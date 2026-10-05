@@ -38,7 +38,7 @@ Forward-only y probadas desde cero en cada `pnpm db:test` y `pnpm stack reset`:
 
 - `20261006000100…000500`: modelo, auditoría, autorización, RLS y RPC base.
 - `20261007000100`: equipo. `…000200`: soporte. `…000300`: flags y estado de tenant. `…000400`: contexto por request. `…000500`: notificaciones. `…000600`: peek de invitación y reset de MFA. `…000700`: onboarding. `…000800`: consola.
-- `20261008000100`: endurecimiento del gate.
+- `20261008000100`: endurecimiento del gate. `20261008000200`: reactivación con la organización suspendida.
 
 ## 4. Pruebas y resultados (locales, 2026-10-05)
 
@@ -88,6 +88,21 @@ Revisión adversarial independiente del diff completo de la fase. Hallazgos y es
 | 4   | Baja               | Enumeración de cuentas por el mensaje de límite de frecuencia                                          | ✅ Respuesta idéntica                                                        |
 | 5   | Baja               | Comparaciones NULL en sentencias separadas                                                             | ✅ `is distinct from`                                                        |
 
+### Revisión de código del gate
+
+Revisión independiente de corrección del mismo diff (8 hallazgos, ninguno bloqueante; todos corregidos):
+
+| #   | Hallazgo                                                                                 | Corrección                                                                                               |
+| --- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 1   | Las acciones de la consola convertían `redirect()`/`notFound()` en "error inesperado"    | `reportActionError` deja pasar los errores de control de Next (`unstable_rethrow`) en todas las acciones |
+| 2   | React 19 vaciaba los formularios tras un error                                           | Las acciones devuelven lo escrito y los campos lo usan como valor inicial (prueba E2E)                   |
+| 3   | Errores de campos sin campo visible (p. ej. `ticket_ref`) no se mostraban                | Error general si ningún campo mostrado lo recoge; `ticket_ref` cableado                                  |
+| 4   | Fecha formateada en el cliente: desajuste de hidratación                                 | Formateada en el servidor con la zona horaria de la tienda                                               |
+| 5   | "Reactivar" en la tienda con la organización suspendida informaba éxito sin cambiar nada | Error explícito `member_org_suspended` (migración `20261008000200`, pgTAP)                               |
+| 6   | "Revocar" en la consola ocultaba los errores                                             | Se muestran                                                                                              |
+| 7   | Mensajes engañosos (mínimo del motivo, slug duplicado)                                   | Mensajes por acción                                                                                      |
+| 8   | Una invitación caducada en la cookie redirigía en cada acceso                            | Se verifica y, si no está vigente, se borra                                                              |
+
 ## 7. Riesgos
 
 | Riesgo                                                                    | Mitigación / estado                                                                                                           |
@@ -115,7 +130,7 @@ Revisión adversarial independiente del diff completo de la fase. Hallazgos y es
 
 - [x] Todas las tareas F2-T01 … F2-T12 hechas con pruebas.
 - [x] Suites verdes en local; mutaciones detectadas.
-- [x] Revisión de seguridad hecha y hallazgos corregidos.
+- [x] Revisiones de seguridad y de código hechas; hallazgos corregidos.
 - [x] `docs/` al día (decisiones, runbooks, progreso).
 - [ ] CI verde en GitHub (bloqueado por P0).
 - [ ] Supabase advisors (requiere el proyecto real).

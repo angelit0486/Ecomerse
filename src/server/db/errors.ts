@@ -24,6 +24,10 @@ const BUSINESS_ALIASES: Record<string, { code: ErrorCode; message: string }> = {
     code: "not_found",
     message: "La invitación no es válida o caducó. Pide una nueva.",
   },
+  member_org_suspended: {
+    code: "conflict",
+    message: "Está suspendido en toda la organización. Reactívalo desde la organización.",
+  },
   invitation_email_mismatch: {
     code: "forbidden",
     message: "Esta invitación es para otro email. Entra con la cuenta invitada.",

@@ -5,17 +5,17 @@
 
 ## Ahora
 
-- **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** Gate F2 (revisión de seguridad y de código de toda la Fase 2, endurecimiento pendiente D-F2-18, informe `docs/phases/PHASE-02-REPORT.md`).
-- **Siguiente paso exacto:** ejecutar la revisión de seguridad y la de código sobre el diff de la Fase 2 (`git diff 473fb44..HEAD`), corregir lo confirmado y escribir el informe con resultados de todas las suites.
+- **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
+- **Siguiente tarea:** F3-T01 (ver backlog de la Fase 3 en `AUTONOMOUS_PLAN.md` §4).
+- **Siguiente paso exacto:** leer GATE0 §14 (catálogo), §23 (búsqueda) y el spike S-3 (imágenes); diseñar las tablas de catálogo con `store_id`, FK compuestas y RLS, y escribir primero la pgTAP de aislamiento.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
 ## Bloqueos (requieren al propietario)
 
-| ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t12.bundle`, todos los commits sin subir). |
+| ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-gate-f2.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 

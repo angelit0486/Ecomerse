@@ -59,7 +59,13 @@ export default async function TeamPage({ params }: Props) {
         canManage={canManage}
         canResetMfa={orgManager}
         members={members}
-        invitations={(invitations ?? []) as InvitationRow[]}
+        invitations={((invitations ?? []) as Omit<InvitationRow, "expires_label">[]).map((inv) => ({
+          ...inv,
+          expires_label: new Intl.DateTimeFormat("es-MX", {
+            dateStyle: "medium",
+            timeZone: ctx.store.timezone,
+          }).format(new Date(inv.expires_at)),
+        }))}
         roles={assignable}
         roleNames={Object.fromEntries((roles ?? []).map((r) => [r.id, r.name]))}
       />

@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 
+import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/ui/primitives/dialog";
 import { Field } from "@/ui/primitives/field";
@@ -35,6 +36,8 @@ export interface InvitationRow {
   email: string;
   store_role_id: string;
   expires_at: string;
+  /** Fecha formateada en el servidor (zona horaria de la tienda): sin desajuste de hidratación. */
+  expires_label: string;
 }
 
 export interface RoleOption {
@@ -208,7 +211,7 @@ function TeamManagerInner({
                 <TR key={inv.id}>
                   <TD>{inv.email}</TD>
                   <TD>{roleNames[inv.store_role_id] ?? "—"}</TD>
-                  <TD>{new Date(inv.expires_at).toLocaleDateString("es-MX")}</TD>
+                  <TD>{inv.expires_label}</TD>
                   <TD>
                     <Button
                       size="sm"
@@ -252,13 +255,21 @@ function InviteDialog({ storeHandle, roles }: { storeHandle: string; roles: Role
         description="Recibirá un enlace por email. Para entrar necesitará verificación en dos pasos."
       >
         <form action={formAction} className="flex flex-col gap-4" noValidate>
-          {state.error && !state.fields ? (
+          {state.error && hasUnrenderedFieldError(state.fields, ["email", "role"]) ? (
             <p role="alert" className="text-[13px] text-danger">
               {state.error}
             </p>
           ) : null}
           <Field label="Email" required error={state.fields?.email}>
-            {(control) => <Input {...control} name="email" type="email" autoComplete="off" />}
+            {(control) => (
+              <Input
+                {...control}
+                name="email"
+                type="email"
+                autoComplete="off"
+                defaultValue={state.values?.email ?? ""}
+              />
+            )}
           </Field>
           <Field label="Rol" required error={state.fields?.role}>
             {(control) => <Select {...control} name="role" options={roles} />}

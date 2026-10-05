@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { formValues } from "@/lib/form-values";
 import { COLOR_KEYS } from "@/lib/theme/palette";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
@@ -14,6 +15,7 @@ export interface StepState {
   message?: string;
   error?: string;
   fields?: Record<string, string>;
+  values?: Record<string, string>;
 }
 
 const FIELD_MESSAGES: Record<string, string> = {
@@ -49,7 +51,10 @@ export async function saveStoreProfile(
       p_timezone: String(formData.get("timezone") ?? ""),
     });
   } catch (error) {
-    return failure(error, FIELD_MESSAGES);
+    return {
+      ...failure(error, FIELD_MESSAGES),
+      values: formValues(formData, ["name", "contact_email", "contact_phone", "timezone"]),
+    };
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
   return { ok: true, message: "Datos de la tienda guardados." };

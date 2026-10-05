@@ -20,6 +20,7 @@ export function EmailForm({ action }: { action: Action }) {
             {...control}
             name="email"
             type="email"
+            defaultValue={state.values?.email}
             autoComplete="email"
             inputMode="email"
             autoFocus

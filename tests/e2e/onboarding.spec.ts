@@ -27,6 +27,8 @@ test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", 
   await page.getByLabel("Email de contacto").fill("no-es-email");
   await page.getByRole("button", { name: "Guardar datos" }).click();
   await expect(page.getByText("Escribe un email válido.")).toBeVisible();
+  // Lo escrito no se pierde tras el error (revisión de código del gate).
+  await expect(page.getByLabel("Email de contacto")).toHaveValue("no-es-email");
 
   await page.getByLabel("Nombre de la tienda").fill(`Moda Ana ${run}`);
   await page.getByLabel("Email de contacto").fill("Hola@ModaAna.mx");

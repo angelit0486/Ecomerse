@@ -3,7 +3,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('cat', 'cat@a.io');
@@ -61,6 +61,13 @@ select throws_ok(format($$ select public.access_authorize_mfa_reset(%L, %L) $$, 
   '42501', 'forbidden', 'staff de plataforma: la organización no puede resetear su MFA');
 select lives_ok(format($$ select public.access_authorize_mfa_reset(%L, %L) $$, tests.fx('org_a'), tests.fx('cat')),
   'miembro solo de esta organización: sí');
+select tests.logout();
+
+-- Reactivar en la tienda a un miembro suspendido en la organización: error explícito.
+select tests.logout(); select tests.login('owner');
+select throws_ok(format($$ select public.access_reactivate_member(%L, %L, %L) $$,
+                        tests.fx('org_a'), tests.fx('cat'), tests.fx('store_a')),
+  'P0001', 'member_org_suspended', 'reactivar en la tienda no oculta la suspensión de la organización');
 select tests.logout();
 
 select * from finish();

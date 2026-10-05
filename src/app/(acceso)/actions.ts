@@ -19,6 +19,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 export interface FormState {
   error?: string;
+  values?: Record<string, string>;
 }
 
 const LOGIN_EMAIL_COOKIE = "staff_login_email";
@@ -38,7 +39,12 @@ export async function requestLoginCode(_: FormState, formData: FormData): Promis
       .trim()
       .toLowerCase(),
   );
-  if (!parsed.success) return { error: "Escribe un email válido." };
+  if (!parsed.success) {
+    return {
+      error: "Escribe un email válido.",
+      values: { email: String(formData.get("email") ?? "") },
+    };
+  }
 
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signInWithOtp({
@@ -129,10 +135,12 @@ export async function verifyTotp(_: FormState, formData: FormData): Promise<Form
   await recordSecurityEvent(enrolling ? "auth.mfa_enrolled" : "auth.mfa_verified", {
     userId: session.userId,
   });
-  const invitation = (await cookies()).get(INVITATION_COOKIE)?.value;
-  redirect(
-    invitation && /^[0-9a-f]{64}$/.test(invitation) ? `/invitacion/${invitation}` : "/admin",
-  );
+  // Solo se vuelve a la invitación si sigue vigente; si no, se olvida.
+  const cookieStore = await cookies();
+  const invitation = cookieStore.get(INVITATION_COOKIE)?.value;
+  if (invitation && (await peekInvitation(invitation))) redirect(`/invitacion/${invitation}`);
+  if (invitation) cookieStore.delete(INVITATION_COOKIE);
+  redirect("/admin");
 }
 
 // -----------------------------------------------------------------------------

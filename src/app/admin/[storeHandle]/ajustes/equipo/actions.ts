@@ -19,6 +19,7 @@ export interface TeamActionState {
   message?: string;
   error?: string;
   fields?: Record<string, string>;
+  values?: Record<string, string>;
 }
 
 const uuid = z.uuid();
@@ -57,12 +58,16 @@ export async function inviteMember(
     .toLowerCase();
   const roleKey = String(formData.get("role") ?? "");
   if (!z.email().safeParse(email).success) {
-    return { error: "Revisa los datos marcados.", fields: { email: "Escribe un email válido." } };
+    return {
+      error: "Revisa los datos marcados.",
+      fields: { email: "Escribe un email válido." },
+      values: { email },
+    };
   }
   if (!/^[a-z_]{2,40}$/.test(roleKey)) {
     return { error: "Revisa los datos marcados.", fields: { role: "Elige un rol." } };
   }
-  return run(
+  const result = await run(
     storeHandle,
     async ({ supabase, storeId, organizationId }) => {
       await callRpc(supabase, "access_invite_member", {
@@ -74,6 +79,7 @@ export async function inviteMember(
     },
     `Invitación enviada a ${email}.`,
   );
+  return result.ok ? result : { ...result, values: { email } };
 }
 
 export async function changeMemberRole(

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 
+import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/ui/primitives/dialog";
 import { Field } from "@/ui/primitives/field";
@@ -16,14 +17,14 @@ import {
   type ConsoleState,
 } from "./actions";
 
-function Feedback({ state }: { state: ConsoleState }) {
+function Feedback({ state, rendered = [] }: { state: ConsoleState; rendered?: readonly string[] }) {
   if (state.ok)
     return (
       <p role="status" className="text-sm text-success">
         {state.message}
       </p>
     );
-  if (state.error && !state.fields)
+  if (state.error && hasUnrenderedFieldError(state.fields, rendered))
     return (
       <p role="alert" className="text-sm text-danger">
         {state.error}
@@ -75,7 +76,7 @@ export function StatusButton({
           <Field label="Motivo" required error={state.fields?.reason}>
             {(c) => <Textarea {...c} name="reason" />}
           </Field>
-          <Feedback state={state} />
+          <Feedback state={state} rendered={["reason"]} />
           <div className="flex justify-end gap-2">
             <DialogClose asChild>
               <Button variant="ghost">Cerrar</Button>
@@ -95,25 +96,27 @@ export function CreateTenantForm({ plans }: { plans: { value: string; label: str
   return (
     <form action={action} className="grid max-w-lg gap-4" noValidate>
       <Field label="Nombre de la organización" required>
-        {(c) => <Input {...c} name="org_name" />}
+        {(c) => <Input {...c} name="org_name" defaultValue={state.values?.org_name} />}
       </Field>
       <Field label="Slug de la organización" hint="Minúsculas, números y guiones." required>
-        {(c) => <Input {...c} name="org_slug" />}
+        {(c) => <Input {...c} name="org_slug" defaultValue={state.values?.org_slug} />}
       </Field>
       <Field label="Email del dueño" hint="Recibirá la invitación para activar su cuenta." required>
-        {(c) => <Input {...c} name="owner_email" type="email" />}
+        {(c) => (
+          <Input {...c} name="owner_email" defaultValue={state.values?.owner_email} type="email" />
+        )}
       </Field>
       <Field label="Nombre de la tienda" required>
-        {(c) => <Input {...c} name="store_name" />}
+        {(c) => <Input {...c} name="store_name" defaultValue={state.values?.store_name} />}
       </Field>
       <Field label="Dirección de la tienda (handle)" hint="Será su subdominio." required>
-        {(c) => <Input {...c} name="store_handle" />}
+        {(c) => <Input {...c} name="store_handle" defaultValue={state.values?.store_handle} />}
       </Field>
       <Field label="Plan" required error={state.fields?.plan}>
         {(c) => <Select {...c} name="plan" options={plans} />}
       </Field>
       <input type="hidden" name="country" value="MX" />
-      <Feedback state={state} />
+      <Feedback state={state} rendered={["plan"]} />
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Creando…" : "Crear organización y tienda"}
@@ -159,10 +162,12 @@ export function GrantSupportForm({
         required
         error={state.fields?.reason}
       >
-        {(c) => <Textarea {...c} name="reason" />}
+        {(c) => <Textarea {...c} name="reason" defaultValue={state.values?.reason} />}
       </Field>
-      <Field label="Ticket (opcional)">{(c) => <Input {...c} name="ticket_ref" />}</Field>
-      <Feedback state={state} />
+      <Field label="Ticket (opcional)" error={state.fields?.ticket_ref}>
+        {(c) => <Input {...c} name="ticket_ref" defaultValue={state.values?.ticket_ref} />}
+      </Field>
+      <Feedback state={state} rendered={["grantee", "minutes", "reason", "ticket_ref"]} />
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Concediendo…" : "Conceder acceso de solo lectura"}
@@ -174,14 +179,27 @@ export function GrantSupportForm({
 
 export function RevokeButton({ grantId }: { grantId: string }) {
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   return (
-    <Button
-      size="sm"
-      variant="secondary"
-      disabled={pending}
-      onClick={() => start(async () => void (await revokeSupport(grantId)))}
-    >
-      {pending ? "Revocando…" : "Revocar"}
-    </Button>
+    <div className="flex flex-col gap-1">
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const result = await revokeSupport(grantId);
+            setError(result.error ?? null);
+          })
+        }
+      >
+        {pending ? "Revocando…" : "Revocar"}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-[13px] text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

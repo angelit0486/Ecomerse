@@ -9,6 +9,7 @@ import {
   type ColorKey,
   type Palette,
 } from "@/lib/theme/palette";
+import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
@@ -16,7 +17,7 @@ import { Select } from "@/ui/primitives/select";
 
 import { saveBranding, saveStoreProfile, type StepState } from "./actions";
 
-function Feedback({ state }: { state: StepState }) {
+function Feedback({ state, rendered = [] }: { state: StepState; rendered?: readonly string[] }) {
   if (state.ok) {
     return (
       <p role="status" className="text-sm text-success">
@@ -24,7 +25,7 @@ function Feedback({ state }: { state: StepState }) {
       </p>
     );
   }
-  if (state.error && !state.fields) {
+  if (state.error && hasUnrenderedFieldError(state.fields, rendered)) {
     return (
       <p role="alert" className="text-sm text-danger">
         {state.error}
@@ -47,7 +48,7 @@ export function ProfileForm({
   return (
     <form action={action} className="grid max-w-lg gap-4" noValidate>
       <Field label="Nombre de la tienda" required error={state.fields?.name}>
-        {(c) => <Input {...c} name="name" defaultValue={initial.name} />}
+        {(c) => <Input {...c} name="name" defaultValue={state.values?.name ?? initial.name} />}
       </Field>
       <Field
         label="Email de contacto"
@@ -56,12 +57,22 @@ export function ProfileForm({
         error={state.fields?.contact_email}
       >
         {(c) => (
-          <Input {...c} name="contact_email" type="email" defaultValue={initial.contact_email} />
+          <Input
+            {...c}
+            name="contact_email"
+            type="email"
+            defaultValue={state.values?.contact_email ?? initial.contact_email}
+          />
         )}
       </Field>
       <Field label="Teléfono" error={state.fields?.contact_phone}>
         {(c) => (
-          <Input {...c} name="contact_phone" type="tel" defaultValue={initial.contact_phone} />
+          <Input
+            {...c}
+            name="contact_phone"
+            type="tel"
+            defaultValue={state.values?.contact_phone ?? initial.contact_phone}
+          />
         )}
       </Field>
       <Field label="Zona horaria" required error={state.fields?.timezone}>
@@ -69,12 +80,12 @@ export function ProfileForm({
           <Select
             {...c}
             name="timezone"
-            defaultValue={initial.timezone}
+            defaultValue={state.values?.timezone ?? initial.timezone}
             options={timezones.map((tz) => ({ value: tz, label: tz.replace(/_/g, " ") }))}
           />
         )}
       </Field>
-      <Feedback state={state} />
+      <Feedback state={state} rendered={["name", "contact_email", "contact_phone", "timezone"]} />
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Guardando…" : "Guardar datos"}
