@@ -158,6 +158,23 @@ describe("stack local: Supabase Auth + PostgREST + RLS", () => {
     expect(direct.body).toEqual([]);
   });
 
+  it("RPC de equipo por la Data API contra el auth.users real de Supabase Auth", async () => {
+    const team = await api("/rest/v1/rpc/access_list_store_members", {
+      token: aal2Token,
+      body: { p_store_id: own.storeId },
+    });
+    expect(team.status).toBe(200);
+    expect(team.body).toMatchObject([
+      { user_id: owner.userId, email: `dueno-${run}@example.test`, role_key: "org_owner" },
+    ]);
+
+    const foreignTeam = await api("/rest/v1/rpc/access_list_store_members", {
+      token: aal2Token,
+      body: { p_store_id: foreign.storeId },
+    });
+    expect(foreignTeam.status).toBe(403);
+  });
+
   it("no puede modificar la tienda ajena (0 filas, sin error que filtre su existencia)", async () => {
     const response = await fetch(`${API}/rest/v1/stores?id=eq.${foreign.storeId}`, {
       method: "PATCH",

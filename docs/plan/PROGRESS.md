@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T02 (RPC de equipo: invitar, cambiar rol, quitar miembro, transferir propiedad).
-- **Siguiente paso exacto:** leer GATE0 §7–§8 y el backlog F2-T02; escribir primero las pruebas pgTAP de escalada (rank, dueño único, entre tiendas) y después las RPC.
+- **Siguiente tarea:** F2-T03 (RPC de soporte: concesión ≤ 60 min con motivo, revocación por ambos lados, aviso al dueño, auditoría de páginas).
+- **Siguiente paso exacto:** leer GATE0 §7.7 y la tabla `support_access_grants`; escribir primero la pgTAP (concesión, expiración, revocación, aviso encolado) y después las RPC.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local.
 
 ## Bloqueos (requieren al propietario)
@@ -28,7 +28,7 @@
 | 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración |
 | 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones           |
 | 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación  |
-| 2    | F2-T02 RPC de equipo                     | pendiente                   |                                              |
+| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones |
 | 2    | F2-T03 RPC de soporte                    | pendiente                   |                                              |
 | 2    | F2-T04 Feature flags + estado de tenant  | pendiente                   |                                              |
 | 2    | F2-T05 Capa de servidor                  | pendiente                   |                                              |
@@ -48,6 +48,11 @@
 - S-2: Supabase Auth **alojado** (recovery, Send Email Hook). El claim `aal` y TOTP ya se verificaron con GoTrue v2.197.0 en local.
 - `supabase test db` contra el proyecto real (PG17).
 - CI de GitHub Actions (primer run, incluido el job nuevo `stack`).
+
+## Pendientes menores registrados
+
+- F2-T08: email de aviso de transferencia de propiedad (D-F2-16).
+- F2-T05: mapear `invitation_invalid` e `invitation_email_mismatch` (RPC de aceptación) a códigos de `AppError`.
 
 ## Ideas para después (no se implementan sin aprobación)
 
