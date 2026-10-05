@@ -25,6 +25,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-not-a-real-key-000000
       GATEWAY_DATABASE_URL: postgres://storefront_gateway:ci@localhost:5432/ci
+      APP_HOSTNAME: localhost:3000
+      PREVIEW_HMAC_SECRET: ci-preview-secret-00000000000000000000
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
@@ -89,6 +91,17 @@ jobs:
           PGHOST: localhost
           PGUSER: postgres
           PGPASSWORD: postgres
+      - name: Compilar y arrancar la app contra el stack
+        run: |
+          eval "$(bash scripts/dev/stack.sh env | sed 's/^/export /')"
+          export APP_ENV=test WORKER_DATABASE_URL=postgres://system_worker:system_worker_dev_password@localhost:5432/pruva_dev
+          export GATEWAY_DATABASE_URL=postgres://storefront_gateway:storefront_gateway_dev_password@localhost:5432/pruva_dev
+          export CRON_SECRET=ci-cron-secret-0000000000000000000000 JOBS_HMAC_SECRET=ci-hmac-secret-0000000000000000000000
+          export APP_HOSTNAME=localhost:3000 PREVIEW_HMAC_SECRET=ci-preview-secret-00000000000000000000
+          env | grep -E '^(APP_|WORKER_|GATEWAY_|CRON_|JOBS_|PREVIEW_|NEXT_PUBLIC_)' >> "$GITHUB_ENV"
+          pnpm build
+          nohup pnpm start -H localhost -p 3000 > .stack/run/next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/api/health && break; sleep 1; done
       - run: pnpm test:stack
       - name: Logs del stack
         if: failure()

@@ -25,6 +25,10 @@ export const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
   /** Conexión del rol storefront_gateway (solo EXECUTE de storefront.*). */
   GATEWAY_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  /** Host del panel (sin protocolo; puerto opcional). Cualquier otro host es de tienda. */
+  APP_HOSTNAME: z.string().regex(/^[a-z0-9.-]+(:\d{1,5})?$/),
+  /** Secreto HMAC de los tokens de vista previa de tiendas en borrador (CF-09). */
+  PREVIEW_HMAC_SECRET: z.string().min(32),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

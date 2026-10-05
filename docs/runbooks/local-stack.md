@@ -43,3 +43,15 @@ Una migración nueva sobre una base ya creada: `pnpm stack reset`. Esto borra la
 2. Lee el código de 6 dígitos en Mailpit.
 3. Envíalo a `POST /auth/v1/verify`.
 4. Para staff, el panel exige AAL2: registra un factor TOTP con `POST /auth/v1/factors`, luego `challenge` y `verify`. `tests/stack/auth-rls.test.ts` muestra el flujo completo.
+
+## App contra el stack
+
+```bash
+pnpm stack env >> .env.local     # una vez; completa también APP_HOSTNAME y PREVIEW_HMAC_SECRET (ver .env.example)
+pnpm dev                         # o: pnpm build && pnpm start -H localhost -p 3000
+```
+
+- Panel: `http://localhost:3000` (el host de `APP_HOSTNAME`).
+- Tiendas: `http://{handle}.localhost:3000`. El navegador resuelve `*.localhost` a 127.0.0.1. Para que una tienda tenga ese host, su fila de `store_domains` debe usar `{handle}.localhost`; con `platform_settings.storefront.root_domain = {"domain": "localhost"}` lo hace el alta asistida.
+- Arranca siempre con `-H localhost`, nunca con `-H 127.0.0.1`. Next normaliza 127.0.0.1 a `localhost` en `request.nextUrl`, y entonces las reescrituras del proxy se tratan como proxy externo.
+- `tests/stack/storefront-routing.test.ts` necesita la app levantada y el mismo `PREVIEW_HMAC_SECRET`: `set -a; . ./.env.local; set +a; pnpm test:stack`.
