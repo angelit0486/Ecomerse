@@ -223,7 +223,7 @@ cmd_reset() {
   cmd_down
   sleep 1
   log "Borrando base $DB"
-  dropdb --if-exists "$DB"
+  dropdb --if-exists --force "$DB"
   rm -f "$RUN/mailpit.db"
   cmd_up
 }

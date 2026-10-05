@@ -39,3 +39,4 @@ export function gatewayDb(): Sql {
   gateway ??= createRoleClient(serverEnv().GATEWAY_DATABASE_URL, "pruva-storefront-gateway");
   return gateway;
 }
+export type { Sql } from "postgres";

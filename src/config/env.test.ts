@@ -12,6 +12,9 @@ const valid = {
   GATEWAY_DATABASE_URL: "postgres://storefront_gateway:s3cr3t-value@localhost:5432/db",
   APP_HOSTNAME: "localhost:3000",
   PREVIEW_HMAC_SECRET: "p".repeat(32),
+  APP_URL: "http://localhost:3000",
+  EMAIL_PROVIDER: "fake",
+  EMAIL_FROM: "Plataforma <no-reply@example.test>",
 };
 
 describe("parseServerEnv", () => {
@@ -50,5 +53,28 @@ describe("parseServerEnv", () => {
       expect(message).not.toContain("valor-secreto-corto");
       expect(message).not.toContain("otro");
     }
+  });
+
+  it("producción exige Resend con clave y enlaces https (config inválida nunca llega a producción)", () => {
+    const prod = { ...valid, APP_ENV: "production" };
+    expect(() => parseServerEnv(prod)).toThrow(/EMAIL_PROVIDER: resend obligatorio/);
+    expect(() => parseServerEnv(prod)).toThrow(/APP_URL: https obligatorio/);
+    expect(() =>
+      parseServerEnv({ ...prod, EMAIL_PROVIDER: "resend", APP_URL: "https://app.x.test" }),
+    ).toThrow(/RESEND_API_KEY: requerida/);
+    expect(
+      parseServerEnv({
+        ...prod,
+        EMAIL_PROVIDER: "resend",
+        RESEND_API_KEY: "re_0123456789", // gitleaks:allow (valor ficticio de prueba)
+        APP_URL: "https://app.x.test",
+      }).EMAIL_PROVIDER,
+    ).toBe("resend");
+  });
+
+  it("el remitente debe tener formato 'Nombre <email>'", () => {
+    expect(() => parseServerEnv({ ...valid, EMAIL_FROM: "no-reply@example.test" })).toThrow(
+      /EMAIL_FROM/,
+    );
   });
 });

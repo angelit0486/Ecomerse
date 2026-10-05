@@ -29,6 +29,31 @@ export const serverEnvSchema = z.object({
   APP_HOSTNAME: z.string().regex(/^[a-z0-9.-]+(:\d{1,5})?$/),
   /** Secreto HMAC de los tokens de vista previa de tiendas en borrador (CF-09). */
   PREVIEW_HMAC_SECRET: z.string().min(32),
+  /** Origen público del panel para enlaces en emails (p. ej. https://app.ejemplo.com). */
+  APP_URL: z.url({ protocol: /^https?$/ }),
+  /** Canal de email (GATE0 §27.1): resend en producción; mailpit o fake en local/CI. */
+  EMAIL_PROVIDER: z.enum(["resend", "mailpit", "fake"]),
+  /** Remitente de los emails de plataforma: "Nombre <no-reply@dominio>". */
+  EMAIL_FROM: z.string().regex(/^[^<>]{1,80} <[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/),
+  RESEND_API_KEY: z.string().min(10).optional(),
+  MAILPIT_URL: z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8025"),
+});
+
+/**
+ * Reglas entre variables: una configuración inválida nunca llega a producción
+ * (preview/production exigen Resend con su clave y enlaces https).
+ */
+const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
+  const deployed = env.APP_ENV === "production" || env.APP_ENV === "preview";
+  if (deployed && env.EMAIL_PROVIDER !== "resend") {
+    ctx.addIssue({ code: "custom", path: ["EMAIL_PROVIDER"], message: "resend obligatorio" });
+  }
+  if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
+    ctx.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "requerida" });
+  }
+  if (deployed && !env.APP_URL.startsWith("https://")) {
+    ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "https obligatorio" });
+  }
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -48,11 +73,12 @@ export class EnvValidationError extends Error {
  * pero NUNCA incluye sus valores.
  */
 export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  const result = serverEnvSchema.safeParse(source);
+  const result = serverEnvRules.safeParse(source);
   if (result.success) return result.data;
   const issues = result.error.issues.map((issue) => {
     const key = issue.path.join(".") || "(raíz)";
     const raw = source[key];
+    if (issue.code === "custom") return `${key}: ${issue.message}`;
     return `${key}: ${raw === undefined || raw === "" ? "requerida" : "valor inválido"}`;
   });
   throw new EnvValidationError(issues);

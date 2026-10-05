@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T08 (job `access.invitation_email` y `access.support_access_notice`: emitir el token con el worker, armar el enlace y enviar por el canal de desarrollo visible en Mailpit).
-- **Siguiente paso exacto:** leer GATE0 §27 (notificaciones) y `src/server/jobs/*`; definir una interfaz `EmailChannel` mínima (SMTP en desarrollo) y los handlers, con prueba de integración que verifique que el token no aparece en ningún log.
+- **Siguiente tarea:** F2-T09 (primitivas de UI: Dialog, Drawer, Toast, Select, Checkbox, Table, Tabs con Radix, A-04).
+- **Siguiente paso exacto:** revisar `src/ui/primitives` y `tokens.css`; instalar solo los paquetes Radix necesarios (justificación en DECISIONS) y escribir cada primitiva con su prueba jsdom + axe.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -15,7 +15,7 @@
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t07.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t08.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
@@ -53,7 +53,7 @@
 ## Pendientes menores registrados
 
 - F2-T10: reset de MFA de un miembro por el dueño o un admin vía SR-1 (Auth Admin), auditado (D-F2-24).
-- F2-T08: aviso al dueño de suspensión/reactivación de tenant (D-F2-20); manejadores de `access.invitation_email` y `access.support_access_notice` (ya se encolan); email de aviso de transferencia de propiedad (D-F2-16).
+- Fase 7 (notificaciones completas): aviso al dueño de suspensión/reactivación de tenant (D-F2-20) y de transferencia de propiedad (D-F2-16), con el mismo canal y `notification_deliveries`.
 - Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).
 
 ## Ideas para después (no se implementan sin aprobación)
