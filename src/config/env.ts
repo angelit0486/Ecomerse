@@ -19,6 +19,12 @@ export const serverEnvSchema = z.object({
   CRON_SECRET: z.string().min(32),
   /** Secreto HMAC para disparos firmados del runner de jobs (pg_cron + pg_net). */
   JOBS_HMAC_SECRET: z.string().min(32),
+  /** URL pública de la API de Supabase (en local: `pnpm stack env`). */
+  NEXT_PUBLIC_SUPABASE_URL: z.url({ protocol: /^https?$/ }),
+  /** Clave anónima (publicable): solo identifica el proyecto; RLS protege los datos. */
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
+  /** Conexión del rol storefront_gateway (solo EXECUTE de storefront.*). */
+  GATEWAY_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

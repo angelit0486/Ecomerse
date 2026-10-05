@@ -6,15 +6,15 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T05 (capa de servidor: clientes Supabase SSR, `getStoreContext()`, `requirePermission()`, mapeo de errores de RPC a `AppError`).
-- **Siguiente paso exacto:** leer el backlog F2-T05 del plan y GATE0 §11 y §31; escribir primero las pruebas unitarias del mapeo de errores y una prueba de stack del contexto de tienda.
+- **Siguiente tarea:** F2-T06 (proxy: host del panel vs host de tienda, `storefront.resolve_host` con caché de 60 s, reescritura a `/_store/[storeId]`, 404 uniforme, 503 de suspensión, renovación de la sesión de Supabase en el host del panel).
+- **Siguiente paso exacto:** leer `src/proxy.ts`, GATE0 §21–§22 y el backlog F2-T06; escribir primero las pruebas unitarias de clasificación de host y reescritura.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local.
 
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t04.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t05.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
@@ -22,25 +22,25 @@
 
 ## Tablero
 
-| Fase | Tarea                                    | Estado                      | Evidencia                                    |
-| ---- | ---------------------------------------- | --------------------------- | -------------------------------------------- |
-| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                    |
-| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración |
-| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones           |
-| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación  |
-| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones |
-| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones |
-| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones |
-| 2    | F2-T05 Capa de servidor                  | pendiente                   |                                              |
-| 2    | F2-T06 Proxy de dominios y vista previa  | pendiente                   |                                              |
-| 2    | F2-T07 Auth de staff (OTP + TOTP)        | pendiente                   |                                              |
-| 2    | F2-T08 Job de email de invitación        | pendiente                   |                                              |
-| 2    | F2-T09 Primitivas de UI                  | pendiente                   |                                              |
-| 2    | F2-T10 Panel y Equipo                    | pendiente                   |                                              |
-| 2    | F2-T11 Onboarding en 4 pasos             | pendiente                   |                                              |
-| 2    | F2-T12 Consola de plataforma mínima      | pendiente                   |                                              |
-| 2    | Gate F2                                  | pendiente                   |                                              |
-| 3–11 | Ver el plan §4                           | pendiente                   |                                              |
+| Fase | Tarea                                    | Estado                      | Evidencia                                          |
+| ---- | ---------------------------------------- | --------------------------- | -------------------------------------------------- |
+| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                          |
+| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración       |
+| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones                 |
+| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación        |
+| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones       |
+| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones       |
+| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones       |
+| 2    | F2-T05 Capa de servidor                  | hecha                       | F2-T05 · 16 pgTAP, 17 unit, 2 integración, 1 stack |
+| 2    | F2-T06 Proxy de dominios y vista previa  | pendiente                   |                                                    |
+| 2    | F2-T07 Auth de staff (OTP + TOTP)        | pendiente                   |                                                    |
+| 2    | F2-T08 Job de email de invitación        | pendiente                   |                                                    |
+| 2    | F2-T09 Primitivas de UI                  | pendiente                   |                                                    |
+| 2    | F2-T10 Panel y Equipo                    | pendiente                   |                                                    |
+| 2    | F2-T11 Onboarding en 4 pasos             | pendiente                   |                                                    |
+| 2    | F2-T12 Consola de plataforma mínima      | pendiente                   |                                                    |
+| 2    | Gate F2                                  | pendiente                   |                                                    |
+| 3–11 | Ver el plan §4                           | pendiente                   |                                                    |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 
@@ -53,7 +53,6 @@
 
 - F2-T08: aviso al dueño de suspensión/reactivación de tenant (D-F2-20); manejadores de `access.invitation_email` y `access.support_access_notice` (ya se encolan); email de aviso de transferencia de propiedad (D-F2-16).
 - Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).
-- F2-T05: mapear `invitation_invalid` e `invitation_email_mismatch` (RPC de aceptación) a códigos de `AppError`.
 
 ## Ideas para después (no se implementan sin aprobación)
 

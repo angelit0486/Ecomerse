@@ -22,6 +22,9 @@ jobs:
       WORKER_DATABASE_URL: postgres://system_worker:ci@localhost:5432/ci
       CRON_SECRET: ci-cron-secret-0000000000000000000000
       JOBS_HMAC_SECRET: ci-hmac-secret-0000000000000000000000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-not-a-real-key-000000
+      GATEWAY_DATABASE_URL: postgres://storefront_gateway:ci@localhost:5432/ci
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4

@@ -175,6 +175,32 @@ describe("stack local: Supabase Auth + PostgREST + RLS", () => {
     expect(foreignTeam.status).toBe(403);
   });
 
+  it("contexto de tienda por request: permisos en vivo, nunca en el JWT", async () => {
+    const ctx = await api("/rest/v1/rpc/access_store_context", {
+      token: aal2Token,
+      body: { p_handle: `tienda-a${run}` },
+    });
+    expect(ctx.status).toBe(200);
+    const body = ctx.body as { store: { id: string }; permissions: string[]; org_role: string };
+    expect(body.store.id).toBe(own.storeId);
+    expect(body.org_role).toBe("org_owner");
+    expect(body.permissions).toContain("staff.manage");
+    expect(JSON.stringify(claims(aal2Token))).not.toContain("staff.manage");
+
+    const aal1 = await api("/rest/v1/rpc/access_store_context", {
+      token: owner.accessToken,
+      body: { p_handle: `tienda-a${run}` },
+    });
+    expect(aal1.status).toBe(403);
+    expect((aal1.body as { message: string }).message).toBe("mfa_required");
+
+    const foreignCtx = await api("/rest/v1/rpc/access_store_context", {
+      token: aal2Token,
+      body: { p_handle: `tienda-b${run}` },
+    });
+    expect((foreignCtx.body as { message: string }).message).toBe("not_found");
+  });
+
   it("no puede modificar la tienda ajena (0 filas, sin error que filtre su existencia)", async () => {
     const response = await fetch(`${API}/rest/v1/stores?id=eq.${foreign.storeId}`, {
       method: "PATCH",

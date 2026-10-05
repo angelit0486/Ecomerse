@@ -7,6 +7,9 @@ const valid = {
   WORKER_DATABASE_URL: "postgres://system_worker:s3cr3t-value@localhost:5432/db",
   CRON_SECRET: "c".repeat(32),
   JOBS_HMAC_SECRET: "h".repeat(32),
+  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "a".repeat(40),
+  GATEWAY_DATABASE_URL: "postgres://storefront_gateway:s3cr3t-value@localhost:5432/db",
 };
 
 describe("parseServerEnv", () => {
