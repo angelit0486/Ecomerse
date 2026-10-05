@@ -98,11 +98,20 @@ jobs:
           export GATEWAY_DATABASE_URL=postgres://storefront_gateway:storefront_gateway_dev_password@localhost:5432/pruva_dev
           export CRON_SECRET=ci-cron-secret-0000000000000000000000 JOBS_HMAC_SECRET=ci-hmac-secret-0000000000000000000000
           export APP_HOSTNAME=localhost:3000 PREVIEW_HMAC_SECRET=ci-preview-secret-00000000000000000000
-          env | grep -E '^(APP_|WORKER_|GATEWAY_|CRON_|JOBS_|PREVIEW_|NEXT_PUBLIC_)' >> "$GITHUB_ENV"
+          env | grep -E '^(APP_|WORKER_|GATEWAY_|CRON_|JOBS_|PREVIEW_|NEXT_PUBLIC_|SUPABASE_SERVICE_ROLE_KEY)' >> "$GITHUB_ENV"
           pnpm build
           nohup pnpm start -H localhost -p 3000 > .stack/run/next.log 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/api/health && break; sleep 1; done
       - run: pnpm test:stack
+      - name: E2E (Playwright, Chromium del runner)
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
       - name: Logs del stack
         if: failure()
         run: tail -n 100 .stack/run/*.log

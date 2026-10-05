@@ -52,6 +52,7 @@ export default defineConfig([
       "src/server/jobs/store.ts",
       "tests/integration/**",
       "tests/stack/**",
+      "tests/e2e/**",
     ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
