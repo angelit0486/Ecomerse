@@ -33,7 +33,9 @@ vi.mock("@/server/storefront/resolve-host", () => ({
   },
 }));
 
-const { proxy } = await import("./proxy");
+const { proxy, config } = await import("./proxy");
+const { STORE_ROUTE_HEADER, verifyStoreRoute } =
+  await import("@/server/storefront/route-signature");
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -183,5 +185,21 @@ describe("proxy · vista previa de borradores (CF-09)", () => {
     expect(response.headers.get("x-middleware-rewrite")).toContain(`/_store/${STORE}`);
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("proxy · sin rutas que lo salten", () => {
+  it("el matcher no exime ninguna cabecera (p. ej. prefetch)", () => {
+    expect(JSON.stringify(config.matcher)).not.toContain("missing");
+  });
+
+  it("la reescritura lleva la firma de la tienda resuelta; la del cliente se descarta", async () => {
+    resolutions.set("tienda-a.tiendas.test", store());
+    const response = await proxy(
+      req("https://tienda-a.tiendas.test/", { [STORE_ROUTE_HEADER]: "f".repeat(64) }),
+    );
+    const signature = response.headers.get(`x-middleware-request-${STORE_ROUTE_HEADER}`);
+    expect(verifyStoreRoute(SECRET, STORE, signature)).toEqual({ preview: false });
+    expect(verifyStoreRoute(SECRET, OTHER, signature)).toBeNull();
   });
 });

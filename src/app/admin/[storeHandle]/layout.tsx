@@ -1,16 +1,12 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
-import { createLogger } from "@/server/observability/logger";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 type Props = { children: ReactNode; params: Promise<{ storeHandle: string }> };
-
-const log = createLogger();
 
 interface MyStore {
   store_id: string;
@@ -23,15 +19,6 @@ export default async function StoreLayout({ children, params }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   const supabase = await createSupabaseServerClient();
   const stores = await callRpc<MyStore[]>(supabase, "access_list_my_stores");
-
-  if (ctx.supportGrantId) {
-    // Soporte: cada página abierta queda auditada (GATE0 §7.7).
-    const path = (await headers()).get("x-pathname") ?? `/admin/${storeHandle}`;
-    await callRpc(supabase, "support_log_page_view", {
-      p_grant_id: ctx.supportGrantId,
-      p_path: path,
-    }).catch((error: unknown) => log.error("support.page_view_failed", { err: error }));
-  }
 
   const base = `/admin/${ctx.store.handle}`;
   const nav = [

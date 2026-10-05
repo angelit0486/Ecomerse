@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { serverEnv } from "@/server/env";
+import { STORE_ROUTE_HEADER, verifyStoreRoute } from "@/server/storefront/route-signature";
 import { getStorePublic } from "@/server/storefront/store-public";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
@@ -12,15 +14,32 @@ import { EmptyState } from "@/ui/primitives/empty-state";
  */
 type Props = { params: Promise<{ storeId: string }> };
 
+/** Tienda verificada para este request, o null (404). */
+async function verifiedStore(storeId: string) {
+  // Solo requests enrutados por el proxy para ESTA tienda (firma HMAC).
+  const route = verifyStoreRoute(
+    serverEnv().PREVIEW_HMAC_SECRET,
+    storeId,
+    (await headers()).get(STORE_ROUTE_HEADER),
+  );
+  if (!route) return null;
+  const store = await getStorePublic(storeId);
+  // Segunda comprobación del estado: borrador solo con vista previa.
+  if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview))) {
+    return null;
+  }
+  return { store, preview: route.preview };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const store = await getStorePublic((await params).storeId);
-  return { title: { absolute: store?.name ?? "Tienda" } };
+  const verified = await verifiedStore((await params).storeId);
+  return { title: { absolute: verified?.store.name ?? "Tienda" } };
 }
 
 export default async function StoreHomePage({ params }: Props) {
-  const store = await getStorePublic((await params).storeId);
-  if (!store) notFound();
-  const preview = (await headers()).get("x-store-preview") === "1";
+  const verified = await verifiedStore((await params).storeId);
+  if (!verified) notFound();
+  const { store, preview } = verified;
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-4 py-16">
       {preview ? (

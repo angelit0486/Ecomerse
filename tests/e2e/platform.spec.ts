@@ -6,6 +6,8 @@ import {
   API,
   createAuthUser,
   createTenant,
+  enrollTotp,
+  enterEmailCode,
   loginNewStaff,
   MAIL,
   readInvitationLink,
@@ -35,7 +37,10 @@ test.beforeAll(async () => {
   tenant = await createTenant(`p${run}`, await createAuthUser(ownerEmail));
 });
 
-test("platform_admin: crea un tenant, suspende y concede soporte con motivo", async ({ page }) => {
+test("platform_admin: crea un tenant, suspende y concede soporte con motivo", async ({
+  page,
+  browser,
+}) => {
   await loginNewStaff(page, adminEmail);
   await page.getByRole("link", { name: "Ir a la consola de plataforma" }).click();
   await expect(page.getByRole("heading", { name: "Organizaciones" })).toBeVisible();
@@ -52,7 +57,22 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.getByRole("button", { name: "Crear organización y tienda" }).click();
   await expect(page.getByText(`Tienda creada en nueva-${run}.tiendas.localhost.`)).toBeVisible();
   await runJobs();
-  expect(await readInvitationLink(newOwnerEmail)).toMatch(/\/invitacion\/[0-9a-f]{64}$/);
+  const invitation = await readInvitationLink(newOwnerEmail);
+  expect(invitation).toMatch(/\/invitacion\/[0-9a-f]{64}$/);
+
+  // El dueño acepta: cuenta nueva por invitación → 2FA → su tienda en borrador.
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await owner.goto(invitation);
+  const sentAt = Date.now() - 1000;
+  await owner.getByRole("button", { name: "Enviarme un código" }).click();
+  await enterEmailCode(owner, newOwnerEmail, sentAt);
+  await enrollTotp(owner);
+  await owner.getByRole("button", { name: "Aceptar invitación" }).click();
+  await expect(owner).toHaveURL(new RegExp(`/admin/nueva-${run}$`));
+  await expect(owner.getByText("Dueño de la organización")).toBeVisible();
+  await expect(owner.getByRole("link", { name: "Configurar tienda" })).toBeVisible();
+  await ownerContext.close();
 
   // Suspender y reactivar con motivo.
   await page.goto(`/platform?q=org-p${run}`);

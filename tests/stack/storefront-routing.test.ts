@@ -96,6 +96,22 @@ describe("storefront: host → tienda", () => {
     expect(res.body).not.toContain(stores[`rtb${run}`]!.name);
   });
 
+  it("una cabecera de prefetch no salta el proxy (revisión de seguridad del gate)", async () => {
+    const target = stores[`rtd${run}`]!;
+    const variants: Record<string, string>[] = [
+      { purpose: "prefetch" },
+      { "next-router-prefetch": "1" },
+    ];
+    for (const headers of variants) {
+      const res = await get(stores[`rta${run}`]!.host, `/_store/${target.id}`, {
+        ...headers,
+        "x-store-preview": "1",
+      });
+      expect(res.status).toBe(404);
+      expect(res.body).not.toContain(target.name);
+    }
+  });
+
   it("cabeceras del cliente no eligen otra tienda", async () => {
     const res = await get(stores[`rta${run}`]!.host, "/", {
       "x-forwarded-host": stores[`rtb${run}`]!.host,

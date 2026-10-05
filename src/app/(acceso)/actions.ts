@@ -41,13 +41,13 @@ export async function requestLoginCode(_: FormState, formData: FormData): Promis
   if (!parsed.success) return { error: "Escribe un email válido." };
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  await supabase.auth.signInWithOtp({
     email: parsed.data,
     options: { shouldCreateUser: false },
   });
-  if (error?.status === 429) return { error: "Demasiados intentos. Espera un momento." };
-  // Cualquier otro error (p. ej. email sin cuenta) se trata igual que un éxito: la
-  // respuesta no revela qué emails tienen cuenta.
+  // Cualquier error (email sin cuenta, límite de frecuencia —que Auth solo aplica a
+  // cuentas existentes—) se trata igual que un éxito: la respuesta no revela qué
+  // emails tienen cuenta.
   await recordSecurityEvent("auth.login_code_requested");
 
   (await cookies()).set(LOGIN_EMAIL_COOKIE, parsed.data, {
@@ -179,21 +179,24 @@ export async function acceptInvitation(token: string): Promise<FormState> {
   const supabase = await createSupabaseServerClient();
   let target = "/admin";
   try {
-    const result = await callRpc<{ store_id: string | null }>(
+    const result = await callRpc<{ organization_id: string; store_id: string | null }>(
       supabase,
       "access_accept_invitation",
-      {
-        p_token: token,
-      },
+      { p_token: token },
     );
-    if (result.store_id) {
-      const stores = await callRpc<{ store_id: string; handle: string }[]>(
-        supabase,
-        "access_list_my_stores",
-      );
-      const handle = stores.find((s) => s.store_id === result.store_id)?.handle;
-      if (handle) target = `/admin/${handle}`;
-    }
+    const stores = await callRpc<{ store_id: string; organization_id: string; handle: string }[]>(
+      supabase,
+      "access_list_my_stores",
+    );
+    // Invitación a una tienda: esa tienda. A la organización: su única tienda, si
+    // hay una sola (p. ej. el dueño tras el alta asistida).
+    const orgStores = stores.filter((s) => s.organization_id === result.organization_id);
+    const handle = result.store_id
+      ? stores.find((s) => s.store_id === result.store_id)?.handle
+      : orgStores.length === 1
+        ? orgStores[0]!.handle
+        : undefined;
+    if (handle) target = `/admin/${handle}`;
   } catch (error) {
     return { error: reportActionError("invitation", error).message };
   }

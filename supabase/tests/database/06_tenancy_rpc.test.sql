@@ -109,7 +109,8 @@ select ok((select token_hash is null from public.organization_invitations where 
 select is((select count(*)::int from system.jobs where type = 'access.invitation_email'
             and payload ->> 'invitation_id' = tests.fx('inv_owner')::text), 1, 'email de invitación encolado');
 select set_eq($$ select action from audit.audit_logs where organization_id = tests.fx('org_n') $$,
-  array['organization.created', 'store.created', 'member.invited'], 'alta auditada');
+  array['organization.created', 'store.created', 'member.invited', 'config.insert'],
+  'alta auditada (config.insert: la suscripción, por el trigger de configuración del gate)');
 select is((select distinct actor_type from audit.audit_logs where organization_id = tests.fx('org_n')),
   'platform_staff', 'la auditoría identifica al actor de plataforma');
 select is((select count(*)::int from public.organization_members where organization_id = tests.fx('org_n')), 0,

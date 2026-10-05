@@ -12,6 +12,7 @@ import {
   verifyPreviewToken,
 } from "@/server/storefront/preview";
 import { resolveHost } from "@/server/storefront/resolve-host";
+import { signStoreRoute, STORE_ROUTE_HEADER } from "@/server/storefront/route-signature";
 import { refreshSupabaseSession } from "@/server/supabase/proxy-session";
 
 /**
@@ -30,6 +31,7 @@ import { refreshSupabaseSession } from "@/server/supabase/proxy-session";
 const INTERNAL_HEADERS = [
   "x-store-id",
   "x-store-preview",
+  STORE_ROUTE_HEADER,
   "x-pathname",
   "x-nonce",
   REQUEST_ID_HEADER,
@@ -136,6 +138,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
         return finish(response);
       }
       if (decision.preview) requestHeaders.set("x-store-preview", "1");
+      requestHeaders.set(
+        STORE_ROUTE_HEADER,
+        signStoreRoute(env.PREVIEW_HMAC_SECRET, resolution!.storeId, decision.preview),
+      );
       // clone() conserva el origen interno del servidor: la reescritura queda
       // interna. Una URL con otro origen haría que Next la tratara como proxy externo
       // (en local, arrancar con `-H localhost`: Next normaliza 127.0.0.1 a localhost).
@@ -175,13 +181,7 @@ function unavailable(): NextResponse {
 }
 
 export const config = {
-  matcher: [
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  // Sin excepciones por cabecera: un `missing` de prefetch permitía saltarse el
+  // proxy (y con él el bloqueo de /_store y la resolución de host).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
