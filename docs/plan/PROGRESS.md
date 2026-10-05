@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T09 (primitivas de UI: Dialog, Drawer, Toast, Select, Checkbox, Table, Tabs con Radix, A-04).
-- **Siguiente paso exacto:** revisar `src/ui/primitives` y `tokens.css`; instalar solo los paquetes Radix necesarios (justificación en DECISIONS) y escribir cada primitiva con su prueba jsdom + axe.
+- **Siguiente tarea:** F2-T10 (panel: layout `/admin/[storeHandle]` con selector de tienda, aceptación de invitación `/invitacion/[token]`, Ajustes → Equipo con invitar, cambiar rol, suspender y quitar; reset de MFA por SR-1).
+- **Siguiente paso exacto:** escribir primero el E2E (dueña invita a un catalog_manager → acepta con 2FA → no ve Equipo; acciones forzadas devuelven 403) y después las pantallas sobre `getStoreContext` y las RPC de equipo.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -15,7 +15,7 @@
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t08.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t09.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
