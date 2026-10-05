@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { recordSecurityEvent } from "@/server/auth/security-events";
+import { toAppError } from "@/server/db/errors";
+import { callRpc } from "@/server/db/rpc";
+import { peekInvitation } from "@/server/invitations/peek";
 import { getSession } from "@/server/auth/session";
 import { serverEnv } from "@/server/env";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -19,8 +22,15 @@ export interface FormState {
 }
 
 const LOGIN_EMAIL_COOKIE = "staff_login_email";
+/** Token de la invitación en curso (HttpOnly): tras el login y la 2FA se vuelve a ella. */
+const INVITATION_COOKIE = "staff_invitation";
 const emailSchema = z.email().max(254);
 const codeSchema = z.string().regex(/^\d{6}$/);
+
+function secureCookies(): boolean {
+  const env = serverEnv().APP_ENV;
+  return env === "production" || env === "preview";
+}
 
 export async function requestLoginCode(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = emailSchema.safeParse(
@@ -42,7 +52,7 @@ export async function requestLoginCode(_: FormState, formData: FormData): Promis
 
   (await cookies()).set(LOGIN_EMAIL_COOKIE, parsed.data, {
     httpOnly: true,
-    secure: serverEnv().APP_ENV === "production" || serverEnv().APP_ENV === "preview",
+    secure: secureCookies(),
     sameSite: "lax",
     path: "/",
     maxAge: 10 * 60,
@@ -119,5 +129,74 @@ export async function verifyTotp(_: FormState, formData: FormData): Promise<Form
   await recordSecurityEvent(enrolling ? "auth.mfa_enrolled" : "auth.mfa_verified", {
     userId: session.userId,
   });
-  redirect("/admin");
+  const invitation = (await cookies()).get(INVITATION_COOKIE)?.value;
+  redirect(
+    invitation && /^[0-9a-f]{64}$/.test(invitation) ? `/invitacion/${invitation}` : "/admin",
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Invitaciones (GATE0 §7.2): el alta de una cuenta solo ocurre aquí, y solo para
+// el email de una invitación vigente.
+// -----------------------------------------------------------------------------
+
+/** Envía el código al email invitado (crea la cuenta si no existe) y guarda la invitación. */
+export async function startInvitationLogin(token: string): Promise<FormState> {
+  const invitation = await peekInvitation(token);
+  if (!invitation) return { error: "La invitación no es válida o caducó. Pide una nueva." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: invitation.email,
+    options: { shouldCreateUser: true },
+  });
+  if (error?.status === 429) return { error: "Demasiados intentos. Espera un momento." };
+  if (error) return { error: "No pudimos enviar el código. Inténtalo de nuevo." };
+  await recordSecurityEvent("auth.login_code_requested", { metadata: { via: "invitation" } });
+
+  const cookieStore = await cookies();
+  const options = { httpOnly: true, secure: secureCookies(), sameSite: "lax" as const, path: "/" };
+  cookieStore.set(LOGIN_EMAIL_COOKIE, invitation.email, { ...options, maxAge: 10 * 60 });
+  cookieStore.set(INVITATION_COOKIE, token, { ...options, maxAge: 60 * 60 });
+  redirect("/ingresar/codigo");
+}
+
+/** Sesión aal1 ya iniciada: recuerda la invitación y completa la 2FA. */
+export async function continueInvitation(token: string): Promise<void> {
+  (await cookies()).set(INVITATION_COOKIE, token, {
+    httpOnly: true,
+    secure: secureCookies(),
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60,
+  });
+  redirect("/seguridad/2fa");
+}
+
+export async function acceptInvitation(token: string): Promise<FormState> {
+  const session = await getSession();
+  if (!session) redirect(`/invitacion/${token}`);
+  const supabase = await createSupabaseServerClient();
+  let target = "/admin";
+  try {
+    const result = await callRpc<{ store_id: string | null }>(
+      supabase,
+      "access_accept_invitation",
+      {
+        p_token: token,
+      },
+    );
+    if (result.store_id) {
+      const stores = await callRpc<{ store_id: string; handle: string }[]>(
+        supabase,
+        "access_list_my_stores",
+      );
+      const handle = stores.find((s) => s.store_id === result.store_id)?.handle;
+      if (handle) target = `/admin/${handle}`;
+    }
+  } catch (error) {
+    return { error: toAppError(error).message };
+  }
+  (await cookies()).delete(INVITATION_COOKIE);
+  redirect(target);
 }

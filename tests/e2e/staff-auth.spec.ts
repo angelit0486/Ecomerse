@@ -19,10 +19,6 @@ test.beforeAll(async () => {
   storeName = (await createTenant(`e${run}`, ownerId)).name;
 });
 
-test.afterAll(async () => {
-  await admin.end();
-});
-
 async function loginWithEmailCode(page: Page, email: string) {
   const sentAt = Date.now() - 1000;
   await page.goto("/ingresar");

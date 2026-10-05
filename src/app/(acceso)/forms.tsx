@@ -123,3 +123,26 @@ export function TotpEnrollment({
     </div>
   );
 }
+
+/** Botón que ejecuta una acción sin campos y muestra su error. */
+export function ActionButton({
+  action,
+  label,
+}: {
+  action: () => Promise<FormState>;
+  label: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      {state.error ? (
+        <p role="alert" className="text-[13px] text-danger">
+          {state.error}
+        </p>
+      ) : null}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Un momento…" : label}
+      </Button>
+    </form>
+  );
+}

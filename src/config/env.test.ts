@@ -67,6 +67,7 @@ describe("parseServerEnv", () => {
         ...prod,
         EMAIL_PROVIDER: "resend",
         RESEND_API_KEY: "re_0123456789", // gitleaks:allow (valor ficticio de prueba)
+        SUPABASE_SERVICE_ROLE_KEY: "s".repeat(40),
         APP_URL: "https://app.x.test",
       }).EMAIL_PROVIDER,
     ).toBe("resend");

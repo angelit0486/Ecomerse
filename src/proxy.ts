@@ -27,7 +27,13 @@ import { refreshSupabaseSession } from "@/server/supabase/proxy-session";
  */
 
 /** Cabeceras internas que nunca se aceptan del cliente. */
-const INTERNAL_HEADERS = ["x-store-id", "x-store-preview", "x-nonce", REQUEST_ID_HEADER];
+const INTERNAL_HEADERS = [
+  "x-store-id",
+  "x-store-preview",
+  "x-pathname",
+  "x-nonce",
+  REQUEST_ID_HEADER,
+];
 
 const log = createLogger();
 
@@ -62,6 +68,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const secure = env.APP_ENV !== "development" && env.APP_ENV !== "test";
 
   if (kind === "panel") {
+    // Ruta del request para auditar las páginas vistas por soporte (§7.7).
+    requestHeaders.set("x-pathname", pathname);
     if (pathname.startsWith("/api/")) {
       return finish(NextResponse.next({ request: { headers: requestHeaders } }));
     }

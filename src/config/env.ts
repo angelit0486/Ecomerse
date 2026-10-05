@@ -37,6 +37,11 @@ export const serverEnvSchema = z.object({
   EMAIL_FROM: z.string().regex(/^[^<>]{1,80} <[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/),
   RESEND_API_KEY: z.string().min(10).optional(),
   MAILPIT_URL: z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8025"),
+  /**
+   * service_role: SOLO para src/server/privileged (lista blanca §11.5: Auth Admin
+   * para el reset de MFA, Storage Admin en fases posteriores). Nunca toca tablas.
+   */
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
 });
 
 /**
@@ -50,6 +55,9 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   }
   if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
     ctx.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "requerida" });
+  }
+  if (deployed && !env.SUPABASE_SERVICE_ROLE_KEY) {
+    ctx.addIssue({ code: "custom", path: ["SUPABASE_SERVICE_ROLE_KEY"], message: "requerida" });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {
     ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "https obligatorio" });

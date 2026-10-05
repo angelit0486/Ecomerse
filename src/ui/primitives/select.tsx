@@ -19,6 +19,8 @@ export interface SelectProps extends Partial<FieldControlProps> {
   defaultValue?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Nombre accesible cuando no hay etiqueta visible (p. ej. dentro de una tabla). */
+  "aria-label"?: string;
   onValueChange?: (value: string) => void;
 }
 
@@ -34,6 +36,7 @@ export function Select({
   required,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
+  "aria-label": ariaLabel,
   ...rest
 }: SelectProps) {
   return (
@@ -42,6 +45,7 @@ export function Select({
         id={id}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
+        aria-label={ariaLabel}
         className={cn(
           "flex h-9 w-full items-center justify-between rounded-[var(--radius-control)] border border-control",
           "bg-surface px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2",

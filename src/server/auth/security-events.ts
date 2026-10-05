@@ -17,7 +17,8 @@ export type SecurityEventType =
   | "auth.mfa_enrolled"
   | "auth.mfa_verified"
   | "auth.mfa_failed"
-  | "auth.logout";
+  | "auth.logout"
+  | "auth.mfa_reset";
 
 const SEVERITY: Record<SecurityEventType, "info" | "warning"> = {
   "auth.login_code_requested": "info",
@@ -27,6 +28,7 @@ const SEVERITY: Record<SecurityEventType, "info" | "warning"> = {
   "auth.mfa_verified": "info",
   "auth.mfa_failed": "warning",
   "auth.logout": "info",
+  "auth.mfa_reset": "warning",
 };
 
 const log = createLogger();
