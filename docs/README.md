@@ -7,6 +7,7 @@
 | [`DECISIONS.md`](DECISIONS.md)                                                           | Aprobación del propietario, decisiones de implementación y desviaciones declaradas.                                                                                                                                                                                                  |
 | [`runbooks/database-roles.md`](runbooks/database-roles.md)                               | Habilitar y rotar roles de base de datos; disparo del runner de jobs.                                                                                                                                                                                                                |
 | [`phases/`](phases/)                                                                     | Informe de cierre de cada fase.                                                                                                                                                                                                                                                      |
+| [`plan/AUTONOMOUS_PLAN.md`](plan/AUTONOMOUS_PLAN.md)                                     | Plan de ejecución autónoma hasta la Fase 11; progreso en `plan/PROGRESS.md`.                                                                                                                                                                                                         |
 
 ## Índice por tema (secciones del contrato)
 

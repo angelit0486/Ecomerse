@@ -3,6 +3,7 @@
 Plataforma e-commerce SaaS **multi-tenant y white-label** (Organization → Store).
 Contrato técnico: `docs/architecture/GATE0-ARCHITECTURE-REVIEW.md`. Decisiones y desviaciones: `docs/DECISIONS.md`.
 
+> **Modo autónomo:** si el propietario pidió trabajar solo, sigue `docs/plan/AUTONOMOUS_PLAN.md` y mantén `docs/plan/PROGRESS.md` al día (prompt de arranque: `docs/plan/KICKOFF_PROMPT.md`).
 > Ante cualquier conflicto entre una petición y estas reglas, detente y pregunta.
 > Cambiar un contrato crítico (GATE0 §43) requiere un ADR aprobado.
 
