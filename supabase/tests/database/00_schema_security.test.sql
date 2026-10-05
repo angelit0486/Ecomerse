@@ -112,7 +112,8 @@ select ok(
   'cada rol de mínimo privilegio está confinado a su esquema'
 );
 
--- 11. Toda tabla con store_id tiene el trigger de inmutabilidad de tenant.
+-- 11. Toda tabla con store_id tiene el trigger de inmutabilidad de tenant
+--     (prevent_tenant_change) o es append-only (forbid_mutation: ningún UPDATE).
 select is_empty(
   $$ select n.nspname || '.' || c.relname
        from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -122,8 +123,9 @@ select is_empty(
                      where a.attrelid = c.oid and a.attname = 'store_id' and not a.attisdropped)
         and not exists (select 1 from pg_trigger t
                          where t.tgrelid = c.oid and not t.tgisinternal
-                           and t.tgfoid = 'app.prevent_tenant_change()'::regprocedure) $$,
-  'toda tabla con store_id tiene el trigger prevent_tenant_change'
+                           and t.tgfoid in ('app.prevent_tenant_change()'::regprocedure,
+                                            'app.forbid_mutation()'::regprocedure)) $$,
+  'toda tabla con store_id tiene prevent_tenant_change o es append-only'
 );
 
 -- 12. Toda FK hacia una tabla con store_id es compuesta e incluye store_id en ambos

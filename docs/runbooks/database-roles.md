@@ -36,6 +36,20 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
 2. **Pruebas contra Supabase real** (D-F1-11): `supabase link` + `supabase db push` + `supabase test db`. Deben pasar las mismas pruebas pgTAP que en CI.
 3. **Advisors** (Dashboard → Advisors): sin hallazgos de seguridad.
 4. **PITR** activado (Q-B5) antes del primer cliente de pago.
+5. **Supabase Auth** (Dashboard → Authentication), igual que `supabase/config.toml`:
+   - Email OTP: longitud 6, **expiración 600 s** (10 min).
+   - MFA → TOTP: **inscripción y verificación habilitadas**.
+   - La plantilla de email debe incluir el código (`{{ .Token }}`): los compradores entran con código, que funciona en cualquier dominio.
+6. **Dominio raíz de las tiendas** (lo exige el alta de tenants; la decisión del nombre está pendiente, N-3):
+   ```sql
+   insert into public.platform_settings (key, value)
+   values ('storefront.root_domain', '{"domain": "<dominio-de-tiendas>"}');
+   ```
+7. **Primer administrador de plataforma** (una sola vez, después de que esa persona cree su cuenta y active TOTP):
+   ```sql
+   insert into public.platform_staff (user_id, role)
+   select id, 'platform_owner' from auth.users where email = '<email>';
+   ```
 
 ## 4. Rotación de contraseñas (≤ 2 h, §36.2)
 
