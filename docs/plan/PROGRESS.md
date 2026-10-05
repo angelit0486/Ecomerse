@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T11 (onboarding en 4 pasos: cuenta + 2FA, datos de la tienda + branding con validación de contraste y vista previa, pagos según A-02, guardar en borrador).
-- **Siguiente paso exacto:** leer GATE0 §20 (theming) y la decisión A-02; escribir el E2E del flujo (el contraste insuficiente bloquea guardar) y después la RPC de actualización de datos de tienda + tema en borrador.
+- **Siguiente tarea:** F2-T12 (consola de plataforma mínima: crear tenant, suspender o reactivar, conceder o revocar soporte, ver concesiones).
+- **Siguiente paso exacto:** añadir las RPC de lectura de plataforma (`platform_list_organizations`, `platform_list_support_grants`) con pgTAP; después `/platform` con guardia de `platform_staff` y el E2E (`platform_support` no crea tenants; concesión con motivo).
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -15,7 +15,7 @@
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t10.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t11.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 

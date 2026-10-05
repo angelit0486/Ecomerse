@@ -58,6 +58,9 @@ export async function createTenant(key: string, ownerId: string) {
   const [store] = await admin<{ id: string }[]>`
     insert into public.stores (organization_id, name, handle, currency, country, timezone)
     values (${org!.id}, ${name}, ${`t${key}`}, 'MXN', 'MX', 'America/Mexico_City') returning id`;
+  await admin`insert into public.store_domains (store_id, hostname, type, status, is_primary)
+              values (${store!.id}, ${`t${key}.localhost`}, 'platform_subdomain', 'active', true)`;
+  await admin`insert into public.store_themes (store_id) values (${store!.id})`;
   return { orgId: org!.id, storeId: store!.id, name, handle: `t${key}` };
 }
 

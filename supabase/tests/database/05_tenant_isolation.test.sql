@@ -76,8 +76,8 @@ select set_eq(
 );
 select is(tests.row_count($$ update public.stores set name = name where id = tests.fx('store_a') $$), 1::bigint,
   'control positivo: el dueño de A puede modificar su tienda');
-select is(tests.row_count($$ update public.store_themes set draft_settings = '{"colors":{"primary":"#1d4ed8"}}'
-  where store_id = tests.fx('store_a') $$), 1::bigint,
+-- Desde F2-T11 el borrador solo se guarda con la RPC que valida contraste (D-F2-31).
+select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"primary":"#1d4ed8"}}') $$,
   'control positivo: el dueño de A puede editar el borrador de su branding');
 select tests.logout();
 

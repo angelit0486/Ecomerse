@@ -1,0 +1,73 @@
+import { expect, test } from "@playwright/test";
+
+import { admin, createAuthUser, createTenant, loginNewStaff, uniq } from "./support";
+
+/**
+ * F2-T11: onboarding en 4 pasos. El contraste insuficiente bloquea guardar; la
+ * tienda queda en borrador y se puede ver con la vista previa firmada.
+ */
+const run = uniq();
+const ownerEmail = `duena-o-${run}@example.test`;
+let tenant: Awaited<ReturnType<typeof createTenant>>;
+
+test.beforeAll(async () => {
+  tenant = await createTenant(`o${run}`, await createAuthUser(ownerEmail));
+});
+
+test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", async ({
+  page,
+  context,
+}) => {
+  await loginNewStaff(page, ownerEmail);
+  await page.goto(`/admin/${tenant.handle}`);
+  await page.getByRole("link", { name: "Configurar tienda" }).click();
+  await expect(page.getByRole("heading", { name: "Configura tu tienda" })).toBeVisible();
+
+  // Paso 2a: datos de la tienda (con validación del servidor).
+  await page.getByLabel("Email de contacto").fill("no-es-email");
+  await page.getByRole("button", { name: "Guardar datos" }).click();
+  await expect(page.getByText("Escribe un email válido.")).toBeVisible();
+
+  await page.getByLabel("Nombre de la tienda").fill(`Moda Ana ${run}`);
+  await page.getByLabel("Email de contacto").fill("Hola@ModaAna.mx");
+  await page.getByLabel("Teléfono").fill("+52 55 1234 5678");
+  await page.getByRole("combobox", { name: "Zona horaria" }).click();
+  await page.getByRole("option", { name: "America/Monterrey" }).click();
+  await page.getByRole("button", { name: "Guardar datos" }).click();
+  await expect(page.getByText("Datos de la tienda guardados.")).toBeVisible();
+
+  // Paso 2b: el contraste insuficiente bloquea guardar.
+  const save = page.getByRole("button", { name: "Guardar marca en borrador" });
+  await page.getByLabel("Texto", { exact: true }).fill("#cccccc");
+  await expect(page.getByText("El texto no se lee bien sobre el fondo")).toBeVisible();
+  await expect(save).toBeDisabled();
+
+  await page.getByLabel("Texto", { exact: true }).fill("#0b1320");
+  await page.getByLabel("Color principal (botones)").fill("#0f766e");
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(page.getByText("Branding guardado en borrador.")).toBeVisible();
+
+  // Paso 3 según A-02 y paso 4: borrador con vista previa.
+  await expect(page.getByRole("button", { name: "Conectar pagos (próximamente)" })).toBeDisabled();
+  const [preview] = await Promise.all([
+    context.waitForEvent("page"),
+    page.getByRole("link", { name: "Ver vista previa de la tienda" }).click(),
+  ]);
+  await preview.waitForLoadState();
+  await expect(preview.getByText("Vista previa: solo tú puedes ver esta tienda.")).toBeVisible();
+  await expect(preview.getByRole("heading", { name: `Moda Ana ${run}` })).toBeVisible();
+
+  const [store] = await admin<{ status: string; contact_email: string; draft: unknown }[]>`
+    select s.status, s.contact_email, t.draft_settings as draft
+      from public.stores s join public.store_themes t on t.store_id = s.id
+     where s.id = ${tenant.storeId}`;
+  expect(store).toMatchObject({ status: "draft", contact_email: "hola@modaana.mx" });
+  expect(store!.draft).toMatchObject({ colors: { foreground: "#0b1320", primary: "#0f766e" } });
+
+  // Sin la cookie de vista previa, el borrador no es visible para nadie.
+  const anonymous = await context.browser()!.newPage();
+  const response = await anonymous.goto(`http://${tenant.handle}.localhost:3000/`);
+  expect(response?.status()).toBe(404);
+  await anonymous.close();
+});

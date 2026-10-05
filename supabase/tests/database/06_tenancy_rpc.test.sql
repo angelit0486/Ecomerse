@@ -189,13 +189,12 @@ select tests.logout();
 
 -- Branding: borrador → publicar --------------------------------------------------------------
 select tests.login('duena');
-update public.store_themes set draft_settings = '{"colors":{"primary":"#be123c"}}'
- where store_id = tests.fx('store_n');
+-- Desde F2-T11 el borrador se guarda con la RPC que valida contraste (D-F2-31).
+select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#be123c"}}');
 select lives_ok($$ select public.appearance_publish_theme(tests.fx('store_n')) $$, 'la dueña publica su branding');
 select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_n')) $$, 'P0001', 'validation_failed',
   'publicar sin borrador pendiente es un error explícito');
-update public.store_themes set draft_settings = '{"colors":{"primary":"#000000"}}'
- where store_id = tests.fx('store_n');
+select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#000000"}}');
 select tests.logout();
 
 select is(tests.gateway_store_public(tests.fx('store_n')) #>> '{theme,settings,colors,primary}', '#be123c',

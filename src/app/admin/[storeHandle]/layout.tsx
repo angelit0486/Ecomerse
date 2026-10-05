@@ -36,6 +36,13 @@ export default async function StoreLayout({ children, params }: Props) {
   const base = `/admin/${ctx.store.handle}`;
   const nav = [
     { href: base, label: "Inicio", show: true },
+    {
+      href: `${base}/configuracion`,
+      label: "Configurar tienda",
+      show:
+        ctx.store.status === "draft" &&
+        (hasPermission(ctx, "store.update") || hasPermission(ctx, "appearance.manage")),
+    },
     { href: `${base}/ajustes/equipo`, label: "Equipo", show: hasPermission(ctx, "staff.read") },
   ].filter((item) => item.show);
 
