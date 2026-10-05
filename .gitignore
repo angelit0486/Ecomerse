@@ -36,3 +36,6 @@ pnpm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Stack local sin Docker (scripts/dev/stack.sh)
+.stack/

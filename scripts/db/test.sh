@@ -28,6 +28,7 @@ createdb "$DB"
 
 echo "▸ Aplicando shim de Supabase (solo pruebas)"
 psql_db -f scripts/db/supabase-shim.sql
+psql_db -f scripts/db/supabase-shim-auth.sql
 
 shopt -s nullglob
 migrations=(supabase/migrations/*.sql)

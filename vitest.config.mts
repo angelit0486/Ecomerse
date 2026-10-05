@@ -35,6 +35,17 @@ export default defineConfig({
           testTimeout: 30_000,
         },
       },
+      {
+        extends: true,
+        test: {
+          // Requiere el stack local levantado: `bash scripts/dev/stack.sh up`.
+          name: "stack",
+          include: ["tests/stack/**/*.test.ts"],
+          environment: "node",
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
     ],
   },
 });

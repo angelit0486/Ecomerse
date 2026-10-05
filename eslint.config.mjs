@@ -47,7 +47,12 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/server/db/**", "src/server/jobs/store.ts", "tests/integration/**"],
+    files: [
+      "src/server/db/**",
+      "src/server/jobs/store.ts",
+      "tests/integration/**",
+      "tests/stack/**",
+    ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
     },

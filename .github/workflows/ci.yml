@@ -62,6 +62,35 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
+  stack:
+    name: Stack local · Auth real + PostgREST + RLS
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: PostgreSQL + pgTAP
+        run: |
+          PG_MAJOR=$(ls /usr/lib/postgresql | sort -n | tail -1)
+          sudo apt-get update -q
+          sudo apt-get install -y -q "postgresql-${PG_MAJOR}-pgtap"
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "alter user postgres password 'postgres';"
+      - name: Levantar stack (binarios fijados con sha256)
+        run: bash scripts/dev/stack.sh up
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+      - run: pnpm test:stack
+      - name: Logs del stack
+        if: failure()
+        run: tail -n 100 .stack/run/*.log
+
   secrets:
     name: Escaneo de secretos
     runs-on: ubuntu-24.04

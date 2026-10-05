@@ -15,6 +15,8 @@ pnpm dev                # requiere .env.local (plantilla: .env.example)
 pnpm verify             # lint + formato + tipos + unit + build  (obligatorio antes de cada commit)
 pnpm db:test            # migraciones + pgTAP + integración contra PostgreSQL local
 pnpm test               # solo unit
+pnpm stack up           # stack local sin Docker (Auth + PostgREST + Mailpit); ver docs/runbooks/local-stack.md
+pnpm test:stack         # extremo a extremo contra ese stack
 ```
 
 `pnpm db:test` necesita PostgreSQL ≥ 15 con pgTAP (`postgresql-<v>-pgtap`, `pg_prove`). Por defecto usa `postgres:postgres@localhost:5432`.

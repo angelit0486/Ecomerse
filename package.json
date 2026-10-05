@@ -18,6 +18,8 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:integration": "vitest run --project integration",
+    "test:stack": "vitest run --project stack",
+    "stack": "bash scripts/dev/stack.sh",
     "db:test": "bash scripts/db/test.sh",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
   },
