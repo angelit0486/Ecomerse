@@ -1,0 +1,13 @@
+# Revisión obligatoria del propietario en las zonas de seguridad (GATE0 §11.2 L9).
+/supabase/                 @angelii33
+/scripts/db/               @angelii33
+/src/server/db/            @angelii33
+/src/server/security/      @angelii33
+/src/server/privileged/    @angelii33
+/src/server/jobs/          @angelii33
+/src/proxy.ts              @angelii33
+/src/config/env.ts         @angelii33
+/eslint.config.mjs         @angelii33
+/.github/                  @angelii33
+/CLAUDE.md                 @angelii33
+/docs/architecture/        @angelii33

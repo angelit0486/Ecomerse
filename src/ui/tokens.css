@@ -1,0 +1,28 @@
+/*
+ * Design tokens del panel y la consola de plataforma (GATE0 §32.2).
+ * Contraste verificado por src/ui/tokens.test.ts (WCAG 2.2 AA):
+ *   texto ≥ 4.5:1 · bordes de controles y foco ≥ 3:1.
+ * Los tokens del storefront son de cada tienda (Fase 9) y no viven aquí.
+ */
+@theme {
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-fg: #1b1f24;
+  --color-fg-muted: #59636e;
+  --color-border: #dde1e6;
+  --color-control: #858e99;
+  --color-accent: #2448c4;
+  --color-accent-hover: #1c3aa3;
+  --color-accent-fg: #ffffff;
+  --color-danger: #b42318;
+  --color-danger-fg: #ffffff;
+  --color-success: #1a7f37;
+  --color-warning: #9a6700;
+  --color-focus: #2448c4;
+
+  --radius-control: 6px;
+  --radius-container: 8px;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint · Formato · Tipos · Unit · Build
+    runs-on: ubuntu-24.04
+    env:
+      # Valores ficticios: el build valida el esquema de entorno, no se conecta a nada.
+      APP_ENV: test
+      WORKER_DATABASE_URL: postgres://system_worker:ci@localhost:5432/ci
+      CRON_SECRET: ci-cron-secret-0000000000000000000000
+      JOBS_HMAC_SECRET: ci-hmac-secret-0000000000000000000000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  database:
+    name: Migraciones · pgTAP · Integración
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: PostgreSQL + pgTAP (el mismo motor que la verificación local)
+        run: |
+          PG_MAJOR=$(ls /usr/lib/postgresql | sort -n | tail -1)
+          echo "PostgreSQL ${PG_MAJOR}"
+          sudo apt-get update -q
+          sudo apt-get install -y -q "postgresql-${PG_MAJOR}-pgtap" libtap-parser-sourcehandler-pgtap-perl
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "alter user postgres password 'postgres';"
+      - run: pnpm db:test
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+  secrets:
+    name: Escaneo de secretos
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
