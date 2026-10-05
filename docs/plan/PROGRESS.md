@@ -6,15 +6,15 @@
 ## Ahora
 
 - **Fase actual:** 2 — Identity, Tenancy & Access (A + B hechas).
-- **Siguiente tarea:** F2-T03 (RPC de soporte: concesión ≤ 60 min con motivo, revocación por ambos lados, aviso al dueño, auditoría de páginas).
-- **Siguiente paso exacto:** leer GATE0 §7.7 y la tabla `support_access_grants`; escribir primero la pgTAP (concesión, expiración, revocación, aviso encolado) y después las RPC.
+- **Siguiente tarea:** F2-T04 (feature flags con overrides plan/organización/tienda, kill switch, `app.flag_enabled`, `platform_set_tenant_status`).
+- **Siguiente paso exacto:** leer GATE0 §27.2 (orden de resolución) y §9.2 (`feature_flags`, `feature_flag_overrides`); escribir primero la pgTAP del orden de resolución y de la suspensión de tenant, después la migración.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local.
 
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t01.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f2-t03.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
@@ -29,7 +29,7 @@
 | 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones           |
 | 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación  |
 | 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones |
-| 2    | F2-T03 RPC de soporte                    | pendiente                   |                                              |
+| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones |
 | 2    | F2-T04 Feature flags + estado de tenant  | pendiente                   |                                              |
 | 2    | F2-T05 Capa de servidor                  | pendiente                   |                                              |
 | 2    | F2-T06 Proxy de dominios y vista previa  | pendiente                   |                                              |
@@ -51,7 +51,8 @@
 
 ## Pendientes menores registrados
 
-- F2-T08: email de aviso de transferencia de propiedad (D-F2-16).
+- F2-T08: manejadores de `access.invitation_email` y `access.support_access_notice` (ya se encolan); email de aviso de transferencia de propiedad (D-F2-16).
+- Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).
 - F2-T05: mapear `invitation_invalid` e `invitation_email_mismatch` (RPC de aceptación) a códigos de `AppError`.
 
 ## Ideas para después (no se implementan sin aprobación)
