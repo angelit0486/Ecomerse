@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { recordSecurityEvent } from "@/server/auth/security-events";
-import { toAppError } from "@/server/db/errors";
+import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { peekInvitation } from "@/server/invitations/peek";
 import { getSession } from "@/server/auth/session";
@@ -195,7 +195,7 @@ export async function acceptInvitation(token: string): Promise<FormState> {
       if (handle) target = `/admin/${handle}`;
     }
   } catch (error) {
-    return { error: toAppError(error).message };
+    return { error: reportActionError("invitation", error).message };
   }
   (await cookies()).delete(INVITATION_COOKIE);
   redirect(target);

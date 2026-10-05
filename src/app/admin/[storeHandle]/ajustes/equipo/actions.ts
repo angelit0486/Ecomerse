@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getStoreContext } from "@/server/auth/store-context";
-import { toAppError } from "@/server/db/errors";
+import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { resetMemberMfa } from "@/server/team/mfa-reset";
@@ -37,7 +37,7 @@ async function run(
     const supabase = await createSupabaseServerClient();
     await work({ supabase, storeId: ctx.store.id, organizationId: ctx.store.organization_id });
   } catch (error) {
-    const appError = toAppError(error);
+    const appError = reportActionError("team", error);
     return {
       error: appError.message,
       ...(appError.fields ? { fields: { ...appError.fields } } : {}),

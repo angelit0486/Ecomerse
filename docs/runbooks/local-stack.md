@@ -52,6 +52,6 @@ pnpm dev                         # o: pnpm build && pnpm start -H localhost -p 3
 ```
 
 - Panel: `http://localhost:3000` (el host de `APP_HOSTNAME`).
-- Tiendas: `http://{handle}.localhost:3000`. El navegador resuelve `*.localhost` a 127.0.0.1. Para que una tienda tenga ese host, su fila de `store_domains` debe usar `{handle}.localhost`; con `platform_settings.storefront.root_domain = {"domain": "localhost"}` lo hace el alta asistida.
+- Tiendas: `http://{handle}.tiendas.localhost:3000`. El navegador resuelve cualquier `*.localhost` a 127.0.0.1. `stack.sh` configura `platform_settings.storefront.root_domain = {"domain": "tiendas.localhost"}`, así el alta asistida crea ese subdominio. El dominio raíz debe tener al menos un punto.
 - Arranca siempre con `-H localhost`, nunca con `-H 127.0.0.1`. Next normaliza 127.0.0.1 a `localhost` en `request.nextUrl`, y entonces las reescrituras del proxy se tratan como proxy externo.
 - `tests/stack/storefront-routing.test.ts` necesita la app levantada y el mismo `PREVIEW_HMAC_SECRET`: `set -a; . ./.env.local; set +a; pnpm test:stack`.

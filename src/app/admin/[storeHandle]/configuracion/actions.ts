@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { COLOR_KEYS } from "@/lib/theme/palette";
 import { getStoreContext } from "@/server/auth/store-context";
-import { toAppError } from "@/server/db/errors";
+import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -24,7 +24,7 @@ const FIELD_MESSAGES: Record<string, string> = {
 };
 
 function failure(error: unknown, messages: Record<string, string> = {}): StepState {
-  const appError = toAppError(error);
+  const appError = reportActionError("onboarding", error);
   const fields = appError.fields
     ? Object.fromEntries(
         Object.keys(appError.fields).map((k) => [k, messages[k] ?? "Revisa este dato."]),

@@ -133,6 +133,9 @@ apply_migrations() {
     psql_q -d "$DB" -1 -f "$f"
   done
   psql_q -d "$DB" -f scripts/db/local-roles.sql
+  # Solo desarrollo: las tiendas viven en {handle}.tiendas.localhost (runbook local-stack).
+  psql_q -d "$DB" -c "insert into public.platform_settings (key, value)
+    values ('storefront.root_domain', '{\"domain\": \"tiendas.localhost\"}') on conflict (key) do nothing"
 }
 
 cmd_up() {
