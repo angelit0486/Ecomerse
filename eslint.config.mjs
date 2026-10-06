@@ -9,7 +9,7 @@ import nextTypescript from "eslint-config-next/typescript";
  *  - src/server/privileged/** (service role, lista blanca de 2 usos) solo se
  *    importa desde los servicios autorizados: src/server/team/mfa-reset.ts (SR-1)
  *    y el registro de jobs, que inyecta Storage Admin al worker de medios (SR-2).
- *  - dangerouslySetInnerHTML prohibido (solo SafeHtml, Fase 3+).
+ *  - dangerouslySetInnerHTML prohibido salvo en src/ui/safe-html.tsx (SafeHtml).
  */
 const restrictedImports = {
   paths: [
@@ -67,5 +67,10 @@ export default defineConfig([
     rules: {
       "no-restricted-imports": ["error", { paths: restrictedImports.paths }],
     },
+  },
+  {
+    // Única excepción a react/no-danger: sanitiza siempre al renderizar (T-06).
+    files: ["src/ui/safe-html.tsx"],
+    rules: { "react/no-danger": "off" },
   },
 ]);

@@ -3,6 +3,22 @@ import { describe, expect, it } from "vitest";
 import { productInputSchema } from "./product-input";
 
 describe("productInputSchema", () => {
+  it("guarda la descripción ya sanitizada (T-06)", () => {
+    const parsed = productInputSchema.parse({
+      title: "Gorra",
+      description_html:
+        '<p onclick="x()">Hola</p><script>alert(1)</script><img src=x onerror=alert(1)>',
+      variants: [{ price: 9900 }],
+    });
+    expect(parsed.description_html).toBe("<p>Hola</p>");
+    const onlyScript = productInputSchema.parse({
+      title: "Gorra",
+      description_html: "<script>alert(1)</script>",
+      variants: [{ price: 9900 }],
+    });
+    expect(onlyScript.description_html).toBeNull();
+  });
+
   it("acepta un producto simple con valores por defecto", () => {
     const parsed = productInputSchema.parse({ title: "Gorra", variants: [{ price: 9900 }] });
     expect(parsed.variants[0]).toMatchObject({

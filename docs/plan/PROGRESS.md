@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T04 (sanitización de `description_html` y componente `SafeHtml`, única excepción a `react/no-danger`).
-- **Siguiente paso exacto:** elegir sanitizador (lista blanca de etiquetas y atributos, sin estilos ni scripts; justificar la dependencia) y escribir primero las pruebas con payloads XSS conocidos.
+- **Siguiente tarea:** F3-T05 (UI del catálogo: listado con filtros y cursor, editor simple y con variantes, categorías, marcas y subida de imágenes; E2E de la "Playera" y axe).
+- **Siguiente paso exacto:** CSP `connect-src` del panel para el PUT directo a Storage (URL de Supabase), luego la página de listado `/admin/[storeHandle]/productos` con `catalog_search_products`.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F3-T03. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F3-T04. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -44,7 +44,7 @@ Todos desde `7549db7` (Gate 1) hasta F3-T03. Bundle de respaldo: `pruva-f3.bundl
 | 3    | F3-T01 Tablas del catálogo               | hecha                       | `9ae9edc` · 42 pgTAP                                                             |
 | 3    | F3-T02 RPC del catálogo                  | hecha                       | `2a4ed6e` · 54 pgTAP                                                             |
 | 3    | F3-T03 Medios (Storage, worker, purga)   | hecha                       | F3-T03 · 65 pgTAP, 12 unit, 9 integración, 5 stack con Storage real + mutaciones |
-| 3    | F3-T04 SafeHtml                          | pendiente                   |                                                                                  |
+| 3    | F3-T04 SafeHtml                          | hecha                       | F3-T04 · 45 unit de XSS + SafeHtml + esquema; mutación de `react/no-danger`      |
 | 3    | F3-T05 UI del catálogo                   | pendiente                   |                                                                                  |
 | 3    | F3-T06 Logo de la tienda                 | pendiente                   |                                                                                  |
 | 4–11 | Ver el plan §4                           | pendiente                   |                                                                                  |

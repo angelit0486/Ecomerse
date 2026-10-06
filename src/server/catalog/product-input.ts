@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { MAX_OPTIONS } from "@/lib/catalog/variants";
+import { MAX_DESCRIPTION_BYTES, sanitizeMerchantHtml } from "@/server/security/sanitize";
 
 /**
  * Contrato del payload de catalog_upsert_product (supabase/migrations/
@@ -36,7 +37,13 @@ export const productInputSchema = z
     id: z.uuid().optional(),
     title: z.string().trim().min(1).max(200),
     slug: z.string().trim().max(120).optional(),
-    description_html: z.string().max(102400).optional().nullable(),
+    // Se guarda sanitizado (T-06); SafeHtml vuelve a sanitizar al renderizar.
+    description_html: z
+      .string()
+      .optional()
+      .nullable()
+      .transform((html) => (html ? sanitizeMerchantHtml(html) || null : html))
+      .refine((html) => !html || Buffer.byteLength(html) <= MAX_DESCRIPTION_BYTES),
     brand_id: z.uuid().optional().nullable(),
     tags: z.array(z.string().trim().min(1).max(60)).max(50).default([]),
     seo_title: z.string().max(70).optional().nullable(),
