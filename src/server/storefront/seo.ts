@@ -53,9 +53,13 @@ export function pageMetadata(input: {
   image?: ImageRef | null | undefined;
   type?: "website" | "product";
 }): Metadata {
-  const { store, preview, path, title, description, image } = input;
+  const { store, preview, path, title, image } = input;
   const url = canonicalUrl(store, path);
   const fullTitle = title === store.name ? title : `${title} · ${store.name}`;
+  // Sin texto propio, una descripción neutra con datos reales (nunca inventados).
+  const description =
+    input.description ||
+    (title === store.name ? `Tienda en línea de ${store.name}.` : `${title} en ${store.name}.`);
   const images = image
     ? [
         {
@@ -68,14 +72,14 @@ export function pageMetadata(input: {
     : undefined;
   return {
     title: { absolute: fullTitle },
-    ...(description ? { description } : {}),
+    description,
     alternates: { canonical: url },
     robots: indexable(store, preview)
       ? { index: true, follow: true }
       : { index: false, follow: false },
     openGraph: {
       title: fullTitle,
-      ...(description ? { description } : {}),
+      description,
       url,
       siteName: store.name,
       type: "website",
@@ -85,7 +89,7 @@ export function pageMetadata(input: {
     twitter: {
       card: images ? "summary_large_image" : "summary",
       title: fullTitle,
-      ...(description ? { description } : {}),
+      description,
       ...(images ? { images: images.map((i) => i.url) } : {}),
     },
   };

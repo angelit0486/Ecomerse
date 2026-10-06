@@ -57,6 +57,15 @@ describe("SEO por tienda", () => {
     expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
   });
 
+  it("sin descripción propia: una neutra con el nombre real", () => {
+    expect(pageMetadata({ store, preview: false, path: "/", title: "Moda Ana" }).description).toBe(
+      "Tienda en línea de Moda Ana.",
+    );
+    expect(
+      pageMetadata({ store, preview: false, path: "/productos", title: "Productos" }).description,
+    ).toBe("Productos en Moda Ana.");
+  });
+
   it("extracto sin HTML y JSON-LD sin '<'", () => {
     expect(excerpt("<p>Hola <b>mundo</b></p>")).toBe("Hola mundo");
     expect(excerpt("palabra ".repeat(50))!.length).toBeLessThanOrEqual(160);

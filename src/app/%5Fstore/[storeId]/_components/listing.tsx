@@ -74,7 +74,12 @@ export async function ProductListing({
           <p className="mt-1 text-sm text-[var(--sf-muted)]">{emptyText}</p>
         </section>
       ) : (
-        <ProductGrid products={page.items} store={store} eager={cursor ? 0 : 4} />
+        <section aria-labelledby="sf-resultados">
+          <h2 id="sf-resultados" className="sr-only">
+            Productos
+          </h2>
+          <ProductGrid products={page.items} store={store} eager={cursor ? 0 : 4} />
+        </section>
       )}
       <Pagination
         firstHref={cursor ? params({}) : null}
