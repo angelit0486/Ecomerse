@@ -45,7 +45,7 @@ export async function createTenant(key: string, ownerId: string) {
     insert into public.plans (key, name) values ('e2e_plan', 'e2e_plan')
     on conflict (key) do update set name = excluded.name returning id`;
   await admin`insert into public.plan_entitlements (plan_id, key, value_int)
-              values (${plan!.id}, 'max_stores', 5), (${plan!.id}, 'max_staff', 20)
+              values (${plan!.id}, 'max_stores', 5), (${plan!.id}, 'max_staff', 20), (${plan!.id}, 'max_products', 500)
               on conflict do nothing`;
   const [org] = await admin<{ id: string }[]>`
     insert into public.organizations (name, slug, country)

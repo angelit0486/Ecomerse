@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T01 (ver backlog de la Fase 3 en `AUTONOMOUS_PLAN.md` §4).
-- **Siguiente paso exacto:** leer GATE0 §14 (catálogo), §23 (búsqueda) y el spike S-3 (imágenes); diseñar las tablas de catálogo con `store_id`, FK compuestas y RLS, y escribir primero la pgTAP de aislamiento.
+- **Siguiente tarea:** F3-T02 (RPC del catálogo: `catalog_upsert_product` transaccional, publicar con validación, archivar, borrado lógico y restauración, duplicar, mover categoría, búsqueda del panel).
+- **Siguiente paso exacto:** definir el contrato JSON de `catalog_upsert_product` (producto + opciones + variantes + costos + categorías) y escribir primero su pgTAP (simple, variable, cambio de opciones, permisos, aislamiento).
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
