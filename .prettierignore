@@ -8,3 +8,6 @@ supabase/.temp
 # El contrato técnico se conserva tal como fue aprobado.
 docs/architecture
 CAMBIOS-FASE-1-2.md
+
+# Generado por scripts/docs/golden-cart-cases.mjs (la prueba compara el texto exacto)
+docs/phases/golden-cart-cases.md

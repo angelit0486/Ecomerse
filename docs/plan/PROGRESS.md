@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 6 — Customers, Cart, Shipping, Taxes, Discounts & Checkout (Fase 5 cerrada en local: `docs/phases/PHASE-05-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F6-T02 (`app.calculate_cart` con tabla de casos dorados).
-- **Siguiente paso exacto:** `app.calculate_cart(store, cart, rate?, code?)` (half-even, residuo mayor, impuesto incluido o no, `free_over` sobre el subtotal descontado) + `docs/phases/golden-cart-cases.md` revisable por el propietario.
+- **Siguiente tarea:** F6-T03 (`storefront.cart_*` y `storefront.place_order`).
+- **Siguiente paso exacto:** `storefront.cart_*` con token (hash en la base) y `storefront.place_order` §17.4 (idempotencia, `price_changed`, reserva, contador, cupón, pago `created`, rollback total); pgTAP de cada error §17.6 y concurrencia del último cupón y la última unidad.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -59,6 +59,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 5    | F5-T06 Editor de páginas y menús              | hecha                       | 20 pgTAP + E2E (crear, publicar, sanitizar, menú en la tienda) con axe                                          |
 | 5    | Gate F5                                       | hecha (CI pendiente por P0) | `docs/phases/PHASE-05-REPORT.md` · 809 pgTAP, 29 stack, 18 E2E, Lighthouse 100 local                            |
 | 6    | F6-T01 Tablas de checkout                     | hecha                       | 30 pgTAP (totales, snapshot, transiciones, append-only) + aislamiento con todas las tablas pobladas (mutación)  |
+| 6    | F6-T02 `app.calculate_cart`                   | hecha                       | 17 casos dorados (integración, mutación half-even) + 24 pgTAP sobre datos reales                                |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                 |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

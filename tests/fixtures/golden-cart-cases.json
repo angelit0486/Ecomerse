@@ -1,0 +1,304 @@
+{
+  "description": "Casos dorados de app.cart_totals (GATE0 §17.3). Montos en centavos; tasas en puntos base (1600 = 16 %). Revisables por el propietario: docs/phases/golden-cart-cases.md se genera de este archivo.",
+  "cases": [
+    {
+      "id": "iva-incluido-simple",
+      "title": "Una línea, IVA 16 % incluido en el precio",
+      "lines": [{ "unit_price": 11600, "quantity": 1 }],
+      "rules": { "tax_rate_bps": 1600, "prices_include_tax": true },
+      "expected": {
+        "subtotal": 11600,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 1600,
+        "total": 11600,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "iva-aparte-simple",
+      "title": "Una línea, IVA 16 % aparte (se suma al total)",
+      "lines": [{ "unit_price": 10000, "quantity": 1 }],
+      "rules": { "tax_rate_bps": 1600, "prices_include_tax": false },
+      "expected": {
+        "subtotal": 10000,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 1600,
+        "total": 11600,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "redondeo-mitad-arriba",
+      "title": "Impuesto de 1.5 centavos: mitad al par → 2",
+      "lines": [{ "unit_price": 10, "quantity": 1 }],
+      "rules": { "tax_rate_bps": 1500, "prices_include_tax": false },
+      "expected": {
+        "subtotal": 10,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 2,
+        "total": 12,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "redondeo-mitad-abajo",
+      "title": "Impuesto de 4.5 centavos: mitad al par → 4 (no 5)",
+      "lines": [{ "unit_price": 30, "quantity": 1 }],
+      "rules": { "tax_rate_bps": 1500, "prices_include_tax": false },
+      "expected": {
+        "subtotal": 30,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 4,
+        "total": 34,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "impuesto-por-linea",
+      "title": "El impuesto se redondea por línea y luego se suma (2 + 2 = 4, no 3)",
+      "lines": [
+        { "unit_price": 10, "quantity": 1 },
+        { "unit_price": 10, "quantity": 1 }
+      ],
+      "rules": { "tax_rate_bps": 1500, "prices_include_tax": false },
+      "expected": {
+        "subtotal": 20,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 4,
+        "total": 24,
+        "allocations": [0, 0]
+      }
+    },
+    {
+      "id": "porcentaje-mitad-arriba",
+      "title": "10 % de 15 centavos = 1.5 → 2",
+      "lines": [{ "unit_price": 15, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "percentage", "value": 1000 }
+      },
+      "expected": {
+        "subtotal": 15,
+        "discount_total": 2,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 13,
+        "allocations": [2]
+      }
+    },
+    {
+      "id": "porcentaje-mitad-abajo",
+      "title": "10 % de 25 centavos = 2.5 → 2",
+      "lines": [{ "unit_price": 25, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "percentage", "value": 1000 }
+      },
+      "expected": {
+        "subtotal": 25,
+        "discount_total": 2,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 23,
+        "allocations": [2]
+      }
+    },
+    {
+      "id": "prorrateo-empate",
+      "title": "$1.00 fijo entre tres líneas iguales: 34 + 33 + 33 (empate → primera línea)",
+      "lines": [
+        { "unit_price": 100, "quantity": 1 },
+        { "unit_price": 100, "quantity": 1 },
+        { "unit_price": 100, "quantity": 1 }
+      ],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "fixed_amount", "value": 100 }
+      },
+      "expected": {
+        "subtotal": 300,
+        "discount_total": 100,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 200,
+        "allocations": [34, 33, 33]
+      }
+    },
+    {
+      "id": "prorrateo-residuo-mayor",
+      "title": "10 % de $20.00 entre líneas de $10.00, $9.99 y $0.01: 100 + 100 + 0 (el centavo sobrante va al mayor residuo)",
+      "lines": [
+        { "unit_price": 1000, "quantity": 1 },
+        { "unit_price": 333, "quantity": 3 },
+        { "unit_price": 1, "quantity": 1 }
+      ],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "percentage", "value": 1000 }
+      },
+      "expected": {
+        "subtotal": 2000,
+        "discount_total": 200,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 1800,
+        "allocations": [100, 100, 0]
+      }
+    },
+    {
+      "id": "fijo-mayor-que-subtotal",
+      "title": "Descuento fijo mayor que la mercancía: se limita al subtotal; el envío se cobra",
+      "lines": [{ "unit_price": 500, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "fixed_amount", "value": 1000 },
+        "shipping": { "type": "flat", "price": 9900 }
+      },
+      "expected": {
+        "subtotal": 500,
+        "discount_total": 500,
+        "shipping_total": 9900,
+        "tax_total": 0,
+        "total": 9900,
+        "allocations": [500]
+      }
+    },
+    {
+      "id": "iva-aparte-envio-gravado",
+      "title": "IVA aparte también sobre el envío: 1600 + 160",
+      "lines": [{ "unit_price": 10000, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 1600,
+        "prices_include_tax": false,
+        "tax_applies_to_shipping": true,
+        "shipping": { "type": "flat", "price": 1000 }
+      },
+      "expected": {
+        "subtotal": 10000,
+        "discount_total": 0,
+        "shipping_total": 1000,
+        "tax_total": 1760,
+        "total": 12760,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "envio-gratis-desde",
+      "title": "Envío gratis desde $500: con $600 no se cobra (IVA incluido: 8275.86 → 8276)",
+      "lines": [{ "unit_price": 60000, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 1600,
+        "prices_include_tax": true,
+        "shipping": { "type": "free_over", "price": 15000, "free_over_subtotal": 50000 }
+      },
+      "expected": {
+        "subtotal": 60000,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 8276,
+        "total": 60000,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "envio-gratis-tras-descuento",
+      "title": "Envío gratis desde $500 se evalúa tras el descuento: $550 − 20 % = $440 → se cobra",
+      "lines": [{ "unit_price": 55000, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "percentage", "value": 2000 },
+        "shipping": { "type": "free_over", "price": 15000, "free_over_subtotal": 50000 }
+      },
+      "expected": {
+        "subtotal": 55000,
+        "discount_total": 11000,
+        "shipping_total": 15000,
+        "tax_total": 0,
+        "total": 59000,
+        "allocations": [11000]
+      }
+    },
+    {
+      "id": "cupon-envio-gratis",
+      "title": "Cupón de envío gratis: el envío fijo pasa a 0 y la mercancía no cambia",
+      "lines": [{ "unit_price": 1000, "quantity": 1 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "discount": { "type": "free_shipping", "value": 0 },
+        "shipping": { "type": "flat", "price": 9900 }
+      },
+      "expected": {
+        "subtotal": 1000,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 1000,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "recoger-en-tienda",
+      "title": "Recoger en tienda: sin costo de envío",
+      "lines": [{ "unit_price": 1000, "quantity": 2 }],
+      "rules": {
+        "tax_rate_bps": 0,
+        "prices_include_tax": true,
+        "shipping": { "type": "pickup", "price": 0 }
+      },
+      "expected": {
+        "subtotal": 2000,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 2000,
+        "allocations": [0]
+      }
+    },
+    {
+      "id": "completo-iva-incluido",
+      "title": "IVA incluido con 10 % de descuento y envío gravado: 2880 + 1600",
+      "lines": [{ "unit_price": 11600, "quantity": 2 }],
+      "rules": {
+        "tax_rate_bps": 1600,
+        "prices_include_tax": true,
+        "tax_applies_to_shipping": true,
+        "discount": { "type": "percentage", "value": 1000 },
+        "shipping": { "type": "flat", "price": 11600 }
+      },
+      "expected": {
+        "subtotal": 23200,
+        "discount_total": 2320,
+        "shipping_total": 11600,
+        "tax_total": 4480,
+        "total": 32480,
+        "allocations": [2320]
+      }
+    },
+    {
+      "id": "carrito-vacio",
+      "title": "Carrito vacío: todo en 0",
+      "lines": [],
+      "rules": { "tax_rate_bps": 1600, "prices_include_tax": true },
+      "expected": {
+        "subtotal": 0,
+        "discount_total": 0,
+        "shipping_total": 0,
+        "tax_total": 0,
+        "total": 0,
+        "allocations": []
+      }
+    }
+  ]
+}
