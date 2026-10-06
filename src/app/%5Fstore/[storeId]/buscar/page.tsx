@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 
 import { getStorefront } from "@/server/storefront/context";
+import { pageMetadata } from "@/server/storefront/seo";
 
 import { ProductListing, type SearchParams } from "../_components/listing";
 
 type Props = { params: Promise<{ storeId: string }>; searchParams: Promise<SearchParams> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { store } = await getStorefront((await params).storeId);
+  const { store, preview } = await getStorefront((await params).storeId);
   // Los resultados de búsqueda no se indexan (§24).
-  return { title: { absolute: `Buscar · ${store.name}` }, robots: { index: false, follow: true } };
+  return {
+    ...pageMetadata({ store, preview, path: "/buscar", title: "Buscar" }),
+    robots: { index: false, follow: true },
+  };
 }
 
 export default async function SearchPage({ params, searchParams }: Props) {

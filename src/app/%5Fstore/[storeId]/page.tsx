@@ -3,15 +3,23 @@ import Link from "next/link";
 
 import { getHome, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { canonicalUrl, pageMetadata } from "@/server/storefront/seo";
 
+import { JsonLd } from "./_components/json-ld";
 import { ProductGrid } from "./_components/product-card";
 
 /** Inicio de la tienda: categorías y novedades (las secciones configurables llegan en F9). */
 type Props = { params: Promise<{ storeId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { store } = await getStorefront((await params).storeId);
-  return { title: { absolute: store.name } };
+  const { store, preview } = await getStorefront((await params).storeId);
+  return pageMetadata({
+    store,
+    preview,
+    path: "/",
+    title: store.name,
+    image: store.logo ? { ...store.logo, alt: store.name } : null,
+  });
 }
 
 export default async function StoreHomePage({ params }: Props) {
@@ -19,6 +27,29 @@ export default async function StoreHomePage({ params }: Props) {
   const home = await getHome(store.id);
   return (
     <div className="space-y-12">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "OnlineStore",
+              name: store.name,
+              url: canonicalUrl(store, "/"),
+              ...(store.logo ? { logo: mediaUrl(store.logo.path) } : {}),
+            },
+            {
+              "@type": "WebSite",
+              name: store.name,
+              url: canonicalUrl(store, "/"),
+              potentialAction: {
+                "@type": "SearchAction",
+                target: `${canonicalUrl(store, "/buscar")}?q={search_term_string}`,
+                "query-input": "required name=search_term_string",
+              },
+            },
+          ],
+        }}
+      />
       <h1 className="text-2xl font-semibold sm:text-3xl">{store.name}</h1>
       {home.categories.length > 0 ? (
         <section aria-labelledby="sf-categorias" className="space-y-4">

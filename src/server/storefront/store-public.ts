@@ -20,6 +20,8 @@ const storePublicSchema = z.object({
   locale: z.string(),
   currency: z.string(),
   country: z.string(),
+  // Dominio primario activo: canonical, Open Graph, JSON-LD y sitemap (§22).
+  primary_hostname: z.string().nullable().optional(),
   // Tema publicado (nunca el borrador); validado en la base (theme_settings_valid).
   theme: z
     // Sin fila de tema, la base devuelve key/version null: se usan los defaults (§38 F5).

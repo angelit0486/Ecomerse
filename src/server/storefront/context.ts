@@ -28,3 +28,20 @@ export const getStorefront = cache(
     return { store, preview: route.preview };
   },
 );
+
+/** Igual que getStorefront para Route Handlers: null en lugar de notFound(). */
+export async function storefrontForRoute(
+  storeId: string,
+  requestHeaders: Headers,
+): Promise<{ store: StorePublic; preview: boolean } | null> {
+  const route = verifyStoreRoute(
+    serverEnv().PREVIEW_HMAC_SECRET,
+    storeId,
+    requestHeaders.get(STORE_ROUTE_HEADER),
+  );
+  if (!route) return null;
+  const store = await getStorePublic(storeId);
+  if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
+    return null;
+  return { store, preview: route.preview };
+}

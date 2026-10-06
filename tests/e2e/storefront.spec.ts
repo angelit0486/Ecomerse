@@ -166,6 +166,64 @@ test("caché por tienda: un cambio en el panel se ve al instante en la tienda (i
   await expect(page.getByText("Playera A renovada")).toHaveCount(0);
 });
 
+test("SEO por host: canonical al primario, JSON-LD válido, sitemap y robots sin cruzar tiendas", async ({
+  page,
+}) => {
+  await page.goto(`${origin(a)}/productos/playera-a-de-algodon`);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${origin(a)}/productos/playera-a-de-algodon`,
+  );
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", a.name);
+  const ld = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent())!,
+  ) as {
+    "@graph": Array<Record<string, unknown>>;
+  };
+  const product = ld["@graph"].find((n) => n["@type"] === "Product")!;
+  expect(product).toMatchObject({
+    name: "Playera A renovada", // renombrada en la prueba de invalidación
+
+    brand: { "@type": "Brand", name: "Marca A" },
+    offers: {
+      "@type": "AggregateOffer",
+      lowPrice: "199.00",
+      highPrice: "219.00",
+      priceCurrency: "MXN",
+    },
+  });
+  expect(product.aggregateRating).toBeUndefined(); // nunca valoraciones sin reseñas reales
+  const crumbs = ld["@graph"].find((n) => n["@type"] === "BreadcrumbList") as {
+    itemListElement: { name: string; item: string }[];
+  };
+  expect(crumbs.itemListElement.map((c) => c.name)).toEqual(["Ropa", "Playera A renovada"]);
+
+  await page.goto(`${origin(a)}/`);
+  const home = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent())!,
+  ) as {
+    "@graph": Array<Record<string, unknown>>;
+  };
+  expect(home["@graph"].map((n) => n["@type"])).toEqual(["OnlineStore", "WebSite"]);
+
+  await page.goto(`${origin(a)}/buscar?q=algodon`);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+
+  const sitemapA = await (await page.goto(`${origin(a)}/sitemap.xml`))!.text();
+  expect(sitemapA).toContain(`<loc>${origin(a)}/productos/playera-a-de-algodon</loc>`);
+  expect(sitemapA).toContain(`<loc>${origin(a)}/paginas/envios</loc>`);
+  expect(sitemapA).not.toContain("playera-b");
+  expect(sitemapA).not.toContain("aviso-de-privacidad");
+  expect(sitemapA).not.toContain(origin(b));
+
+  const robotsA = await (await page.goto(`${origin(a)}/robots.txt`))!.text();
+  expect(robotsA).toContain("Disallow: /checkout");
+  expect(robotsA).toContain(`Sitemap: ${origin(a)}/sitemap.xml`);
+  const robotsB = await (await page.goto(`${origin(b)}/robots.txt`))!.text();
+  expect(robotsB).toContain(`Sitemap: ${origin(b)}/sitemap.xml`);
+});
+
 test("host desconocido → 404 uniforme; tienda suspendida → 503", async ({ page }) => {
   const unknown = await page.goto(`http://no-existe-${run}.localhost:3000/`);
   expect(unknown?.status()).toBe(404);

@@ -1,22 +1,31 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getProduct, mediaUrl } from "@/server/storefront/catalog";
+import { centsToInput } from "@/lib/money/format";
+import {
+  getProduct,
+  mediaUrl,
+  type Availability,
+  type ProductDetail,
+} from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
+import type { StorePublic } from "@/server/storefront/store-public";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { Breadcrumb } from "../../_components/breadcrumb";
 import { AVAILABILITY_LABELS, money } from "../../_components/format";
+import { JsonLd } from "../../_components/json-ld";
 import { VariantSelector } from "../../_components/variant-selector";
 
 type Props = { params: Promise<{ storeId: string; slug: string }> };
 
 async function load(params: Props["params"]) {
   const { storeId, slug } = await params;
-  const { store } = await getStorefront(storeId);
+  const { store, preview } = await getStorefront(storeId);
   const product = await getProduct(store.id, slug);
   if (!product) notFound();
-  return { store, product };
+  return { store, preview, product };
 }
 
 /** "Color=Negro|Talla=M" → { Color: "Negro", Talla: "M" }. */
@@ -30,10 +39,92 @@ function parseSignature(signature: string): Record<string, string> {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { store, product } = await load(params);
+  const { store, preview, product } = await load(params);
+  return pageMetadata({
+    store,
+    preview,
+    path: `/productos/${product.slug}`,
+    title: product.seo_title ?? product.title,
+    description: product.seo_description ?? excerpt(product.description_html),
+    image: product.images[0],
+    type: "product",
+  });
+}
+
+const SCHEMA_AVAILABILITY: Record<Availability, string> = {
+  in_stock: "https://schema.org/InStock",
+  low_stock: "https://schema.org/LimitedAvailability",
+  backorder: "https://schema.org/BackOrder",
+  out_of_stock: "https://schema.org/OutOfStock",
+};
+
+/** GTIN solo si el código de barras tiene una longitud GTIN válida (8, 12, 13 o 14 dígitos). */
+function gtin(barcode: string | null): string | undefined {
+  return barcode && /^(\d{8}|\d{12,14})$/.test(barcode) ? barcode : undefined;
+}
+
+function productJsonLd(store: StorePublic, product: ProductDetail) {
+  const url = canonicalUrl(store, `/productos/${product.slug}`);
+  const prices = product.variants.map((v) => v.price);
+  const single = product.variants.length === 1 ? product.variants[0] : undefined;
+  const offers = single
+    ? {
+        "@type": "Offer",
+        price: centsToInput(single.price),
+        priceCurrency: store.currency,
+        availability: SCHEMA_AVAILABILITY[single.availability],
+        itemCondition: "https://schema.org/NewCondition",
+        url,
+      }
+    : {
+        "@type": "AggregateOffer",
+        lowPrice: centsToInput(Math.min(...prices)),
+        highPrice: centsToInput(Math.max(...prices)),
+        offerCount: product.variants.length,
+        priceCurrency: store.currency,
+        availability: SCHEMA_AVAILABILITY[product.availability],
+        url,
+      };
   return {
-    title: { absolute: `${product.seo_title ?? product.title} · ${store.name}` },
-    ...(product.seo_description ? { description: product.seo_description } : {}),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        name: product.title,
+        url,
+        ...(product.images.length > 0
+          ? { image: product.images.map((i) => mediaUrl(i.path)) }
+          : {}),
+        ...(excerpt(product.description_html, 5000)
+          ? { description: excerpt(product.description_html, 5000) }
+          : {}),
+        ...(single?.sku ? { sku: single.sku } : {}),
+        ...(gtin(single?.barcode ?? null) ? { gtin: gtin(single?.barcode ?? null) } : {}),
+        ...(product.brand ? { brand: { "@type": "Brand", name: product.brand.name } } : {}),
+        ...(product.variants.length > 0 ? { offers } : {}),
+      },
+      ...(product.breadcrumb.length > 0
+        ? [
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                ...product.breadcrumb.map((c, i) => ({
+                  "@type": "ListItem",
+                  position: i + 1,
+                  name: c.name,
+                  item: canonicalUrl(store, `/categoria/${c.path}`),
+                })),
+                {
+                  "@type": "ListItem",
+                  position: product.breadcrumb.length + 1,
+                  name: product.title,
+                  item: url,
+                },
+              ],
+            },
+          ]
+        : []),
+    ],
   };
 }
 
@@ -44,6 +135,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
+      <JsonLd data={productJsonLd(store, product)} />
       <Breadcrumb
         items={[
           { label: "Inicio", href: "/" },

@@ -3,24 +3,28 @@ import { notFound } from "next/navigation";
 
 import { getPage } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { excerpt, pageMetadata } from "@/server/storefront/seo";
 import { SafeHtml } from "@/ui/safe-html";
 
 type Props = { params: Promise<{ storeId: string; slug: string }> };
 
 async function load(params: Props["params"]) {
   const { storeId, slug } = await params;
-  const { store } = await getStorefront(storeId);
+  const { store, preview } = await getStorefront(storeId);
   const page = await getPage(store.id, slug);
   if (!page) notFound();
-  return { store, page };
+  return { store, preview, page };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { store, page } = await load(params);
-  return {
-    title: { absolute: `${page.seo_title ?? page.title} · ${store.name}` },
-    ...(page.seo_description ? { description: page.seo_description } : {}),
-  };
+  const { store, preview, page } = await load(params);
+  return pageMetadata({
+    store,
+    preview,
+    path: `/paginas/${page.slug}`,
+    title: page.seo_title ?? page.title,
+    description: page.seo_description ?? excerpt(page.body_html),
+  });
 }
 
 export default async function StorePage({ params }: Props) {

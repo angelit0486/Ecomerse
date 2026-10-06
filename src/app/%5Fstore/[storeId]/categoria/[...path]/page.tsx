@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 
 import { getCategory } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 
 import { Breadcrumb } from "../../_components/breadcrumb";
+import { JsonLd } from "../../_components/json-ld";
 import { ProductListing, type SearchParams } from "../../_components/listing";
 
 type Props = {
@@ -15,24 +17,50 @@ type Props = {
 
 async function load(params: Props["params"]) {
   const { storeId, path } = await params;
-  const { store } = await getStorefront(storeId);
+  const { store, preview } = await getStorefront(storeId);
   const category = await getCategory(store.id, path.map(decodeURIComponent).join("/"));
   if (!category) notFound();
-  return { store, category };
+  return { store, preview, category };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { store, category } = await load(params);
-  return {
-    title: { absolute: `${category.seo_title ?? category.name} · ${store.name}` },
-    ...(category.seo_description ? { description: category.seo_description } : {}),
-  };
+  const { store, preview, category } = await load(params);
+  return pageMetadata({
+    store,
+    preview,
+    path: `/categoria/${category.path}`,
+    title: category.seo_title ?? category.name,
+    description: category.seo_description ?? excerpt(category.description),
+    image: category.image,
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { store, category } = await load(params);
   return (
     <div className="space-y-6">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "CollectionPage",
+              name: category.name,
+              url: canonicalUrl(store, `/categoria/${category.path}`),
+              ...(category.description ? { description: category.description } : {}),
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: category.breadcrumb.map((c, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: c.name,
+                item: canonicalUrl(store, `/categoria/${c.path}`),
+              })),
+            },
+          ],
+        }}
+      />
       <Breadcrumb
         items={[
           { label: "Inicio", href: "/" },
