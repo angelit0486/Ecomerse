@@ -1,0 +1,89 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { hasPermission } from "@/server/auth/context";
+import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { listBrands, listCategories } from "@/server/catalog/queries";
+import {
+  getMenuItems,
+  listPages,
+  listProductTargets,
+  type MenuItemRow,
+} from "@/server/content/queries";
+import { createSupabaseServerClient } from "@/server/supabase/server";
+
+import { MenuEditor, type MenuDraft } from "./menu-editor";
+
+export const metadata: Metadata = { title: "Menús" };
+
+type Props = { params: Promise<{ storeHandle: string }> };
+
+function toDrafts(rows: MenuItemRow[]): MenuDraft[] {
+  const draft = (r: MenuItemRow): MenuDraft => ({
+    key: r.id,
+    label: r.label,
+    link_type: r.link_type,
+    target_id: r.target_id ?? "",
+    url: r.url ?? "",
+    children: [],
+  });
+  const roots = rows.filter((r) => !r.parent_id).map(draft);
+  for (const r of rows) {
+    if (r.parent_id) roots.find((p) => p.key === r.parent_id)?.children.push(draft(r));
+  }
+  return roots;
+}
+
+export default async function MenusPage({ params }: Props) {
+  const { storeHandle } = await params;
+  const ctx = await getStoreContextForPage(storeHandle);
+  if (!hasPermission(ctx, "appearance.manage")) notFound();
+  const supabase = await createSupabaseServerClient();
+  const [main, footer, categories, brands, pages, products] = await Promise.all([
+    getMenuItems(supabase, ctx.store.id, "main"),
+    getMenuItems(supabase, ctx.store.id, "footer"),
+    listCategories(supabase, ctx.store.id),
+    listBrands(supabase, ctx.store.id),
+    listPages(supabase, ctx.store.id),
+    listProductTargets(supabase, ctx.store.id),
+  ]);
+  const targets = {
+    category: categories.map((c) => ({ id: c.id, name: `${"— ".repeat(c.depth)}${c.name}` })),
+    brand: brands.map((b) => ({ id: b.id, name: b.name })),
+    page: pages.map((p) => ({
+      id: p.id,
+      name: p.is_published ? p.title : `${p.title} (borrador)`,
+    })),
+    product: products,
+  };
+
+  return (
+    <section className="space-y-6">
+      <header>
+        <Link href={`/admin/${ctx.store.handle}/contenido`} className="text-sm underline">
+          ← Contenido
+        </Link>
+        <h1 className="mt-2 text-xl font-semibold">Menús</h1>
+        <p className="text-sm text-fg-muted">
+          Hasta 50 enlaces por menú y dos niveles. Los enlaces a algo oculto o en borrador no se
+          muestran en la tienda.
+        </p>
+      </header>
+      <MenuEditor
+        storeHandle={ctx.store.handle}
+        handle="main"
+        title="Menú principal"
+        initial={toDrafts(main)}
+        targets={targets}
+      />
+      <MenuEditor
+        storeHandle={ctx.store.handle}
+        handle="footer"
+        title="Menú del pie"
+        initial={toDrafts(footer)}
+        targets={targets}
+      />
+    </section>
+  );
+}

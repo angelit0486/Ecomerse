@@ -6,20 +6,20 @@
 ## Ahora
 
 - **Fase actual:** 5 — Storefront (Fase 4 cerrada en local: `docs/phases/PHASE-04-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F5-T06 (editor mínimo de menús y páginas en el panel).
-- **Siguiente paso exacto:** RPC `content_upsert_page`, `content_publish_page`, `content_delete_page` (content.manage, sanitizado) y `menu_set_items` (appearance.manage, destinos verificados en la tienda); páginas del panel `/admin/[h]/contenido`; E2E.
+- **Siguiente tarea:** Gate F5 (revisión adversarial, Lighthouse e informe de la fase).
+- **Siguiente paso exacto:** revisión adversarial de `git diff a691c4c..HEAD` (subagente), corregir hallazgos, medir Lighthouse en local y escribir `docs/phases/PHASE-05-REPORT.md`.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
 ## Bloqueos (requieren al propietario)
 
-| ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                                   |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-gate-f2.bundle`, todos los commits sin subir). |
+| ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f5.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F5-T05. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F5-T06. Bundle de respaldo: `pruva-f5.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -56,6 +56,7 @@ Todos desde `7549db7` (Gate 1) hasta F5-T05. Bundle de respaldo: `pruva-f3.bundl
 | 5    | F5-T03 Tema base del storefront               | hecha                       | E2E en dos hosts (catálogo, ficha, categoría, marca, búsqueda, páginas, 404, 503) con axe y capturas a 375/1280 |
 | 5    | F5-T04 Caché por tags + ADR CSP               | hecha                       | E2E de invalidación (con mutación) y aislamiento A/B                                                            |
 | 5    | F5-T05 SEO por host                           | hecha                       | 4 unit + E2E (canonical, JSON-LD, sitemap y robots por host)                                                    |
+| 5    | F5-T06 Editor de páginas y menús              | hecha                       | 20 pgTAP + E2E (crear, publicar, sanitizar, menú en la tienda) con axe                                          |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                 |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
