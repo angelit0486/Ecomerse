@@ -69,7 +69,8 @@ select is_empty(
 select tests.login('owner_a');
 select set_eq(
   $$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
-  array['customers', 'organization_entitlement_overrides', 'organization_invitations',
+  -- inventory_locations: toda tienda nace con su ubicación por defecto (F4-T01).
+  array['customers', 'inventory_locations', 'organization_entitlement_overrides', 'organization_invitations',
         'organization_members', 'organizations', 'store_domains', 'store_themes',
         'stores', 'subscriptions', 'support_access_grants'],
   'control positivo: el dueño de A ve los datos de A'
@@ -141,7 +142,8 @@ select tests.logout();
 -- Con concesión en A: solo lectura de la tienda; nunca datos sensibles ni escritura.
 select tests.login('support');
 select set_eq($$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
-  array['store_domains', 'store_themes', 'stores', 'support_access_grants'],
+  -- inventory.read es legible por soporte (dato operativo, no sensible).
+  array['inventory_locations', 'store_domains', 'store_themes', 'stores', 'support_access_grants'],
   'soporte con concesión: solo lectura no sensible (sin clientes, invitaciones ni facturación)');
 select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0::bigint,
   'soporte con concesión: no MODIFICA nada');
