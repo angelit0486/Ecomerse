@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F7-T03 (reembolsos, envíos y cancelación).
-- **Siguiente paso exacto:** tablas `refunds`, `shipments`, `shipment_items`; `orders_fulfill` (parcial, consume la reserva con `app.inventory_fulfill`), `orders_mark_delivered`, `orders_cancel`, `orders_request_refund` + job `refund.execute` + `system.apply_refund_result`; pgTAP + integración.
+- **Siguiente tarea:** F7-T04 (notificaciones de pedidos).
+- **Siguiente paso exacto:** reglas §27.2 sobre los jobs `order.created`, `order.paid`, `payment.failed`, `order.shipped`, `order.cancelled`, `refund.succeeded`, `payment.late_without_stock`; plantillas con la marca de la tienda; `notification_deliveries` con `dedupe_key`; destinatarios de staff configurables.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -66,6 +66,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 6    | Gate F6                                       | hecha (CI pendiente por P0)    | `docs/phases/PHASE-06-REPORT.md` · 982 pgTAP, 62 integración, 20 E2E                                                                                                      |
 | 7    | F7-T01 Adaptador Stripe Connect               | hecha (sandbox pendiente: S-4) | 16 unit de contrato (firma, tolerancia, codificación, estados, cargo directo, reembolso)                                                                                  |
 | 7    | F7-T02 Eventos de pago y webhook              | hecha                          | §34.4 en integración (firma, replay, cuenta, duplicado, fuera de orden, monto, moneda, referencia, pago tardío con y sin stock, reconciliación; mutación)                 |
+| 7    | F7-T03 Envíos, cancelación y reembolsos       | hecha                          | 31 pgTAP (parcial, idempotencia, reembolso > cobrado, doble solicitud, reposición, cancelación con y sin pago, entrega) + job como system_worker                          |
 | 5–11 | Ver el plan §4                                | pendiente                      |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

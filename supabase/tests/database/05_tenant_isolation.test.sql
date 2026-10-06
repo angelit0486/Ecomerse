@@ -68,6 +68,14 @@ values (tests.fx('store_a'), 'manual', 'active', 'Transferencia');
 insert into public.payments (store_id, order_id, payment_account_id, provider, amount, currency, idempotency_key)
 select tests.fx('store_a'), tests.fx('order_a'), id, 'manual', 100, 'MXN', 'pago-prueba-0000001'
   from public.payment_accounts where store_id = tests.fx('store_a');
+insert into public.shipments (store_id, order_id, idempotency_key)
+values (tests.fx('store_a'), tests.fx('order_a'), 'envio-prueba-0000001');
+insert into public.shipment_items (store_id, shipment_id, order_item_id, quantity)
+select tests.fx('store_a'), s.id, i.id, 1 from public.shipments s, public.order_items i
+ where s.store_id = tests.fx('store_a') and i.order_id = tests.fx('order_a');
+insert into public.refunds (store_id, order_id, payment_id, amount, idempotency_key)
+select tests.fx('store_a'), tests.fx('order_a'), id, 1, 'reemb-prueba-000001' from public.payments
+ where store_id = tests.fx('store_a');
 insert into public.payment_events (store_id, payment_account_id, provider_event_id, type, signed_at, payload)
 select tests.fx('store_a'), id, 'evt_test_1', 'checkout.session.completed', now(), '{}'
   from public.payment_accounts where store_id = tests.fx('store_a');
@@ -106,7 +114,7 @@ select set_eq(
   array['customer_addresses', 'customers', 'discount_redemptions', 'discounts', 'inventory_levels',
         'inventory_locations', 'menus', 'order_events', 'order_items', 'orders', 'organization_entitlement_overrides',
         'organization_invitations', 'organization_members', 'organizations', 'payment_accounts', 'payment_events',
-        'payments',
+        'payments', 'refunds', 'shipment_items', 'shipments',
         'product_variants', 'products', 'shipping_rates', 'shipping_zones', 'store_domains', 'store_pages',
         'store_themes', 'stores', 'subscriptions', 'support_access_grants'],
   'control positivo: el dueño de A ve los datos de A'
@@ -182,7 +190,8 @@ select set_eq($$ select * from tests.visible_tenant_tables(tests.fx('store_a'), 
   -- Pedidos sin datos de contacto (grant por columna), descuentos y envíos: lectura no
   -- sensible (matriz §8, «G»). Nunca pagos, cuentas de pago ni direcciones (sensibles).
   array['discount_redemptions', 'discounts', 'inventory_levels', 'inventory_locations', 'menus', 'order_events',
-        'order_items', 'orders', 'product_variants', 'products', 'shipping_rates', 'shipping_zones',
+        'order_items', 'orders', 'product_variants', 'products', 'refunds', 'shipment_items', 'shipments',
+        'shipping_rates', 'shipping_zones',
         'store_domains', 'store_pages', 'store_themes', 'stores', 'support_access_grants'],
   'soporte con concesión: solo lectura no sensible (sin clientes, invitaciones ni facturación)');
 select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0::bigint,

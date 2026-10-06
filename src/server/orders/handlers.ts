@@ -36,6 +36,10 @@ export function createOrderHandlers(deps: {
     const [row] = await deps.db<{ n: number }[]>`select system.purge_rate_limits() as n`;
     log.info("Ventanas de rate limit purgadas", { count: row?.n ?? 0 });
   };
+  const complete: JobHandler = async (_job, { log }) => {
+    const [row] = await deps.db<{ n: number }[]>`select system.complete_orders() as n`;
+    if ((row?.n ?? 0) > 0) log.info("Pedidos completados", { count: row?.n });
+  };
   const reconcile: JobHandler = async (_job, { log }) => {
     const stripe = deps.stripe?.();
     if (!stripe) return;
@@ -47,6 +51,10 @@ export function createOrderHandlers(deps: {
     ["payments.reconcile", reconcile],
     ["payment.failed", record("payment.failed")],
     ["payment.late_without_stock", record("payment.late_without_stock")],
+    ["orders.complete", complete],
+    ["order.shipped", record("order.shipped")],
+    ["order.cancelled", record("order.cancelled")],
+    ["refund.succeeded", record("refund.succeeded")],
     ["rate_limits.purge", purgeRateLimits],
     ["order.created", record("order.created")],
     ["order.paid", record("order.paid")],
