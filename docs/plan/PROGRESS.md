@@ -5,9 +5,9 @@
 
 ## Ahora
 
-- **Fase actual:** 4 — Inventory (Fase 3 cerrada en local: `docs/phases/PHASE-03-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** Gate F4 (revisión de seguridad y de código de la Fase 4, informe `docs/phases/PHASE-04-REPORT.md`).
-- **Siguiente paso exacto:** revisión adversarial del diff F4 (ledger, guardas, reservas, concurrencia, UI), corregir y escribir el informe.
+- **Fase actual:** 5 — Storefront (Fase 4 cerrada en local: `docs/phases/PHASE-04-REPORT.md`; CI pendiente por P0).
+- **Siguiente tarea:** F5-T01 (ver el plan §4, Fase 5).
+- **Siguiente paso exacto:** leer el plan y GATE0 de la Fase 5 (storefront) y empezar por las funciones `storefront.*` de lectura del catálogo publicado.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F4-T03. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta el Gate F4. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -50,7 +50,8 @@ Todos desde `7549db7` (Gate 1) hasta F4-T03. Bundle de respaldo: `pruva-f3.bundl
 | 3    | Gate F3                                       | hecha                       | `b1afc12` · informe `docs/phases/PHASE-03-REPORT.md` · 18 hallazgos corregidos                               |
 | 4    | F4-T01/T02 Tablas, ledger, ajustes y reservas | hecha                       | 44 pgTAP + concurrencia (20 compradores por 1 unidad → 1; 40 pedidos cruzados sin deadlock) con mutación     |
 | 4    | F4-T03 UI de inventario                       | hecha                       | `inventory_search` (5 pgTAP) + E2E (motivo obligatorio, daño, fijar, stock bajo, historial) con axe          |
-| 4–11 | Ver el plan §4                                | pendiente                   |                                                                                                              |
+| 4    | Gate F4                                       | hecha                       | informe `docs/phases/PHASE-04-REPORT.md` · 7 hallazgos corregidos                                            |
+| 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                              |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 

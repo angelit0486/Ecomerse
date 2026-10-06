@@ -117,6 +117,11 @@ export default async function InventoryHistoryPage({ params }: Props) {
           </TBody>
         </Table>
       )}
+      {(movements ?? []).length === 100 ? (
+        <p className="text-sm text-fg-muted">
+          Se muestran los 100 movimientos más recientes. Los anteriores se conservan en el registro.
+        </p>
+      ) : null}
     </section>
   );
 }
