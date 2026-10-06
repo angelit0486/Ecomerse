@@ -3,7 +3,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(44);
+select plan(49);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('cat', 'cat@a.io');
@@ -133,6 +133,19 @@ select is((tests.level('DENY-1')).reserved || ':' || (select status from public.
   '0:released', 'se libera solo lo pendiente');
 select lives_ok(format($$ select app.inventory_release(%L, %L, 'released') $$, tests.fx('store_a'), tests.fx('r1')),
   'liberar dos veces es un no-op');
+
+-- ============================================================================ Búsqueda del panel
+select tests.login('cat');
+select is((select count(*)::int from public.inventory_search(tests.fx('store_a'))), 4, 'tabla de inventario');
+select is((select sku from public.inventory_search(tests.fx('store_a'), 'bag-1')), 'BAG-1', 'búsqueda por SKU exacto');
+select is((select string_agg(sku, ',') from public.inventory_search(tests.fx('store_a'), null, true)), 'DENY-1',
+  'stock bajo: disponible ≤ umbral (DENY-1: 2 ≤ 2)');
+select is((select count(*)::int from public.inventory_search(tests.fx('store_a'), '%')), 0,
+  'los comodines de la búsqueda se escapan');
+select tests.logout(); select tests.login('owner_b');
+select throws_ok($$ select * from public.inventory_search(tests.fx('store_a')) $$, '42501', 'forbidden',
+  'otro tenant no lee el inventario de A');
+select tests.logout();
 
 select is_empty($$ select * from system.inventory_ledger_mismatches() $$,
   'invariante del ledger: cada nivel es la suma de sus movimientos');

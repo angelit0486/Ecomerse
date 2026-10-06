@@ -19,7 +19,14 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-container)] border border-border">
+    // Región enfocable: si la tabla se desplaza en horizontal, se recorre con el
+    // teclado (axe: scrollable-region-focusable).
+    <div
+      role="region"
+      aria-label={caption}
+      tabIndex={0}
+      className="overflow-x-auto rounded-[var(--radius-container)] border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+    >
       <table className={cn("w-full border-collapse text-left text-sm", className)}>
         <caption className={captionHidden ? "sr-only" : "px-4 py-2 text-left text-fg-muted"}>
           {caption}
