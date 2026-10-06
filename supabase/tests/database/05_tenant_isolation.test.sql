@@ -76,6 +76,7 @@ select tests.fx('store_a'), s.id, i.id, 1 from public.shipments s, public.order_
 insert into public.refunds (store_id, order_id, payment_id, amount, idempotency_key)
 select tests.fx('store_a'), tests.fx('order_a'), id, 1, 'reemb-prueba-000001' from public.payments
  where store_id = tests.fx('store_a');
+insert into public.store_notification_settings (store_id, staff_emails) values (tests.fx('store_a'), '{ventas@a.io}');
 insert into public.payment_events (store_id, payment_account_id, provider_event_id, type, signed_at, payload)
 select tests.fx('store_a'), id, 'evt_test_1', 'checkout.session.completed', now(), '{}'
   from public.payment_accounts where store_id = tests.fx('store_a');
@@ -116,7 +117,7 @@ select set_eq(
         'organization_invitations', 'organization_members', 'organizations', 'payment_accounts', 'payment_events',
         'payments', 'refunds', 'shipment_items', 'shipments',
         'product_variants', 'products', 'shipping_rates', 'shipping_zones', 'store_domains', 'store_pages',
-        'store_themes', 'stores', 'subscriptions', 'support_access_grants'],
+        'store_notification_settings', 'store_themes', 'stores', 'subscriptions', 'support_access_grants'],
   'control positivo: el dueño de A ve los datos de A'
 );
 select is(tests.row_count($$ update public.stores set name = name where id = tests.fx('store_a') $$), 1::bigint,

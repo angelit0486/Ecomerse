@@ -1,5 +1,7 @@
 import {
+  isEmail,
   PermanentDeliveryError,
+  safeDisplayName,
   type EmailChannel,
   type EmailMessage,
   type SendResult,
@@ -31,7 +33,10 @@ export function resendChannel(apiKey: string, from: string, fetchImpl = fetch): 
           ...(options?.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}),
         },
         body: JSON.stringify({
-          from,
+          from: message.fromName
+            ? `${safeDisplayName(message.fromName)} <${parseFrom(from).email}>`
+            : from,
+          ...(isEmail(message.replyTo) ? { reply_to: message.replyTo } : {}),
           to: [message.to],
           subject: message.subject,
           html: message.html,
@@ -55,7 +60,11 @@ export function mailpitChannel(baseUrl: string, from: string, fetchImpl = fetch)
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          From: { Email: sender.email, Name: sender.name },
+          From: {
+            Email: sender.email,
+            Name: message.fromName ? safeDisplayName(message.fromName) : sender.name,
+          },
+          ...(isEmail(message.replyTo) ? { ReplyTo: [{ Email: message.replyTo }] } : {}),
           To: [{ Email: message.to }],
           Subject: message.subject,
           HTML: message.html,

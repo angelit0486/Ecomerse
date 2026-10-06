@@ -6,6 +6,26 @@ export interface EmailMessage {
   subject: string;
   html: string;
   text: string;
+  /** Nombre visible del remitente (p. ej. la tienda); la dirección es siempre la de la plataforma. */
+  fromName?: string;
+  /** Respuestas al contacto de la tienda (GATE0 §27: marca de la tienda). */
+  replyTo?: string;
+}
+
+/** Nombre de remitente seguro: sin comillas, ángulos ni saltos de línea (cabecera From). */
+export function safeDisplayName(name: string): string {
+  return name
+    .replace(/["<>\r\n\\]/g, "")
+    .trim()
+    .slice(0, 60);
+}
+
+export function isEmail(value: string | null | undefined): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= 254 &&
+    /^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$/.test(value)
+  );
 }
 
 export interface SendResult {

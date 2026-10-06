@@ -16,9 +16,9 @@ export interface NotificationDeps {
   appUrl: string;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-function payloadId(job: JobRecord, key: string): string {
+export function payloadId(job: JobRecord, key: string): string {
   const value = job.payload[key];
   if (typeof value !== "string" || !UUID_RE.test(value)) {
     throw new PermanentJobError(`payload.${key} inválido`);
@@ -26,7 +26,7 @@ function payloadId(job: JobRecord, key: string): string {
   return value;
 }
 
-async function send(
+export async function sendNotification(
   deps: NotificationDeps,
   input: {
     dedupeKey: string;
@@ -54,7 +54,7 @@ async function send(
   }
 }
 
-async function alreadyDelivered(db: Sql, dedupeKey: string): Promise<boolean> {
+export async function alreadyDelivered(db: Sql, dedupeKey: string): Promise<boolean> {
   const [row] = await db<{ delivered: boolean }[]>`
     select system.notification_delivered(${dedupeKey}) as delivered`;
   return row?.delivered ?? false;
@@ -81,7 +81,7 @@ export function createNotificationHandlers(deps: NotificationDeps): Array<[strin
       log.info("Invitación no vigente: nada que enviar");
       return;
     }
-    await send(deps, {
+    await sendNotification(deps, {
       dedupeKey,
       template: "staff_invitation",
       organizationId: null,
@@ -115,7 +115,7 @@ export function createNotificationHandlers(deps: NotificationDeps): Array<[strin
       log.info("Concesión no vigente: nada que avisar");
       return;
     }
-    await send(deps, {
+    await sendNotification(deps, {
       dedupeKey,
       template: "support_access_notice",
       organizationId: row.organization_id,

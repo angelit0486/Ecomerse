@@ -3,11 +3,13 @@ import { serverEnv } from "@/server/env";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
+import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
 import { createOrderHandlers } from "@/server/orders/handlers";
 import { createRefundHandlers } from "@/server/orders/refunds";
 import { stripeProvider } from "@/server/payments/registry";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
+import { storeOrigin } from "@/server/storefront/seo";
 
 import type { JobHandler, JobRegistry } from "./types";
 
@@ -35,6 +37,19 @@ const media = () =>
     onPublished: invalidateStore,
   });
 
+const orderNotifications = () => {
+  const env = serverEnv();
+  return createOrderNotificationHandlers({
+    db: workerDb(),
+    channel: emailChannel(),
+    linkSecret: env.ORDER_LINK_SECRET,
+    storeOrigin: (hostname) => storeOrigin({ primary_hostname: hostname, handle: hostname }),
+    mediaUrl: (path) =>
+      `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-media/${path}`,
+    appUrl: env.APP_URL,
+  });
+};
+
 const orders = () => createOrderHandlers({ db: workerDb(), stripe: stripeProvider });
 const refunds = () => createRefundHandlers({ db: workerDb(), stripe: stripeProvider });
 
@@ -46,15 +61,15 @@ const handlers: Array<[string, JobHandler]> = [
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
   ["payments.reconcile", lazy("payments.reconcile", orders)],
-  ["payment.failed", lazy("payment.failed", orders)],
-  ["payment.late_without_stock", lazy("payment.late_without_stock", orders)],
+  ["payment.failed", lazy("payment.failed", orderNotifications)],
+  ["payment.late_without_stock", lazy("payment.late_without_stock", orderNotifications)],
   ["orders.complete", lazy("orders.complete", orders)],
-  ["order.shipped", lazy("order.shipped", orders)],
-  ["order.cancelled", lazy("order.cancelled", orders)],
-  ["refund.succeeded", lazy("refund.succeeded", orders)],
+  ["order.shipped", lazy("order.shipped", orderNotifications)],
+  ["order.cancelled", lazy("order.cancelled", orderNotifications)],
+  ["refund.succeeded", lazy("refund.succeeded", orderNotifications)],
   ["refund.execute", lazy("refund.execute", refunds)],
-  ["order.created", lazy("order.created", orders)],
-  ["order.paid", lazy("order.paid", orders)],
+  ["order.created", lazy("order.created", orderNotifications)],
+  ["order.paid", lazy("order.paid", orderNotifications)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);
