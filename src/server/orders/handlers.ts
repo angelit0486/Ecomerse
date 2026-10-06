@@ -1,5 +1,7 @@
 import type { Sql } from "@/server/db/role-clients";
 import type { JobHandler } from "@/server/jobs/types";
+import type { StripeProvider } from "@/server/payments/stripe";
+import { reconcilePayments } from "@/server/payments/webhook";
 
 /**
  * Jobs del ciclo de pedidos (GATE0 §17.5-17.6).
@@ -12,6 +14,8 @@ import type { JobHandler } from "@/server/jobs/types";
 export function createOrderHandlers(deps: {
   db: Sql;
   onExpired?: (count: number) => void;
+  /** Stripe configurado; sin él la reconciliación no tiene nada que consultar. */
+  stripe?: () => StripeProvider | null;
 }): Array<[string, JobHandler]> {
   const expire: JobHandler = async (_job, { log }) => {
     const [row] = await deps.db<{ n: number }[]>`select system.expire_orders(200) as n`;
@@ -32,8 +36,17 @@ export function createOrderHandlers(deps: {
     const [row] = await deps.db<{ n: number }[]>`select system.purge_rate_limits() as n`;
     log.info("Ventanas de rate limit purgadas", { count: row?.n ?? 0 });
   };
+  const reconcile: JobHandler = async (_job, { log }) => {
+    const stripe = deps.stripe?.();
+    if (!stripe) return;
+    const count = await reconcilePayments({ db: deps.db, provider: stripe, log });
+    if (count > 0) log.info("Pagos reconciliados", { count });
+  };
   return [
     ["orders.expire", expire],
+    ["payments.reconcile", reconcile],
+    ["payment.failed", record("payment.failed")],
+    ["payment.late_without_stock", record("payment.late_without_stock")],
     ["rate_limits.purge", purgeRateLimits],
     ["order.created", record("order.created")],
     ["order.paid", record("order.paid")],

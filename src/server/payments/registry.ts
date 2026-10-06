@@ -6,6 +6,21 @@ import { serverEnv } from "@/server/env";
 import { createFakeProvider } from "./fake";
 import { manualProvider } from "./manual";
 import type { PaymentProvider } from "./provider";
+import { createStripeProvider, type StripeProvider } from "./stripe";
+
+/** Stripe configurado (clave de plataforma y secreto del webhook Connect), o null. */
+export function stripeProvider(): StripeProvider | null {
+  const env = serverEnv();
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_CONNECT_WEBHOOK_SECRET) return null;
+  // En producción solo claves live; fuera de producción solo test (nunca se cobra de verdad en pruebas).
+  const live = env.STRIPE_SECRET_KEY.startsWith("sk_live_");
+  if (live !== (env.APP_ENV === "production")) return null;
+  return createStripeProvider({
+    secretKey: env.STRIPE_SECRET_KEY,
+    webhookSecret: env.STRIPE_CONNECT_WEBHOOK_SECRET,
+    ...(env.STRIPE_API_BASE ? { apiBase: env.STRIPE_API_BASE } : {}),
+  });
+}
 
 /** Adaptador por clave. `fake` no existe en producción, aunque la base lo permitiera. */
 export function paymentProvider(key: string): PaymentProvider {
@@ -13,5 +28,9 @@ export function paymentProvider(key: string): PaymentProvider {
   if (key === "manual") return manualProvider;
   if (key === "fake" && env.APP_ENV !== "production")
     return createFakeProvider(env.ORDER_LINK_SECRET);
+  if (key === "stripe") {
+    const stripe = stripeProvider();
+    if (stripe) return stripe;
+  }
   throw new AppError("provider_error", "Este método de pago no está disponible.");
 }

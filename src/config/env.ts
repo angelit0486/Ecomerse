@@ -34,6 +34,21 @@ export const serverEnvSchema = z.object({
    * idempotencia, la base solo guarda su hash) y la página del pago simulado.
    */
   ORDER_LINK_SECRET: z.string().min(32),
+  /**
+   * Stripe Connect de la PLATAFORMA (A-01): clave secreta y secreto del endpoint de
+   * webhooks Connect. Opcionales hasta que el propietario cree la cuenta; sin ellas
+   * el método Stripe no se ofrece.
+   */
+  STRIPE_SECRET_KEY: z
+    .string()
+    .regex(/^sk_(test|live)_[A-Za-z0-9]{10,}$/)
+    .optional(),
+  STRIPE_CONNECT_WEBHOOK_SECRET: z
+    .string()
+    .regex(/^whsec_[A-Za-z0-9]{10,}$/)
+    .optional(),
+  /** Solo pruebas: API de Stripe simulada. */
+  STRIPE_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /** Origen público del panel para enlaces en emails (p. ej. https://app.ejemplo.com). */
   APP_URL: z.url({ protocol: /^https?$/ }),
   /** Canal de email (GATE0 §27.1): resend en producción; mailpit o fake en local/CI. */

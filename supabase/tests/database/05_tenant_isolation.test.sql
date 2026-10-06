@@ -68,6 +68,9 @@ values (tests.fx('store_a'), 'manual', 'active', 'Transferencia');
 insert into public.payments (store_id, order_id, payment_account_id, provider, amount, currency, idempotency_key)
 select tests.fx('store_a'), tests.fx('order_a'), id, 'manual', 100, 'MXN', 'pago-prueba-0000001'
   from public.payment_accounts where store_id = tests.fx('store_a');
+insert into public.payment_events (store_id, payment_account_id, provider_event_id, type, signed_at, payload)
+select tests.fx('store_a'), id, 'evt_test_1', 'checkout.session.completed', now(), '{}'
+  from public.payment_accounts where store_id = tests.fx('store_a');
 
 -- Cobertura: ninguna tabla con columna de tenant queda fuera de la clasificación.
 select is_empty(
@@ -102,7 +105,8 @@ select set_eq(
   -- Checkout (F6-T01): todo menos carts/cart_items (sin grants: solo storefront.*).
   array['customer_addresses', 'customers', 'discount_redemptions', 'discounts', 'inventory_levels',
         'inventory_locations', 'menus', 'order_events', 'order_items', 'orders', 'organization_entitlement_overrides',
-        'organization_invitations', 'organization_members', 'organizations', 'payment_accounts', 'payments',
+        'organization_invitations', 'organization_members', 'organizations', 'payment_accounts', 'payment_events',
+        'payments',
         'product_variants', 'products', 'shipping_rates', 'shipping_zones', 'store_domains', 'store_pages',
         'store_themes', 'stores', 'subscriptions', 'support_access_grants'],
   'control positivo: el dueño de A ve los datos de A'

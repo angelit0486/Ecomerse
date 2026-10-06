@@ -4,6 +4,7 @@ import { createMediaHandlers } from "@/server/media/handlers";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderHandlers } from "@/server/orders/handlers";
+import { stripeProvider } from "@/server/payments/registry";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
 
@@ -33,7 +34,7 @@ const media = () =>
     onPublished: invalidateStore,
   });
 
-const orders = () => createOrderHandlers({ db: workerDb() });
+const orders = () => createOrderHandlers({ db: workerDb(), stripe: stripeProvider });
 
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
@@ -42,6 +43,9 @@ const handlers: Array<[string, JobHandler]> = [
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
+  ["payments.reconcile", lazy("payments.reconcile", orders)],
+  ["payment.failed", lazy("payment.failed", orders)],
+  ["payment.late_without_stock", lazy("payment.late_without_stock", orders)],
   ["order.created", lazy("order.created", orders)],
   ["order.paid", lazy("order.paid", orders)],
 ];

@@ -1,9 +1,9 @@
 /**
  * Contrato de proveedor de pagos de la TIENDA (GATE0 §18.2, contrato crítico §43).
- * Fase 6: `manual` y `fake`. Stripe Connect llega en la F7 con el mismo contrato.
+ * `manual`, `fake` (F6) y `stripe` (Connect, F7) con el mismo contrato.
  * Ninguna llamada de un adaptador ocurre dentro de una transacción de base de datos.
  */
-export type PaymentProviderKey = "manual" | "fake";
+export type PaymentProviderKey = "manual" | "fake" | "stripe";
 
 export interface Money {
   /** Centavos (bigint en la base; aquí siempre entero seguro). */
@@ -62,7 +62,19 @@ export interface NormalizedPayment {
 }
 
 export type WebhookVerification =
-  | { ok: true; eventId: string; type: string; providerPaymentId?: string; signedAt: Date }
+  | {
+      ok: true;
+      eventId: string;
+      type: string;
+      providerPaymentId?: string;
+      signedAt: Date;
+      /** Cuenta del proveedor que originó el evento (Connect: `acct_…`). Extensión aditiva, D-F7-01. */
+      account?: string;
+      /** Sesión de checkout del evento, si la hay. */
+      checkoutId?: string;
+      /** Referencia propia (= payments.id) informada por el proveedor. */
+      reference?: string;
+    }
   | { ok: false; reason: "bad_signature" | "stale" | "malformed" };
 
 export interface PaymentProvider {
