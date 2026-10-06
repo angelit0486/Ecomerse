@@ -164,7 +164,8 @@ describe("storefront: host → tienda", () => {
     expect(res.body).not.toContain("Tienda no disponible");
   });
 
-  it("las rutas del storefront aún no construidas responden 404", async () => {
-    expect((await get(stores[`rta${run}`]!.host, "/productos")).status).toBe(404);
+  it("las rutas del storefront existen desde la Fase 5; una ruta desconocida responde 404", async () => {
+    expect((await get(stores[`rta${run}`]!.host, "/productos")).status).toBe(200);
+    expect((await get(stores[`rta${run}`]!.host, "/no-existe")).status).toBe(404);
   });
 });

@@ -18,6 +18,15 @@ const storePublicSchema = z.object({
   locale: z.string(),
   currency: z.string(),
   country: z.string(),
+  // Tema publicado (nunca el borrador); validado en la base (theme_settings_valid).
+  theme: z
+    // Sin fila de tema, la base devuelve key/version null: se usan los defaults (§38 F5).
+    .object({
+      key: z.string().nullable(),
+      version: z.number().nullable(),
+      settings: z.record(z.string(), z.unknown()),
+    })
+    .optional(),
   // Logo publicado (F3-T06): ruta en store-media, ya re-codificado por el worker.
   logo: z
     .object({ path: z.string(), width: z.number().nullable(), height: z.number().nullable() })
