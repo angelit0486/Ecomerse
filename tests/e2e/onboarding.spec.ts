@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 import { admin, createAuthUser, createTenant, loginNewStaff, uniq } from "./support";
 
 /**
- * F2-T11: onboarding en 4 pasos. El contraste insuficiente bloquea guardar; la
- * tienda queda en borrador y se puede ver con la vista previa firmada.
+ * F2-T11 + F7-T05: onboarding en 4 pasos. El contraste insuficiente bloquea guardar;
+ * sin pagos ni políticas la tienda queda en borrador, visible con la vista previa firmada.
  */
 const run = uniq();
 const ownerEmail = `duena-o-${run}@example.test`;
@@ -50,8 +50,12 @@ test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", 
   await save.click();
   await expect(page.getByText("Branding guardado en borrador.")).toBeVisible();
 
-  // Paso 3 según A-02 y paso 4: borrador con vista previa.
-  await expect(page.getByRole("button", { name: "Conectar pagos (próximamente)" })).toBeDisabled();
+  // Pasos 3 y 4 (F7-T05): sin pagos ni políticas la tienda no se publica; queda en
+  // borrador con vista previa.
+  const pending = page.getByRole("list", { name: "Pendientes para publicar" });
+  await expect(pending.getByText("Activa al menos un método de pago real")).toBeVisible();
+  await expect(pending.getByText("Publica tu aviso de privacidad")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publicar tienda" })).toBeDisabled();
   const [preview] = await Promise.all([
     context.waitForEvent("page"),
     page.getByRole("link", { name: "Ver vista previa de la tienda" }).click(),

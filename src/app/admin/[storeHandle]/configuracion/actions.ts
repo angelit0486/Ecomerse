@@ -166,3 +166,56 @@ export async function setLogoDraft(
     message: mediaId ? "Logo guardado en el borrador." : "Logo quitado del borrador.",
   };
 }
+
+// -----------------------------------------------------------------------------
+// Pasos 3 y 4 (F7-T05, A-02): pago manual y publicación con validación.
+// -----------------------------------------------------------------------------
+const PAYMENT_MESSAGES: Record<string, string> = {
+  display_name: "Escribe un nombre de 1 a 80 caracteres.",
+  instructions: "Escribe instrucciones de 10 a 2000 caracteres (banco, CLABE, titular).",
+};
+
+export async function saveManualPayment(
+  storeHandle: string,
+  _: StepState,
+  formData: FormData,
+): Promise<StepState> {
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    await callRpc(supabase, "payments_save_manual", {
+      p_store_id: ctx.store.id,
+      p_display_name: String(formData.get("display_name") ?? ""),
+      p_instructions: String(formData.get("instructions") ?? ""),
+      p_active: formData.get("active") === "1",
+    });
+    invalidateStore(ctx.store.id);
+  } catch (error) {
+    const result = failure(error, PAYMENT_MESSAGES);
+    return {
+      ...result,
+      error: (result.fields && Object.values(result.fields)[0]) || result.error,
+      values: formValues(formData, ["display_name", "instructions"]),
+    };
+  }
+  revalidatePath(`/admin/${storeHandle}/configuracion`);
+  return { ok: true, message: "Pago por transferencia guardado." };
+}
+
+export async function launchStore(storeHandle: string, _: StepState): Promise<StepState> {
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    await callRpc(supabase, "stores_launch", { p_store_id: ctx.store.id });
+    invalidateStore(ctx.store.id);
+  } catch (error) {
+    const result = failure(error);
+    return {
+      error: result.fields
+        ? "Aún hay pendientes en la lista. Complétalos y vuelve a intentarlo."
+        : result.error,
+    };
+  }
+  revalidatePath(`/admin/${storeHandle}`, "layout");
+  return { ok: true, message: "¡Tu tienda está publicada!" };
+}

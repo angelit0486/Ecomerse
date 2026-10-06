@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { publicMediaUrl } from "@/server/catalog/queries";
 
 import { BrandingForm, ProfileForm } from "./forms";
+import { LaunchButton, ManualPaymentForm } from "./launch-forms";
 import { LogoForm, type LogoCandidate } from "./logo-form";
 
 export const metadata: Metadata = { title: "Configura tu tienda" };
@@ -47,11 +48,26 @@ function previewUrl(hostname: string, storeId: string): string {
   return `${origin}/_preview?token=${token}`;
 }
 
+interface LaunchIssue {
+  code: string;
+  message: string;
+}
+
+/** Dónde se resuelve cada pendiente del checklist (§14.3). */
+function issueHref(base: string, code: string): string {
+  if (code === "payment_method") return "#paso-pagos";
+  if (code === "contact") return "#paso-datos";
+  if (code === "active_product") return `${base}/productos`;
+  if (code === "shipping_zone") return `${base}/envios`;
+  return `${base}/contenido`;
+}
+
 export default async function OnboardingPage({ params }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   const canEditProfile = hasPermission(ctx, "store.update");
   const canEditBranding = hasPermission(ctx, "appearance.manage");
+  const canManagePayments = hasPermission(ctx, "payments.manage");
   if (!canEditProfile && !canEditBranding) notFound();
 
   const supabase = await createSupabaseServerClient();
@@ -82,6 +98,24 @@ export default async function OnboardingPage({ params }: Props) {
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
+  const [{ data: checklist, error: checklistError }, { data: manual }] = await Promise.all([
+    supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
+    hasPermission(ctx, "payments.read")
+      ? supabase
+          .from("payment_accounts")
+          .select("display_name, status, public_config")
+          .eq("store_id", ctx.store.id)
+          .eq("provider", "manual")
+          .order("created_at")
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  if (checklistError) throw checklistError;
+  const launch = checklist as { status: string; issues: LaunchIssue[] };
+  const issues = launch.issues;
+  const paymentsDone = !issues.some((i) => i.code === "payment_method");
+  const launched = launch.status === "active";
   const logos: Array<LogoCandidate & { path: string }> = (
     (logoMedia ?? []) as { id: string; status: LogoCandidate["status"]; storage_path: string }[]
   ).map((m) => ({
@@ -121,8 +155,8 @@ export default async function OnboardingPage({ params }: Props) {
   const steps = [
     { title: "Cuenta y verificación en dos pasos", done: true },
     { title: "Datos de la tienda y marca", done: profileDone && brandingSaved },
-    { title: "Pagos", done: false },
-    { title: "Guardar en borrador", done: profileDone && brandingSaved },
+    { title: "Pagos", done: paymentsDone },
+    { title: "Publicar", done: launched },
   ];
 
   return (
@@ -191,36 +225,73 @@ export default async function OnboardingPage({ params }: Props) {
 
       <section
         aria-labelledby="paso-pagos"
-        className="space-y-2 rounded-md border border-border p-4"
+        className="space-y-3 rounded-md border border-border p-4"
       >
         <h2 id="paso-pagos" className="text-base font-semibold">
           Pagos
         </h2>
         <p className="text-sm text-fg-muted">
-          Conectar pagos: disponible al activar pagos. Mientras tanto tu tienda queda en borrador y
-          nadie puede comprar.
+          {paymentsDone
+            ? "Tu tienda ya tiene un método de pago activo."
+            : "Activa al menos un método de pago para poder publicar."}{" "}
+          Con transferencia, tú confirmas cada pago desde Pedidos.
         </p>
-        <button
-          type="button"
-          disabled
-          className="rounded-md border border-border px-3 py-1.5 text-sm opacity-60"
-        >
-          Conectar pagos (próximamente)
-        </button>
+        {canManagePayments ? (
+          <ManualPaymentForm
+            storeHandle={ctx.store.handle}
+            initial={{
+              display_name:
+                (manual?.display_name as string | undefined) ?? "Transferencia bancaria",
+              instructions:
+                (manual?.public_config as { instructions?: string } | undefined)?.instructions ??
+                "",
+              active: manual ? manual.status === "active" : true,
+            }}
+          />
+        ) : (
+          <p className="text-sm">Pide a un administrador de la tienda que configure los pagos.</p>
+        )}
       </section>
 
       <section
-        aria-labelledby="paso-borrador"
-        className="space-y-2 rounded-md border border-border p-4"
+        aria-labelledby="paso-publicar"
+        className="space-y-3 rounded-md border border-border p-4"
       >
-        <h2 id="paso-borrador" className="text-base font-semibold">
-          Guardar en borrador
+        <h2 id="paso-publicar" className="text-base font-semibold">
+          Publicar
         </h2>
-        <p className="text-sm text-fg-muted">
-          Tus cambios se guardan como borrador. La tienda no es visible para compradores hasta que
-          se pueda publicar.
-        </p>
-        {domain?.hostname ? (
+        {launched ? (
+          <p className="text-sm">Tu tienda está publicada y los compradores ya pueden verla.</p>
+        ) : (
+          <>
+            <p className="text-sm text-fg-muted">
+              Mientras haya pendientes, la tienda queda en borrador y nadie puede comprar.
+            </p>
+            {issues.length > 0 ? (
+              <ul
+                className="list-disc space-y-1 pl-5 text-sm"
+                aria-label="Pendientes para publicar"
+              >
+                {issues.map((issue) => (
+                  <li key={issue.code}>
+                    <a
+                      className="underline"
+                      href={issueHref(`/admin/${ctx.store.handle}`, issue.code)}
+                    >
+                      {issue.message}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm">Todo listo para publicar.</p>
+            )}
+            {canEditProfile ? (
+              <LaunchButton storeHandle={ctx.store.handle} ready={issues.length === 0} />
+            ) : null}
+          </>
+        )}
+        {domain?.hostname && !launched ? (
           <a
             href={previewUrl(domain.hostname, ctx.store.id)}
             target="_blank"
