@@ -46,7 +46,8 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F3. Bundle de respaldo: `pruva-f3.b
 | 3    | F3-T03 Medios (Storage, worker, purga)   | hecha                       | F3-T03 · 65 pgTAP, 12 unit, 9 integración, 5 stack con Storage real + mutaciones                             |
 | 3    | F3-T04 SafeHtml                          | hecha                       | F3-T04 · 45 unit de XSS + SafeHtml + esquema; mutación de `react/no-danger`                                  |
 | 3    | F3-T05 UI del catálogo                   | hecha                       | F3-T05 · E2E de la Playera (6 variantes, imagen real, publicar/archivar/eliminar/restaurar, masivas) con axe |
-| 3    | F3-T06 Logo de la tienda                 | pendiente                   |                                                                                                              |
+| 3    | F3-T06 Logo de la tienda                 | hecha                       | `bd335c5` · 16 pgTAP + E2E (SVG rechazado, logo sin EXIF en la tienda)                                       |
+| 3    | Gate F3                                  | hecha                       | `b1afc12` · informe `docs/phases/PHASE-03-REPORT.md` · 18 hallazgos corregidos                               |
 | 4–11 | Ver el plan §4                           | pendiente                   |                                                                                                              |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
