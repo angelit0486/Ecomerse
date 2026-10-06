@@ -71,7 +71,7 @@ jobs:
           PGPASSWORD: postgres
 
   stack:
-    name: Stack local · Auth real + PostgREST + RLS
+    name: Stack local · Auth y Storage reales + PostgREST + RLS
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
           sudo apt-get install -y -q "postgresql-${PG_MAJOR}-pgtap"
           sudo systemctl start postgresql.service
           sudo -u postgres psql -q -c "alter user postgres password 'postgres';"
-      - name: Levantar stack (binarios fijados con sha256)
+      - name: Levantar stack (binarios fijados con sha256; Storage compilado desde un commit fijado)
         run: bash scripts/dev/stack.sh up
         env:
           PGHOST: localhost

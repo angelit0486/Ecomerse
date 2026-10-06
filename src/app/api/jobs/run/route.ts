@@ -39,8 +39,11 @@ async function handle(request: Request): Promise<Response> {
     }
 
     const workerId = `${process.env.VERCEL_REGION ?? "local"}:${crypto.randomUUID()}`;
+    const db = workerDb();
+    // Mantenimiento periódico (purga diaria de medios): idempotente por día.
+    await db`select system.enqueue_maintenance()`;
     const result = await runJobs({
-      store: createPostgresJobStore(workerDb()),
+      store: createPostgresJobStore(db),
       registry: jobRegistry,
       workerId,
       log: reqLog.child({ worker_id: workerId }),

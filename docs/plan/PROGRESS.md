@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T03 (medios: buckets `store-media`/`store-private`, `media_create_upload`/`media_finalize`, job `media.process` con magic bytes, sharp, sin EXIF, límite de píxeles; purga de huérfanos SR-2).
-- **Siguiente paso exacto:** spike S-3 en local: Supabase Storage no tiene binario; evaluar storage-api desde el código fuente o un `StorageAdapter` con implementación de sistema de archivos para dev/CI (ADR), y escribir los fixtures maliciosos primero.
+- **Siguiente tarea:** F3-T04 (sanitización de `description_html` y componente `SafeHtml`, única excepción a `react/no-danger`).
+- **Siguiente paso exacto:** elegir sanitizador (lista blanca de etiquetas y atributos, sin estilos ni scripts; justificar la dependencia) y escribir primero las pruebas con payloads XSS conocidos.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,35 +19,42 @@
 
 ## Commits sin subir
 
-`7549db7` (Gate 1) · `4b74b5d` (Fase 2 A+B) · `473fb44` (plan autónomo) · F2-T01
+Todos desde `7549db7` (Gate 1) hasta F3-T03. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
-| Fase | Tarea                                    | Estado                      | Evidencia                                          |
-| ---- | ---------------------------------------- | --------------------------- | -------------------------------------------------- |
-| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                          |
-| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración       |
-| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones                 |
-| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación        |
-| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones       |
-| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones       |
-| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones       |
-| 2    | F2-T05 Capa de servidor                  | hecha                       | F2-T05 · 16 pgTAP, 17 unit, 2 integración, 1 stack |
-| 2    | F2-T06 Proxy de dominios y vista previa  | pendiente                   |                                                    |
-| 2    | F2-T07 Auth de staff (OTP + TOTP)        | pendiente                   |                                                    |
-| 2    | F2-T08 Job de email de invitación        | pendiente                   |                                                    |
-| 2    | F2-T09 Primitivas de UI                  | pendiente                   |                                                    |
-| 2    | F2-T10 Panel y Equipo                    | pendiente                   |                                                    |
-| 2    | F2-T11 Onboarding en 4 pasos             | pendiente                   |                                                    |
-| 2    | F2-T12 Consola de plataforma mínima      | pendiente                   |                                                    |
-| 2    | Gate F2                                  | pendiente                   |                                                    |
-| 3–11 | Ver el plan §4                           | pendiente                   |                                                    |
+| Fase | Tarea                                    | Estado                      | Evidencia                                                                        |
+| ---- | ---------------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
+| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                                                        |
+| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración                                     |
+| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones                                               |
+| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación                                      |
+| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones                                     |
+| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones                                     |
+| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones                                     |
+| 2    | F2-T05 Capa de servidor                  | hecha                       | F2-T05 · 16 pgTAP, 17 unit, 2 integración, 1 stack                               |
+| 2    | F2-T06 Proxy de dominios y vista previa  | hecha                       | `69920f0`                                                                        |
+| 2    | F2-T07 Auth de staff (OTP + TOTP)        | hecha                       | `aa62e9b`                                                                        |
+| 2    | F2-T08 Job de email de invitación        | hecha                       | `7189916`                                                                        |
+| 2    | F2-T09 Primitivas de UI                  | hecha                       | `471137d`                                                                        |
+| 2    | F2-T10 Panel y Equipo                    | hecha                       | `41eabbb`                                                                        |
+| 2    | F2-T11 Onboarding en 4 pasos             | hecha                       | `43152d6`                                                                        |
+| 2    | F2-T12 Consola de plataforma mínima      | hecha                       | `06bf25d`                                                                        |
+| 2    | Gate F2                                  | hecha                       | `297b169` · informe `docs/phases/PHASE-02-REPORT.md`                             |
+| 3    | F3-T01 Tablas del catálogo               | hecha                       | `9ae9edc` · 42 pgTAP                                                             |
+| 3    | F3-T02 RPC del catálogo                  | hecha                       | `2a4ed6e` · 54 pgTAP                                                             |
+| 3    | F3-T03 Medios (Storage, worker, purga)   | hecha                       | F3-T03 · 65 pgTAP, 12 unit, 9 integración, 5 stack con Storage real + mutaciones |
+| 3    | F3-T04 SafeHtml                          | pendiente                   |                                                                                  |
+| 3    | F3-T05 UI del catálogo                   | pendiente                   |                                                                                  |
+| 3    | F3-T06 Logo de la tienda                 | pendiente                   |                                                                                  |
+| 4–11 | Ver el plan §4                           | pendiente                   |                                                                                  |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 
 - S-1: roles personalizados a través de Supavisor.
 - S-2: Supabase Auth **alojado** (recovery, Send Email Hook). El claim `aal` y TOTP ya se verificaron con GoTrue v2.197.0 en local.
 - `supabase test db` contra el proyecto real (PG17).
+- S-3 (Storage alojado): vigencia real de la URL firmada de subida (2 h por defecto), que `postgres` lea `storage.objects` desde funciones SECURITY DEFINER (`media_finalize`, purga) y costo de las transformaciones de imagen (§25.3.5).
 - CI de GitHub Actions (primer run, incluido el job nuevo `stack`).
 
 ## Pendientes menores registrados

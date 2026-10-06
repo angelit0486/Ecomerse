@@ -7,7 +7,8 @@ import nextTypescript from "eslint-config-next/typescript";
  *  - El cliente Postgres (`postgres`) solo se usa en src/server/db/** (clientes de
  *    roles de mínimo privilegio) y en las pruebas de integración.
  *  - src/server/privileged/** (service role, lista blanca de 2 usos) solo se
- *    importa desde los servicios autorizados: src/server/team/mfa-reset.ts (SR-1).
+ *    importa desde los servicios autorizados: src/server/team/mfa-reset.ts (SR-1)
+ *    y el registro de jobs, que inyecta Storage Admin al worker de medios (SR-2).
  *  - dangerouslySetInnerHTML prohibido (solo SafeHtml, Fase 3+).
  */
 const restrictedImports = {
@@ -34,6 +35,7 @@ export default defineConfig([
     "coverage/**",
     "next-env.d.ts",
     "supabase/.temp/**",
+    ".stack/**",
   ]),
   {
     rules: {
@@ -60,7 +62,8 @@ export default defineConfig([
   },
   {
     // Lista blanca del service role (GATE0 §11.5): uso #1, reset de MFA (Auth Admin).
-    files: ["src/server/team/mfa-reset.ts"],
+    // Uso #2, Storage Admin del worker de medios (SR-2), inyectado desde el registro de jobs.
+    files: ["src/server/team/mfa-reset.ts", "src/server/jobs/registry.ts"],
     rules: {
       "no-restricted-imports": ["error", { paths: restrictedImports.paths }],
     },

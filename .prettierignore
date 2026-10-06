@@ -4,6 +4,7 @@ coverage
 pnpm-lock.yaml
 next-env.d.ts
 supabase/.temp
+.stack
 # El contrato técnico se conserva tal como fue aprobado.
 docs/architecture
 CAMBIOS-FASE-1-2.md

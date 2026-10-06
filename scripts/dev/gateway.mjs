@@ -17,10 +17,12 @@ const templatesDir = path.join(root, "supabase/templates");
 const PORT = Number(process.env.GATEWAY_PORT ?? 54321);
 const AUTH_PORT = Number(process.env.AUTH_PORT ?? 9999);
 const REST_PORT = Number(process.env.REST_PORT ?? 3001);
+const STORAGE_PORT = Number(process.env.STORAGE_PORT ?? 5000);
 
 const routes = [
   { prefix: "/auth/v1", port: AUTH_PORT },
   { prefix: "/rest/v1", port: REST_PORT },
+  { prefix: "/storage/v1", port: STORAGE_PORT },
 ];
 
 function proxy(req, res, route) {

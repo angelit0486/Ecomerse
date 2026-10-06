@@ -33,6 +33,7 @@ GATEWAY_PORT=54321
 AUTH_PORT=9999
 REST_PORT=3001
 SMTP_PORT=1025
+STORAGE_PORT=5000
 MAIL_UI_PORT=8025
 
 AUTH_ADMIN_PASSWORD="supabase_auth_admin_dev_password"
@@ -49,6 +50,11 @@ POSTGREST_SHA="eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279"
 MAILPIT_VERSION="v1.31.4"
 MAILPIT_URL="https://github.com/axllent/mailpit/releases/download/${MAILPIT_VERSION}/mailpit-linux-amd64.tar.gz"
 MAILPIT_SHA="30942c4605c2ca8b9f759b1bb4e3ab6a12bdfdf66e5c94644ec2c75ac41e88e7" # gitleaks:allow (sha256 público del release)
+# Supabase Storage no publica binarios: se compila desde el tag (commit fijado) con Node 24.
+NODE24_URL="https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz"
+NODE24_SHA="fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6" # gitleaks:allow (sha256 público del release)
+STORAGE_TAG="v1.79.33"
+STORAGE_COMMIT="2379ad5493f06bcf3bb5f044b844e292b98df4a0" # gitleaks:allow (commit del tag)
 
 log() { printf '▸ %s\n' "$*"; }
 die() { printf '✗ %s\n' "$*" >&2; exit 1; }
@@ -75,11 +81,29 @@ cmd_install() {
   tar -xzf "$dl/auth.tar.gz" -C "$BIN/auth-dist"
   tar -xJf "$dl/postgrest.tar.xz" -C "$BIN"
   tar -xzf "$dl/mailpit.tar.gz" -C "$BIN" mailpit
+  install_storage
   log "Binarios listos en $BIN"
+}
+
+install_storage() {
+  local dl="$STACK_DIR/downloads"
+  fetch "$NODE24_URL" "$NODE24_SHA" "$dl/node24.tar.xz"
+  rm -rf "$BIN/node24" && mkdir -p "$BIN/node24"
+  tar -xJf "$dl/node24.tar.xz" -C "$BIN/node24" --strip-components=1
+  if [ ! -d "$BIN/storage/.git" ]; then
+    rm -rf "$BIN/storage"
+    git clone -q --depth 1 --branch "$STORAGE_TAG" https://github.com/supabase/storage "$BIN/storage"
+  fi
+  [ "$(git -C "$BIN/storage" rev-parse HEAD)" = "$STORAGE_COMMIT" ] || die "commit de Storage inesperado"
+  log "Compilando Supabase Storage $STORAGE_TAG"
+  (cd "$BIN/storage" && PATH="$BIN/node24/bin:$PATH" npm ci --no-audit --no-fund --ignore-scripts >/dev/null \
+    && PATH="$BIN/node24/bin:$PATH" npm rebuild fs-xattr >/dev/null \
+    && PATH="$BIN/node24/bin:$PATH" npm run build >/dev/null)
 }
 
 ensure_installed() {
   [ -x "$BIN/auth-dist/auth" ] && [ -x "$BIN/postgrest" ] && [ -x "$BIN/mailpit" ] || cmd_install
+  [ -f "$BIN/storage/dist/start/server.js" ] && [ -x "$BIN/node24/bin/node" ] || install_storage
 }
 
 is_running() { [ -f "$RUN/$1.pid" ] && kill -0 "$(cat "$RUN/$1.pid")" 2>/dev/null; }
@@ -150,7 +174,7 @@ cmd_up() {
   wait_http mailpit "http://127.0.0.1:$MAIL_UI_PORT/api/v1/info"
 
   log "Puerta de enlace (:$GATEWAY_PORT)"
-  GATEWAY_PORT=$GATEWAY_PORT AUTH_PORT=$AUTH_PORT REST_PORT=$REST_PORT \
+  GATEWAY_PORT=$GATEWAY_PORT AUTH_PORT=$AUTH_PORT REST_PORT=$REST_PORT STORAGE_PORT=$STORAGE_PORT \
     start gateway "$ROOT" node scripts/dev/gateway.mjs
   wait_http gateway "http://127.0.0.1:$GATEWAY_PORT/health"
 
@@ -184,7 +208,34 @@ cmd_up() {
     ./auth
   wait_http auth "http://127.0.0.1:$AUTH_PORT/health"
 
-  if [ "$NEW_DB" = 1 ]; then apply_migrations; fi
+  log "Supabase Storage (:$STORAGE_PORT) — ejecuta sus propias migraciones del esquema storage"
+  mkdir -p "$RUN/storage-data"
+  start storage "$BIN/storage" env -i PATH="$BIN/node24/bin:/usr/bin:/bin" HOME="$HOME" NODE_ENV=production \
+    SERVER_HOST=127.0.0.1 SERVER_PORT=$STORAGE_PORT SERVER_ADMIN_PORT=$((STORAGE_PORT + 1)) \
+    AUTH_JWT_SECRET="$JWT_SECRET" AUTH_JWT_ALGORITHM=HS256 \
+    ANON_KEY="$(node scripts/dev/keys.mjs | sed -n 's/^NEXT_PUBLIC_SUPABASE_ANON_KEY=//p')" \
+    SERVICE_KEY="$(node scripts/dev/keys.mjs | sed -n 's/^SUPABASE_SERVICE_ROLE_KEY=//p')" \
+    DATABASE_URL="postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${DB}" DB_INSTALL_ROLES=false \
+    DB_MIGRATIONS_STRATEGY=full_fleet STORAGE_BACKEND=file STORAGE_FILE_BACKEND_PATH="$RUN/storage-data" \
+    TENANT_ID=local REGION=local GLOBAL_S3_BUCKET=local IMAGE_TRANSFORMATION_ENABLED=false PG_QUEUE_ENABLE=false \
+    RATE_LIMITER_ENABLED=false OTEL_METRICS_ENABLED=false PROMETHEUS_METRICS_ENABLED=false LOG_LEVEL=warn \
+    UPLOAD_SIGNED_URL_EXPIRATION_TIME=600 \
+    node dist/start/server.js
+  wait_http storage "http://127.0.0.1:$STORAGE_PORT/status"
+  # Storage migra su esquema en segundo plano tras arrancar: se espera a que termine.
+  for _ in $(seq 1 120); do
+    local pending
+    pending=$(psql_q -d "$DB" -tAc "select case when to_regclass('storage.objects') is null then 1
+      else (select count(*) from storage.migrations where executed_at > now() - interval '3 seconds') end" 2>/dev/null || echo 1)
+    [ "$pending" = "0" ] && break
+    sleep 1
+  done
+
+  if [ "$NEW_DB" = 1 ]; then
+    # Privilegios que Supabase concede en el esquema storage a los roles de la API.
+    psql_q -d "$DB" -f scripts/db/supabase-shim-storage-grants.sql
+    apply_migrations
+  fi
 
   log "PostgREST (:$REST_PORT)"
   cat >"$RUN/postgrest.conf" <<CONF
@@ -207,9 +258,14 @@ CONF
 }
 
 cmd_down() {
-  for name in postgrest auth gateway mailpit; do
+  for name in postgrest storage auth gateway mailpit; do
     if is_running "$name"; then
-      kill "$(cat "$RUN/$name.pid")" 2>/dev/null || true
+      local pid
+      pid="$(cat "$RUN/$name.pid")"
+      kill "$pid" 2>/dev/null || true
+      # Espera a que libere el puerto; si no termina en 10 s, se fuerza.
+      for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+      kill -9 "$pid" 2>/dev/null || true
       log "$name detenido"
     fi
     rm -f "$RUN/$name.pid"
@@ -217,7 +273,7 @@ cmd_down() {
 }
 
 cmd_status() {
-  for name in mailpit gateway auth postgrest; do
+  for name in mailpit gateway auth storage postgrest; do
     if is_running "$name"; then echo "✓ $name"; else echo "✗ $name"; fi
   done
 }

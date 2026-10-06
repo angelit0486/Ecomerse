@@ -72,7 +72,8 @@ begin
   insert into public.plans (key, name) values (p_key, p_key)
   on conflict (key) do update set name = excluded.name returning id into v;
   insert into public.plan_entitlements (plan_id, key, value_int) values
-    (v, 'max_stores', p_max_stores), (v, 'max_staff', p_max_staff), (v, 'max_products', 1000)
+    (v, 'max_stores', p_max_stores), (v, 'max_staff', p_max_staff), (v, 'max_products', 1000),
+    (v, 'storage_mb', 1000)
   on conflict (plan_id, key) do update set value_int = excluded.value_int;
   return v;
 end $$;
