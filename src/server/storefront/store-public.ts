@@ -18,6 +18,11 @@ const storePublicSchema = z.object({
   locale: z.string(),
   currency: z.string(),
   country: z.string(),
+  // Logo publicado (F3-T06): ruta en store-media, ya re-codificado por el worker.
+  logo: z
+    .object({ path: z.string(), width: z.number().nullable(), height: z.number().nullable() })
+    .nullable()
+    .optional(),
 });
 
 export type StorePublic = z.infer<typeof storePublicSchema>;

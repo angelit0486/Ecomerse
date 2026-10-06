@@ -59,9 +59,9 @@ export function Select({
         <S.Content
           position="popper"
           sideOffset={4}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] rounded-[var(--radius-control)] border border-border bg-surface shadow-lg"
+          className="z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--radius-control)] border border-border bg-surface shadow-lg"
         >
-          <S.Viewport className="p-1">
+          <S.Viewport className="max-h-[inherit] overflow-y-auto p-1">
             {options.map((option) => (
               <S.Item
                 key={option.value}

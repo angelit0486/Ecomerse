@@ -47,6 +47,16 @@ export default async function StoreHomePage({ params }: Props) {
           Vista previa: solo tú puedes ver esta tienda.
         </p>
       ) : null}
+      {store.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
+        <img
+          src={`${serverEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-media/${store.logo.path}`}
+          alt={store.name}
+          width={store.logo.width ?? undefined}
+          height={store.logo.height ?? undefined}
+          className="mb-6 h-16 w-auto self-start object-contain"
+        />
+      ) : null}
       <EmptyState
         title={store.name}
         description="Muy pronto encontrarás aquí nuestros productos."

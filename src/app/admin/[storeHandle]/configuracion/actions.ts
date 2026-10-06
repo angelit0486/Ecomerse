@@ -7,6 +7,7 @@ import { COLOR_KEYS } from "@/lib/theme/palette";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
+import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /** Onboarding, paso 2 (GATE0 §20.2): datos de la tienda y branding en borrador. */
@@ -89,4 +90,75 @@ export async function saveBranding(
   }
   revalidatePath(`/admin/${storeHandle}/configuracion`);
   return { ok: true, message: "Branding guardado en borrador." };
+}
+
+// -----------------------------------------------------------------------------
+// Logo (F3-T06): mismo pipeline que las imágenes del catálogo (§25.3), máx. 2 MB.
+// -----------------------------------------------------------------------------
+const LOGO_ERROR = "Usa una imagen JPG, PNG, WebP o AVIF de hasta 2 MB.";
+
+export async function requestLogoUpload(
+  storeHandle: string,
+  input: { mimeType: string; bytes: number },
+): Promise<{ ok: true; mediaId: string; signedUrl: string } | { ok: false; error: string }> {
+  if (typeof input?.mimeType !== "string" || !Number.isInteger(input?.bytes) || input.bytes < 1) {
+    return { ok: false, error: LOGO_ERROR };
+  }
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    const ticket = await createMediaUpload(supabase, {
+      storeId: ctx.store.id,
+      ownerType: "store_branding",
+      productId: null,
+      mimeType: input.mimeType,
+      bytes: input.bytes,
+    });
+    return { ok: true, mediaId: ticket.mediaId, signedUrl: ticket.signedUrl };
+  } catch (error) {
+    const result = failure(error);
+    return { ok: false, error: result.fields ? LOGO_ERROR : (result.error ?? LOGO_ERROR) };
+  }
+}
+
+export async function finalizeLogoUpload(
+  storeHandle: string,
+  mediaId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!/^[0-9a-f-]{36}$/.test(mediaId)) return { ok: false, error: "Subida no válida." };
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    await finalizeMediaUpload(supabase, ctx.store.id, mediaId);
+  } catch (error) {
+    return { ok: false, error: failure(error).error };
+  }
+  revalidatePath(`/admin/${storeHandle}/configuracion`);
+  return { ok: true };
+}
+
+/** Usa (o quita) un logo ya procesado en el borrador del branding. */
+export async function setLogoDraft(
+  storeHandle: string,
+  _: StepState,
+  formData: FormData,
+): Promise<StepState> {
+  const mediaId = String(formData.get("media_id") ?? "");
+  if (mediaId && !/^[0-9a-f-]{36}$/.test(mediaId)) return { error: "Logo no válido." };
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    await callRpc(supabase, "appearance_set_logo_draft", {
+      p_store_id: ctx.store.id,
+      p_media_id: mediaId || null,
+    });
+  } catch (error) {
+    const result = failure(error);
+    return result.fields?.logo ? { error: "Ese logo aún no está listo o no es válido." } : result;
+  }
+  revalidatePath(`/admin/${storeHandle}/configuracion`);
+  return {
+    ok: true,
+    message: mediaId ? "Logo guardado en el borrador." : "Logo quitado del borrador.",
+  };
 }

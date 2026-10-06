@@ -8,7 +8,10 @@ import { serverEnv } from "@/server/env";
 import { createPreviewToken } from "@/server/storefront/preview";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { publicMediaUrl } from "@/server/catalog/queries";
+
 import { BrandingForm, ProfileForm } from "./forms";
+import { LogoForm, type LogoCandidate } from "./logo-form";
 
 export const metadata: Metadata = { title: "Configura tu tienda" };
 
@@ -52,24 +55,44 @@ export default async function OnboardingPage({ params }: Props) {
   if (!canEditProfile && !canEditBranding) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: store }, { data: theme }, { data: domain }] = await Promise.all([
-    supabase
-      .from("stores")
-      .select("name, contact_email, contact_phone, timezone")
-      .eq("id", ctx.store.id)
-      .single(),
-    supabase
-      .from("store_themes")
-      .select("settings, draft_settings")
-      .eq("store_id", ctx.store.id)
-      .maybeSingle(),
-    supabase
-      .from("store_domains")
-      .select("hostname")
-      .eq("store_id", ctx.store.id)
-      .eq("is_primary", true)
-      .maybeSingle(),
-  ]);
+  const [{ data: store }, { data: theme }, { data: domain }, { data: logoMedia }] =
+    await Promise.all([
+      supabase
+        .from("stores")
+        .select("name, contact_email, contact_phone, timezone")
+        .eq("id", ctx.store.id)
+        .single(),
+      supabase
+        .from("store_themes")
+        .select("settings, draft_settings, logo_media_id, draft_logo_media_id")
+        .eq("store_id", ctx.store.id)
+        .maybeSingle(),
+      supabase
+        .from("store_domains")
+        .select("hostname")
+        .eq("store_id", ctx.store.id)
+        .eq("is_primary", true)
+        .maybeSingle(),
+      supabase
+        .from("media")
+        .select("id, status, storage_path")
+        .eq("store_id", ctx.store.id)
+        .eq("owner_type", "store_branding")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+  const logos: Array<LogoCandidate & { path: string }> = (
+    (logoMedia ?? []) as { id: string; status: LogoCandidate["status"]; storage_path: string }[]
+  ).map((m) => ({
+    id: m.id,
+    status: m.status,
+    path: m.storage_path,
+    url: m.status === "ready" ? publicMediaUrl(m.storage_path) : null,
+  }));
+  // El borrador manda; sin borrador, el logo publicado.
+  const currentLogoId = theme?.draft_settings ? theme?.draft_logo_media_id : theme?.logo_media_id;
+  const currentLogo = logos.find((l) => l.id === currentLogoId && l.url);
   const settings = (theme?.draft_settings ?? theme?.settings ?? {}) as ThemeSettings;
   const brandingSaved = Boolean(
     theme?.draft_settings || (theme?.settings as ThemeSettings)?.colors,
@@ -114,6 +137,20 @@ export default async function OnboardingPage({ params }: Props) {
             timezones={
               TIMEZONES.includes(store.timezone) ? TIMEZONES : [store.timezone, ...TIMEZONES]
             }
+          />
+        </section>
+      ) : null}
+
+      {canEditBranding ? (
+        <section aria-labelledby="paso-logo" className="space-y-3">
+          <h2 id="paso-logo" className="text-base font-semibold">
+            Logo
+          </h2>
+          <LogoForm
+            storeHandle={ctx.store.handle}
+            storeName={ctx.store.name}
+            current={currentLogo ? { id: currentLogo.id, url: currentLogo.url! } : null}
+            candidates={logos.map(({ id, status, url }) => ({ id, status, url }))}
           />
         </section>
       ) : null}

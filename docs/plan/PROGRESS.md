@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T06 (logo de la tienda en el branding con el pipeline de medios).
-- **Siguiente paso exacto:** subida del logo (`store_branding`, máx. 2 MB) en Configurar tienda → guardar `logo_media_id` en el tema con una RPC (`appearance.manage`) que exija un medio `ready` de la misma tienda; E2E.
+- **Siguiente tarea:** Gate F3 (revisión de seguridad y de código de la Fase 3, informe `docs/phases/PHASE-03-REPORT.md`).
+- **Siguiente paso exacto:** revisión adversarial del diff F3-T01..T06 (aislamiento de Storage, RPC de medios, acciones del panel, CSP), corregir hallazgos y escribir el informe.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F3-T05. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F3-T06. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -60,6 +60,7 @@ Todos desde `7549db7` (Gate 1) hasta F3-T05. Bundle de respaldo: `pruva-f3.bundl
 ## Pendientes menores registrados
 
 - Fase 7 (notificaciones completas): aviso al dueño de suspensión/reactivación de tenant (D-F2-20) y de transferencia de propiedad (D-F2-16), con el mismo canal y `notification_deliveries`.
+- Consola de plataforma: el selector de tienda para conceder soporte lista todas las tiendas; con cientos de tenants necesita búsqueda (el `Select` ya limita su altura y desplaza).
 - Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).
 
 ## Ideas para después (no se implementan sin aprobación)
