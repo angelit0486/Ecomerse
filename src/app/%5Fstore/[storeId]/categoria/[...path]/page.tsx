@@ -18,7 +18,9 @@ type Props = {
 async function load(params: Props["params"]) {
   const { storeId, path } = await params;
   const { store, preview } = await getStorefront(storeId);
-  const category = await getCategory(store.id, path.map(decodeURIComponent).join("/"));
+  // Los segmentos son slugs: algo distinto (incluido un %-escape malformado) es 404, no 500.
+  if (path.length > 8 || !path.every((s) => /^[a-z0-9-]{1,120}$/.test(s))) notFound();
+  const category = await getCategory(store.id, path.join("/"));
   if (!category) notFound();
   return { store, preview, category };
 }

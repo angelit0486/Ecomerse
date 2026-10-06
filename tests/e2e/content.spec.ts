@@ -91,4 +91,18 @@ test("contenido: página publicada y menú principal visibles en la tienda", asy
   await expect(page.getByRole("heading", { name: "Nuestra historia" })).toBeVisible();
   expect(await page.content()).not.toContain("alert(1)");
   await expectNoSeriousA11yViolations(page);
+
+  // Un destino borrado después no bloquea el editor: se marca y se vacía.
+  await admin`update public.store_pages set is_published = false, deleted_at = now()
+              where store_id = ${tenant.storeId} and slug = 'quienes-somos'`;
+  await page.goto(`/admin/${tenant.handle}/contenido/menus`);
+  await expect(page.getByText("El destino de enlace 1 ya no existe.")).toBeVisible();
+  await page
+    .getByRole("form", { name: "Menú principal" })
+    .getByRole("button", { name: "Quitar enlace 1", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Guardar menú principal" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Menú principal guardado." }),
+  ).toBeVisible();
 });

@@ -13,21 +13,27 @@ import {
 } from "@/server/content/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { MenuEditor, type MenuDraft } from "./menu-editor";
+import { MenuEditor, type MenuDraft, type TargetOptions } from "./menu-editor";
 
 export const metadata: Metadata = { title: "Menús" };
 
 type Props = { params: Promise<{ storeHandle: string }> };
 
-function toDrafts(rows: MenuItemRow[]): MenuDraft[] {
-  const draft = (r: MenuItemRow): MenuDraft => ({
-    key: r.id,
-    label: r.label,
-    link_type: r.link_type,
-    target_id: r.target_id ?? "",
-    url: r.url ?? "",
-    children: [],
-  });
+/** Un destino que ya no está entre las opciones (borrado) se vacía y se marca. */
+function toDrafts(rows: MenuItemRow[], targets: TargetOptions): MenuDraft[] {
+  const draft = (r: MenuItemRow): MenuDraft => {
+    const options = targets[r.link_type as keyof TargetOptions];
+    const stale = Boolean(options && r.target_id && !options.some((o) => o.id === r.target_id));
+    return {
+      key: r.id,
+      label: r.label,
+      link_type: r.link_type,
+      target_id: stale ? "" : (r.target_id ?? ""),
+      url: r.url ?? "",
+      children: [],
+      ...(stale ? { stale: true } : {}),
+    };
+  };
   const roots = rows.filter((r) => !r.parent_id).map(draft);
   for (const r of rows) {
     if (r.parent_id) roots.find((p) => p.key === r.parent_id)?.children.push(draft(r));
@@ -40,15 +46,20 @@ export default async function MenusPage({ params }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "appearance.manage")) notFound();
   const supabase = await createSupabaseServerClient();
-  const [main, footer, categories, brands, pages, products] = await Promise.all([
+  const [main, footer] = await Promise.all([
     getMenuItems(supabase, ctx.store.id, "main"),
     getMenuItems(supabase, ctx.store.id, "footer"),
+  ]);
+  const linkedProducts = [...main, ...footer].flatMap((i) =>
+    i.link_type === "product" && i.target_id ? [i.target_id] : [],
+  );
+  const [categories, brands, pages, products] = await Promise.all([
     listCategories(supabase, ctx.store.id),
     listBrands(supabase, ctx.store.id),
     listPages(supabase, ctx.store.id),
-    listProductTargets(supabase, ctx.store.id),
+    listProductTargets(supabase, ctx.store.id, linkedProducts),
   ]);
-  const targets = {
+  const targets: TargetOptions = {
     category: categories.map((c) => ({ id: c.id, name: `${"— ".repeat(c.depth)}${c.name}` })),
     brand: brands.map((b) => ({ id: b.id, name: b.name })),
     page: pages.map((p) => ({
@@ -74,14 +85,14 @@ export default async function MenusPage({ params }: Props) {
         storeHandle={ctx.store.handle}
         handle="main"
         title="Menú principal"
-        initial={toDrafts(main)}
+        initial={toDrafts(main, targets)}
         targets={targets}
       />
       <MenuEditor
         storeHandle={ctx.store.handle}
         handle="footer"
         title="Menú del pie"
-        initial={toDrafts(footer)}
+        initial={toDrafts(footer, targets)}
         targets={targets}
       />
     </section>

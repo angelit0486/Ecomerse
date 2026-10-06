@@ -73,21 +73,24 @@ export async function getMenuItems(
   return items.sort((a, b) => a.position - b.position);
 }
 
-/** Productos para elegir como destino de menú (los más recientes; el menú es corto). */
+/**
+ * Productos para elegir como destino de menú: los 200 más recientes más los que
+ * los menús ya enlazan (para no perder un destino antiguo al editar).
+ */
 export async function listProductTargets(
   supabase: SupabaseClient,
   storeId: string,
+  linkedIds: string[],
 ): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, title")
-    .eq("store_id", storeId)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(200);
-  if (error) throw error;
-  return ((data ?? []) as { id: string; title: string }[]).map((p) => ({
-    id: p.id,
-    name: p.title,
-  }));
+  const query = () =>
+    supabase.from("products").select("id, title").eq("store_id", storeId).is("deleted_at", null);
+  const [recent, linked] = await Promise.all([
+    query().order("updated_at", { ascending: false }).limit(200),
+    linkedIds.length ? query().in("id", linkedIds.slice(0, 100)) : null,
+  ]);
+  if (recent.error) throw recent.error;
+  if (linked?.error) throw linked.error;
+  const rows = [...(linked?.data ?? []), ...(recent.data ?? [])] as { id: string; title: string }[];
+  const byId = new Map(rows.map((p) => [p.id, { id: p.id, name: p.title }]));
+  return [...byId.values()];
 }

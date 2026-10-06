@@ -5,9 +5,9 @@
 
 ## Ahora
 
-- **Fase actual:** 5 — Storefront (Fase 4 cerrada en local: `docs/phases/PHASE-04-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** Gate F5 (revisión adversarial, Lighthouse e informe de la fase).
-- **Siguiente paso exacto:** revisión adversarial de `git diff a691c4c..HEAD` (subagente), corregir hallazgos, medir Lighthouse en local y escribir `docs/phases/PHASE-05-REPORT.md`.
+- **Fase actual:** 6 — Customers, Cart, Shipping, Taxes, Discounts & Checkout (Fase 5 cerrada en local: `docs/phases/PHASE-05-REPORT.md`; CI pendiente por P0).
+- **Siguiente tarea:** F6-T01 (ver `docs/plan/AUTONOMOUS_PLAN.md` §4).
+- **Siguiente paso exacto:** leer GATE0 §16-17 y §38 (PHASE 6) y el plan de la Fase 6; empezar por las tablas de clientes y carrito.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F5-T06. Bundle de respaldo: `pruva-f5.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -57,6 +57,7 @@ Todos desde `7549db7` (Gate 1) hasta F5-T06. Bundle de respaldo: `pruva-f5.bundl
 | 5    | F5-T04 Caché por tags + ADR CSP               | hecha                       | E2E de invalidación (con mutación) y aislamiento A/B                                                            |
 | 5    | F5-T05 SEO por host                           | hecha                       | 4 unit + E2E (canonical, JSON-LD, sitemap y robots por host)                                                    |
 | 5    | F5-T06 Editor de páginas y menús              | hecha                       | 20 pgTAP + E2E (crear, publicar, sanitizar, menú en la tienda) con axe                                          |
+| 5    | Gate F5                                       | hecha (CI pendiente por P0) | `docs/phases/PHASE-05-REPORT.md` · 809 pgTAP, 29 stack, 18 E2E, Lighthouse 100 local                            |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                 |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

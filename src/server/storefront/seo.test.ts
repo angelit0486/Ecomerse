@@ -68,6 +68,7 @@ describe("SEO por tienda", () => {
 
   it("extracto sin HTML y JSON-LD sin '<'", () => {
     expect(excerpt("<p>Hola <b>mundo</b></p>")).toBe("Hola mundo");
+    expect(excerpt("<p>Tom &amp; Jerry &lt;3</p>")).toBe("Tom & Jerry <3");
     expect(excerpt("palabra ".repeat(50))!.length).toBeLessThanOrEqual(160);
     expect(jsonLd({ name: "</script><script>alert(1)</script>" })).not.toContain("<");
   });

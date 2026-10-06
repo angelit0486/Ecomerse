@@ -33,9 +33,20 @@ export function indexable(store: Pick<StorePublic, "status">, preview: boolean):
 }
 
 /** Recorta a ~160 caracteres sin cortar palabras (descripción por defecto). */
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  "#39": "'",
+  nbsp: " ",
+};
+
 export function excerpt(text: string | null | undefined, max = 160): string | undefined {
   const plain = (text ?? "")
     .replace(/<[^>]*>/g, " ")
+    // Entidades del HTML sanitizado; React vuelve a escapar al renderizar.
+    .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, e: string) => ENTITIES[e]!)
     .replace(/\s+/g, " ")
     .trim();
   if (!plain) return undefined;

@@ -64,7 +64,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   };
 
   const { pathname, search } = request.nextUrl;
-  if (isInternalStorePath(pathname)) return finish(notFound());
+  if (isInternalStorePath(pathname) || !decodablePath(pathname)) return finish(notFound());
 
   const host = normalizeHost(request.headers.get("host"));
   const kind = classifyHost(host, normalizeHost(env.APP_HOSTNAME) ?? "");
@@ -179,6 +179,16 @@ function unavailable(): NextResponse {
   );
   response.headers.set("retry-after", "300");
   return response;
+}
+
+/** Un %-escape malformado haría fallar al router de Next (500): se responde 404. */
+function decodablePath(pathname: string): boolean {
+  try {
+    decodeURIComponent(pathname);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const config = {

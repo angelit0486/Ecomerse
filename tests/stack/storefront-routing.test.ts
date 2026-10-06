@@ -112,6 +112,18 @@ describe("storefront: host → tienda", () => {
     }
   });
 
+  it("favicon neutro (marca blanca) sin error en cualquier host", async () => {
+    const res = await get(stores[`rta${run}`]!.host, "/favicon.ico");
+    expect(res.status).toBe(200);
+    expect(res.body).not.toMatch(/pruva/i);
+  });
+
+  it("un %-escape malformado es 404, no 500 (Gate F5)", async () => {
+    for (const path of ["/%E0%A4%A", "/productos/%E0%A4%A", "/categoria/%E0%A4%A"]) {
+      expect((await get(stores[`rta${run}`]!.host, path)).status).toBe(404);
+    }
+  });
+
   it("cabeceras del cliente no eligen otra tienda", async () => {
     const res = await get(stores[`rta${run}`]!.host, "/", {
       "x-forwarded-host": stores[`rtb${run}`]!.host,

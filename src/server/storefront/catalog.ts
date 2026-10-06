@@ -167,23 +167,25 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
 
 export async function listProducts(storeId: string, filters: ListFilters): Promise<ProductPage> {
   assertStore(storeId);
+  // Solo se cachea la primera página sin búsqueda: cursores y textos libres son
+  // ilimitados y llenarían la caché con claves de un solo uso (Gate F5).
+  if (filters.cursor || filters.query) return readListProducts(storeId, filters);
   return listProductsCached(storeId, filters);
 }
 
-const listProductsCached = cachedRead(
-  "list_products",
-  async (storeId: string, filters: ListFilters) => {
-    const cursor = decodeListCursor(filters.cursor);
-    const db = gatewayDb();
-    const page = await call<ProductPage>(db`
+const readListProducts = async (storeId: string, filters: ListFilters): Promise<ProductPage> => {
+  const cursor = decodeListCursor(filters.cursor);
+  const db = gatewayDb();
+  const page = await call<ProductPage>(db`
     select storefront.list_products(
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
       ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null}, null, null,
       ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24}
     ) as value`);
-    return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
-  },
-);
+  return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
+};
+
+const listProductsCached = cachedRead("list_products", readListProducts);
 
 export const getProduct = cache(
   async (storeId: string, slug: string): Promise<ProductDetail | null> => {

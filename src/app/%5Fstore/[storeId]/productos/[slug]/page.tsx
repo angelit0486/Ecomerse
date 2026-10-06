@@ -67,24 +67,27 @@ function productJsonLd(store: StorePublic, product: ProductDetail) {
   const url = canonicalUrl(store, `/productos/${product.slug}`);
   const prices = product.variants.map((v) => v.price);
   const single = product.variants.length === 1 ? product.variants[0] : undefined;
-  const offers = single
-    ? {
-        "@type": "Offer",
-        price: centsToInput(single.price),
-        priceCurrency: store.currency,
-        availability: SCHEMA_AVAILABILITY[single.availability],
-        itemCondition: "https://schema.org/NewCondition",
-        url,
-      }
-    : {
-        "@type": "AggregateOffer",
-        lowPrice: centsToInput(Math.min(...prices)),
-        highPrice: centsToInput(Math.max(...prices)),
-        offerCount: product.variants.length,
-        priceCurrency: store.currency,
-        availability: SCHEMA_AVAILABILITY[product.availability],
-        url,
-      };
+  // Sin variantes vendibles no hay oferta (Math.min de [] = Infinity rompería BigInt).
+  const offers = !prices.length
+    ? undefined
+    : single
+      ? {
+          "@type": "Offer",
+          price: centsToInput(single.price),
+          priceCurrency: store.currency,
+          availability: SCHEMA_AVAILABILITY[single.availability],
+          itemCondition: "https://schema.org/NewCondition",
+          url,
+        }
+      : {
+          "@type": "AggregateOffer",
+          lowPrice: centsToInput(Math.min(...prices)),
+          highPrice: centsToInput(Math.max(...prices)),
+          offerCount: product.variants.length,
+          priceCurrency: store.currency,
+          availability: SCHEMA_AVAILABILITY[product.availability],
+          url,
+        };
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -101,7 +104,7 @@ function productJsonLd(store: StorePublic, product: ProductDetail) {
         ...(single?.sku ? { sku: single.sku } : {}),
         ...(gtin(single?.barcode ?? null) ? { gtin: gtin(single?.barcode ?? null) } : {}),
         ...(product.brand ? { brand: { "@type": "Brand", name: product.brand.name } } : {}),
-        ...(product.variants.length > 0 ? { offers } : {}),
+        ...(offers ? { offers } : {}),
       },
       ...(product.breadcrumb.length > 0
         ? [

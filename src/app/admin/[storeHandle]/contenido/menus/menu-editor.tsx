@@ -17,6 +17,8 @@ export interface MenuDraft {
   target_id: string;
   url: string;
   children: MenuDraft[];
+  /** Su destino anterior ya no existe: hay que elegir otro. */
+  stale?: boolean;
 }
 
 export type TargetOptions = Record<
@@ -107,7 +109,7 @@ function ItemRow({
           <select
             className={control}
             value={item.target_id}
-            onChange={(e) => onChange({ target_id: e.target.value })}
+            onChange={(e) => onChange({ target_id: e.target.value, stale: false })}
           >
             <option value="">Elige…</option>
             {options.map((o) => (
@@ -129,6 +131,11 @@ function ItemRow({
             onChange={(e) => onChange({ url: e.target.value })}
           />
         </label>
+      ) : null}
+      {item.stale ? (
+        <p className="basis-full text-[13px] text-danger">
+          El destino de {label} ya no existe. Elige otro o quita el enlace.
+        </p>
       ) : null}
       <div className="flex gap-1">
         <Button
