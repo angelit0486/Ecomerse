@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 const rows: { store: unknown }[] = [];
+// Fuera de Next no hay caché incremental: la lectura se ejecuta directamente.
+vi.mock("./cache", () => ({ cachedRead: (_name: string, read: unknown) => read }));
 vi.mock("@/server/db/role-clients", () => ({
   gatewayDb: () => async () => rows,
 }));

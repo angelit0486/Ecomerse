@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import { gatewayDb } from "@/server/db/role-clients";
 
+import { cachedRead } from "./cache";
+
 /**
  * Datos públicos de una tienda (storefront.get_store_public, rol
  * storefront_gateway). El store_id viene de la reescritura del proxy, que lo
@@ -40,8 +42,12 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export const getStorePublic = cache(async (storeId: string): Promise<StorePublic | null> => {
   if (!UUID_RE.test(storeId)) return null;
+  const parsed = storePublicSchema.safeParse(await readStorePublic(storeId));
+  return parsed.success ? parsed.data : null;
+});
+
+const readStorePublic = cachedRead("get_store_public", async (storeId: string) => {
   const rows = await gatewayDb()<{ store: unknown }[]>`
     select storefront.get_store_public(${storeId}::uuid) as store`;
-  const parsed = storePublicSchema.safeParse(rows[0]?.store);
-  return parsed.success ? parsed.data : null;
+  return rows[0]?.store ?? null;
 });

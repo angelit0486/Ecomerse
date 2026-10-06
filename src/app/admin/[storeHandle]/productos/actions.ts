@@ -11,6 +11,7 @@ import { validateProduct } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { AppError } from "@/server/errors";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { FIELD_MESSAGES, PUBLISH_ISSUES } from "./messages";
@@ -38,7 +39,10 @@ async function withStore<T>(
 ): Promise<T> {
   const ctx = await getStoreContext(storeHandle);
   const supabase = await createSupabaseServerClient();
-  return work({ supabase, storeId: ctx.store.id });
+  const result = await work({ supabase, storeId: ctx.store.id });
+  // La tienda pública deja de servir lo cacheado de esta tienda (§21.4).
+  invalidateStore(ctx.store.id);
+  return result;
 }
 
 function failure(scope: string, error: unknown): CatalogActionState {

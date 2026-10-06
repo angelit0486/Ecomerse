@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 5 — Storefront (Fase 4 cerrada en local: `docs/phases/PHASE-04-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F5-T04 (caché por tags + invalidación desde el panel + ADR de CSP).
-- **Siguiente paso exacto:** decidir caché de datos por tags (`unstable_cache`/`cacheTag` sobre las lecturas `storefront.*` con `store:{id}`, `product:{id}`…) compatible con el nonce por request; invalidar desde las acciones del panel; prueba «la página de A nunca se sirve en el host de B».
+- **Siguiente tarea:** F5-T05 (SEO: metadata, canonical al primario, OG/Twitter, JSON-LD, sitemap y robots por host, noindex en borrador o vista previa).
+- **Siguiente paso exacto:** `canonicalUrl(store, path)` con el hostname primario (añadirlo a `get_store_public`), `generateMetadata` con canonical/OG, JSON-LD (Product, BreadcrumbList, Organization, WebSite+SearchAction), rutas `sitemap.xml` y `robots.txt` por host.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F5-T03. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F5-T04. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -54,6 +54,7 @@ Todos desde `7549db7` (Gate 1) hasta F5-T03. Bundle de respaldo: `pruva-f3.bundl
 | 5    | F5-T01 Menús, páginas y plantillas            | hecha                       | 13 pgTAP + aislamiento                                                                                          |
 | 5    | F5-T02 Lecturas `storefront.*`                | hecha                       | 30 pgTAP como `storefront_gateway` (sin borradores, costos, cantidades ni otra tienda)                          |
 | 5    | F5-T03 Tema base del storefront               | hecha                       | E2E en dos hosts (catálogo, ficha, categoría, marca, búsqueda, páginas, 404, 503) con axe y capturas a 375/1280 |
+| 5    | F5-T04 Caché por tags + ADR CSP               | hecha                       | E2E de invalidación (con mutación) y aislamiento A/B                                                            |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                 |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

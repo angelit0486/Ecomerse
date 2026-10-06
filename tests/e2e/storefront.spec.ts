@@ -5,6 +5,7 @@ import {
   createAuthUser,
   createTenant,
   expectNoSeriousA11yViolations,
+  loginNewStaff,
   uniq,
 } from "./support";
 
@@ -138,6 +139,31 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
   await expect(page.getByText("Playera A de algodón")).toHaveCount(0);
   await expectNoSeriousA11yViolations(page);
   await shots(page, "listado");
+});
+
+test("caché por tienda: un cambio en el panel se ve al instante en la tienda (invalidación por tag)", async ({
+  page,
+}) => {
+  // Calienta la caché de datos de A y de B.
+  await page.goto(`${origin(a)}/productos`);
+  await expect(page.getByRole("link", { name: "Playera A de algodón" })).toBeVisible();
+  await page.goto(`${origin(b)}/productos`);
+  await expect(page.getByRole("link", { name: "Playera B de algodón" })).toBeVisible();
+
+  await loginNewStaff(page, `sf-a-${run}@example.test`);
+  await page.goto(`/admin/${a.handle}/productos`);
+  await page.getByRole("link", { name: "Playera A de algodón" }).click();
+  await page.getByRole("textbox", { name: "Título", exact: true }).fill("Playera A renovada");
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Cambios guardados." })).toBeVisible();
+
+  // Sin esperar el TTL de 60 s: la invalidación por tag lo hace visible ya.
+  await page.goto(`${origin(a)}/productos`);
+  await expect(page.getByRole("link", { name: "Playera A renovada" })).toBeVisible();
+  // B no cambia ni recibe nada de A.
+  await page.goto(`${origin(b)}/productos`);
+  await expect(page.getByRole("link", { name: "Playera B de algodón" })).toBeVisible();
+  await expect(page.getByText("Playera A renovada")).toHaveCount(0);
 });
 
 test("host desconocido → 404 uniforme; tienda suspendida → 503", async ({ page }) => {

@@ -16,6 +16,8 @@ import {
 export interface MediaDeps {
   db: Sql;
   storage: StorageAdmin;
+  /** Una imagen nueva cambia la tienda pública: invalida su caché (§21.4). */
+  onPublished?: (storeId: string) => void;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -78,6 +80,7 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     await deps.db`select system.media_mark_ready(${id}::uuid, ${result.width}, ${result.height},
                                                  ${result.data.length})`;
     await deps.storage.remove("store-uploads", [row.storage_path]);
+    deps.onPublished?.(row.store_id);
     log.info("Medio publicado", { media_id: id, width: result.width, height: result.height });
   };
 

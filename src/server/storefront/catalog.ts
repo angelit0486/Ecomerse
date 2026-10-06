@@ -5,6 +5,8 @@ import { cache } from "react";
 import { gatewayDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 
+import { cachedRead } from "./cache";
+
 /**
  * Lecturas del catálogo publicado (funciones storefront.*, rol
  * storefront_gateway, F5-T02). El storeId llega siempre de la ruta verificada
@@ -165,24 +167,29 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
 
 export async function listProducts(storeId: string, filters: ListFilters): Promise<ProductPage> {
   assertStore(storeId);
-  const cursor = decodeListCursor(filters.cursor);
-  const db = gatewayDb();
-  const page = await call<ProductPage>(db`
+  return listProductsCached(storeId, filters);
+}
+
+const listProductsCached = cachedRead(
+  "list_products",
+  async (storeId: string, filters: ListFilters) => {
+    const cursor = decodeListCursor(filters.cursor);
+    const db = gatewayDb();
+    const page = await call<ProductPage>(db`
     select storefront.list_products(
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
       ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null}, null, null,
       ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24}
     ) as value`);
-  return page ?? { items: [], sort: "newest", next_cursor: null };
-}
+    return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
+  },
+);
 
 export const getProduct = cache(
   async (storeId: string, slug: string): Promise<ProductDetail | null> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
-    return call<ProductDetail>(
-      gatewayDb()`select storefront.get_product(${storeId}::uuid, ${slug}) as value`,
-    );
+    return productCached(storeId, slug);
   },
 );
 
@@ -190,9 +197,7 @@ export const getCategory = cache(
   async (storeId: string, path: string): Promise<CategoryDetail | null> => {
     assertStore(storeId);
     if (path.length > 500 || !path.split("/").every((part) => SLUG_RE.test(part))) return null;
-    return call<CategoryDetail>(
-      gatewayDb()`select storefront.get_category(${storeId}::uuid, ${path}) as value`,
-    );
+    return categoryCached(storeId, path);
   },
 );
 
@@ -200,18 +205,14 @@ export const getBrand = cache(
   async (storeId: string, slug: string): Promise<BrandDetail | null> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
-    return call<BrandDetail>(
-      gatewayDb()`select storefront.get_brand(${storeId}::uuid, ${slug}) as value`,
-    );
+    return brandCached(storeId, slug);
   },
 );
 
 export const getPage = cache(async (storeId: string, slug: string): Promise<PageDetail | null> => {
   assertStore(storeId);
   if (!SLUG_RE.test(slug) || slug.length > 120) return null;
-  return call<PageDetail>(
-    gatewayDb()`select storefront.get_page(${storeId}::uuid, ${slug}) as value`,
-  );
+  return pageCached(storeId, slug);
 });
 
 export const getMenus = cache(
@@ -225,24 +226,23 @@ export const getMenus = cache(
   },
 );
 
-export const getHome = cache(
-  async (
-    storeId: string,
-  ): Promise<{
-    featured: ProductCard[];
-    categories: { name: string; path: string; image: ImageRef | null }[];
-  }> => {
-    assertStore(storeId);
-    return (
-      (await call<{
-        featured: ProductCard[];
-        categories: { name: string; path: string; image: ImageRef | null }[];
-      }>(gatewayDb()`select storefront.get_home(${storeId}::uuid) as value`)) ?? {
-        featured: [],
-        categories: [],
-      }
-    );
-  },
+interface HomeData {
+  featured: ProductCard[];
+  categories: { name: string; path: string; image: ImageRef | null }[];
+}
+
+export const getHome = cache(async (storeId: string): Promise<HomeData> => {
+  assertStore(storeId);
+  return homeCached(storeId);
+});
+
+const homeCached = cachedRead(
+  "get_home",
+  async (storeId: string) =>
+    (await call<HomeData>(gatewayDb()`select storefront.get_home(${storeId}::uuid) as value`)) ?? {
+      featured: [],
+      categories: [],
+    },
 );
 
 export async function sitemapEntries(
@@ -257,3 +257,20 @@ export async function sitemapEntries(
 export function mediaUrl(path: string): string {
   return `${serverEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-media/${path}`;
 }
+
+const productCached = cachedRead("get_product", (storeId: string, slug: string) =>
+  call<ProductDetail>(
+    gatewayDb()`select storefront.get_product(${storeId}::uuid, ${slug}) as value`,
+  ),
+);
+const categoryCached = cachedRead("get_category", (storeId: string, path: string) =>
+  call<CategoryDetail>(
+    gatewayDb()`select storefront.get_category(${storeId}::uuid, ${path}) as value`,
+  ),
+);
+const brandCached = cachedRead("get_brand", (storeId: string, slug: string) =>
+  call<BrandDetail>(gatewayDb()`select storefront.get_brand(${storeId}::uuid, ${slug}) as value`),
+);
+const pageCached = cachedRead("get_page", (storeId: string, slug: string) =>
+  call<PageDetail>(gatewayDb()`select storefront.get_page(${storeId}::uuid, ${slug}) as value`),
+);

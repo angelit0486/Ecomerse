@@ -6,6 +6,7 @@ import { z } from "zod";
 import { reportActionError } from "@/server/actions/report";
 import { getStoreContext } from "@/server/auth/store-context";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /**
@@ -84,6 +85,7 @@ export async function adjustInventory(
       p_mode: input.mode,
       p_idempotency_key: input.idempotency_key,
     });
+    invalidateStore(ctx.store.id);
   } catch (error) {
     return { ...failure(error), values };
   }
@@ -117,6 +119,7 @@ export async function setLowStockThreshold(
       p_variant_id: variantId,
       p_threshold: threshold,
     });
+    invalidateStore(ctx.store.id);
   } catch (error) {
     return failure(error);
   }

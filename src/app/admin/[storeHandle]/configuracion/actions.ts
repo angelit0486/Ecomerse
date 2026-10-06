@@ -8,6 +8,7 @@ import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /** Onboarding, paso 2 (GATE0 §20.2): datos de la tienda y branding en borrador. */
@@ -51,6 +52,7 @@ export async function saveStoreProfile(
       p_contact_phone: String(formData.get("contact_phone") ?? ""),
       p_timezone: String(formData.get("timezone") ?? ""),
     });
+    invalidateStore(ctx.store.id);
   } catch (error) {
     return {
       ...failure(error, FIELD_MESSAGES),
@@ -81,6 +83,7 @@ export async function saveBranding(
       p_store_id: ctx.store.id,
       p_settings: { colors, shape: { radius, button_style: buttonStyle } },
     });
+    invalidateStore(ctx.store.id);
   } catch (error) {
     const result = failure(error);
     if (result.fields?.contrast) {
@@ -152,6 +155,7 @@ export async function setLogoDraft(
       p_store_id: ctx.store.id,
       p_media_id: mediaId || null,
     });
+    invalidateStore(ctx.store.id);
   } catch (error) {
     const result = failure(error);
     return result.fields?.logo ? { error: "Ese logo aún no está listo o no es válido." } : result;

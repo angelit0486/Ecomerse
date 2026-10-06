@@ -4,6 +4,7 @@ import { createMediaHandlers } from "@/server/media/handlers";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
+import { invalidateStore } from "@/server/storefront/cache";
 
 import type { JobHandler, JobRegistry } from "./types";
 
@@ -24,7 +25,12 @@ const notifications = () =>
     channel: emailChannel(),
     appUrl: serverEnv().APP_URL,
   });
-const media = () => createMediaHandlers({ db: workerDb(), storage: createStorageAdmin() });
+const media = () =>
+  createMediaHandlers({
+    db: workerDb(),
+    storage: createStorageAdmin(),
+    onPublished: invalidateStore,
+  });
 
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
