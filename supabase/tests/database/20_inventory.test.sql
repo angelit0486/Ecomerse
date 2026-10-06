@@ -94,8 +94,12 @@ select is((select count(*)::int from public.inventory_movements where store_id =
 select tests.logout();
 
 -- ============================================================================ Reservas
+-- Pedido real de la tienda A con un id fijo (lo crea la primera vez).
+create function tests.order_once(p_id uuid) returns uuid language sql as $$
+  select coalesce((select o.id from public.orders o where o.id = p_id), tests.order(tests.fx('store_a'), p_id))
+$$;
 -- DENY-1: on_hand 4. Pedido 1 reserva 3.
-select tests.set_fx('r1', app.inventory_reserve(tests.fx('store_a'), '0190a0d0-0000-7000-8000-000000000001',
+select tests.set_fx('r1', app.inventory_reserve(tests.fx('store_a'), tests.order_once('0190a0d0-0000-7000-8000-000000000001'),
   jsonb_build_array(jsonb_build_object('variant_id', tests.variant('DENY-1'), 'quantity', 2),
                     jsonb_build_object('variant_id', tests.variant('DENY-1'), 'quantity', 1),
                     jsonb_build_object('variant_id', tests.variant('FREE-1'), 'quantity', 9)), now() + interval '15 minutes'));
@@ -103,15 +107,15 @@ select is((tests.level('DENY-1')).reserved || '/' || (tests.level('DENY-1')).ava
   'checkout reserva 3 (líneas de la misma variante sumadas): disponible 1');
 select is((select count(*)::int from public.inventory_reservation_items where reservation_id = tests.fx('r1')), 1,
   'las variantes sin seguimiento no se reservan');
-select throws_ok($$ select app.inventory_reserve(tests.fx('store_a'), '0190a0d0-0000-7000-8000-000000000002',
+select throws_ok($$ select app.inventory_reserve(tests.fx('store_a'), tests.order_once('0190a0d0-0000-7000-8000-000000000002'),
   jsonb_build_array(jsonb_build_object('variant_id', tests.variant('BAG-1'), 'quantity', 1),
                     jsonb_build_object('variant_id', tests.variant('DENY-1'), 'quantity', 2)), now() + interval '15 minutes') $$,
   'P0001', 'insufficient_stock', 'un item sin stock hace fallar todo el pedido');
 select is((tests.level('BAG-1')).reserved, 0, 'atómico: nada del pedido fallido quedó reservado');
-select throws_ok($$ select app.inventory_reserve(tests.fx('store_a'), '0190a0d0-0000-7000-8000-000000000001',
+select throws_ok($$ select app.inventory_reserve(tests.fx('store_a'), tests.order_once('0190a0d0-0000-7000-8000-000000000001'),
   jsonb_build_array(jsonb_build_object('variant_id', tests.variant('BAG-1'), 'quantity', 1)), now() + interval '15 minutes') $$,
   'P0001', 'conflict', 'un pedido no tiene dos reservas vivas');
-select lives_ok($$ select app.inventory_reserve(tests.fx('store_a'), '0190a0d0-0000-7000-8000-000000000003',
+select lives_ok($$ select app.inventory_reserve(tests.fx('store_a'), tests.order_once('0190a0d0-0000-7000-8000-000000000003'),
   jsonb_build_array(jsonb_build_object('variant_id', tests.variant('CONT-1'), 'quantity', 5)), now() + interval '15 minutes') $$,
   'con política continue se reserva sin existencias');
 select is((tests.level('CONT-1')).available, -5, 'disponible negativo solo con continue');

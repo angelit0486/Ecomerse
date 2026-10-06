@@ -256,6 +256,19 @@ begin
   return v_state;
 end $$;
 
+-- Pedido mínimo (sin partidas) para las pruebas de reservas: desde la F6 la
+-- reserva exige un pedido real de la misma tienda (FK compuesta, D-F4-01).
+create or replace function tests.order(p_store uuid, p_id uuid default null) returns uuid
+language sql security definer set search_path = '' as $$
+  insert into public.orders (id, store_id, number, display_number, checkout_idempotency_key, email,
+                             customer_name, requires_shipping, currency, prices_include_tax, tax_rate_bps,
+                             tax_applies_to_shipping, subtotal, total)
+  select coalesce(p_id, app.uuid_v7()), p_store, n, '#' || n, 'test-' || gen_random_uuid(), 'test@example.test',
+         'Prueba', false, 'MXN', true, 0, false, 0, 0
+    from (select coalesce(max(o.number), 1000) + 1 as n from public.orders o where o.store_id = p_store) x
+  returning id
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated, storefront_gateway, system_worker;
 
 select pass('helpers de pruebas instalados');

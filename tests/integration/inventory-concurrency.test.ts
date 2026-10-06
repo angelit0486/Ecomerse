@@ -36,8 +36,23 @@ async function level(levelId: string) {
   return row!;
 }
 
-function reserve(items: { variantId: string; quantity: number }[]) {
-  return admin`select app.inventory_reserve(${storeId}, gen_random_uuid(),
+let orderNumber = 1000;
+
+/** Desde la F6 la reserva exige un pedido real de la tienda (FK compuesta, D-F4-01). */
+async function newOrder(): Promise<string> {
+  const [order] = await admin<{ id: string }[]>`
+    insert into public.orders (store_id, number, display_number, checkout_idempotency_key, email, customer_name,
+                               requires_shipping, currency, prices_include_tax, tax_rate_bps,
+                               tax_applies_to_shipping, subtotal, total)
+    values (${storeId}, ${++orderNumber}, 'T', ${"test-" + crypto.randomUUID()}, 'test@example.test',
+            'Prueba', false, 'MXN', true, 0, false, 0, 0)
+    returning id`;
+  return order!.id;
+}
+
+async function reserve(items: { variantId: string; quantity: number }[]) {
+  const orderId = await newOrder();
+  return admin`select app.inventory_reserve(${storeId}, ${orderId},
     ${admin.json(items.map((i) => ({ variant_id: i.variantId, quantity: i.quantity })))}, ${expires()})`;
 }
 

@@ -40,6 +40,34 @@ values (tests.fx('org_a'), tests.fx('store_a'), tests.fx('support'), tests.fx('p
         'Ticket 9001: revisión solicitada por el dueño', now() + interval '30 minutes');
 insert into public.organization_entitlement_overrides (organization_id, key, value_int, reason)
 values (tests.fx('org_a'), 'max_stores', 5, 'Acuerdo comercial');
+-- Checkout (F6-T01): una fila en cada tabla nueva de A.
+insert into public.products (store_id, title, slug) values (tests.fx('store_a'), 'Taza', 'taza');
+insert into public.product_variants (store_id, product_id, sku, price, option_signature)
+select tests.fx('store_a'), id, 'TAZA-1', 15000, '' from public.products where store_id = tests.fx('store_a');
+insert into public.customer_addresses (store_id, customer_id, recipient_name, line1, city, region, postal_code, country)
+select tests.fx('store_a'), id, 'Ana', 'Calle 1', 'CDMX', 'CDMX', '01000', 'MX'
+  from public.customers where store_id = tests.fx('store_a') and user_id is not null;
+insert into public.shipping_zones (store_id, name, countries) values (tests.fx('store_a'), 'México', '{MX}');
+insert into public.shipping_rates (store_id, zone_id, name, type, price)
+select tests.fx('store_a'), id, 'Estándar', 'flat', 9900 from public.shipping_zones where store_id = tests.fx('store_a');
+insert into public.discounts (store_id, code, type, value) values (tests.fx('store_a'), 'BIENVENIDA', 'percentage', 1000);
+insert into public.carts (store_id, token_hash) values (tests.fx('store_a'), sha256('cart-a'::bytea));
+insert into public.cart_items (store_id, cart_id, variant_id, quantity)
+select tests.fx('store_a'), c.id, v.id, 1 from public.carts c, public.product_variants v
+ where c.store_id = tests.fx('store_a') and v.store_id = tests.fx('store_a');
+select tests.set_fx('order_a', tests.order(tests.fx('store_a')));
+insert into public.order_items (store_id, order_id, product_title, product_type, requires_shipping, unit_price,
+                                quantity, line_total)
+values (tests.fx('store_a'), tests.fx('order_a'), 'Taza', 'physical', true, 0, 1, 0);
+insert into public.order_events (store_id, order_id, type, actor_type)
+values (tests.fx('store_a'), tests.fx('order_a'), 'order.created', 'system');
+insert into public.discount_redemptions (store_id, discount_id, order_id, amount)
+select tests.fx('store_a'), id, tests.fx('order_a'), 0 from public.discounts where store_id = tests.fx('store_a');
+insert into public.payment_accounts (store_id, provider, status, display_name)
+values (tests.fx('store_a'), 'manual', 'active', 'Transferencia');
+insert into public.payments (store_id, order_id, payment_account_id, provider, amount, currency, idempotency_key)
+select tests.fx('store_a'), tests.fx('order_a'), id, 'manual', 100, 'MXN', 'pago-prueba-0000001'
+  from public.payment_accounts where store_id = tests.fx('store_a');
 
 -- Cobertura: ninguna tabla con columna de tenant queda fuera de la clasificación.
 select is_empty(
@@ -71,9 +99,12 @@ select set_eq(
   $$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
   -- inventory_locations: toda tienda nace con su ubicación por defecto (F4-T01).
   -- menus y store_pages: menús y políticas en borrador creados con la tienda (F5-T01).
-  array['customers', 'inventory_locations', 'menus', 'organization_entitlement_overrides', 'organization_invitations',
-        'organization_members', 'organizations', 'store_domains', 'store_pages', 'store_themes',
-        'stores', 'subscriptions', 'support_access_grants'],
+  -- Checkout (F6-T01): todo menos carts/cart_items (sin grants: solo storefront.*).
+  array['customer_addresses', 'customers', 'discount_redemptions', 'discounts', 'inventory_levels',
+        'inventory_locations', 'menus', 'order_events', 'order_items', 'orders', 'organization_entitlement_overrides',
+        'organization_invitations', 'organization_members', 'organizations', 'payment_accounts', 'payments',
+        'product_variants', 'products', 'shipping_rates', 'shipping_zones', 'store_domains', 'store_pages',
+        'store_themes', 'stores', 'subscriptions', 'support_access_grants'],
   'control positivo: el dueño de A ve los datos de A'
 );
 select is(tests.row_count($$ update public.stores set name = name where id = tests.fx('store_a') $$), 1::bigint,
@@ -144,8 +175,11 @@ select tests.logout();
 select tests.login('support');
 select set_eq($$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
   -- inventory.read es legible por soporte (dato operativo, no sensible).
-  array['inventory_locations', 'menus', 'store_domains', 'store_pages', 'store_themes', 'stores',
-        'support_access_grants'],
+  -- Pedidos sin datos de contacto (grant por columna), descuentos y envíos: lectura no
+  -- sensible (matriz §8, «G»). Nunca pagos, cuentas de pago ni direcciones (sensibles).
+  array['discount_redemptions', 'discounts', 'inventory_levels', 'inventory_locations', 'menus', 'order_events',
+        'order_items', 'orders', 'product_variants', 'products', 'shipping_rates', 'shipping_zones',
+        'store_domains', 'store_pages', 'store_themes', 'stores', 'support_access_grants'],
   'soporte con concesión: solo lectura no sensible (sin clientes, invitaciones ni facturación)');
 select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0::bigint,
   'soporte con concesión: no MODIFICA nada');
