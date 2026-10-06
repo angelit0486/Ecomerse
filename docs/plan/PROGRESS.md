@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T05 (UI del catálogo: listado con filtros y cursor, editor simple y con variantes, categorías, marcas y subida de imágenes; E2E de la "Playera" y axe).
-- **Siguiente paso exacto:** CSP `connect-src` del panel para el PUT directo a Storage (URL de Supabase), luego la página de listado `/admin/[storeHandle]/productos` con `catalog_search_products`.
+- **Siguiente tarea:** F3-T06 (logo de la tienda en el branding con el pipeline de medios).
+- **Siguiente paso exacto:** subida del logo (`store_branding`, máx. 2 MB) en Configurar tienda → guardar `logo_media_id` en el tema con una RPC (`appearance.manage`) que exija un medio `ready` de la misma tienda; E2E.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,35 +19,35 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F3-T04. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F3-T05. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
-| Fase | Tarea                                    | Estado                      | Evidencia                                                                        |
-| ---- | ---------------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
-| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                                                        |
-| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración                                     |
-| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones                                               |
-| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación                                      |
-| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones                                     |
-| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones                                     |
-| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones                                     |
-| 2    | F2-T05 Capa de servidor                  | hecha                       | F2-T05 · 16 pgTAP, 17 unit, 2 integración, 1 stack                               |
-| 2    | F2-T06 Proxy de dominios y vista previa  | hecha                       | `69920f0`                                                                        |
-| 2    | F2-T07 Auth de staff (OTP + TOTP)        | hecha                       | `aa62e9b`                                                                        |
-| 2    | F2-T08 Job de email de invitación        | hecha                       | `7189916`                                                                        |
-| 2    | F2-T09 Primitivas de UI                  | hecha                       | `471137d`                                                                        |
-| 2    | F2-T10 Panel y Equipo                    | hecha                       | `41eabbb`                                                                        |
-| 2    | F2-T11 Onboarding en 4 pasos             | hecha                       | `43152d6`                                                                        |
-| 2    | F2-T12 Consola de plataforma mínima      | hecha                       | `06bf25d`                                                                        |
-| 2    | Gate F2                                  | hecha                       | `297b169` · informe `docs/phases/PHASE-02-REPORT.md`                             |
-| 3    | F3-T01 Tablas del catálogo               | hecha                       | `9ae9edc` · 42 pgTAP                                                             |
-| 3    | F3-T02 RPC del catálogo                  | hecha                       | `2a4ed6e` · 54 pgTAP                                                             |
-| 3    | F3-T03 Medios (Storage, worker, purga)   | hecha                       | F3-T03 · 65 pgTAP, 12 unit, 9 integración, 5 stack con Storage real + mutaciones |
-| 3    | F3-T04 SafeHtml                          | hecha                       | F3-T04 · 45 unit de XSS + SafeHtml + esquema; mutación de `react/no-danger`      |
-| 3    | F3-T05 UI del catálogo                   | pendiente                   |                                                                                  |
-| 3    | F3-T06 Logo de la tienda                 | pendiente                   |                                                                                  |
-| 4–11 | Ver el plan §4                           | pendiente                   |                                                                                  |
+| Fase | Tarea                                    | Estado                      | Evidencia                                                                                                    |
+| ---- | ---------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 0    | Contrato aprobado y versionado           | hecha                       | `7549db7`                                                                                                    |
+| 1    | Foundation                               | hecha (CI pendiente por P0) | `7549db7` · 76 unit, 47 pgTAP, 4 integración                                                                 |
+| 2    | A + B: identidad, tenancy, RLS, RPC base | hecha                       | `4b74b5d` · 196 pgTAP + mutaciones                                                                           |
+| 2    | F2-T01 Spike S-6 stack local             | hecha                       | F2-T01 · 10 pruebas `test:stack` + mutación                                                                  |
+| 2    | F2-T02 RPC de equipo                     | hecha                       | F2-T02 · 86 pgTAP (282 total) + 4 mutaciones                                                                 |
+| 2    | F2-T03 RPC de soporte                    | hecha                       | F2-T03 · 51 pgTAP (333 total) + 4 mutaciones                                                                 |
+| 2    | F2-T04 Feature flags + estado de tenant  | hecha                       | F2-T04 · 64 pgTAP (397 total) + 4 mutaciones                                                                 |
+| 2    | F2-T05 Capa de servidor                  | hecha                       | F2-T05 · 16 pgTAP, 17 unit, 2 integración, 1 stack                                                           |
+| 2    | F2-T06 Proxy de dominios y vista previa  | hecha                       | `69920f0`                                                                                                    |
+| 2    | F2-T07 Auth de staff (OTP + TOTP)        | hecha                       | `aa62e9b`                                                                                                    |
+| 2    | F2-T08 Job de email de invitación        | hecha                       | `7189916`                                                                                                    |
+| 2    | F2-T09 Primitivas de UI                  | hecha                       | `471137d`                                                                                                    |
+| 2    | F2-T10 Panel y Equipo                    | hecha                       | `41eabbb`                                                                                                    |
+| 2    | F2-T11 Onboarding en 4 pasos             | hecha                       | `43152d6`                                                                                                    |
+| 2    | F2-T12 Consola de plataforma mínima      | hecha                       | `06bf25d`                                                                                                    |
+| 2    | Gate F2                                  | hecha                       | `297b169` · informe `docs/phases/PHASE-02-REPORT.md`                                                         |
+| 3    | F3-T01 Tablas del catálogo               | hecha                       | `9ae9edc` · 42 pgTAP                                                                                         |
+| 3    | F3-T02 RPC del catálogo                  | hecha                       | `2a4ed6e` · 54 pgTAP                                                                                         |
+| 3    | F3-T03 Medios (Storage, worker, purga)   | hecha                       | F3-T03 · 65 pgTAP, 12 unit, 9 integración, 5 stack con Storage real + mutaciones                             |
+| 3    | F3-T04 SafeHtml                          | hecha                       | F3-T04 · 45 unit de XSS + SafeHtml + esquema; mutación de `react/no-danger`                                  |
+| 3    | F3-T05 UI del catálogo                   | hecha                       | F3-T05 · E2E de la Playera (6 variantes, imagen real, publicar/archivar/eliminar/restaurar, masivas) con axe |
+| 3    | F3-T06 Logo de la tienda                 | pendiente                   |                                                                                                              |
+| 4–11 | Ver el plan §4                           | pendiente                   |                                                                                                              |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 

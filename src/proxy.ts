@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const securityHeaders = buildSecurityHeaders({
     nonce,
     isDev: process.env.NODE_ENV === "development",
+    storageOrigin: env.NEXT_PUBLIC_SUPABASE_URL,
     enableHsts: process.env.NODE_ENV === "production",
   });
 

@@ -3,6 +3,7 @@
 // de Supabase para que supabase-js funcione contra el stack sin Docker:
 //   /auth/v1/*   → Supabase Auth (GoTrue)
 //   /rest/v1/*   → PostgREST
+//   /storage/v1/* → Supabase Storage
 //   /templates/* → supabase/templates (GoTrue descarga las plantillas por URL)
 // Escucha solo en 127.0.0.1.
 // =============================================================================
@@ -25,6 +26,22 @@ const routes = [
   { prefix: "/storage/v1", port: STORAGE_PORT },
 ];
 
+// Como el plugin CORS de Kong en Supabase: el navegador sube directo a Storage
+// desde el origen del panel (PUT a una URL firmada).
+const CORS_HEADERS = {
+  "access-control-allow-methods": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+  "access-control-allow-headers":
+    "authorization, apikey, content-type, x-client-info, x-upsert, cache-control, x-metadata",
+  "access-control-max-age": "600",
+};
+
+function corsFor(req) {
+  const origin = req.headers.origin;
+  return typeof origin === "string"
+    ? { "access-control-allow-origin": origin, vary: "origin" }
+    : {};
+}
+
 function proxy(req, res, route) {
   const headers = { ...req.headers, host: `127.0.0.1:${route.port}` };
   // Como Kong en Supabase: sin Authorization, la apikey actúa como portador.
@@ -40,7 +57,7 @@ function proxy(req, res, route) {
       headers,
     },
     (up) => {
-      res.writeHead(up.statusCode ?? 502, up.headers);
+      res.writeHead(up.statusCode ?? 502, { ...up.headers, ...corsFor(req) });
       up.pipe(res);
     },
   );
@@ -75,6 +92,10 @@ const server = http.createServer((req, res) => {
     res
       .writeHead(404, { "content-type": "application/json" })
       .end(JSON.stringify({ message: "not found" }));
+    return;
+  }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, { ...CORS_HEADERS, ...corsFor(req) }).end();
     return;
   }
   proxy(req, res, route);

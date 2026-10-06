@@ -30,6 +30,7 @@ export default async function StoreLayout({ children, params }: Props) {
         ctx.store.status === "draft" &&
         (hasPermission(ctx, "store.update") || hasPermission(ctx, "appearance.manage")),
     },
+    { href: `${base}/productos`, label: "Productos", show: hasPermission(ctx, "products.read") },
     { href: `${base}/ajustes/equipo`, label: "Equipo", show: hasPermission(ctx, "staff.read") },
   ].filter((item) => item.show);
 

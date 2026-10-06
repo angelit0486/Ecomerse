@@ -172,3 +172,37 @@ export async function readInvitationLink(email: string): Promise<string> {
   }
   throw new Error(`No llegó la invitación a ${email}`);
 }
+
+// -----------------------------------------------------------------------------
+// Accesibilidad (axe-core). Se evalúa por CDP: no depende de la CSP de la página.
+// -----------------------------------------------------------------------------
+let axeSource: string | null = null;
+
+/** Falla si axe encuentra violaciones serias o críticas en la página actual. */
+export async function expectNoSeriousA11yViolations(page: Page) {
+  if (!axeSource) {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    axeSource = await readFile(join(process.cwd(), "node_modules/axe-core/axe.min.js"), "utf8");
+  }
+  await page.evaluate(axeSource);
+  const violations = await page.evaluate(async () => {
+    const axe = (
+      window as unknown as {
+        axe: {
+          run: (
+            ctx: Document,
+            opts: object,
+          ) => Promise<{
+            violations: Array<{ id: string; impact: string; nodes: Array<{ target: unknown }> }>;
+          }>;
+        };
+      }
+    ).axe;
+    const result = await axe.run(document, { resultTypes: ["violations"] });
+    return result.violations
+      .filter((v) => v.impact === "serious" || v.impact === "critical")
+      .map((v) => `${v.id}: ${JSON.stringify(v.nodes.map((n) => n.target))}`);
+  });
+  expect(violations, "violaciones de accesibilidad").toEqual([]);
+}

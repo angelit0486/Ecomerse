@@ -13,6 +13,11 @@ export interface SecurityHeaderOptions {
   isDev: boolean;
   /** Strict-Transport-Security solo en builds de producción (HTTPS garantizado). */
   enableHsts: boolean;
+  /**
+   * Origen de Supabase (F3-T03): el panel sube imágenes con PUT directo a
+   * Storage y las muestra desde su URL pública. Solo ese origen, nunca comodines.
+   */
+  storageOrigin?: string | undefined;
 }
 
 export function generateNonce(): string {
@@ -23,10 +28,23 @@ export function generateNonce(): string {
   return btoa(binary);
 }
 
+/** Origen (esquema + host + puerto) de una URL http(s); null si no es válida. */
+export function originOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildContentSecurityPolicy({
   nonce,
   isDev,
-}: Pick<SecurityHeaderOptions, "nonce" | "isDev">): string {
+  storageOrigin,
+}: Pick<SecurityHeaderOptions, "nonce" | "isDev" | "storageOrigin">): string {
+  const storage = originOf(storageOrigin);
   const directives: Array<[string, string[]]> = [
     ["default-src", ["'self'"]],
     [
@@ -34,9 +52,9 @@ export function buildContentSecurityPolicy({
       ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
     ],
     ["style-src", ["'self'", isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`]],
-    ["img-src", ["'self'", "blob:", "data:"]],
+    ["img-src", ["'self'", "blob:", "data:", ...(storage ? [storage] : [])]],
     ["font-src", ["'self'"]],
-    ["connect-src", ["'self'", ...(isDev ? ["ws:", "wss:"] : [])]],
+    ["connect-src", ["'self'", ...(storage ? [storage] : []), ...(isDev ? ["ws:", "wss:"] : [])]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],
     ["form-action", ["'self'"]],

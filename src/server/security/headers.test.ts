@@ -29,6 +29,21 @@ describe("cabeceras de seguridad", () => {
     expect(csp).not.toContain("upgrade-insecure-requests");
   });
 
+  it("permite solo el origen de Storage para subidas e imágenes", () => {
+    const csp = buildContentSecurityPolicy({
+      nonce: "n",
+      isDev: false,
+      storageOrigin: "https://abc.supabase.co/ruta?x=1",
+    });
+    expect(csp).toContain("connect-src 'self' https://abc.supabase.co;");
+    expect(csp).toContain("img-src 'self' blob: data: https://abc.supabase.co;");
+    for (const bad of ["javascript:alert(1)", "*", "nada"]) {
+      expect(
+        buildContentSecurityPolicy({ nonce: "n", isDev: false, storageOrigin: bad }),
+      ).toContain("connect-src 'self';");
+    }
+  });
+
   it("incluye las cabeceras endurecidas y HSTS solo cuando se pide", () => {
     const prod = buildSecurityHeaders({ nonce: "n", isDev: false, enableHsts: true });
     expect(prod).toMatchObject({
