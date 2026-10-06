@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** F3-T02 (RPC del catálogo: `catalog_upsert_product` transaccional, publicar con validación, archivar, borrado lógico y restauración, duplicar, mover categoría, búsqueda del panel).
-- **Siguiente paso exacto:** definir el contrato JSON de `catalog_upsert_product` (producto + opciones + variantes + costos + categorías) y escribir primero su pgTAP (simple, variable, cambio de opciones, permisos, aislamiento).
+- **Siguiente tarea:** F3-T03 (medios: buckets `store-media`/`store-private`, `media_create_upload`/`media_finalize`, job `media.process` con magic bytes, sharp, sin EXIF, límite de píxeles; purga de huérfanos SR-2).
+- **Siguiente paso exacto:** spike S-3 en local: Supabase Storage no tiene binario; evaluar storage-api desde el código fuente o un `StorageAdapter` con implementación de sistema de archivos para dev/CI (ADR), y escribir los fixtures maliciosos primero.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
