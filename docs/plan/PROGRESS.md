@@ -6,7 +6,7 @@
 ## Ahora
 
 - **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F7-T06 (UI de pedidos, Ajustes → Pagos y Notificaciones); F7-T04b (Send Email Hook) antes del gate.
+- **Siguiente tarea:** F7-T06b (Ajustes → Pagos con Stripe Connect y Notificaciones; 100 checkouts con fallos aleatorios); F7-T04b (Send Email Hook) antes del gate.
 - **Siguiente paso exacto:** reglas §27.2 sobre los jobs `order.created`, `order.paid`, `payment.failed`, `order.shipped`, `order.cancelled`, `refund.succeeded`, `payment.late_without_stock`; plantillas con la marca de la tienda; `notification_deliveries` con `dedupe_key`; destinatarios de staff configurables.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
@@ -69,6 +69,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 7    | F7-T03 Envíos, cancelación y reembolsos       | hecha                            | 31 pgTAP (parcial, idempotencia, reembolso > cobrado, doble solicitud, reposición, cancelación con y sin pago, entrega) + job como system_worker                          |
 | 7    | F7-T04 Notificaciones de pedidos              | hecha (Send Email Hook: F7-T04b) | 14 pgTAP (permisos, validación, destinatarios) + 5 integración (dedupe al reprocesar, escape, enlace, staff, otra tienda, reembolso) + 3 unit de plantillas               |
 | 7    | F7-T05 Validación de lanzamiento              | hecha                            | 23 pgTAP (cada bloqueo, plantilla legal sin completar, permisos, idempotencia, auditoría) + E2E de lanzamiento y onboarding actualizado                                   |
+| 7    | F7-T06a Operación del pedido en el panel      | hecha                            | E2E: surtir parcial (se conserva lo escrito tras error, rastreo solo https), entregar, reembolso parcial confirmado por job, cancelar pagado con reembolso total          |
 | 5–11 | Ver el plan §4                                | pendiente                        |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
