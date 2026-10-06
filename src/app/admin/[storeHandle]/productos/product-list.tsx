@@ -31,11 +31,18 @@ export function BulkProductsTable({
   canBulkStatus: boolean;
   canBulkDelete: boolean;
 }) {
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
-    bulkProductsAction.bind(null, storeHandle),
+    async (previous: CatalogActionState, formData: FormData) => {
+      const result = await bulkProductsAction(storeHandle, previous, formData);
+      if (result.ok) setChosen(new Set());
+      return result;
+    },
     {},
   );
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Solo cuenta lo que sigue en esta página (tras borrar, paginar o refrescar).
+  const selected = new Set(rows.map((r) => r.id).filter((id) => chosen.has(id)));
+  const setSelected = setChosen;
   const bulkEnabled = !deletedView && (canBulkStatus || canBulkDelete);
   const allSelected = rows.length > 0 && selected.size === rows.length;
 

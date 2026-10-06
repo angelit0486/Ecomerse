@@ -47,7 +47,10 @@ async function handle(request: Request): Promise<Response> {
       registry: jobRegistry,
       workerId,
       log: reqLog.child({ worker_id: workerId }),
-      deadlineMs: 50_000,
+      deadlineMs: 45_000,
+      // Un job por reclamo: el plazo se comprueba antes de cada uno y un medio
+      // pesado (≤ 15 s con el timeout de sharp) no arrastra a otros (Gate F3).
+      batchSize: 1,
     });
 
     reqLog.info("Runner de jobs completado", { method: auth.method, ...result });

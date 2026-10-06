@@ -192,6 +192,20 @@ describe("media.process", () => {
     });
   });
 
+  it("un original mayor que el tamaño declarado (cuota storage_mb) → too_large", async () => {
+    const png = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#123" } })
+      .png()
+      .toBuffer();
+    const row = await pendingMedia("image/png", png);
+    await admin`update public.media set bytes = 1 where id = ${row.id}`;
+    await run();
+    expect(await media(row.id)).toMatchObject({
+      status: "rejected",
+      rejection_reason: "too_large",
+    });
+    expect(storage.objects.has(storage.key("store-media", row.storage_path))).toBe(false);
+  });
+
   it("es idempotente: un medio ya procesado no se vuelve a procesar", async () => {
     const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#fff" } })
       .png()

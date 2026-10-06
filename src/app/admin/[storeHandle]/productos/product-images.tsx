@@ -58,51 +58,59 @@ export function ProductImages({
     setUploading(true);
     setMessage(null);
     let done = 0;
-    for (const file of Array.from(files).slice(0, 10)) {
-      if (
-        !(ALLOWED_IMAGE_MIME as readonly string[]).includes(file.type) ||
-        file.size > MAX_UPLOAD_BYTES
-      ) {
-        setMessage({ kind: "error", text: `${file.name}: ${FIELD_MESSAGES.file}` });
-        continue;
-      }
-      const ticket = await requestProductImageUpload(storeHandle, {
-        productId,
-        mimeType: file.type,
-        bytes: file.size,
-      });
-      if (!ticket.ok) {
-        setMessage({ kind: "error", text: `${file.name}: ${ticket.error}` });
-        continue;
-      }
-      const response = await fetch(ticket.signedUrl, {
-        method: "PUT",
-        headers: { "content-type": file.type },
-        body: file,
-      }).catch(() => null);
-      if (!response?.ok) {
-        setMessage({
-          kind: "error",
-          text: `${file.name}: no se pudo subir. Revisa tu conexión e inténtalo de nuevo.`,
+    try {
+      for (const file of Array.from(files).slice(0, 10)) {
+        if (
+          !(ALLOWED_IMAGE_MIME as readonly string[]).includes(file.type) ||
+          file.size > MAX_UPLOAD_BYTES
+        ) {
+          setMessage({ kind: "error", text: `${file.name}: ${FIELD_MESSAGES.file}` });
+          continue;
+        }
+        const ticket = await requestProductImageUpload(storeHandle, {
+          productId,
+          mimeType: file.type,
+          bytes: file.size,
         });
-        continue;
+        if (!ticket.ok) {
+          setMessage({ kind: "error", text: `${file.name}: ${ticket.error}` });
+          continue;
+        }
+        const response = await fetch(ticket.signedUrl, {
+          method: "PUT",
+          headers: { "content-type": file.type },
+          body: file,
+        }).catch(() => null);
+        if (!response?.ok) {
+          setMessage({
+            kind: "error",
+            text: `${file.name}: no se pudo subir. Revisa tu conexión e inténtalo de nuevo.`,
+          });
+          continue;
+        }
+        const finalized = await finalizeProductImageUpload(storeHandle, ticket.mediaId);
+        if (!finalized.ok) {
+          setMessage({ kind: "error", text: `${file.name}: ${finalized.error}` });
+          continue;
+        }
+        done += 1;
       }
-      const finalized = await finalizeProductImageUpload(storeHandle, ticket.mediaId);
-      if (!finalized.ok) {
-        setMessage({ kind: "error", text: `${file.name}: ${finalized.error}` });
-        continue;
+      if (done > 0) {
+        setMessage({
+          kind: "ok",
+          text: `${done} ${done === 1 ? "imagen subida" : "imágenes subidas"}; las estamos procesando.`,
+        });
       }
-      done += 1;
-    }
-    if (done > 0) {
+    } catch {
       setMessage({
-        kind: "ok",
-        text: `${done} ${done === 1 ? "imagen subida" : "imágenes subidas"}; las estamos procesando.`,
+        kind: "error",
+        text: "Se perdió la conexión. Recarga la página e inténtalo de nuevo.",
       });
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+      setUploading(false);
+      router.refresh();
     }
-    if (fileRef.current) fileRef.current.value = "";
-    setUploading(false);
-    router.refresh();
   }
 
   return (

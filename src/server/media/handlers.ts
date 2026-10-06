@@ -1,7 +1,12 @@
 import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
 import { processImage } from "./image";
-import { ObjectTooLargeError, type MediaBucket, type StorageAdmin } from "./storage";
+import {
+  isStorePrefixedPath,
+  ObjectTooLargeError,
+  type MediaBucket,
+  type StorageAdmin,
+} from "./storage";
 
 /**
  * Worker de medios (GATE0 §25.3, SR-2). Idempotente: un medio que ya no está
@@ -26,7 +31,13 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
   const processMedia: JobHandler = async (job, { log }) => {
     const id = mediaId(job);
     const [row] = await deps.db<
-      { store_id: string; storage_path: string; mime_type: string; max_bytes: string }[]
+      {
+        store_id: string;
+        storage_path: string;
+        mime_type: string;
+        max_bytes: string;
+        declared_bytes: string | null;
+      }[]
     >`select * from system.media_for_processing(${id}::uuid)`;
     if (!row) return; // ya procesado, rechazado o borrado
 
@@ -35,9 +46,13 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     }
 
     const maxBytes = Number(row.max_bytes);
+    // El original no puede pesar más de lo declarado al reservar: la cuota
+    // storage_mb se comprobó con ese tamaño (Gate F3).
+    const declared =
+      row.declared_bytes == null ? maxBytes : Math.min(maxBytes, Number(row.declared_bytes));
     let original: Buffer | null;
     try {
-      original = await deps.storage.download("store-uploads", row.storage_path, maxBytes);
+      original = await deps.storage.download("store-uploads", row.storage_path, declared);
     } catch (error) {
       if (error instanceof ObjectTooLargeError) {
         await reject(deps, id, row.storage_path, "too_large");
@@ -73,6 +88,11 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
 
     const byBucket = new Map<MediaBucket, string[]>();
     for (const candidate of candidates) {
+      // Un nombre ajeno al esquema de rutas no bloquea la purga del resto.
+      if (!isStorePrefixedPath(candidate.path)) {
+        log.warn("Objeto con ruta no canónica omitido en la purga", { bucket: candidate.bucket });
+        continue;
+      }
       byBucket.set(candidate.bucket, [...(byBucket.get(candidate.bucket) ?? []), candidate.path]);
     }
     for (const [bucket, paths] of byBucket) {

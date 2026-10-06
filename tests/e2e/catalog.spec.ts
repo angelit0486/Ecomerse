@@ -148,6 +148,27 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
   expect(restored?.status).toBe("draft");
   expect(restored?.deleted_at).toBeNull();
 
+  // Agregar una opción conserva las variantes existentes (mismo id y SKU).
+  const [before] = await admin<{ id: string }[]>`
+    select id from public.product_variants where sku = 'PLY-N-M' and deleted_at is null
+       and store_id = ${tenant.storeId}`;
+  await page.getByRole("button", { name: "Agregar opción" }).click();
+  await page.getByRole("textbox", { name: "Opción 3", exact: true }).fill("Material");
+  await page.getByLabel("Valores de la opción 3").fill("Algodón");
+  await expect(page.getByLabel("SKU de Negro / M / Algodón")).toHaveValue("PLY-N-M");
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Cambios guardados." })).toBeVisible();
+  const [after] = await admin<{ id: string; option_signature: string }[]>`
+    select id, option_signature from public.product_variants where sku = 'PLY-N-M' and deleted_at is null
+       and store_id = ${tenant.storeId}`;
+  expect(after).toEqual({
+    id: before!.id,
+    option_signature: "Color=Negro|Talla=M|Material=Algodón",
+  });
+  const [category] = await admin<{ is_visible: boolean }[]>`
+    select is_visible from public.categories where store_id = ${tenant.storeId} and name = 'Ropa'`;
+  expect(category?.is_visible).toBe(true);
+
   // Listado: búsqueda por SKU, filtro por estado y acción masiva
   await page.goto(`${base}?q=PLY-N-M`);
   await expect(page.getByRole("link", { name: "Playera Básica" })).toBeVisible();

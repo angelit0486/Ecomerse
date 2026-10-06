@@ -59,7 +59,8 @@ function zodFields(error: z.ZodError): Record<string, string> {
   for (const issue of error.issues) {
     const key = issue.path.join(".");
     const root = String(issue.path[0] ?? "product");
-    const leaf = String(issue.path.at(-1) ?? root);
+    // Opciones: el mensaje es el de opciones aunque el campo se llame "name".
+    const leaf = root === "options" ? "options" : String(issue.path.at(-1) ?? root);
     fields[key || "product"] ??=
       leaf === "compare_at_price"
         ? "Debe ser mayor que el precio."
@@ -346,7 +347,7 @@ export async function saveCategory(
           ...(id ? { id } : {}),
           name,
           parent_id: parentId || null,
-          is_visible: formData.get("is_visible") !== "0",
+          is_visible: formData.getAll("is_visible").includes("1"),
           slug: String(formData.get("slug") ?? "").trim() || undefined,
         },
       }),

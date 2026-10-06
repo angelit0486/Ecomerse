@@ -33,6 +33,12 @@ function Feedback({ state }: { state: CatalogActionState }) {
   return null;
 }
 
+/** Un slug repetido se muestra en el nombre, que es de donde sale la dirección. */
+function nameError(state: CatalogActionState): string | undefined {
+  if (state.fields?.name) return state.fields.name;
+  return state.fields?.slug ? "Ya existe otra con ese nombre en el mismo nivel." : undefined;
+}
+
 interface CategoryOption {
   id: string;
   name: string;
@@ -71,7 +77,7 @@ export function CategoryForm({
         label={category ? `Nombre de ${category.name}` : "Nombre"}
         id={`${prefix}-name`}
         required
-        error={state.fields?.name}
+        error={nameError(state)}
       >
         {(c) => <Input {...c} name="name" defaultValue={category?.name ?? ""} maxLength={120} />}
       </Field>
@@ -173,7 +179,7 @@ export function BrandForm({
         label={brand ? `Nombre de ${brand.name}` : "Nombre de la marca"}
         id={brand ? `brand-${brand.id}` : "brand-new"}
         required
-        error={state.fields?.name}
+        error={nameError(state)}
       >
         {(c) => <Input {...c} name="name" defaultValue={brand?.name ?? ""} maxLength={120} />}
       </Field>

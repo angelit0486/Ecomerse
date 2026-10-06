@@ -13,6 +13,8 @@ export const PUBLISH_ISSUES: Record<string, string> = {
 
 export const FIELD_MESSAGES: Record<string, string> = {
   title: "Escribe un título de hasta 200 caracteres.",
+  publish:
+    "Este producto está publicado: necesita al menos una variante activa y precios mayores que 0. Corrígelo o despublícalo primero.",
   slug: "Esa dirección ya la usa otro producto o no es válida (solo minúsculas, números y guiones).",
   sku: "Ese SKU ya existe en la tienda.",
   barcode: "Ese código de barras ya existe en la tienda o no es válido.",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_BRANDING_UPLOAD_BYTES } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
@@ -35,6 +35,7 @@ export function LogoForm({
     {},
   );
   const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const processing = candidates.some((c) => c.status === "pending");
   const latest = candidates[0];
@@ -53,27 +54,37 @@ export function LogoForm({
       file.size > MAX_BRANDING_UPLOAD_BYTES
     ) {
       setUploadError("Usa una imagen JPG, PNG, WebP o AVIF de hasta 2 MB.");
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
     setUploading(true);
-    const ticket = await requestLogoUpload(storeHandle, { mimeType: file.type, bytes: file.size });
-    if (!ticket.ok) {
-      setUploadError(ticket.error);
-    } else {
-      const response = await fetch(ticket.signedUrl, {
-        method: "PUT",
-        headers: { "content-type": file.type },
-        body: file,
-      }).catch(() => null);
-      if (!response?.ok) {
-        setUploadError("No se pudo subir el logo. Revisa tu conexión e inténtalo de nuevo.");
+    try {
+      const ticket = await requestLogoUpload(storeHandle, {
+        mimeType: file.type,
+        bytes: file.size,
+      });
+      if (!ticket.ok) {
+        setUploadError(ticket.error);
       } else {
-        const finalized = await finalizeLogoUpload(storeHandle, ticket.mediaId);
-        if (!finalized.ok) setUploadError(finalized.error ?? "No pudimos procesar el logo.");
+        const response = await fetch(ticket.signedUrl, {
+          method: "PUT",
+          headers: { "content-type": file.type },
+          body: file,
+        }).catch(() => null);
+        if (!response?.ok) {
+          setUploadError("No se pudo subir el logo. Revisa tu conexión e inténtalo de nuevo.");
+        } else {
+          const finalized = await finalizeLogoUpload(storeHandle, ticket.mediaId);
+          if (!finalized.ok) setUploadError(finalized.error ?? "No pudimos procesar el logo.");
+        }
       }
+    } catch {
+      setUploadError("Se perdió la conexión. Recarga la página e inténtalo de nuevo.");
+    } finally {
+      if (inputRef.current) inputRef.current.value = "";
+      setUploading(false);
+      router.refresh();
     }
-    setUploading(false);
-    router.refresh();
   }
 
   return (
@@ -109,6 +120,7 @@ export function LogoForm({
           JPG, PNG, WebP o AVIF de hasta 2 MB. Sin SVG.
         </p>
         <input
+          ref={inputRef}
           id="logo-input"
           type="file"
           accept={ALLOWED_IMAGE_MIME.join(",")}

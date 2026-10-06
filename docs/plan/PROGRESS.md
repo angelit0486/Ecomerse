@@ -5,9 +5,9 @@
 
 ## Ahora
 
-- **Fase actual:** 3 — Catalog & Media (Fase 2 cerrada en local; CI pendiente por P0).
-- **Siguiente tarea:** Gate F3 (revisión de seguridad y de código de la Fase 3, informe `docs/phases/PHASE-03-REPORT.md`).
-- **Siguiente paso exacto:** revisión adversarial del diff F3-T01..T06 (aislamiento de Storage, RPC de medios, acciones del panel, CSP), corregir hallazgos y escribir el informe.
+- **Fase actual:** 4 — Inventory (Fase 3 cerrada en local: `docs/phases/PHASE-03-REPORT.md`; CI pendiente por P0).
+- **Siguiente tarea:** F4-T01 (`inventory_locations` con ubicación por defecto + backfill + trigger, `inventory_levels`, `inventory_movements` append-only, `inventory_reservations` + `_items`).
+- **Siguiente paso exacto:** leer GATE0 §15 y escribir primero los pgTAP de inmutabilidad del ledger y de los metatests para las tablas nuevas.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F3-T06. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta el Gate F3. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 

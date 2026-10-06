@@ -217,7 +217,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
       <nav aria-label="Paginación" className="flex gap-3 text-sm">
         {cursor ? (
           <Link
-            href={`${base}?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status ? { estado: status } : {}), ...(deleted ? { eliminados: "1" } : {}) })}`}
+            href={`${base}?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status ? { estado: status } : {}), ...(categoryParam ? { categoria: categoryParam } : {}), ...(deleted ? { eliminados: "1" } : {}) })}`}
             className="underline"
           >
             Primera página

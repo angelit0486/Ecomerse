@@ -2,7 +2,9 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { matchDrafts, renameOptionKey, renameOptionValue } from "@/lib/catalog/variant-drafts";
 import {
+  DEFAULT_MAX_VARIANTS,
   generateCombinations,
   MAX_OPTIONS,
   selectionLabel,
@@ -89,10 +91,9 @@ export function ProductEditor({
   const [options, setOptions] = useState<OptionDraft[]>(
     initial.options.map((o) => ({ name: o.name, values: o.values.join(", ") })),
   );
-  const [variants, setVariants] = useState<Record<string, VariantDraft>>(() => {
-    const parsed = initial.options.map((o) => ({ name: o.name, values: o.values }));
-    return Object.fromEntries(initial.variants.map((v) => [signatureOf(parsed, v.options), v]));
-  });
+  // Borradores de variante (con id, SKU, código de barras y costo); se emparejan
+  // con las combinaciones en cada render para sobrevivir a cambios de opciones.
+  const [drafts, setDrafts] = useState<VariantDraft[]>(initial.variants);
 
   const parsedOptions = useMemo(
     () =>
@@ -101,39 +102,80 @@ export function ProductEditor({
         .filter((o) => o.name),
     [options],
   );
+  const combinationCount = parsedOptions.reduce((n, o) => n * Math.max(o.values.length, 1), 1);
+  const tooMany = combinationCount > DEFAULT_MAX_VARIANTS;
   const combinations = useMemo(
-    () => (parsedOptions.length === 0 ? [{}] : generateCombinations(parsedOptions)),
-    [parsedOptions],
+    () => (parsedOptions.length === 0 ? [{}] : tooMany ? [] : generateCombinations(parsedOptions)),
+    [parsedOptions, tooMany],
   );
-  const rows = combinations.map((combo) => {
-    const signature = signatureOf(parsedOptions, combo);
-    return { signature, combo, draft: variants[signature] ?? emptyVariant(combo) };
+  const matches = matchDrafts(
+    combinations,
+    parsedOptions.map((o) => o.name),
+    drafts,
+  );
+  const rows = combinations.map((combo, i) => {
+    const index = matches[i]!;
+    return {
+      signature: signatureOf(parsedOptions, combo),
+      combo,
+      index,
+      draft: index >= 0 ? drafts[index]! : emptyVariant(combo),
+    };
   });
 
-  function updateVariant(
-    signature: string,
-    combo: Record<string, string>,
-    patch: Partial<VariantDraft>,
+  function patchRows(
+    patches: Array<{ index: number; combo: Record<string, string>; patch: Partial<VariantDraft> }>,
   ) {
-    setVariants((current) => ({
-      ...current,
-      [signature]: { ...(current[signature] ?? emptyVariant(combo)), ...patch, options: combo },
-    }));
+    setDrafts((current) => {
+      const next = [...current];
+      for (const { index, combo, patch } of patches) {
+        if (index >= 0) next[index] = { ...next[index]!, ...patch, options: combo };
+        else next.push({ ...emptyVariant(combo), ...patch, options: combo });
+      }
+      return next;
+    });
+  }
+
+  function updateVariant(row: (typeof rows)[number], patch: Partial<VariantDraft>) {
+    patchRows([{ index: row.index, combo: row.combo, patch }]);
   }
 
   function applyToAll(field: "price" | "compare_at_price" | "cost", value: string) {
-    setVariants((current) => {
-      const next = { ...current };
-      for (const row of rows)
-        next[row.signature] = { ...row.draft, [field]: value, options: row.combo };
-      return next;
-    });
+    patchRows(
+      rows.map((row) => ({ index: row.index, combo: row.combo, patch: { [field]: value } })),
+    );
+  }
+
+  function renameOption(index: number, name: string) {
+    const previous = options[index]?.name ?? "";
+    setOptions((list) => list.map((o, i) => (i === index ? { ...o, name } : o)));
+    if (previous.trim() && name.trim())
+      setDrafts((d) => renameOptionKey(d, previous.trim(), name.trim()));
+  }
+
+  function changeValues(index: number, text: string) {
+    const option = options[index];
+    setOptions((list) => list.map((o, i) => (i === index ? { ...o, values: text } : o)));
+    if (!option?.name.trim()) return;
+    // Mismo número de valores: se interpreta como renombrar por posición.
+    const before = splitValues(option.values);
+    const after = splitValues(text);
+    if (before.length !== after.length) return;
+    setDrafts((d) =>
+      before.reduce(
+        (acc, value, i) => renameOptionValue(acc, option.name.trim(), value, after[i]!),
+        d,
+      ),
+    );
   }
 
   const [clientError, setClientError] = useState<string | null>(null);
   const fieldError = (key: string) => state.fields?.[key];
 
   function buildPayload(): { ok: true; json: string } | { ok: false; error: string } {
+    if (tooMany) {
+      return { ok: false, error: `Máximo ${DEFAULT_MAX_VARIANTS} variantes por producto.` };
+    }
     const payloadVariants = [];
     for (const [index, row] of rows.entries()) {
       const price = parseMoneyToCents(row.draft.price);
@@ -349,11 +391,7 @@ export function ProductEditor({
                   value={option.name}
                   placeholder="Color"
                   maxLength={60}
-                  onChange={(e) =>
-                    setOptions((list) =>
-                      list.map((o, i) => (i === index ? { ...o, name: e.target.value } : o)),
-                    )
-                  }
+                  onChange={(e) => renameOption(index, e.target.value)}
                 />
               )}
             </Field>
@@ -363,11 +401,7 @@ export function ProductEditor({
                   {...c}
                   value={option.values}
                   placeholder="Negro, Blanco"
-                  onChange={(e) =>
-                    setOptions((list) =>
-                      list.map((o, i) => (i === index ? { ...o, values: e.target.value } : o)),
-                    )
-                  }
+                  onChange={(e) => changeValues(index, e.target.value)}
                 />
               )}
             </Field>
@@ -394,9 +428,11 @@ export function ProductEditor({
 
         <div className="flex flex-wrap items-end gap-3">
           <p className="text-sm font-medium" aria-live="polite">
-            {rows.length === 1 && parsedOptions.length === 0
-              ? "Una variante"
-              : `${rows.length} variantes`}
+            {tooMany
+              ? `${combinationCount} combinaciones: el máximo es ${DEFAULT_MAX_VARIANTS} variantes por producto. Quita valores u opciones.`
+              : rows.length === 1 && parsedOptions.length === 0
+                ? "Una variante"
+                : `${rows.length} variantes`}
           </p>
           {rows.length > 1 ? (
             <ApplyToAll currency={currency} onApply={applyToAll} canReadCost={canReadCost} />
@@ -431,7 +467,8 @@ export function ProductEditor({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ signature, combo, draft }, index) => {
+              {rows.map((row, index) => {
+                const { signature, combo, draft } = row;
                 const label = selectionLabel(parsedOptions, combo) || "Única";
                 const priceError = fieldError(`variants.${index}.price`);
                 const compareError = fieldError(`variants.${index}.compare_at_price`);
@@ -446,7 +483,7 @@ export function ProductEditor({
                         inputMode="decimal"
                         value={draft.price}
                         aria-invalid={priceError ? true : undefined}
-                        onChange={(e) => updateVariant(signature, combo, { price: e.target.value })}
+                        onChange={(e) => updateVariant(row, { price: e.target.value })}
                         className="w-28"
                       />
                       {priceError ? (
@@ -459,9 +496,7 @@ export function ProductEditor({
                         inputMode="decimal"
                         value={draft.compare_at_price}
                         aria-invalid={compareError ? true : undefined}
-                        onChange={(e) =>
-                          updateVariant(signature, combo, { compare_at_price: e.target.value })
-                        }
+                        onChange={(e) => updateVariant(row, { compare_at_price: e.target.value })}
                         className="w-28"
                       />
                       {compareError ? (
@@ -474,9 +509,7 @@ export function ProductEditor({
                           aria-label={`Costo de ${label}`}
                           inputMode="decimal"
                           value={draft.cost}
-                          onChange={(e) =>
-                            updateVariant(signature, combo, { cost: e.target.value })
-                          }
+                          onChange={(e) => updateVariant(row, { cost: e.target.value })}
                           className="w-28"
                         />
                       </td>
@@ -486,7 +519,7 @@ export function ProductEditor({
                         aria-label={`SKU de ${label}`}
                         value={draft.sku}
                         maxLength={64}
-                        onChange={(e) => updateVariant(signature, combo, { sku: e.target.value })}
+                        onChange={(e) => updateVariant(row, { sku: e.target.value })}
                         className="w-32"
                       />
                     </td>
@@ -495,9 +528,7 @@ export function ProductEditor({
                         type="checkbox"
                         aria-label={`${label} activa`}
                         checked={draft.active}
-                        onChange={(e) =>
-                          updateVariant(signature, combo, { active: e.target.checked })
-                        }
+                        onChange={(e) => updateVariant(row, { active: e.target.checked })}
                       />
                     </td>
                   </tr>

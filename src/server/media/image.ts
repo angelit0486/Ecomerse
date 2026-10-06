@@ -16,6 +16,7 @@ export type { ImageMime };
 export const MAX_IMAGE_SIDE = 4096;
 /** Límite de píxeles de ENTRADA: corta las bombas de descompresión antes de decodificar. */
 export const MAX_INPUT_PIXELS = 40_000_000;
+export const SHARP_TIMEOUT_SECONDS = 15;
 
 export type RejectionReason =
   "too_large" | "unsupported_format" | "mime_mismatch" | "too_many_pixels" | "decode_failed";
@@ -100,6 +101,8 @@ export async function processImage(
 
   try {
     const pipeline = sharp(input, options)
+      // Tope de CPU por imagen: protege la cola compartida (Gate F3).
+      .timeout({ seconds: SHARP_TIMEOUT_SECONDS })
       .rotate() // aplica la orientación EXIF antes de descartar los metadatos
       .resize({
         width: MAX_IMAGE_SIDE,
@@ -114,7 +117,7 @@ export async function processImage(
           ? pipeline.png({ compressionLevel: 9 })
           : sniffed === "image/webp"
             ? pipeline.webp({ quality: 82 })
-            : pipeline.avif({ quality: 55, effort: 4 });
+            : pipeline.avif({ quality: 55, effort: 2 });
     const { data, info } = await encoded.toBuffer({ resolveWithObject: true });
     if (data.length > maxBytes) return { ok: false, reason: "too_large" };
     return { ok: true, data, width: info.width, height: info.height, mime: sniffed };

@@ -92,7 +92,26 @@ export default async function OnboardingPage({ params }: Props) {
   }));
   // El borrador manda; sin borrador, el logo publicado.
   const currentLogoId = theme?.draft_settings ? theme?.draft_logo_media_id : theme?.logo_media_id;
-  const currentLogo = logos.find((l) => l.id === currentLogoId && l.url);
+  let currentLogo = logos.find((l) => l.id === currentLogoId && l.url);
+  if (!currentLogo && currentLogoId) {
+    // El logo vigente puede ser más antiguo que las últimas subidas.
+    const { data: row } = await supabase
+      .from("media")
+      .select("id, status, storage_path")
+      .eq("store_id", ctx.store.id)
+      .eq("id", currentLogoId)
+      .eq("status", "ready")
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (row) {
+      currentLogo = {
+        id: row.id,
+        status: "ready",
+        path: row.storage_path,
+        url: publicMediaUrl(row.storage_path),
+      };
+    }
+  }
   const settings = (theme?.draft_settings ?? theme?.settings ?? {}) as ThemeSettings;
   const brandingSaved = Boolean(
     theme?.draft_settings || (theme?.settings as ThemeSettings)?.colors,
