@@ -3,7 +3,15 @@ import Link from "next/link";
 import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
-export function StoreHeader({ store, menu }: { store: StorePublic; menu: MenuEntry[] }) {
+export function StoreHeader({
+  store,
+  menu,
+  cartCount,
+}: {
+  store: StorePublic;
+  menu: MenuEntry[];
+  cartCount: number;
+}) {
   return (
     <header className="border-b border-[var(--sf-border)]">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4">
@@ -43,6 +51,15 @@ export function StoreHeader({ store, menu }: { store: StorePublic; menu: MenuEnt
             Buscar
           </button>
         </form>
+        <Link
+          href="/carrito"
+          className="ml-auto inline-flex h-10 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium sm:ml-0"
+        >
+          Carrito<span className="sr-only">, productos:</span>
+          <span className="ml-2 rounded-full bg-[var(--sf-fg)] px-2 text-xs text-[var(--sf-bg)]">
+            {cartCount}
+          </span>
+        </Link>
       </div>
       {menu.length > 0 ? (
         <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 pb-3">

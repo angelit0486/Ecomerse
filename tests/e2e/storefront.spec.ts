@@ -101,7 +101,9 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
   await expect(page.getByText("Disponible", { exact: true })).toBeVisible();
   await page.getByText("M", { exact: true }).click();
   await expect(page.getByText("$219.00")).toBeVisible();
-  await expect(page.getByText("Agotado", { exact: true })).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: /^Agotado$/ })).toBeVisible();
+  // Una variante agotada no se puede agregar al carrito (F6).
+  await expect(page.getByRole("button", { name: "Agotado" })).toBeDisabled();
   await expect(page.getByRole("navigation", { name: "Ruta de navegación" })).toContainText("Ropa");
   await expectNoSeriousA11yViolations(page);
   await shots(page, "producto");

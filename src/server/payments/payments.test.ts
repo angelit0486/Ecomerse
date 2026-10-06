@@ -6,6 +6,7 @@ import {
   fakePaymentSignature,
   guestToken,
   isGuestTokenShape,
+  isOrderReturnPath,
   tokenHash,
   verifyFakePaymentSignature,
 } from "./order-links";
@@ -13,6 +14,7 @@ import type { CreateCheckoutInput } from "./provider";
 
 const SECRET = "s".repeat(32);
 const PAYMENT = "0190a0d0-0000-7000-8000-000000000001";
+const BACK = `/pedido/0190a0d0-0000-7000-8000-00000000000a?t=${"a".repeat(43)}`;
 
 const input: CreateCheckoutInput = {
   account: { id: "a", provider: "fake", mode: "test", publicConfig: {} },
@@ -20,9 +22,9 @@ const input: CreateCheckoutInput = {
   order: { id: "o", displayNumber: "#1001", items: [] },
   buyer: { email: "a@b.io" },
   returnUrls: {
-    success: "https://tienda.example.com/pedido/o",
-    pending: "https://tienda.example.com/pedido/o",
-    failure: "https://tienda.example.com/pedido/o",
+    success: `https://tienda.example.com${BACK}`,
+    pending: `https://tienda.example.com${BACK}`,
+    failure: `https://tienda.example.com${BACK}`,
   },
   expiresAt: new Date(),
   idempotencyKey: PAYMENT,
@@ -39,16 +41,18 @@ describe("enlaces del pedido", () => {
     expect(() => guestToken(SECRET, "corta")).toThrow();
   });
 
-  it("la firma del pago simulado se verifica en tiempo constante", () => {
-    const sig = fakePaymentSignature(SECRET, PAYMENT);
-    expect(verifyFakePaymentSignature(SECRET, PAYMENT, sig)).toBe(true);
-    expect(verifyFakePaymentSignature(SECRET, PAYMENT, sig.replace(/^./, "0"))).toBe(
-      sig.startsWith("0"),
-    );
-    expect(verifyFakePaymentSignature(SECRET, "0190a0d0-0000-7000-8000-000000000002", sig)).toBe(
-      false,
-    );
-    expect(verifyFakePaymentSignature(SECRET, PAYMENT, null)).toBe(false);
+  it("la firma del pago simulado cubre el pago y la ruta de regreso", () => {
+    const sig = fakePaymentSignature(SECRET, PAYMENT, BACK);
+    expect(verifyFakePaymentSignature(SECRET, PAYMENT, BACK, sig)).toBe(true);
+    expect(verifyFakePaymentSignature(SECRET, PAYMENT, `${BACK}x`, sig)).toBe(false);
+    expect(
+      verifyFakePaymentSignature(SECRET, "0190a0d0-0000-7000-8000-000000000002", BACK, sig),
+    ).toBe(false);
+    expect(verifyFakePaymentSignature(SECRET, PAYMENT, BACK, null)).toBe(false);
+    // Ninguna ruta ajena al pedido sirve de regreso (sin redirección abierta).
+    expect(isOrderReturnPath("//evil.example.com/pedido")).toBe(false);
+    expect(isOrderReturnPath("https://evil.example.com")).toBe(false);
+    expect(() => fakePaymentSignature(SECRET, PAYMENT, "/admin")).toThrow();
   });
 });
 
@@ -61,12 +65,20 @@ describe("adaptadores de pago", () => {
     expect(r).toEqual({ providerCheckoutId: `manual_${PAYMENT}` });
   });
 
-  it("fake: redirige a la página firmada de la misma tienda", async () => {
+  it("fake: redirige a la página firmada de la misma tienda y vuelve al pedido", async () => {
     const r = await createFakeProvider(SECRET).createCheckout(input);
     const url = new URL(r.redirectUrl!);
     expect(url.origin).toBe("https://tienda.example.com");
     expect(url.pathname).toBe(`/pago-simulado/${PAYMENT}`);
-    expect(verifyFakePaymentSignature(SECRET, PAYMENT, url.searchParams.get("firma"))).toBe(true);
+    expect(url.searchParams.get("volver")).toBe(BACK);
+    expect(
+      verifyFakePaymentSignature(
+        SECRET,
+        PAYMENT,
+        url.searchParams.get("volver"),
+        url.searchParams.get("firma"),
+      ),
+    ).toBe(true);
   });
 
   it("ningún adaptador de la F6 acepta webhooks", async () => {

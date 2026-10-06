@@ -3,8 +3,8 @@ import type { PaymentProvider } from "./provider";
 
 /**
  * Proveedor simulado para desarrollo y pruebas E2E: redirige a una página de la
- * propia tienda que aprueba o rechaza el pago. Nunca en producción (lo impiden el
- * registro y el ajuste de plataforma `payments.allow_fake`).
+ * propia tienda que aprueba o rechaza el pago y vuelve al pedido. Nunca en
+ * producción (lo impiden el registro y el ajuste de plataforma `payments.allow_fake`).
  */
 export function createFakeProvider(secret: string): PaymentProvider {
   return {
@@ -18,9 +18,12 @@ export function createFakeProvider(secret: string): PaymentProvider {
       providerSideExpiration: false,
     },
     async createCheckout(input) {
-      const url = new URL(`/pago-simulado/${input.payment.id}`, input.returnUrls.success);
+      const back = new URL(input.returnUrls.success);
+      const returnPath = `${back.pathname}${back.search}`;
+      const url = new URL(`/pago-simulado/${input.payment.id}`, back);
       url.search = new URLSearchParams({
-        firma: fakePaymentSignature(secret, input.payment.id),
+        volver: returnPath,
+        firma: fakePaymentSignature(secret, input.payment.id, returnPath),
       }).toString();
       return { providerCheckoutId: `fake_${input.payment.id}`, redirectUrl: url.toString() };
     },

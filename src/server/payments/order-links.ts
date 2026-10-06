@@ -23,17 +23,34 @@ export function isGuestTokenShape(token: string | null | undefined): token is st
   return typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token);
 }
 
-/** Firma de la página del pago simulado: solo quien recibió el enlace la abre. */
-export function fakePaymentSignature(secret: string, paymentId: string): string {
+/** Ruta de regreso permitida tras el pago simulado: solo la página del pedido. */
+export function isOrderReturnPath(path: string): boolean {
+  return /^\/pedido\/[0-9a-f-]{36}\?t=[A-Za-z0-9_-]{43}$/.test(path);
+}
+
+/**
+ * Firma de la página del pago simulado: cubre el pago y la ruta de regreso, así
+ * nadie la abre sin el enlace ni la usa como redirección abierta.
+ */
+export function fakePaymentSignature(
+  secret: string,
+  paymentId: string,
+  returnPath: string,
+): string {
   if (!UUID_RE.test(paymentId)) throw new Error("paymentId inválido");
-  return createHmac("sha256", secret).update(`fake-payment:${paymentId}`).digest("hex");
+  if (!isOrderReturnPath(returnPath)) throw new Error("ruta de regreso inválida");
+  return createHmac("sha256", secret)
+    .update(`fake-payment:${paymentId}:${returnPath}`)
+    .digest("hex");
 }
 
 export function verifyFakePaymentSignature(
   secret: string,
   paymentId: string,
+  returnPath: string | null | undefined,
   signature: string | null | undefined,
 ): boolean {
-  if (!UUID_RE.test(paymentId) || !signature || !/^[0-9a-f]{64}$/.test(signature)) return false;
-  return constantTimeEqual(fakePaymentSignature(secret, paymentId), signature);
+  if (!UUID_RE.test(paymentId) || !returnPath || !isOrderReturnPath(returnPath)) return false;
+  if (!signature || !/^[0-9a-f]{64}$/.test(signature)) return false;
+  return constantTimeEqual(fakePaymentSignature(secret, paymentId, returnPath), signature);
 }

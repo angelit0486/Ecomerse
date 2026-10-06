@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
+import { getCart } from "@/server/storefront/cart";
 import { getMenus } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 
@@ -27,9 +28,11 @@ const BASE_CSS = [
 export default async function StoreLayout({ children, params }: Props) {
   const { storeId } = await params;
   const { store, preview } = await getStorefront(storeId);
-  const [menus, nonce] = await Promise.all([
+  const [menus, nonce, cart] = await Promise.all([
     getMenus(store.id),
     headers().then((h) => h.get("x-nonce") ?? undefined),
+    // Sin caché: depende de la cookie del comprador (§44.7).
+    getCart(store.id).catch(() => null),
   ]);
   const theme = resolveTheme(store.theme?.settings);
 
@@ -50,7 +53,7 @@ export default async function StoreLayout({ children, params }: Props) {
       >
         Saltar al contenido
       </a>
-      <StoreHeader store={store} menu={menus.main} />
+      <StoreHeader store={store} menu={menus.main} cartCount={cart?.item_count ?? 0} />
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {children}
       </main>

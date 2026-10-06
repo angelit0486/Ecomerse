@@ -16,6 +16,7 @@ import { SafeHtml } from "@/ui/safe-html";
 import { Breadcrumb } from "../../_components/breadcrumb";
 import { AVAILABILITY_LABELS, money } from "../../_components/format";
 import { JsonLd } from "../../_components/json-ld";
+import { AddToCart } from "../../_components/add-to-cart";
 import { VariantSelector } from "../../_components/variant-selector";
 
 type Props = { params: Promise<{ storeId: string; slug: string }> };
@@ -202,9 +203,15 @@ export default async function ProductPage({ params }: Props) {
                 ) : null}
               </p>
               <p className="text-sm">{AVAILABILITY_LABELS[single.availability]}</p>
+              <AddToCart
+                storeId={store.id}
+                variantId={single.id}
+                available={single.availability !== "out_of_stock"}
+              />
             </div>
           ) : product.variants.length > 0 ? (
             <VariantSelector
+              storeId={store.id}
               options={product.options}
               variants={product.variants.map((v) => ({
                 id: v.id,
@@ -219,9 +226,6 @@ export default async function ProductPage({ params }: Props) {
           ) : (
             <p className="text-sm">{AVAILABILITY_LABELS.out_of_stock}</p>
           )}
-          <p className="text-sm text-[var(--sf-muted)]">
-            La compra en línea estará disponible muy pronto.
-          </p>
           {product.description_html ? (
             <section aria-label="Descripción" className="border-t border-[var(--sf-border)] pt-5">
               <SafeHtml

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { AddToCart } from "./add-to-cart";
+
 /**
  * Selector de variantes (isla cliente, §21.4): un grupo de botones de opción por
  * opción del producto; muestra precio, disponibilidad e imagen de la
@@ -19,9 +21,11 @@ export interface SelectorVariant {
 }
 
 export function VariantSelector({
+  storeId,
   options,
   variants,
 }: {
+  storeId: string;
   options: { name: string; values: string[] }[];
   variants: SelectorVariant[];
 }) {
@@ -100,6 +104,11 @@ export function VariantSelector({
           <p className="text-sm text-[var(--sf-muted)]">Esta combinación no está disponible.</p>
         )}
       </div>
+      <AddToCart
+        storeId={storeId}
+        variantId={selected?.id ?? null}
+        available={Boolean(selected?.available)}
+      />
     </div>
   );
 }
