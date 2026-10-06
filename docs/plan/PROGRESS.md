@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 5 — Storefront (Fase 4 cerrada en local: `docs/phases/PHASE-04-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F5-T02 (funciones `storefront.*` de lectura).
-- **Siguiente paso exacto:** `storefront.list_products`, `get_product` (con disponibilidad por estado), `get_category`, `get_brand`, `search_products`, `get_menus`, `get_page`, `sitemap_entries`; pgTAP como `storefront_gateway` (nada de borradores, costos ni cantidades).
+- **Siguiente tarea:** F5-T03 (tema base del storefront).
+- **Siguiente paso exacto:** rutas de `src/app/%5Fstore/[storeId]/` (inicio, /productos, /productos/[slug], /categoria/[...path], /marca/[slug], /buscar, /paginas/[slug]) con header, footer y menús; cliente `storefront` sobre `gatewayDb`.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -19,7 +19,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta F5-T01. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta F5-T02. Bundle de respaldo: `pruva-f3.bundle` en el scratchpad.
 
 ## Tablero
 
@@ -52,6 +52,7 @@ Todos desde `7549db7` (Gate 1) hasta F5-T01. Bundle de respaldo: `pruva-f3.bundl
 | 4    | F4-T03 UI de inventario                       | hecha                       | `inventory_search` (5 pgTAP) + E2E (motivo obligatorio, daño, fijar, stock bajo, historial) con axe          |
 | 4    | Gate F4                                       | hecha                       | informe `docs/phases/PHASE-04-REPORT.md` · 7 hallazgos corregidos                                            |
 | 5    | F5-T01 Menús, páginas y plantillas            | hecha                       | 13 pgTAP + aislamiento                                                                                       |
+| 5    | F5-T02 Lecturas `storefront.*`                | hecha                       | 30 pgTAP como `storefront_gateway` (sin borradores, costos, cantidades ni otra tienda)                       |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                              |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
