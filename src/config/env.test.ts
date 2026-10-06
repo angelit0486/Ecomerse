@@ -12,6 +12,7 @@ const valid = {
   GATEWAY_DATABASE_URL: "postgres://storefront_gateway:s3cr3t-value@localhost:5432/db",
   APP_HOSTNAME: "localhost:3000",
   PREVIEW_HMAC_SECRET: "p".repeat(32),
+  ORDER_LINK_SECRET: "o".repeat(32),
   APP_URL: "http://localhost:3000",
   EMAIL_PROVIDER: "fake",
   EMAIL_FROM: "Plataforma <no-reply@example.test>",

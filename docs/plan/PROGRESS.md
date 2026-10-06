@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 6 — Customers, Cart, Shipping, Taxes, Discounts & Checkout (Fase 5 cerrada en local: `docs/phases/PHASE-05-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F6-T04 (expiración de reservas y pedidos; `PaymentProvider` + `manual` y `fake`).
-- **Siguiente paso exacto:** `system.expire_pending_orders` (cancela `payment_expired`, libera reserva y cupón) + job por minuto; contrato `PaymentProvider` en `src/server/payments/` con adaptadores `manual` y `fake`; `system.mark_payment_*`; integración.
+- **Siguiente tarea:** F6-T05 (UI del carrito, checkout, pedido del invitado; panel de envíos, impuestos, descuentos y pedidos).
+- **Siguiente paso exacto:** cookie httpOnly del carrito + acciones del storefront (agregar, cambiar cantidad, checkout de una página, `place_order` → `createCheckout`), página `/pedido/[id]?t=`, `/pago-simulado/[id]`; panel `/admin/[h]/envios`, `/impuestos`, `/descuentos`, `/pedidos`; E2E hasta pagado con `fake`.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -61,6 +61,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 6    | F6-T01 Tablas de checkout                     | hecha                       | 30 pgTAP (totales, snapshot, transiciones, append-only) + aislamiento con todas las tablas pobladas (mutación)                                                            |
 | 6    | F6-T02 `app.calculate_cart`                   | hecha                       | 17 casos dorados (integración, mutación half-even) + 24 pgTAP sobre datos reales                                                                                          |
 | 6    | F6-T03 Carrito público y `place_order`        | hecha                       | 42 pgTAP (cada error de §17.6, rollback total, idempotencia, aislamiento) + concurrencia real: última unidad, último cupón, numeración sin huecos, doble envío (mutación) |
+| 6    | F6-T04 Pagos manual/fake y expiración         | hecha                       | 32 pgTAP (fake, manual, fallo, reintento, expiración) + integración como system_worker + 11 unit                                                                          |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

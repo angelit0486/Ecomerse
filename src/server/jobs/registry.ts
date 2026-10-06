@@ -3,6 +3,7 @@ import { serverEnv } from "@/server/env";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
+import { createOrderHandlers } from "@/server/orders/handlers";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
 
@@ -32,11 +33,16 @@ const media = () =>
     onPublished: invalidateStore,
   });
 
+const orders = () => createOrderHandlers({ db: workerDb() });
+
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
   ["access.support_access_notice", lazy("access.support_access_notice", notifications)],
   ["media.process", lazy("media.process", media)],
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
+  ["orders.expire", lazy("orders.expire", orders)],
+  ["order.created", lazy("order.created", orders)],
+  ["order.paid", lazy("order.paid", orders)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

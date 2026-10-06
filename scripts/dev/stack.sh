@@ -160,6 +160,9 @@ apply_migrations() {
   # Solo desarrollo: las tiendas viven en {handle}.tiendas.localhost (runbook local-stack).
   psql_q -d "$DB" -c "insert into public.platform_settings (key, value)
     values ('storefront.root_domain', '{\"domain\": \"tiendas.localhost\"}') on conflict (key) do nothing"
+  # Solo desarrollo: el proveedor de pago simulado (D-F6-06). Nunca en producción.
+  psql_q -d "$DB" -c "insert into public.platform_settings (key, value)
+    values ('payments.allow_fake', '{\"enabled\": true}') on conflict (key) do nothing"
 }
 
 cmd_up() {

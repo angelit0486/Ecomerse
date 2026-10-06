@@ -29,6 +29,11 @@ export const serverEnvSchema = z.object({
   APP_HOSTNAME: z.string().regex(/^[a-z0-9.-]+(:\d{1,5})?$/),
   /** Secreto HMAC de los tokens de vista previa de tiendas en borrador (CF-09). */
   PREVIEW_HMAC_SECRET: z.string().min(32),
+  /**
+   * HMAC de los enlaces de pedido: token del invitado (derivado de la clave de
+   * idempotencia, la base solo guarda su hash) y la página del pago simulado.
+   */
+  ORDER_LINK_SECRET: z.string().min(32),
   /** Origen público del panel para enlaces en emails (p. ej. https://app.ejemplo.com). */
   APP_URL: z.url({ protocol: /^https?$/ }),
   /** Canal de email (GATE0 §27.1): resend en producción; mailpit o fake en local/CI. */
