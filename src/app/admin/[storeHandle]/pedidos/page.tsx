@@ -31,8 +31,11 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   if (!hasPermission(ctx, "orders.read")) notFound();
   const sp = await searchParams;
   const filter = typeof sp.estado === "string" && FILTERS[sp.estado] ? sp.estado : "todos";
+  // Cursor (placed_at, id): pedidos con la misma hora no se saltan (Gate F6).
+  const cursor =
+    typeof sp.antes === "string" ? /^(.{10,40})\|([0-9a-f-]{36})$/.exec(sp.antes) : null;
   const before =
-    typeof sp.antes === "string" && !Number.isNaN(Date.parse(sp.antes)) ? sp.antes : null;
+    cursor && !Number.isNaN(Date.parse(cursor[1]!)) ? { at: cursor[1]!, id: cursor[2]! } : null;
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -42,11 +45,14 @@ export default async function OrdersPage({ params, searchParams }: Props) {
     )
     .eq("store_id", ctx.store.id)
     .order("placed_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(PAGE + 1);
   if (filter === "pendientes") query = query.eq("status", "pending_payment");
   if (filter === "pagados") query = query.eq("status", "open");
   if (filter === "cancelados") query = query.eq("status", "cancelled");
-  if (before) query = query.lt("placed_at", before);
+  if (before) {
+    query = query.or(`placed_at.lt.${before.at},and(placed_at.eq.${before.at},id.lt.${before.id})`);
+  }
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data ?? []).slice(0, PAGE) as {
@@ -60,7 +66,8 @@ export default async function OrdersPage({ params, searchParams }: Props) {
     fulfillment_status: string;
     needs_attention: boolean;
   }[];
-  const next = (data ?? []).length > PAGE ? rows.at(-1)?.placed_at : null;
+  const last = rows.at(-1);
+  const next = (data ?? []).length > PAGE && last ? `${last.placed_at}|${last.id}` : null;
   const base = `/admin/${ctx.store.handle}/pedidos`;
 
   return (

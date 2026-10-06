@@ -14,6 +14,7 @@ const MESSAGES = {
   code_locked: "Este código ya se usó: no se puede cambiar.",
   value: "Revisa el valor: porcentaje de 0.01 a 100, o un monto mayor que 0.",
   discount: "Revisa los datos del descuento.",
+  dates: "Revisa las fechas.",
   status: "Estado no válido.",
 };
 const failure = failureFrom("discounts", MESSAGES);
@@ -27,7 +28,8 @@ function percentToBps(input: string): number | null {
 }
 const optInt = (v: string) =>
   v === "" ? null : /^\d{1,7}$/.test(v) && Number(v) > 0 ? Number(v) : NaN;
-const optDate = (v: string) => (v ? new Date(`${v}T00:00:00`).toISOString() : null);
+/** Día (AAAA-MM-DD); la base lo interpreta en la zona horaria de la tienda. */
+const optDay = (v: string) => (v === "" ? null : /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
 
 export async function saveDiscount(
   storeHandle: string,
@@ -58,7 +60,8 @@ export async function saveDiscount(
   if (value === null || (type === "fixed_amount" && value <= 0)) {
     return { error: MESSAGES.value, fields: { value: MESSAGES.value }, values };
   }
-  if (min === null || limits.some((l) => Number.isNaN(l))) {
+  const days = [optDay(values.starts_at ?? ""), optDay(values.ends_at ?? "")];
+  if (min === null || limits.some((l) => Number.isNaN(l)) || days.includes(undefined)) {
     return { error: MESSAGES.discount, fields: { discount: MESSAGES.discount }, values };
   }
   try {
@@ -71,8 +74,8 @@ export async function saveDiscount(
         type,
         value,
         min_subtotal: min,
-        starts_at: optDate(values.starts_at ?? ""),
-        ends_at: optDate(values.ends_at ?? ""),
+        starts_on: days[0],
+        ends_on: days[1],
         usage_limit: limits[0],
         usage_limit_per_customer: limits[1],
       },

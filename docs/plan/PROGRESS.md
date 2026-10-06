@@ -5,9 +5,9 @@
 
 ## Ahora
 
-- **Fase actual:** 6 — Customers, Cart, Shipping, Taxes, Discounts & Checkout (Fase 5 cerrada en local: `docs/phases/PHASE-05-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** Gate F6 (revisión adversarial, correcciones e informe).
-- **Siguiente paso exacto:** revisión adversarial de `git diff cd8dc6c..HEAD` (checkout, pagos, RLS de las tablas nuevas, rate limits, UI), corregir hallazgos y escribir `docs/phases/PHASE-06-REPORT.md`.
+- **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
+- **Siguiente tarea:** F7-T01 (adaptador Stripe Connect). **Requiere la cuenta de Stripe del propietario** para la verificación real (pruebas de contrato con payloads de ejemplo sí se pueden hacer sin ella).
+- **Siguiente paso exacto:** leer GATE0 §18 completo, §27 y §38 (PHASE 7); empezar por `payment_events` y el webhook con verificación de firma y pruebas de contrato.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -63,6 +63,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 6    | F6-T03 Carrito público y `place_order`        | hecha                       | 42 pgTAP (cada error de §17.6, rollback total, idempotencia, aislamiento) + concurrencia real: última unidad, último cupón, numeración sin huecos, doble envío (mutación) |
 | 6    | F6-T04 Pagos manual/fake y expiración         | hecha                       | 32 pgTAP (fake, manual, fallo, reintento, expiración) + integración como system_worker + 11 unit                                                                          |
 | 6    | F6-T05 UI de carrito, checkout y panel        | hecha                       | 25 pgTAP (RPC del panel, rate limits) + E2E de punta a punta con `fake` (total manipulado rechazado) y panel, con axe                                                     |
+| 6    | Gate F6                                       | hecha (CI pendiente por P0) | `docs/phases/PHASE-06-REPORT.md` · 982 pgTAP, 62 integración, 20 E2E                                                                                                      |
 | 5–11 | Ver el plan §4                                | pendiente                   |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

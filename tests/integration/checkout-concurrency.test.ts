@@ -171,4 +171,47 @@ describe("place_order concurrente", () => {
     expect(ra.order_id).toBe(rb.order_id);
     expect([ra.replayed, rb.replayed].sort()).toEqual([false, true]);
   });
+
+  it("expiración contra confirmación simultánea: cada pedido queda pagado o cancelado, nunca a medias", async () => {
+    await admin`insert into public.platform_settings (key, value) values ('payments.allow_fake', '{"enabled": true}')
+                on conflict (key) do update set value = excluded.value`;
+    const [fake] = await admin<{ id: string }[]>`
+      insert into public.payment_accounts (store_id, provider, status, display_name)
+      values (${storeId}, 'fake', 'active', 'Prueba') returning id`;
+    const variantId = await product(`RACE-${run}`, 50);
+    const orders: { orderId: string; paymentId: string }[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const c = await cart(variantId);
+      const idem = `idem-${randomBytes(12).toString("hex")}`;
+      const [row] = await admin<{ r: { order_id: string; payment: { id: string } } }[]>`
+        select storefront.place_order(${storeId}, ${c}, ${admin.json({
+          email: `race-${i}@example.test`,
+          customer_name: "Race",
+          shipping_address: address,
+          shipping_rate_id: rateId,
+          payment_account_id: fake!.id,
+        })}, 10000, ${idem}, ${sha(`g-${idem}`)}) as r`;
+      orders.push({ orderId: row!.r.order_id, paymentId: row!.r.payment.id });
+    }
+    const ids = orders.map((o) => o.orderId);
+    await admin`update public.inventory_reservations set expires_at = now() - interval '1 second'
+                where order_id = any(${ids}::uuid[])`;
+    await Promise.allSettled([
+      admin`select system.expire_orders(100)`,
+      ...orders.map((o) => admin`select system.fake_payment_result(${o.paymentId}, 'succeeded')`),
+    ]);
+    const states = await admin<{ status: string; payment_status: string; reservation: string }[]>`
+      select o.status, o.payment_status, r.status as reservation
+        from public.orders o join public.inventory_reservations r on r.order_id = o.id
+       where o.id = any(${ids}::uuid[])`;
+    for (const st of states) {
+      expect(["open/paid/committed", "cancelled/expired/expired"]).toContain(
+        `${st.status}/${st.payment_status}/${st.reservation}`,
+      );
+    }
+    const paid = states.filter((st) => st.status === "open").length;
+    const [level] = await admin<{ reserved: number }[]>`
+      select reserved from public.inventory_levels where variant_id = ${variantId}`;
+    expect(level!.reserved).toBe(paid);
+  });
 });

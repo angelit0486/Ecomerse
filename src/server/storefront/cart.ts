@@ -194,10 +194,21 @@ export async function paymentMethods(storeId: string): Promise<PaymentMethod[]> 
   );
 }
 
-/** Hash de la IP del cliente (los rate limits nunca guardan la IP en claro). */
+/**
+ * Hash de la IP del cliente (los rate limits nunca guardan la IP en claro).
+ * Supone un proxy de confianza que fija `x-forwarded-for` (Vercel lo hace); sin él
+ * el valor lo elige el cliente y el límite por IP pierde eficacia (D-F6-08).
+ */
 export async function clientIpHash(): Promise<string> {
   const h = await headers();
   const ip =
     (h.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
   return createHash("sha256").update(`${serverEnv().ORDER_LINK_SECRET}:${ip}`).digest("hex");
+}
+
+/** Intentos de códigos por IP y tienda (A20), además del límite por carrito. */
+export async function discountGuard(storeId: string): Promise<boolean> {
+  const [row] = await gatewayDb()<{ ok: boolean }[]>`
+    select storefront.discount_guard(${storeId}, ${await clientIpHash()}) as ok`;
+  return Boolean(row?.ok);
 }

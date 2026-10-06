@@ -29,7 +29,11 @@ interface Row {
 }
 
 const STATUS: Record<string, string> = { active: "Activo", disabled: "Desactivado" };
-const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
+/** Día en la zona de la tienda; «hasta» se guarda como el inicio del día siguiente. */
+const day = (iso: string | null, tz: string, end = false) =>
+  iso
+    ? new Date(Date.parse(iso) - (end ? 1 : 0)).toLocaleDateString("en-CA", { timeZone: tz })
+    : "";
 
 export default async function DiscountsPage({ params }: Props) {
   const { storeHandle } = await params;
@@ -96,8 +100,8 @@ export default async function DiscountsPage({ params }: Props) {
                             ? centsToInput(r.value)
                             : "",
                       min_subtotal: r.min_subtotal ? centsToInput(r.min_subtotal) : "",
-                      starts_at: day(r.starts_at),
-                      ends_at: day(r.ends_at),
+                      starts_at: day(r.starts_at, ctx.store.timezone),
+                      ends_at: day(r.ends_at, ctx.store.timezone, true),
                       usage_limit: r.usage_limit?.toString() ?? "",
                       usage_limit_per_customer: r.usage_limit_per_customer?.toString() ?? "",
                     }}

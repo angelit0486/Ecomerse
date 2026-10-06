@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -10,7 +10,13 @@ import { toAppError } from "@/server/db/errors";
 import { AppError } from "@/server/errors";
 import { serverEnv } from "@/server/env";
 import { isGuestTokenShape, verifyFakePaymentSignature } from "@/server/payments/order-links";
-import { addToCart, dbDetail, setCartDetails, setCartQuantity } from "@/server/storefront/cart";
+import {
+  addToCart,
+  dbDetail,
+  discountGuard,
+  setCartDetails,
+  setCartQuantity,
+} from "@/server/storefront/cart";
 import {
   fakePaymentResult,
   placeOrder,
@@ -55,6 +61,7 @@ const DISCOUNT_ERRORS: Record<string, string> = {
   min_subtotal: "Tu compra no alcanza el mínimo para ese código.",
   exhausted: "Ese código ya no tiene usos disponibles.",
   customer_limit: "Ya usaste ese código.",
+  not_applicable: "Ese código es de envío gratis y tu pedido no requiere envío.",
 };
 
 const CART_ERRORS: Record<string, string> = {
@@ -103,7 +110,7 @@ export async function addItem(
   if (!variant.success || !qty.success || qty.data < 1) return { error: ERRORS.quantity };
   try {
     const cart = await addToCart(s.id, variant.data, qty.data);
-    revalidatePath("/", "layout");
+    refresh();
     return { ok: true, message: "Agregado al carrito.", count: cart.item_count };
   } catch (error) {
     return failure(error);
@@ -121,7 +128,7 @@ export async function updateLine(
   if (!variant.success || !qty.success) return { error: ERRORS.quantity };
   try {
     await setCartQuantity(s.id, variant.data, qty.data);
-    revalidatePath("/", "layout");
+    refresh();
     return { ok: true, message: qty.data === 0 ? "Producto quitado." : "Cantidad actualizada." };
   } catch (error) {
     return failure(error);
@@ -137,11 +144,14 @@ export async function applyDiscount(
   const code = String(formData.get("discount_code") ?? "")
     .trim()
     .slice(0, 40);
+  if (code && !formData.get("remove") && !(await discountGuard(s.id))) {
+    return { error: "Demasiados intentos con códigos. Espera un momento." };
+  }
   try {
     const cart = await setCartDetails(s.id, {
       discount_code: formData.get("remove") ? null : code || null,
     });
-    revalidatePath("/", "layout");
+    refresh();
     if (cart.discount && cart.discount.status !== "ok") {
       const message = DISCOUNT_ERRORS[cart.discount.status] ?? DISCOUNT_ERRORS.not_found!;
       return { error: message, fields: { discount_code: message } };
@@ -197,7 +207,7 @@ export async function checkout(
   } catch (error) {
     return failure(error);
   }
-  revalidatePath("/", "layout");
+  refresh();
   if (intent === "quote") return { ok: true, message: "Formas de envío actualizadas." };
 
   const account = uuid.safeParse(formData.get("payment_account_id"));
