@@ -28,8 +28,13 @@ export function createOrderHandlers(deps: {
         store_id: job.storeId,
       });
     };
+  const purgeRateLimits: JobHandler = async (_job, { log }) => {
+    const [row] = await deps.db<{ n: number }[]>`select system.purge_rate_limits() as n`;
+    log.info("Ventanas de rate limit purgadas", { count: row?.n ?? 0 });
+  };
   return [
     ["orders.expire", expire],
+    ["rate_limits.purge", purgeRateLimits],
     ["order.created", record("order.created")],
     ["order.paid", record("order.paid")],
   ];

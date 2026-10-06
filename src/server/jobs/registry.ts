@@ -41,6 +41,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["media.process", lazy("media.process", media)],
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
   ["orders.expire", lazy("orders.expire", orders)],
+  ["rate_limits.purge", lazy("rate_limits.purge", orders)],
   ["order.created", lazy("order.created", orders)],
   ["order.paid", lazy("order.paid", orders)],
 ];
