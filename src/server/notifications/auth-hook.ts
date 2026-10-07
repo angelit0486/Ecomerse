@@ -50,8 +50,7 @@ export async function handleSendEmailHook(deps: {
     nowSeconds: Math.floor(deps.now.getTime() / 1000),
   });
   if (!verified.ok) {
-    await deps.db`select system.record_security_event(${`auth.email_hook_${verified.reason}`}, 'warning',
-                                                      null, null, null, null, null, null)`;
+    await deps.db`select system.record_webhook_rejection(${`auth.email_hook_${verified.reason}`}, 'supabase_auth')`;
     return error(401, "invalid_signature");
   }
   let payload: HookPayload;
@@ -63,12 +62,19 @@ export async function handleSendEmailHook(deps: {
   const action = String(payload.email_data?.email_action_type ?? "");
   if (!ACTION_RE.test(action)) return error(400, "malformed");
 
-  // Cambio de email seguro: un código al email actual y otro al nuevo.
-  const sends: { to: unknown; code: unknown }[] = [
-    { to: payload.user?.email, code: payload.email_data?.token },
-  ];
-  if (action === "email_change" && payload.email_data?.token_new) {
-    sends.push({ to: payload.user?.new_email, code: payload.email_data.token_new });
+  // Cambio de email (verificado en el código de Supabase Auth, internal/api/mail.go):
+  // seguro → `token` al email actual y `token_new` al nuevo; sin cambio seguro, el
+  // único `token` es del email NUEVO.
+  const sends: { to: unknown; code: unknown }[] = [];
+  if (action === "email_change") {
+    if (payload.email_data?.token_new) {
+      sends.push({ to: payload.user?.email, code: payload.email_data?.token });
+      sends.push({ to: payload.user?.new_email, code: payload.email_data.token_new });
+    } else {
+      sends.push({ to: payload.user?.new_email, code: payload.email_data?.token });
+    }
+  } else {
+    sends.push({ to: payload.user?.email, code: payload.email_data?.token });
   }
   for (const s of sends) {
     if (

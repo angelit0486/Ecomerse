@@ -12,7 +12,8 @@ import { STRIPE_PAYMENT_EVENTS, type StripeProvider } from "./stripe";
  * 3. registro deduplicado del evento (ya procesado: 200);
  * 4. RE-CONSULTA al proveedor (fuente de verdad);
  * 5-6. system.apply_payment_status valida referencia, monto y moneda y aplica.
- * `account.updated` sincroniza el estado de la cuenta conectada (F7-T06).
+ * `account.updated` sincroniza el estado de la cuenta conectada (F7-T06) y
+ * `account.application.deauthorized` la deja en error (Gate F7).
  * Responde rápido; un error interno devuelve 500 para que el proveedor reintente.
  */
 export interface WebhookResult {
@@ -82,6 +83,8 @@ export async function handleStripeWebhook(deps: {
   rawBody: string;
   now: Date;
   log: Logger;
+  /** Producción: solo eventos `livemode` (un endpoint live también recibe los de prueba). */
+  requireLivemode?: boolean;
 }): Promise<WebhookResult> {
   const { db, provider, log } = deps;
   if (deps.rawBody.length > 262_144) return { status: 413, body: { received: false } };
@@ -92,18 +95,20 @@ export async function handleStripeWebhook(deps: {
     now: deps.now,
   });
   if (!verified.ok) {
-    await db`select system.record_security_event(${`payment.webhook_${verified.reason}`}, 'warning', null, null,
-                                                null, null, null, ${db.json({ provider: "stripe" })})`;
+    // Con límite de frecuencia: un tercero sin firma no puede inflar la tabla.
+    await db`select system.record_webhook_rejection(${`payment.webhook_${verified.reason}`}, 'stripe')`;
     return { status: verified.reason === "malformed" ? 400 : 401, body: { received: false } };
   }
   // Eventos de la propia plataforma (sin cuenta conectada): nada que aplicar.
   if (!verified.account) return { status: 200, body: { received: true, outcome: "ignored" } };
+  if (deps.requireLivemode && !verified.livemode) {
+    return { status: 200, body: { received: true, outcome: "ignored" } };
+  }
 
   const [account] = await db<{ id: string; store_id: string; status: string }[]>`
     select * from system.payment_account_for_webhook('stripe', ${verified.account})`;
   if (!account) {
-    await db`select system.record_security_event('payment.webhook_unknown_account', 'warning', null, null, null,
-                                                null, null, ${db.json({ provider: "stripe" })})`;
+    await db`select system.record_webhook_rejection('payment.webhook_unknown_account', 'stripe')`;
     return { status: 404, body: { received: false } };
   }
 
@@ -114,6 +119,12 @@ export async function handleStripeWebhook(deps: {
   if (event.processed) return { status: 200, body: { received: true, outcome: "duplicate" } };
 
   try {
+    if (verified.type === "account.application.deauthorized") {
+      // La tienda retiró el acceso de la plataforma en Stripe: deja de ofrecer tarjeta.
+      await db`select system.stripe_mark_deauthorized(${verified.account})`;
+      await db`select system.finish_payment_event(${event.id}, null)`;
+      return { status: 200, body: { received: true, outcome: "account_deauthorized" } };
+    }
     if (verified.type === "account.updated") {
       // Estado de la cuenta conectada: se re-consulta a Stripe (fuente de verdad).
       await syncStripeAccount({ db, api: provider.api }, verified.account);

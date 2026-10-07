@@ -7,7 +7,7 @@ import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
-import { startStripeOnboarding } from "@/server/payments/connect";
+import { startStripeOnboarding, syncStripeAccount } from "@/server/payments/connect";
 import { stripeProvider } from "@/server/payments/registry";
 import { invalidateStore } from "@/server/storefront/cache";
 
@@ -31,7 +31,10 @@ function onboardingUrls(storeHandle: string) {
 }
 
 /** Crea (o retoma) la cuenta conectada y lleva al formulario de Stripe. */
-export async function stripeOnboardingUrl(storeHandle: string): Promise<string> {
+export async function stripeOnboardingUrl(
+  storeHandle: string,
+  options: { create: boolean } = { create: true },
+): Promise<string> {
   const { supabase, storeId } = await storeClient(storeHandle);
   // Verifica payments.manage en la base antes de cualquier llamada a Stripe.
   const settings = await callRpc<StripeSettings>(supabase, "payments_get_stripe", {
@@ -39,6 +42,8 @@ export async function stripeOnboardingUrl(storeHandle: string): Promise<string> 
   });
   const stripe = stripeProvider();
   if (!stripe) throw new Error("stripe_not_configured");
+  // Una petición GET (enlace vencido) nunca crea la cuenta: solo un formulario POST.
+  if (!options.create && !settings.account) throw new Error("stripe_account_missing");
   const mode = serverEnv().STRIPE_SECRET_KEY!.startsWith("sk_live_") ? "live" : "test";
   return startStripeOnboarding(
     { db: workerDb(), api: stripe.api, mode },
@@ -73,12 +78,26 @@ export async function setStripeEnabled(
   enabled: boolean,
   _: FormState,
 ): Promise<FormState> {
+  let status: string | null = null;
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
-    await callRpc(supabase, "payments_set_stripe_enabled", {
+    status = await callRpc<string>(supabase, "payments_set_stripe_enabled", {
       p_store_id: storeId,
       p_enabled: enabled,
     });
+    // Reactivar: se pregunta a Stripe de inmediato (no llegará account.updated si nada cambió allá).
+    const stripe = enabled ? stripeProvider() : null;
+    if (stripe) {
+      const settings = await callRpc<StripeSettings>(supabase, "payments_get_stripe", {
+        p_store_id: storeId,
+      });
+      if (settings.account) {
+        status = await syncStripeAccount(
+          { db: workerDb(), api: stripe.api },
+          settings.account.account_id,
+        );
+      }
+    }
     invalidateStore(storeId);
   } catch (error) {
     return { error: reportActionError("payments", error).message };
@@ -86,8 +105,10 @@ export async function setStripeEnabled(
   revalidatePath(`/admin/${storeHandle}/ajustes/pagos`);
   return {
     ok: true,
-    message: enabled
-      ? "Cobro con tarjeta reactivado: se activa cuando Stripe lo confirme."
-      : "Cobro con tarjeta desactivado.",
+    message: !enabled
+      ? "Cobro con tarjeta desactivado."
+      : status === "active"
+        ? "Cobro con tarjeta reactivado."
+        : "Cobro con tarjeta reactivado: Stripe aún debe confirmar tu cuenta.",
   };
 }

@@ -18,6 +18,12 @@ const OTP_MINUTES = 10;
 export async function POST(request: Request): Promise<Response> {
   const secret = serverEnv().SEND_EMAIL_HOOK_SECRET;
   if (!secret) return new Response(null, { status: 404 });
+  if (Number(request.headers.get("content-length") ?? 0) > 65_536) {
+    return Response.json(
+      { error: { http_code: 413, message: "payload_too_large" } },
+      { status: 413 },
+    );
+  }
   const result = await handleSendEmailHook({
     secret,
     headers: request.headers,

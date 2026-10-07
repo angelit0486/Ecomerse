@@ -46,7 +46,9 @@ export function NotificationsForm({
             type="checkbox"
             name="notify_new_order"
             value="1"
-            defaultChecked={initial.notify_new_order}
+            defaultChecked={
+              state.values ? state.values.notify_new_order === "1" : initial.notify_new_order
+            }
           />
           llegue un pedido con pago por transferencia
         </label>
@@ -55,7 +57,7 @@ export function NotificationsForm({
             type="checkbox"
             name="notify_paid"
             value="1"
-            defaultChecked={initial.notify_paid}
+            defaultChecked={state.values ? state.values.notify_paid === "1" : initial.notify_paid}
           />
           un pedido quede pagado y listo para preparar
         </label>

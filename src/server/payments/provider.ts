@@ -74,6 +74,8 @@ export type WebhookVerification =
       checkoutId?: string;
       /** Referencia propia (= payments.id) informada por el proveedor. */
       reference?: string;
+      /** El evento es de modo real (Stripe `livemode`). */
+      livemode?: boolean;
     }
   | { ok: false; reason: "bad_signature" | "stale" | "malformed" };
 

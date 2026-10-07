@@ -34,7 +34,7 @@ export function resendChannel(apiKey: string, from: string, fetchImpl = fetch): 
         },
         body: JSON.stringify({
           from: message.fromName
-            ? `${safeDisplayName(message.fromName)} <${parseFrom(from).email}>`
+            ? `"${safeDisplayName(message.fromName)}" <${parseFrom(from).email}>`
             : from,
           ...(isEmail(message.replyTo) ? { reply_to: message.replyTo } : {}),
           to: [message.to],

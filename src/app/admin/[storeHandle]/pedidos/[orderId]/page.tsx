@@ -13,6 +13,8 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import {
   CancelForm,
+  CloseUnshippedForm,
+  ResolveAttentionForm,
   ConfirmPaymentForm,
   DeliveredButton,
   FulfillForm,
@@ -33,6 +35,8 @@ const NOTICES: Record<string, string> = {
   entregado: "Envío marcado como entregado.",
   cancelado: "Pedido cancelado.",
   reembolso: "Reembolso solicitado. El monto se aplica cuando el proveedor lo confirma.",
+  cerrado: "Unidades no enviadas cerradas.",
+  resuelto: "Atención marcada como resuelta.",
 };
 
 interface Contact {
@@ -60,6 +64,10 @@ const EVENT_LABELS: Record<string, string> = {
   "payment.late_without_stock": "Pago tardío sin existencias",
   "payment.duplicate": "Pago duplicado",
   "payment.mismatch": "Pago con monto o moneda distintos",
+  "payment.after_cancel": "Pago recibido después de cancelar",
+  "refund.stuck": "Reembolso sin confirmar",
+  "attention.resolved": "Atención resuelta",
+  "order.unshipped_closed": "Unidades no enviadas cerradas",
 };
 
 const SHIPMENT_STATUS: Record<string, string> = {
@@ -100,7 +108,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     supabase
       .from("order_items")
       .select(
-        "id, product_title, variant_title, sku, quantity, unit_price, discount_allocation, line_total",
+        "id, product_title, variant_title, sku, quantity, unit_price, discount_allocation, line_total, refunded_quantity, cancelled_quantity",
       )
       .eq("store_id", ctx.store.id)
       .eq("order_id", orderId)
@@ -138,7 +146,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       .eq("shipments.order_id", orderId),
     supabase
       .from("refunds")
-      .select("id, amount, status, reason, created_at")
+      .select("id, amount, status, reason, items, created_at")
       .eq("store_id", ctx.store.id)
       .eq("order_id", orderId)
       .order("created_at"),
@@ -163,14 +171,28 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     .map((i) => ({
       id: i.id as string,
       label: lineLabel(i),
-      pending: (i.quantity as number) - (shippedByItem.get(i.id as string) ?? 0),
+      pending:
+        (i.quantity as number) -
+        (shippedByItem.get(i.id as string) ?? 0) -
+        ((i.cancelled_quantity as number | undefined) ?? 0),
     }))
     .filter((l) => l.pending > 0);
+  // Unidades ya comprometidas en reembolsos pendientes (la base aplica el mismo límite).
+  const pendingUnits = new Map<string, number>();
+  for (const r of refunds.data ?? []) {
+    if (r.status !== "pending") continue;
+    for (const it of (r.items as { order_item_id: string; quantity: number }[] | null) ?? []) {
+      pendingUnits.set(it.order_item_id, (pendingUnits.get(it.order_item_id) ?? 0) + it.quantity);
+    }
+  }
   const returnLines = (items.data ?? [])
     .map((i) => ({
       id: i.id as string,
       label: lineLabel(i),
-      shipped: shippedByItem.get(i.id as string) ?? 0,
+      shipped:
+        (shippedByItem.get(i.id as string) ?? 0) -
+        ((i.refunded_quantity as number | undefined) ?? 0) -
+        (pendingUnits.get(i.id as string) ?? 0),
     }))
     .filter((l) => l.shipped > 0);
   const pendingRefunds = (refunds.data ?? [])
@@ -185,6 +207,12 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     isPaid &&
     fulfillLines.length > 0;
   const canRefund = hasPermission(ctx, "orders.refund") && refundable > 0;
+  const canCloseUnshipped =
+    hasPermission(ctx, "orders.cancel") &&
+    order.status === "open" &&
+    shippedByItem.size > 0 &&
+    fulfillLines.length > 0;
+  const canResolve = hasPermission(ctx, "orders.update") && order.needs_attention === true;
   const canCancel =
     hasPermission(ctx, "orders.cancel") &&
     ["pending_payment", "open"].includes(order.status as string) &&
@@ -207,6 +235,25 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         <p role="status" className="rounded-md border border-success p-3 text-sm text-success">
           {notice}
         </p>
+      ) : null}
+
+      {order.needs_attention ? (
+        <section
+          aria-labelledby="atencion"
+          className="space-y-2 rounded-md border border-warning p-4"
+        >
+          <h2 id="atencion" className="font-semibold">
+            Este pedido necesita atención
+          </h2>
+          <p className="text-sm">
+            Revisa el historial: puede haber un cobro duplicado, un pago después de cancelar o un
+            reembolso que no se confirmó. Un cobro duplicado se reembolsa desde el panel de tu
+            proveedor de pagos.
+          </p>
+          {canResolve ? (
+            <ResolveAttentionForm storeHandle={ctx.store.handle} orderId={orderId} />
+          ) : null}
+        </section>
       ) : null}
 
       {canConfirm ? (
@@ -316,6 +363,27 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             orderId={orderId}
             lines={fulfillLines}
             idempotencyKey={formKey()}
+          />
+        </section>
+      ) : null}
+
+      {canCloseUnshipped ? (
+        <section
+          aria-labelledby="cerrar-pendientes"
+          className="space-y-2 rounded-md border border-border p-4"
+        >
+          <h2 id="cerrar-pendientes" className="font-semibold">
+            Unidades que no se enviarán
+          </h2>
+          <p className="text-sm text-fg-muted">
+            Libera las existencias apartadas para las unidades pendientes y permite completar el
+            pedido.
+          </p>
+          <CloseUnshippedForm
+            storeHandle={ctx.store.handle}
+            orderId={orderId}
+            idempotencyKey={formKey()}
+            canRefund={hasPermission(ctx, "orders.refund") && refundable > 0}
           />
         </section>
       ) : null}

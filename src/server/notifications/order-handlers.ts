@@ -14,6 +14,7 @@ import {
   refundIssuedEmail,
   staffOrderEmail,
   type OrderEmailData,
+  type StaffEmailKind,
 } from "./order-templates";
 import { isEmail, type EmailChannel, type EmailMessage } from "./types";
 
@@ -134,11 +135,7 @@ export function createOrderNotificationHandlers(
     });
   }
 
-  async function notifyStaff(
-    job: JobRecord,
-    n: OrderNotification,
-    kind: "new" | "paid" | "attention",
-  ) {
+  async function notifyStaff(job: JobRecord, n: OrderNotification, kind: StaffEmailKind) {
     const data = emailData(n);
     const panel = new URL(
       `/admin/${encodeURIComponent(n.store.handle)}/pedidos/${n.order.id}`,
@@ -237,6 +234,12 @@ export function createOrderNotificationHandlers(
     );
   };
 
+  const afterCancel: JobHandler = async (job, { log }) => {
+    const n = await load(job);
+    if (!n) return log.info("Pedido inexistente: nada que avisar");
+    await notifyStaff(job, n, "paid_after_cancel");
+  };
+
   const lateWithoutStock: JobHandler = async (job, { log }) => {
     const n = await load(job);
     if (!n) return log.info("Pedido inexistente: nada que avisar");
@@ -251,5 +254,6 @@ export function createOrderNotificationHandlers(
     ["order.cancelled", cancelled],
     ["refund.succeeded", refunded],
     ["payment.late_without_stock", lateWithoutStock],
+    ["payment.after_cancel", afterCancel],
   ];
 }

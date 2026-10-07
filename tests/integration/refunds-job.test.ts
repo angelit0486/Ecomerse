@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { JobRecord } from "@/server/jobs/types";
 import { createLogger } from "@/server/observability/logger";
-import { createRefundHandlers } from "@/server/orders/refunds";
+import { createRefundHandlers, reconcileRefunds } from "@/server/orders/refunds";
 import { createStripeProvider } from "@/server/payments/stripe";
 
 /** Job refund.execute (GATE0 §18.6) como system_worker: manual y Stripe (API simulada). */
@@ -20,11 +20,30 @@ const run = Math.random().toString(36).slice(2, 8);
 let storeId: string;
 let variantId: string;
 
+/** API simulada como la real: el POST con la misma clave repite su primera respuesta; el GET da el estado actual. */
 const refundStatuses: string[] = [];
-const fetchImpl = (async () =>
-  new Response(JSON.stringify({ id: "re_test_1", status: refundStatuses.shift() ?? "succeeded" }), {
-    status: 200,
-  })) as unknown as typeof fetch;
+const calls: { method: string; path: string }[] = [];
+let createStatus: number = 200;
+const created = new Map<string, { id: string; status: string }>();
+const current = new Map<string, string>();
+const fetchImpl = (async (url: string, init: RequestInit) => {
+  const path = new URL(url).pathname;
+  const method = init.method ?? "GET";
+  calls.push({ method, path });
+  if (method === "POST" && path === "/v1/refunds") {
+    if (createStatus !== 200) return new Response("{}", { status: createStatus });
+    const key = (init.headers as Record<string, string>)["idempotency-key"]!;
+    if (!created.has(key)) {
+      const id = `re_${key.replace(/-/g, "").slice(0, 12)}`;
+      created.set(key, { id, status: refundStatuses.shift() ?? "succeeded" });
+      current.set(id, created.get(key)!.status);
+    }
+    return Response.json(created.get(key));
+  }
+  const m = /^\/v1\/refunds\/(re_\w+)$/.exec(path);
+  if (method === "GET" && m) return Response.json({ id: m[1], status: current.get(m[1]!) });
+  return new Response("{}", { status: 404 });
+}) as unknown as typeof fetch;
 const stripe = createStripeProvider({
   secretKey: "sk_test_integration000",
   webhookSecret: "whsec_integration000000000",
@@ -114,12 +133,63 @@ describe("job refund.execute", () => {
     expect((await orderState(orderId)).refunded_total).toBe("4000");
   });
 
-  it("stripe: pendiente se reintenta con la misma clave; al confirmarse se aplica", async () => {
+  it("stripe: pendiente guarda el re_ y los reintentos lo CONSULTAN (no repiten el POST)", async () => {
     const { orderId, refundId } = await paidOrder("stripe");
-    refundStatuses.push("pending", "succeeded");
+    refundStatuses.push("pending");
+    calls.length = 0;
     await expect(handler(job(refundId), { log } as never)).rejects.toThrow("refund_pending");
     expect((await orderState(orderId)).refunded_total).toBe("0");
+    const [r] = await admin<{ provider_refund_id: string }[]>`
+      select provider_refund_id from public.refunds where id = ${refundId}`;
+    expect(r!.provider_refund_id).toMatch(/^re_/);
+    current.set(r!.provider_refund_id, "succeeded"); // Stripe lo completa después
     await handler(job(refundId), { log } as never);
+    expect(calls.map((c) => c.method)).toEqual(["POST", "GET"]);
     expect((await orderState(orderId)).refunded_total).toBe("4000");
+  });
+
+  it("stripe: un rechazo 4xx es definitivo: reembolso fallido y pedido en atención", async () => {
+    const { orderId, refundId } = await paidOrder("stripe");
+    createStatus = 400;
+    try {
+      await handler(job(refundId), { log } as never);
+    } finally {
+      createStatus = 200;
+    }
+    const [r] = await admin<{ status: string; failure_code: string }[]>`
+      select status, failure_code from public.refunds where id = ${refundId}`;
+    expect(r).toEqual({ status: "failed", failure_code: "provider_rejected_400" });
+    const [o] = await admin<{ needs_attention: boolean }[]>`
+      select needs_attention from public.orders where id = ${orderId}`;
+    expect(o!.needs_attention).toBe(true);
+  });
+
+  it("reconciliación: retoma un pendiente sin job y marca en atención uno sin id tras 23 h", async () => {
+    const pending = await paidOrder("stripe");
+    refundStatuses.push("pending");
+    await expect(handler(job(pending.refundId), { log } as never)).rejects.toThrow(
+      "refund_pending",
+    );
+    const stuck = await paidOrder("stripe");
+    await admin.begin(async (sql) => {
+      await sql`set local session_replication_role = replica`;
+      await sql`update public.refunds set created_at = now() - interval '1 hour' where id = ${pending.refundId}`;
+      await sql`update public.refunds set created_at = now() - interval '30 hours' where id = ${stuck.refundId}`;
+      await sql`update system.jobs set status = 'dead', finished_at = now(), locked_at = null, locked_by = null
+                 where dedupe_key in (${`refund.execute:${pending.refundId}`}, ${`refund.execute:${stuck.refundId}`})`;
+    });
+    const [p] = await admin<{ provider_refund_id: string }[]>`
+      select provider_refund_id from public.refunds where id = ${pending.refundId}`;
+    current.set(p!.provider_refund_id, "succeeded");
+    calls.length = 0;
+    expect(
+      await reconcileRefunds({ db: worker, stripe: () => stripe, log }),
+    ).toBeGreaterThanOrEqual(1);
+    expect((await orderState(pending.orderId)).refunded_total).toBe("4000");
+    // El de 30 h sin id del proveedor nunca se vuelve a crear (podría duplicar).
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+    const [o] = await admin<{ needs_attention: boolean }[]>`
+      select needs_attention from public.orders where id = ${stuck.orderId}`;
+    expect(o!.needs_attention).toBe(true);
   });
 });

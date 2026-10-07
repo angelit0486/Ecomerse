@@ -8,6 +8,8 @@ import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import {
   cancelOrder,
+  closeUnshipped,
+  resolveAttention,
   confirmManualPayment,
   fulfillOrder,
   markDelivered,
@@ -333,6 +335,95 @@ export function RefundForm({
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" variant="secondary" loading={pending}>
           Solicitar reembolso
+        </Button>
+        <FormFeedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+export function CloseUnshippedForm({
+  storeHandle,
+  orderId,
+  idempotencyKey,
+  canRefund,
+}: {
+  storeHandle: string;
+  orderId: string;
+  idempotencyKey: string;
+  canRefund: boolean;
+}) {
+  const [state, action, pending] = useActionState<FormState, FormData>(
+    closeUnshipped.bind(null, storeHandle, orderId),
+    {},
+  );
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Nota (opcional)
+        <input
+          name="note"
+          maxLength={500}
+          defaultValue={state.values?.note}
+          className={inputClass}
+        />
+      </label>
+      {canRefund ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="refund"
+            value="1"
+            defaultChecked={state.values ? state.values.refund === "1" : true}
+          />
+          Reembolsar el importe de esas unidades (sin el envío)
+        </label>
+      ) : null}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="confirm"
+          value="1"
+          defaultChecked={state.values?.confirm === "1"}
+        />
+        Entiendo que las unidades pendientes ya no se enviarán
+      </label>
+      <div className="flex items-center gap-3">
+        <Button type="submit" size="sm" variant="secondary" loading={pending}>
+          Cerrar unidades no enviadas
+        </Button>
+        <FormFeedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+export function ResolveAttentionForm({
+  storeHandle,
+  orderId,
+}: {
+  storeHandle: string;
+  orderId: string;
+}) {
+  const [state, action, pending] = useActionState<FormState, FormData>(
+    resolveAttention.bind(null, storeHandle, orderId),
+    {},
+  );
+  return (
+    <form action={action} className="space-y-2">
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Qué hiciste para resolverlo
+        <input
+          name="note"
+          maxLength={1000}
+          defaultValue={state.values?.note}
+          className={inputClass}
+        />
+      </label>
+      <div className="flex items-center gap-3">
+        <Button type="submit" size="sm" variant="secondary" loading={pending}>
+          Marcar como resuelto
         </Button>
         <FormFeedback state={state} />
       </div>

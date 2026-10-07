@@ -30,6 +30,51 @@ export interface StripeConfig {
 }
 
 const API_VERSION = "2024-06-20";
+
+/** Respuesta HTTP no exitosa de Stripe; `status` distingue rechazos (4xx) de fallas (5xx). */
+export class StripeHttpError extends AppError {
+  constructor(
+    readonly httpStatus: number,
+    path: string,
+    method: string,
+  ) {
+    super("provider_error", undefined, {
+      cause: new Error(`stripe ${method} ${path} → ${httpStatus}`),
+    });
+  }
+  /** 4xx (salvo 409 y 429): la solicitud nunca va a prosperar con los mismos datos. */
+  get rejected(): boolean {
+    return (
+      this.httpStatus >= 400 &&
+      this.httpStatus < 500 &&
+      this.httpStatus !== 409 &&
+      this.httpStatus !== 429
+    );
+  }
+}
+
+/** Monedas sin decimales: `unit_amount` no es en centavos (L9). La plataforma solo cobra con 2 decimales. */
+const ZERO_DECIMAL = new Set([
+  "BIF",
+  "CLP",
+  "DJF",
+  "GNF",
+  "JPY",
+  "KMF",
+  "KRW",
+  "MGA",
+  "PYG",
+  "RWF",
+  "UGX",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
+  "ISK",
+  "HUF",
+  "TWD",
+]);
 const ACCOUNT_RE = /^acct_[A-Za-z0-9]{8,64}$/;
 /** Stripe exige que una sesión de checkout viva entre 30 min y 24 h. */
 const MIN_SESSION_SECONDS = 31 * 60;
@@ -109,9 +154,7 @@ export class StripeApi {
     }
     if (!response.ok) {
       // El cuerpo de error de Stripe nunca llega al cliente (puede traer datos internos).
-      throw new AppError("provider_error", undefined, {
-        cause: new Error(`stripe ${method} ${path} → ${response.status}`),
-      });
+      throw new StripeHttpError(response.status, path, method);
     }
     return (await response.json()) as T;
   }
@@ -153,6 +196,18 @@ export class StripeApi {
       `/v1/accounts/${account}`,
     );
     return { chargesEnabled: a.charges_enabled, detailsSubmitted: a.details_submitted };
+  }
+
+  /** Estado actual de un reembolso (un reintento con la misma clave solo repite la primera respuesta). */
+  retrieveRefund(account: string, refundId: string): Promise<{ id: string; status: string }> {
+    if (!/^re_[A-Za-z0-9_]{6,200}$/.test(refundId)) throw new AppError("validation_failed");
+    return this.request("GET", `/v1/refunds/${refundId}`, { account });
+  }
+
+  /** Cierra una sesión abierta para que ya no se pueda pagar (pedido cancelado). */
+  expireSession(account: string, sessionId: string): Promise<{ id: string; status: string }> {
+    if (!/^cs_[A-Za-z0-9_]{8,255}$/.test(sessionId)) throw new AppError("validation_failed");
+    return this.request("POST", `/v1/checkout/sessions/${sessionId}/expire`, { account });
   }
 
   retrieveSession(account: string, sessionId: string): Promise<StripeSession> {
@@ -230,7 +285,14 @@ export interface StripeProvider extends PaymentProvider {
     providerPaymentId: string;
     amount: number;
     idempotencyKey: string;
+    /** `re_…` ya registrado: se consulta en lugar de crear. */
+    providerRefundId?: string | null;
   }): Promise<{ providerRefundId: string; status: "succeeded" | "pending" | "failed" }>;
+}
+
+function refundStatus(status: string): "succeeded" | "failed" | "pending" {
+  if (status === "succeeded") return "succeeded";
+  return status === "failed" || status === "canceled" ? "failed" : "pending";
 }
 
 export function createStripeProvider(cfg: StripeConfig): StripeProvider {
@@ -248,6 +310,9 @@ export function createStripeProvider(cfg: StripeConfig): StripeProvider {
     },
     async createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
       const account = stripeAccountId(input.account);
+      if (ZERO_DECIMAL.has(input.payment.currency.toUpperCase())) {
+        throw new AppError("provider_error", "Esta moneda no se puede cobrar con tarjeta.");
+      }
       const expiresAt = Math.max(
         Math.floor(input.expiresAt.getTime() / 1000),
         Math.floor(Date.now() / 1000) + MIN_SESSION_SECONDS,
@@ -296,6 +361,7 @@ export function createStripeProvider(cfg: StripeConfig): StripeProvider {
         id?: unknown;
         type?: unknown;
         account?: unknown;
+        livemode?: unknown;
         data?: { object?: Record<string, unknown> };
       };
       try {
@@ -311,6 +377,7 @@ export function createStripeProvider(cfg: StripeConfig): StripeProvider {
         eventId: event.id,
         type: event.type,
         signedAt: check.signedAt,
+        livemode: event.livemode === true,
         ...(typeof event.account === "string" ? { account: event.account } : {}),
         ...(typeof object.id === "string" && object.object === "checkout.session"
           ? { checkoutId: object.id }
@@ -324,18 +391,16 @@ export function createStripeProvider(cfg: StripeConfig): StripeProvider {
       return api.retrieveSession(stripeAccountId(account), sessionId).then(normalizeSession);
     },
     async refund(input) {
-      const r = await api.request<{ id: string; status: string }>("POST", "/v1/refunds", {
-        account: stripeAccountId(input.account),
-        idempotencyKey: input.idempotencyKey,
-        params: { payment_intent: input.providerPaymentId, amount: input.amount },
-      });
-      const status =
-        r.status === "succeeded"
-          ? "succeeded"
-          : r.status === "failed" || r.status === "canceled"
-            ? "failed"
-            : "pending";
-      return { providerRefundId: r.id, status };
+      const account = stripeAccountId(input.account);
+      // Ya creado: se consulta su estado; repetir el POST devolvería la primera respuesta.
+      const r = input.providerRefundId
+        ? await api.retrieveRefund(account, input.providerRefundId)
+        : await api.request<{ id: string; status: string }>("POST", "/v1/refunds", {
+            account,
+            idempotencyKey: input.idempotencyKey,
+            params: { payment_intent: input.providerPaymentId, amount: input.amount },
+          });
+      return { providerRefundId: r.id, status: refundStatus(r.status) };
     },
   };
 }

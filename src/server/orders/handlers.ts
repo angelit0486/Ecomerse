@@ -3,6 +3,8 @@ import type { JobHandler } from "@/server/jobs/types";
 import type { StripeProvider } from "@/server/payments/stripe";
 import { reconcilePayments } from "@/server/payments/webhook";
 
+import { reconcileRefunds } from "./refunds";
+
 /**
  * Jobs del ciclo de pedidos (GATE0 §17.5-17.6).
  * - `orders.expire`: cada minuto (system.enqueue_maintenance) cancela los pedidos
@@ -35,6 +37,8 @@ export function createOrderHandlers(deps: {
     if (!stripe) return;
     const count = await reconcilePayments({ db: deps.db, provider: stripe, log });
     if (count > 0) log.info("Pagos reconciliados", { count });
+    const refunds = await reconcileRefunds({ db: deps.db, stripe: deps.stripe, log });
+    if (refunds > 0) log.info("Reembolsos reconciliados", { count: refunds });
   };
   return [
     ["orders.expire", expire],

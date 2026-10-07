@@ -43,7 +43,8 @@ export async function startStripeOnboarding(
     accountId = row!.id;
   }
   const link = await deps.api.createAccountLink(accountId, input.refreshUrl, input.returnUrl);
-  if (!/^https:\/\//.test(link.url)) throw new AppError("provider_error");
+  // Solo el formulario alojado por Stripe (L5): nunca otra URL aunque la API la devolviera.
+  if (!/^https:\/\/connect\.stripe\.com\//.test(link.url)) throw new AppError("provider_error");
   return link.url;
 }
 

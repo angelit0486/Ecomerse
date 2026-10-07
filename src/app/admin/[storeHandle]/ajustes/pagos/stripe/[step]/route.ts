@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   );
   try {
     if (step === "reanudar") {
-      return NextResponse.redirect(await stripeOnboardingUrl(storeHandle), 303);
+      return NextResponse.redirect(await stripeOnboardingUrl(storeHandle, { create: false }), 303);
     }
     if (step !== "retorno") return new NextResponse(null, { status: 404 });
     const { supabase, storeId } = await storeClient(storeHandle);

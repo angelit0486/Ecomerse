@@ -28,7 +28,7 @@ const fetchImpl = (async (url: string, init: RequestInit) => {
   calls.push({ path, idempotencyKey: headers["idempotency-key"] ?? null });
   if (path === "/v1/accounts") return Response.json({ id: ACCOUNT });
   if (path === "/v1/account_links")
-    return Response.json({ url: "https://connect.stripe.test/setup/x" });
+    return Response.json({ url: "https://connect.stripe.com/setup/x" });
   if (path === `/v1/accounts/${ACCOUNT}`) {
     return Response.json({ charges_enabled: chargesEnabled, details_submitted: chargesEnabled });
   }
@@ -82,7 +82,7 @@ describe("Stripe Connect", () => {
       { db: worker, api: provider.api, mode: "test" },
       input(),
     );
-    expect(url).toBe("https://connect.stripe.test/setup/x");
+    expect(url).toBe("https://connect.stripe.com/setup/x");
     expect(calls[0]).toEqual({
       path: "/v1/accounts",
       idempotencyKey: `connect-account:${storeId}`,

@@ -73,6 +73,15 @@ describe("Send Email Hook", () => {
     ]);
   });
 
+  it("cambio de email sin modo seguro: el único código va al email nuevo", async () => {
+    const r = await call({
+      user: { email: "viejo@hook.test", new_email: "nuevo@hook.test" },
+      email_data: { token: "333333", email_action_type: "email_change" },
+    });
+    expect(r.status).toBe(200);
+    expect(channel.sent.map((m) => m.to)).toEqual(["nuevo@hook.test"]);
+  });
+
   it("firma inválida o vieja: 401, sin envío y con evento de seguridad", async () => {
     const before = await admin<{ n: number }[]>`
       select count(*)::int as n from audit.security_events where type like 'auth.email_hook_%'`;

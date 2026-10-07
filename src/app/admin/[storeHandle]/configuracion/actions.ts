@@ -195,7 +195,7 @@ export async function saveManualPayment(
     return {
       ...result,
       error: (result.fields && Object.values(result.fields)[0]) || result.error,
-      values: formValues(formData, ["display_name", "instructions"]),
+      values: formValues(formData, ["display_name", "instructions", "active"]),
     };
   }
   revalidatePath(`/admin/${storeHandle}/configuracion`);

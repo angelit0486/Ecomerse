@@ -12,7 +12,10 @@ export interface EmailMessage {
   replyTo?: string;
 }
 
-/** Nombre de remitente seguro: sin comillas, ángulos ni saltos de línea (cabecera From). */
+/**
+ * Nombre de remitente seguro: sin comillas, ángulos ni saltos de línea. El canal lo
+ * envía como quoted-string (RFC 5322), así que comas, «@» o paréntesis no rompen la cabecera.
+ */
 export function safeDisplayName(name: string): string {
   return name
     .replace(/["<>\r\n\\]/g, "")

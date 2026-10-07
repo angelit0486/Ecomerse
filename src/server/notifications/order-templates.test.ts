@@ -62,4 +62,10 @@ describe("plantillas de pedidos", () => {
     expect(m.replyTo).toBeUndefined();
     expect(m.fromName).toBeUndefined();
   });
+
+  it("staff: pago después de cancelar con su propio aviso", () => {
+    const m = staffOrderEmail(base, "s@x.test", "paid_after_cancel", "https://panel.test/p");
+    expect(m.subject).toContain("pedido cancelado #1001");
+    expect(m.text).toContain("reembolso automáticamente");
+  });
 });

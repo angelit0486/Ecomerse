@@ -19,7 +19,7 @@ export async function saveNotifications(
     .split(/[\s,;]+/)
     .map((e) => e.trim())
     .filter(Boolean);
-  const values = formValues(formData, ["staff_emails"]);
+  const values = formValues(formData, ["staff_emails", "notify_new_order", "notify_paid"]);
   if (emails.length > 5) {
     const message = "Escribe hasta 5 emails válidos, uno por línea.";
     return { error: message, fields: { staff_emails: message }, values };

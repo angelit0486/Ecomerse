@@ -53,6 +53,16 @@ describe("canal Resend", () => {
     expect(JSON.parse(init.body as string)).toMatchObject({ to: ["ana@example.test"] });
   });
 
+  it("nombre de la tienda como quoted-string: comas, @ o paréntesis no rompen el From", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ id: "re_2" }));
+    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", fetchImpl);
+    await channel.send({ ...message, fromName: 'Café, Pan & Más (Moda@Casa) "x"\r\nBcc: y' });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).from).toBe(
+      '"Café, Pan & Más (Moda@Casa) xBcc: y" <no-reply@x.test>',
+    );
+  });
+
   it("422 es definitivo; 429 y 5xx se reintentan", async () => {
     const reject = (status: number) =>
       resendChannel("k", "P <a@x.test>", async () => new Response("{}", { status })).send(message);

@@ -5,9 +5,9 @@
 
 ## Ahora
 
-- **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** Gate F7 (revisión adversarial, correcciones e informe `docs/phases/PHASE-07-REPORT.md`).
-- **Siguiente paso exacto:** revisión adversarial de la Fase 7 (base de datos y dinero; capa de aplicación), correcciones en `20261014000600_phase7_gate_fixes.sql` y el informe.
+- **Fase actual:** 8 — Customer Accounts & Admin Ops (Fase 7 cerrada en local: `docs/phases/PHASE-07-REPORT.md`; CI pendiente por P0).
+- **Siguiente tarea:** F8-T01 (cuenta del comprador por tienda, con la marca de la tienda en el código de acceso). Antes de F8-T04, decisiones D5 del propietario (`docs/plan/PROJECT-BRIEF.md` §10).
+- **Siguiente paso exacto:** diseño de `storefront_link_customer` (vincular pedidos solo tras OTP) y del login del comprador por host de tienda.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -73,6 +73,7 @@ Todos desde `7549db7` (Gate 1) hasta la Fase 7 en curso. Bundle de respaldo: `pr
 | 7    | F7-T06b Ajustes → Pagos y Notificaciones      | hecha (sandbox real: S-4)        | 15 pgTAP (solo el worker asocia/activa, idempotencia, desactivar no se revierte) + integración Connect (clave por tienda, account.updated re-consulta) + E2E de ajustes   |
 | 7    | F7-T06c 100 checkouts con fallos aleatorios   | hecha                            | `order-chaos` (semilla fija, 11 escenarios, 16 invariantes de inventario, dinero y estados); 20 semillas extra sin violaciones; 2 mutaciones detectadas                   |
 | 7    | F7-T04b Send Email Hook de Supabase Auth      | hecha (marca por tienda: F8-T01) | 4 unit (firma, rotación, vieja, alterada) + 4 integración (dedupe por webhook-id, cambio de email, 401 con evento, 400) + E2E de login con el hook activo en el Auth real |
+| 7    | Gate F7                                       | hecha                            | 2 revisiones adversariales; 3 altas + 8 medias + 15 bajas corregidas; pgTAP 36 (34) + integración; mutación contra la base sin correcciones; `PHASE-07-REPORT.md`         |
 | 5–11 | Ver el plan §4                                | pendiente                        |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)

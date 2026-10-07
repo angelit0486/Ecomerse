@@ -68,6 +68,8 @@ const handlers: Array<[string, JobHandler]> = [
   ["order.cancelled", lazy("order.cancelled", orderNotifications)],
   ["refund.succeeded", lazy("refund.succeeded", orderNotifications)],
   ["refund.execute", lazy("refund.execute", refunds)],
+  ["payment.expire_checkout", lazy("payment.expire_checkout", refunds)],
+  ["payment.after_cancel", lazy("payment.after_cancel", orderNotifications)],
   ["order.created", lazy("order.created", orderNotifications)],
   ["order.paid", lazy("order.paid", orderNotifications)],
 ];

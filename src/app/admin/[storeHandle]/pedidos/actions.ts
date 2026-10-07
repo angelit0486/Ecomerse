@@ -252,3 +252,61 @@ export async function requestRefund(
   }
   done(storeHandle, orderId, "reembolso");
 }
+
+/** Cerrar lo que no se enviará de un pedido surtido en parte (Gate F7, DB-M4). */
+export async function closeUnshipped(
+  storeHandle: string,
+  orderId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const values = keep(formData);
+  const key = validForm(orderId, formData);
+  if (!key) return { error: "Formulario no válido.", values };
+  if (formData.get("confirm") !== "1") {
+    return { error: "Confirma que esas unidades ya no se enviarán.", values };
+  }
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "orders_close_unshipped", {
+      p_store_id: storeId,
+      p_order_id: orderId,
+      p_refund: formData.get("refund") === "1",
+      p_note:
+        String(formData.get("note") ?? "")
+          .trim()
+          .slice(0, 500) || null,
+      p_idempotency_key: key,
+    });
+    invalidateStore(storeId);
+  } catch (error) {
+    return rpcFailure(error, "No hay unidades pendientes de envío que cerrar.", values);
+  }
+  done(storeHandle, orderId, "cerrado");
+}
+
+/** El staff da por resuelta la atención del pedido (con nota). */
+export async function resolveAttention(
+  storeHandle: string,
+  orderId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const values = keep(formData);
+  if (!uuid.safeParse(orderId).success) return { error: "Pedido no válido.", values };
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "orders_resolve_attention", {
+      p_store_id: storeId,
+      p_order_id: orderId,
+      p_note: String(formData.get("note") ?? ""),
+    });
+  } catch (error) {
+    const e = reportActionError("orders", error);
+    if (e.code === "validation_failed") {
+      return { error: "Escribe qué hiciste para resolverlo (3 a 1000 caracteres).", values };
+    }
+    return { error: e.message, values };
+  }
+  done(storeHandle, orderId, "resuelto");
+}

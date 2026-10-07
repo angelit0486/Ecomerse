@@ -193,7 +193,7 @@ cmd_up() {
           GOTRUE_HOOK_SEND_EMAIL_URI="${STACK_EMAIL_HOOK_URI:-http://localhost:3000/api/auth/email-hook}"
           GOTRUE_HOOK_SEND_EMAIL_SECRETS="$STACK_EMAIL_HOOK_SECRET")
   fi
-  start auth "$BIN/auth-dist" env -i PATH="$PATH" HOME="$HOME" "${hook[@]}" \
+  start auth "$BIN/auth-dist" env -i PATH="$PATH" HOME="$HOME" ${hook[@]+"${hook[@]}"} \
     GOTRUE_API_HOST=127.0.0.1 PORT=$AUTH_PORT \
     API_EXTERNAL_URL="http://127.0.0.1:$GATEWAY_PORT/auth/v1" \
     GOTRUE_DB_DRIVER=postgres \

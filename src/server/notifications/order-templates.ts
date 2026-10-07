@@ -230,25 +230,34 @@ export function refundIssuedEmail(d: OrderEmailData, to: string): EmailMessage {
   );
 }
 
+export type StaffEmailKind = "new" | "paid" | "attention" | "paid_after_cancel";
+
 /** Staff: pedido nuevo, pagado o que requiere atención (sin PII más allá del número y el total). */
 export function staffOrderEmail(
   d: OrderEmailData,
   to: string,
-  kind: "new" | "paid" | "attention",
+  kind: StaffEmailKind,
   panelUrl: string,
 ): EmailMessage {
-  const subject =
-    kind === "new"
-      ? `Nuevo pedido ${d.order.display_number} (${money(d.order.total, d)})`
-      : kind === "paid"
-        ? `Pedido pagado ${d.order.display_number}: por preparar`
-        : `Atención: pedido ${d.order.display_number} pagado sin existencias`;
-  const body =
-    kind === "attention"
-      ? "El pago llegó después de vencer el pedido y ya no hay existencias. Reembólsalo desde el panel."
-      : kind === "paid"
-        ? "El pedido está pagado y listo para prepararse."
-        : "Llegó un pedido nuevo (pendiente de pago).";
+  const n = d.order.display_number;
+  const { subject, body } = {
+    new: {
+      subject: `Nuevo pedido ${n} (${money(d.order.total, d)})`,
+      body: "Llegó un pedido nuevo (pendiente de pago).",
+    },
+    paid: {
+      subject: `Pedido pagado ${n}: por preparar`,
+      body: "El pedido está pagado y listo para prepararse.",
+    },
+    attention: {
+      subject: `Atención: pedido ${n} pagado sin existencias`,
+      body: "El pago llegó después de vencer el pedido y ya no hay existencias. Iniciamos el reembolso automáticamente; revisa que se complete.",
+    },
+    paid_after_cancel: {
+      subject: `Atención: pago recibido en el pedido cancelado ${n}`,
+      body: "El comprador pagó después de que cancelaste el pedido. El pedido sigue cancelado e iniciamos el reembolso automáticamente; revisa que se complete.",
+    },
+  }[kind];
   return {
     to,
     subject,

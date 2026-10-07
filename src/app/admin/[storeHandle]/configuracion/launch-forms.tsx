@@ -49,7 +49,12 @@ export function ManualPaymentForm({
         )}
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="active" value="1" defaultChecked={initial.active} />
+        <input
+          type="checkbox"
+          name="active"
+          value="1"
+          defaultChecked={state.values ? state.values.active === "1" : initial.active}
+        />
         Aceptar pagos por transferencia
       </label>
       <div className="flex items-center gap-3">

@@ -81,7 +81,10 @@ function event(
   });
 }
 
-function deliver(body: string, opts: { secret?: string; at?: number } = {}) {
+function deliver(
+  body: string,
+  opts: { secret?: string; at?: number; requireLivemode?: boolean } = {},
+) {
   const t = opts.at ?? Math.floor(Date.now() / 1000);
   const sig = createHmac("sha256", opts.secret ?? SECRET)
     .update(`${t}.${body}`)
@@ -93,6 +96,7 @@ function deliver(body: string, opts: { secret?: string; at?: number } = {}) {
     rawBody: body,
     now: new Date(),
     log,
+    ...(opts.requireLivemode ? { requireLivemode: true } : {}),
   });
 }
 
@@ -265,5 +269,30 @@ describe("webhook de Stripe (§34.4)", () => {
     sessions.get(o.checkoutId)!.payment_status = "paid";
     expect(await reconcilePayments({ db: worker, provider, log })).toBeGreaterThanOrEqual(1);
     expect((await state(o.orderId)).payment_status).toBe("paid");
+  });
+
+  it("producción: un evento de modo prueba se ignora sin tocar el pedido", async () => {
+    const o = await order();
+    sessions.get(o.checkoutId)!.status = "complete";
+    sessions.get(o.checkoutId)!.payment_status = "paid";
+    const r = await deliver(event(o.checkoutId), { requireLivemode: true });
+    expect(r.body.outcome).toBe("ignored");
+    expect((await state(o.orderId)).payment_status).not.toBe("paid");
+  });
+
+  it("account.application.deauthorized: la cuenta queda en error y deja de cobrar", async () => {
+    const r = await deliver(
+      JSON.stringify({
+        id: `evt_${randomBytes(8).toString("hex")}`,
+        type: "account.application.deauthorized",
+        account: ACCOUNT,
+        created: Math.floor(Date.now() / 1000),
+        data: { object: { id: "ca_x", object: "application" } },
+      }),
+    );
+    expect(r.body.outcome).toBe("account_deauthorized");
+    const [a] = await admin<{ status: string }[]>`
+      select status from public.payment_accounts where id = ${accountId}`;
+    expect(a!.status).toBe("error");
   });
 });
