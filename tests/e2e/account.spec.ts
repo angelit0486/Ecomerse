@@ -118,6 +118,7 @@ test("comprador: entra con código, ve su pedido de invitado y guarda una direcc
 
   await page.goto(`${origin(a)}/cuenta`);
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await page.waitForURL(`${origin(a)}/`); // la acción termina con la redirección al inicio
   await page.goto(`${origin(a)}/cuenta`);
   await expect(page.getByRole("button", { name: "Enviarme un código" })).toBeVisible();
 
