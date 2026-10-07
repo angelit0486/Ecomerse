@@ -75,6 +75,8 @@ const ACTIONS: Record<string, string> = {
   "support_session.ended": "Terminó una sesión de soporte",
   "support_session.page_viewed": "Soporte vio una página",
   "export.requested": "Descargó una exportación",
+  "import.requested": "Subió un archivo de importación",
+  "import.committed": "Confirmó una importación de productos",
 };
 
 const when = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });

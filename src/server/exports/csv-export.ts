@@ -1,5 +1,6 @@
 import { centsToInput } from "@/lib/money/format";
 import { toCsv, type CsvValue } from "@/lib/csv";
+import { IMPORT_HEADERS } from "@/server/imports/products";
 
 /**
  * Filas de `exports_rows` → CSV (F8-T04a, §26.2). Los productos usan las mismas
@@ -23,35 +24,7 @@ const ORDER_LABELS: Record<string, string> = {
 export function exportCsv(entity: ExportEntity, rows: Row[], pii: boolean): string {
   switch (entity) {
     case "products": {
-      const headers = [
-        "handle",
-        "title",
-        "status",
-        "description",
-        "brand",
-        "categories",
-        "tags",
-        "option1_name",
-        "option1_value",
-        "option2_name",
-        "option2_value",
-        "option3_name",
-        "option3_value",
-        "sku",
-        "barcode",
-        "price",
-        "compare_at_price",
-        "inventory_quantity",
-        "inventory_policy",
-        "requires_shipping",
-        "weight_g",
-        "length_mm",
-        "width_mm",
-        "height_mm",
-        "variant_status",
-        "seo_title",
-        "seo_description",
-      ];
+      const headers = IMPORT_HEADERS;
       return toCsv(
         headers,
         rows.map((r) => {
@@ -72,7 +45,7 @@ export function exportCsv(entity: ExportEntity, rows: Row[], pii: boolean): stri
             str(r.barcode),
             money(r.price),
             money(r.compare_at_price),
-            str(r.available),
+            str(r.on_hand),
             str(r.inventory_policy),
             r.requires_shipping ? "true" : "false",
             str(r.weight_g),

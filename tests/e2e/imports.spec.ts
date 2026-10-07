@@ -1,0 +1,87 @@
+import { expect, test } from "@playwright/test";
+
+import { admin, createAuthUser, createTenant, loginNewStaff, uniq } from "./support";
+
+/** F8-T04b: importación CSV → vista previa con errores por fila → confirmación todo o nada. */
+const run = uniq();
+const ownerEmail = `importar-${run}@example.test`;
+let tenant: Awaited<ReturnType<typeof createTenant>>;
+const sku = `IMP-${run.toUpperCase()}`;
+
+const HEADER =
+  "handle,title,status,description,brand,categories,tags,option1_name,option1_value,option2_name,option2_value,option3_name,option3_value,sku,barcode,price,compare_at_price,inventory_quantity,inventory_policy,requires_shipping,weight_g,length_mm,width_mm,height_mm,variant_status,seo_title,seo_description";
+const line = (cells: Record<number, string>, sep = ",") =>
+  Array.from({ length: 27 }, (_, i) => cells[i] ?? "").join(sep);
+
+test.beforeAll(async () => {
+  tenant = await createTenant(`im${run}`, await createAuthUser(ownerEmail));
+});
+
+test("importar productos: errores por fila, confirmación y producto en el catálogo", async ({
+  page,
+}) => {
+  await loginNewStaff(page, ownerEmail);
+  await page.goto(`/admin/${tenant.handle}/productos`);
+  await page.getByRole("link", { name: "Importar" }).click();
+  await expect(page.getByRole("heading", { name: "Importar productos" })).toBeVisible();
+
+  // 1) Archivo con errores: nada se escribe y cada error dice su fila.
+  const bad = [
+    HEADER,
+    line({ 0: "taza-roja", 1: "Taza roja", 5: "No existe", 13: sku, 15: "abc" }),
+  ].join("\n");
+  await page.getByLabel(/Archivo CSV/).setInputFiles({
+    name: "malo.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(bad),
+  });
+  await page.getByRole("button", { name: "Validar archivo" }).click();
+  await expect(page.getByRole("heading", { name: "malo.csv" })).toBeVisible();
+  await expect(page.getByText("price: escribe un importe como 199.50")).toBeVisible();
+  await expect(page.getByText("categories: no existe la categoría No existe")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirmar importación" })).toHaveCount(0);
+
+  // 2) Archivo correcto con dos variantes (punto y coma y coma decimal, como Excel en español).
+  const good = [
+    HEADER.replaceAll(",", ";"),
+    line(
+      {
+        0: "taza-roja",
+        1: "Taza roja",
+        7: "Tamaño",
+        8: "Chica",
+        13: sku,
+        15: "149,50",
+        17: "6",
+      },
+      ";",
+    ),
+    line({ 0: "taza-roja", 7: "Tamaño", 8: "Grande", 15: "199,00" }, ";"),
+  ].join("\r\n");
+  await page.goto(`/admin/${tenant.handle}/productos/importar`);
+  await page.getByLabel(/Archivo CSV/).setInputFiles({
+    name: "bueno.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(good),
+  });
+  await page.getByRole("button", { name: "Validar archivo" }).click();
+  await expect(page.getByRole("heading", { name: "bueno.csv" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirmar importación" }).click();
+  await expect(page.getByText("Importación terminada.")).toBeVisible();
+
+  const [variant] = await admin<{ price: string; on_hand: number }[]>`
+    select v.price::text, l.on_hand from public.product_variants v
+      join public.inventory_levels l on l.variant_id = v.id
+     where v.store_id = ${tenant.storeId} and v.sku = ${sku}`;
+  expect(variant).toEqual({ price: "14950", on_hand: 6 });
+
+  await page.goto(`/admin/${tenant.handle}/productos`);
+  await expect(page.getByRole("link", { name: "Taza roja" })).toBeVisible();
+
+  // Otro origen no puede subir archivos.
+  const forged = await page.request.post(`/admin/${tenant.handle}/productos/importar/subir`, {
+    headers: { origin: "http://malo.test" },
+    multipart: { mode: "upsert" },
+  });
+  expect(forged.status()).toBe(403);
+});
