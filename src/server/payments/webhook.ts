@@ -2,6 +2,7 @@ import type { Sql } from "@/server/db/role-clients";
 import type { Logger } from "@/server/observability/logger";
 
 import type { NormalizedPayment, PaymentAccountCredentials } from "./provider";
+import { syncStripeAccount } from "./connect";
 import { STRIPE_PAYMENT_EVENTS, type StripeProvider } from "./stripe";
 
 /**
@@ -11,6 +12,7 @@ import { STRIPE_PAYMENT_EVENTS, type StripeProvider } from "./stripe";
  * 3. registro deduplicado del evento (ya procesado: 200);
  * 4. RE-CONSULTA al proveedor (fuente de verdad);
  * 5-6. system.apply_payment_status valida referencia, monto y moneda y aplica.
+ * `account.updated` sincroniza el estado de la cuenta conectada (F7-T06).
  * Responde rápido; un error interno devuelve 500 para que el proveedor reintente.
  */
 export interface WebhookResult {
@@ -112,6 +114,12 @@ export async function handleStripeWebhook(deps: {
   if (event.processed) return { status: 200, body: { received: true, outcome: "duplicate" } };
 
   try {
+    if (verified.type === "account.updated") {
+      // Estado de la cuenta conectada: se re-consulta a Stripe (fuente de verdad).
+      await syncStripeAccount({ db, api: provider.api }, verified.account);
+      await db`select system.finish_payment_event(${event.id}, null)`;
+      return { status: 200, body: { received: true, outcome: "account_synced" } };
+    }
     if (!STRIPE_PAYMENT_EVENTS.has(verified.type) || !verified.checkoutId) {
       await db`select system.finish_payment_event(${event.id}, null)`;
       return { status: 200, body: { received: true, outcome: "ignored" } };

@@ -199,6 +199,7 @@ export async function saveManualPayment(
     };
   }
   revalidatePath(`/admin/${storeHandle}/configuracion`);
+  revalidatePath(`/admin/${storeHandle}/ajustes/pagos`);
   return { ok: true, message: "Pago por transferencia guardado." };
 }
 

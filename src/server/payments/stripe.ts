@@ -117,9 +117,14 @@ export class StripeApi {
   }
 
   /** Onboarding (Account Links): crea la cuenta Standard de la tienda. */
-  createAccount(email: string | null, country: string): Promise<{ id: string }> {
+  createAccount(
+    email: string | null,
+    country: string,
+    idempotencyKey?: string,
+  ): Promise<{ id: string }> {
     return this.request("POST", "/v1/accounts", {
       params: { type: "standard", country, ...(email ? { email } : {}) },
+      ...(idempotencyKey ? { idempotencyKey } : {}),
     });
   }
 
