@@ -51,9 +51,12 @@ export function StoreHeader({
             Buscar
           </button>
         </form>
+        <Link href="/cuenta" className="ml-auto text-sm font-medium underline sm:ml-0">
+          Mi cuenta
+        </Link>
         <Link
           href="/carrito"
-          className="ml-auto inline-flex h-10 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium sm:ml-0"
+          className="inline-flex h-10 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium"
         >
           Carrito<span className="sr-only">, productos:</span>
           <span className="ml-2 rounded-full bg-[var(--sf-fg)] px-2 text-xs text-[var(--sf-bg)]">

@@ -99,17 +99,39 @@ const AUTH_SUBJECTS: Record<string, string> = {
   email_change: "Confirma tu nuevo email",
 };
 
-/** Código de un solo uso de Supabase Auth (Send Email Hook, F7-T04b). */
+/** Marca de la tienda en la que el comprador pidió el código (F8-T01, D-F7-07). */
+export interface AuthEmailBrand {
+  name: string;
+  contactEmail: string | null;
+  logoUrl: string | null;
+  primaryColor: string | null;
+}
+
+/** Código de un solo uso de Supabase Auth (Send Email Hook, F7-T04b; marca por tienda, F8-T01). */
 export function authCodeEmail(input: {
   to: string;
   code: string;
   action: string;
   expiresMinutes: number;
+  brand?: AuthEmailBrand | null;
 }): EmailMessage {
-  const subject = AUTH_SUBJECTS[input.action] ?? "Tu código de verificación";
+  const brand = input.brand ?? null;
+  const base = AUTH_SUBJECTS[input.action] ?? "Tu código de verificación";
+  const subject = brand ? `${base} a ${brand.name}` : base;
+  const header = brand
+    ? brand.logoUrl?.startsWith("https://")
+      ? `<p><img src="${escapeHtml(brand.logoUrl)}" alt="${escapeHtml(brand.name)}" height="48" style="max-height:48px"></p>`
+      : `<p style="font-size:20px;font-weight:700">${escapeHtml(brand.name)}</p>`
+    : "";
+  const color =
+    brand?.primaryColor && /^#[0-9a-fA-F]{6}$/.test(brand.primaryColor)
+      ? brand.primaryColor
+      : "#1a1a1a";
   return {
     to: input.to,
     subject,
+    ...(brand ? { fromName: brand.name } : {}),
+    ...(brand?.contactEmail ? { replyTo: brand.contactEmail } : {}),
     text: [
       `Tu código es: ${input.code}`,
       "",
@@ -119,8 +141,8 @@ export function authCodeEmail(input: {
     ].join("\n"),
     html: layout(
       subject,
-      `<p>Tu código es:</p>
-<p style="font-size:28px;font-weight:700;letter-spacing:4px">${escapeHtml(input.code)}</p>
+      `${header}<p>Tu código es:</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:4px;color:${color}">${escapeHtml(input.code)}</p>
 <p>Caduca en ${input.expiresMinutes} minutos. No lo compartas con nadie: nunca te lo pediremos.</p>
 <p style="color:#555">Si no lo pediste, ignora este correo.</p>`,
     ),

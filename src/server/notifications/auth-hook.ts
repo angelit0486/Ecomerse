@@ -5,7 +5,7 @@ import type { Logger } from "@/server/observability/logger";
 import { verifyStandardWebhook } from "@/server/security/standard-webhooks";
 
 import { alreadyDelivered, sendNotification } from "./handlers";
-import { authCodeEmail } from "./templates";
+import { authCodeEmail, type AuthEmailBrand } from "./templates";
 import { isEmail, type EmailChannel } from "./types";
 
 /**
@@ -18,6 +18,13 @@ import { isEmail, type EmailChannel } from "./types";
 export interface AuthHookResult {
   status: number;
   body: Record<string, unknown>;
+}
+
+interface IntentBrand {
+  name: string;
+  contact_email: string | null;
+  logo_path: string | null;
+  primary_color: string | null;
 }
 
 interface HookPayload {
@@ -41,6 +48,8 @@ export async function handleSendEmailHook(deps: {
   channel: EmailChannel;
   log: Logger;
   otpMinutes: number;
+  /** URL pública de un objeto de store-media (logo de la tienda). */
+  mediaUrl?: (path: string) => string;
 }): Promise<AuthHookResult> {
   if (deps.rawBody.length > 65_536) return error(413, "payload_too_large");
   const verified = verifyStandardWebhook({
@@ -87,6 +96,20 @@ export async function handleSendEmailHook(deps: {
     }
   }
   try {
+    // Marca de la tienda donde se pidió el código (intento de ≤ 15 min); sin intento, plataforma (staff).
+    const [intent] = await deps.db<{ b: IntentBrand | null }[]>`
+      select system.login_intent_store(${(sends[0] as { to: string }).to}) as b`;
+    const brand: AuthEmailBrand | null = intent?.b
+      ? {
+          name: intent.b.name,
+          contactEmail:
+            intent.b.contact_email && isEmail(intent.b.contact_email)
+              ? intent.b.contact_email
+              : null,
+          logoUrl: intent.b.logo_path && deps.mediaUrl ? deps.mediaUrl(intent.b.logo_path) : null,
+          primaryColor: intent.b.primary_color,
+        }
+      : null;
     for (const s of sends as { to: string; code: string }[]) {
       const recipient = createHash("sha256").update(s.to.toLowerCase()).digest("hex").slice(0, 16);
       const dedupeKey = `auth_hook:${verified.id}:${recipient}`;
@@ -103,6 +126,7 @@ export async function handleSendEmailHook(deps: {
             code: s.code,
             action,
             expiresMinutes: deps.otpMinutes,
+            brand,
           }),
         },
       );

@@ -33,6 +33,8 @@ export async function POST(request: Request): Promise<Response> {
     channel: emailChannel(),
     log: log.child({ request_id: requestIdFrom(request.headers), route: "auth.email_hook" }),
     otpMinutes: OTP_MINUTES,
+    mediaUrl: (path) =>
+      `${serverEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-media/${path}`,
   });
   return Response.json(result.body, {
     status: result.status,

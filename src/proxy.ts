@@ -148,7 +148,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       // (en local, arrancar con `-H localhost`: Next normaliza 127.0.0.1 a localhost).
       const target = request.nextUrl.clone();
       target.pathname = decision.pathname;
-      const response = NextResponse.rewrite(target, { request: { headers: requestHeaders } });
+      // Sesión de comprador (F8-T01): cookies host-only de ESTA tienda; se renuevan aquí.
+      const response = await refreshSupabaseSession({
+        request,
+        requestHeaders,
+        url: env.NEXT_PUBLIC_SUPABASE_URL,
+        anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        secureCookies: secure,
+        rewriteTo: target,
+      });
       if (decision.preview) {
         response.headers.set("x-robots-tag", "noindex, nofollow");
         response.headers.set("cache-control", "no-store");

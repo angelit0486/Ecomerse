@@ -101,4 +101,31 @@ describe("Send Email Hook", () => {
     expect((await call(login("a@hook.test", "<b>1</b>"))).status).toBe(400);
     expect(channel.sent).toHaveLength(0);
   });
+
+  it("comprador: el código lleva la marca de la tienda donde lo pidió (intento ≤ 15 min)", async () => {
+    const run = randomBytes(3).toString("hex");
+    const [plan] = await admin<{ id: string }[]>`
+      insert into public.plans (key, name) values ('hook_plan', 'hook_plan')
+      on conflict (key) do update set name = excluded.name returning id`;
+    await admin`insert into public.plan_entitlements (plan_id, key, value_int)
+                values (${plan!.id}, 'max_stores', 5) on conflict do nothing`;
+    const [org] = await admin<{ id: string }[]>`
+      insert into public.organizations (name, slug, country) values ('Org hk', ${`org-hk-${run}`}, 'MX') returning id`;
+    await admin`insert into public.subscriptions (organization_id, plan_id, status) values (${org!.id}, ${plan!.id}, 'active')`;
+    const [store] = await admin<{ id: string }[]>`
+      insert into public.stores (organization_id, name, handle, currency, country, timezone, status, launched_at, contact_email)
+      values (${org!.id}, 'Panadería <La Espiga>', ${`hk-${run}`}, 'MXN', 'MX', 'America/Mexico_City', 'active', now(),
+              'hola@espiga.test') returning id`;
+    await admin`select storefront.record_login_intent(${store!.id}, ${`compra-${run}@hook.test`}, ${"a".repeat(64)})`;
+    expect((await call(login(`compra-${run}@hook.test`))).status).toBe(200);
+    const m = channel.sent[0]!;
+    expect(m.subject).toBe("Tu código para entrar a Panadería <La Espiga>");
+    expect(m.fromName).toBe("Panadería <La Espiga>");
+    expect(m.replyTo).toBe("hola@espiga.test");
+    expect(m.html).toContain("Panadería &lt;La Espiga&gt;");
+    // El staff (sin intento) recibe la plantilla de la plataforma.
+    channel = fakeChannel();
+    await call(login(`staff-${run}@hook.test`));
+    expect(channel.sent[0]!.fromName).toBeUndefined();
+  });
 });
