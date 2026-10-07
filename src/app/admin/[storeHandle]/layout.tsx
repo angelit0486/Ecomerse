@@ -54,6 +54,11 @@ export default async function StoreLayout({ children, params }: Props) {
       label: "Actividad",
       show: hasPermission(ctx, "audit.read"),
     },
+    {
+      href: `${base}/ajustes/exportar`,
+      label: "Exportar",
+      show: hasPermission(ctx, "exports.run"),
+    },
   ].filter((item) => item.show);
 
   return (

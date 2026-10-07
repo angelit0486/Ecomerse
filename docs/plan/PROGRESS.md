@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 8 — Customer Accounts & Admin Ops (Fase 7 cerrada en local: `docs/phases/PHASE-07-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F8-T04a (exportación CSV, §26.2: no depende de D5). La importación (F8-T04b…) espera las decisiones D5 del propietario (`docs/plan/PROJECT-BRIEF.md` §10).
-- **Siguiente paso exacto:** exportación de productos, inventario, pedidos y clientes (≤ 5 000 filas con el JWT del usuario; permisos exports.run + lectura + PII), neutralización de fórmulas y auditoría `export.requested`.
+- **Siguiente tarea:** F8-T04b (importación) — espera las decisiones D5 del propietario (`docs/plan/PROJECT-BRIEF.md` §10). Mientras, se adelanta lo que no depende de ellas: tablas `import_jobs`/`import_job_rows`, validación y commit atómico de CSV.
+- **Siguiente paso exacto:** migración de `import_jobs`/`import_job_rows` (§26.1) con RLS y RPC `imports_create`; parser CSV en streaming y validadores compartidos con el editor del catálogo.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -78,6 +78,7 @@ Todos desde `7549db7` (Gate 1) hasta la Fase 7 en curso. Bundle de respaldo: `pr
 | 8    | F8-T02 Clientes en el panel                   | hecha                            | 20 pgTAP (enmascarado por rol, sin búsqueda sin PII, cursor, consentimiento solo retirable, anonimizar, aislamiento) + E2E de clientes                                                                                                        |
 | 8    | F8-T03 Dashboard de KPIs                      | hecha                            | 16 pgTAP contra un seed conocido (fronteras de zona horaria, reembolsos, ticket, top, rango, permisos, aislamiento) + E2E del inicio (7/30/90 días)                                                                                           |
 | 8    | F8-T05 Ajustes → Actividad                    | hecha                            | 9 pgTAP (audit.read, aislamiento, área, cursor, sin IP) + E2E (un cambio aparece con su autor; filtro por área)                                                                                                                               |
+| 8    | F8-T04a Exportación CSV                       | hecha                            | 13 pgTAP (permisos por entidad, PII, opciones en orden, auditoría, límite de 5 000) + 5 unit de CSV (formula injection) + E2E (descarga, fórmula neutralizada, Origin ajeno → 403, Actividad)                                                 |
 | 5–11 | Ver el plan §4                                | pendiente                        |                                                                                                                                                                                                                                               |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
