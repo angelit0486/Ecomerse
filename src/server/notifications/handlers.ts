@@ -27,7 +27,7 @@ export function payloadId(job: JobRecord, key: string): string {
 }
 
 export async function sendNotification(
-  deps: NotificationDeps,
+  deps: Pick<NotificationDeps, "db" | "channel">,
   input: {
     dedupeKey: string;
     template: string;

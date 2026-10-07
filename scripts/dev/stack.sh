@@ -11,7 +11,8 @@
 #   bash scripts/dev/stack.sh status
 #   bash scripts/dev/stack.sh env       # variables para .env.local
 #
-# Variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, DEV_DB_NAME, PRUVA_STACK_DIR.
+# Variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, DEV_DB_NAME, PRUVA_STACK_DIR,
+#            STACK_EMAIL_HOOK_SECRET (opcional: Send Email Hook hacia la app).
 # Todas las contraseñas y claves de aquí son públicas y solo valen en 127.0.0.1.
 # =============================================================================
 set -euo pipefail
@@ -183,7 +184,16 @@ cmd_up() {
 
   log "Supabase Auth (:$AUTH_PORT) — ejecuta sus propias migraciones del esquema auth"
   local tpl="http://127.0.0.1:$GATEWAY_PORT/templates"
-  start auth "$BIN/auth-dist" env -i PATH="$PATH" HOME="$HOME" \
+  # Opcional (F7-T04b): con STACK_EMAIL_HOOK_SECRET, Auth delega sus emails en la app
+  # (http://localhost:3000/api/auth/email-hook), que debe estar levantada con el
+  # mismo valor en SEND_EMAIL_HOOK_SECRET. Sin él, Auth envía por SMTP a Mailpit.
+  local hook=()
+  if [ -n "${STACK_EMAIL_HOOK_SECRET:-}" ]; then
+    hook=(GOTRUE_HOOK_SEND_EMAIL_ENABLED=true
+          GOTRUE_HOOK_SEND_EMAIL_URI="${STACK_EMAIL_HOOK_URI:-http://localhost:3000/api/auth/email-hook}"
+          GOTRUE_HOOK_SEND_EMAIL_SECRETS="$STACK_EMAIL_HOOK_SECRET")
+  fi
+  start auth "$BIN/auth-dist" env -i PATH="$PATH" HOME="$HOME" "${hook[@]}" \
     GOTRUE_API_HOST=127.0.0.1 PORT=$AUTH_PORT \
     API_EXTERNAL_URL="http://127.0.0.1:$GATEWAY_PORT/auth/v1" \
     GOTRUE_DB_DRIVER=postgres \

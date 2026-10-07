@@ -1,0 +1,95 @@
+import { randomBytes } from "node:crypto";
+
+import postgres from "postgres";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
+import { handleSendEmailHook } from "@/server/notifications/auth-hook";
+import { fakeChannel } from "@/server/notifications/channels";
+import { createLogger } from "@/server/observability/logger";
+import { signStandardWebhook } from "@/server/security/standard-webhooks";
+
+/** Send Email Hook de Supabase Auth (F7-T04b) como system_worker. */
+const admin = postgres(process.env.TEST_ADMIN_DATABASE_URL!, { max: 2, onnotice: () => {} });
+const worker = postgres(process.env.TEST_WORKER_DATABASE_URL!, {
+  max: 2,
+  prepare: false,
+  onnotice: () => {},
+});
+const log = createLogger({ sink: () => {} });
+const SECRET = `v1,whsec_${randomBytes(32).toString("base64")}`;
+let channel = fakeChannel();
+
+function call(payload: unknown, opts: { id?: string; secret?: string; ts?: number } = {}) {
+  const body = JSON.stringify(payload);
+  const id = opts.id ?? `msg_${randomBytes(6).toString("hex")}`;
+  const ts = opts.ts ?? Math.floor(Date.now() / 1000);
+  return handleSendEmailHook({
+    secret: SECRET,
+    headers: new Headers({
+      "webhook-id": id,
+      "webhook-timestamp": String(ts),
+      "webhook-signature": signStandardWebhook(opts.secret ?? SECRET, id, ts, body),
+    }),
+    rawBody: body,
+    now: new Date(),
+    db: worker,
+    channel,
+    log,
+    otpMinutes: 10,
+  });
+}
+const login = (email: string, token = "123456") => ({
+  user: { email },
+  email_data: { token, email_action_type: "magiclink" },
+});
+
+beforeEach(() => {
+  channel = fakeChannel();
+});
+afterAll(async () => {
+  await Promise.all([admin.end(), worker.end()]);
+});
+
+describe("Send Email Hook", () => {
+  it("envía el código; un reintento de Auth con el mismo id no reenvía", async () => {
+    const id = `msg_${randomBytes(6).toString("hex")}`;
+    expect((await call(login("staff@hook.test"), { id })).status).toBe(200);
+    expect((await call(login("staff@hook.test"), { id })).status).toBe(200);
+    expect(channel.sent).toHaveLength(1);
+    expect(channel.sent[0]!.to).toBe("staff@hook.test");
+    expect(channel.sent[0]!.text).toContain("123456");
+    expect(channel.sent[0]!.subject).toBe("Tu código para entrar");
+  });
+
+  it("cambio de email: un código a cada dirección", async () => {
+    const r = await call({
+      user: { email: "viejo@hook.test", new_email: "nuevo@hook.test" },
+      email_data: { token: "111111", token_new: "222222", email_action_type: "email_change" },
+    });
+    expect(r.status).toBe(200);
+    expect(channel.sent.map((m) => [m.to, m.text.includes("111111") ? 1 : 2])).toEqual([
+      ["viejo@hook.test", 1],
+      ["nuevo@hook.test", 2],
+    ]);
+  });
+
+  it("firma inválida o vieja: 401, sin envío y con evento de seguridad", async () => {
+    const before = await admin<{ n: number }[]>`
+      select count(*)::int as n from audit.security_events where type like 'auth.email_hook_%'`;
+    const other = `v1,whsec_${randomBytes(32).toString("base64")}`;
+    expect((await call(login("x@hook.test"), { secret: other })).status).toBe(401);
+    expect(
+      (await call(login("x@hook.test"), { ts: Math.floor(Date.now() / 1000) - 600 })).status,
+    ).toBe(401);
+    expect(channel.sent).toHaveLength(0);
+    const after = await admin<{ n: number }[]>`
+      select count(*)::int as n from audit.security_events where type like 'auth.email_hook_%'`;
+    expect(after[0]!.n - before[0]!.n).toBe(2);
+  });
+
+  it("datos inesperados: 400 sin envío", async () => {
+    expect((await call(login("no-es-email"))).status).toBe(400);
+    expect((await call(login("a@hook.test", "<b>1</b>"))).status).toBe(400);
+    expect(channel.sent).toHaveLength(0);
+  });
+});

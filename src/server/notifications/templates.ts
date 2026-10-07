@@ -89,3 +89,40 @@ export function supportAccessNoticeEmail(input: {
     ),
   };
 }
+
+const AUTH_SUBJECTS: Record<string, string> = {
+  signup: "Tu código para entrar",
+  magiclink: "Tu código para entrar",
+  invite: "Tu código para entrar",
+  reauthentication: "Tu código de confirmación",
+  recovery: "Tu código para recuperar el acceso",
+  email_change: "Confirma tu nuevo email",
+};
+
+/** Código de un solo uso de Supabase Auth (Send Email Hook, F7-T04b). */
+export function authCodeEmail(input: {
+  to: string;
+  code: string;
+  action: string;
+  expiresMinutes: number;
+}): EmailMessage {
+  const subject = AUTH_SUBJECTS[input.action] ?? "Tu código de verificación";
+  return {
+    to: input.to,
+    subject,
+    text: [
+      `Tu código es: ${input.code}`,
+      "",
+      `Caduca en ${input.expiresMinutes} minutos. No lo compartas con nadie: nunca te lo pediremos.`,
+      "",
+      "Si no lo pediste, ignora este correo.",
+    ].join("\n"),
+    html: layout(
+      subject,
+      `<p>Tu código es:</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:4px">${escapeHtml(input.code)}</p>
+<p>Caduca en ${input.expiresMinutes} minutos. No lo compartas con nadie: nunca te lo pediremos.</p>
+<p style="color:#555">Si no lo pediste, ignora este correo.</p>`,
+    ),
+  };
+}

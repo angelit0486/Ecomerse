@@ -49,6 +49,11 @@ export const serverEnvSchema = z.object({
     .optional(),
   /** Solo pruebas: API de Stripe simulada. */
   STRIPE_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
+  // Send Email Hook de Supabase Auth (Standard Webhooks): v1,whsec_<base64>.
+  SEND_EMAIL_HOOK_SECRET: z
+    .string()
+    .regex(/^v1,whsec_[A-Za-z0-9+/=]{24,}$/)
+    .optional(),
   /** Origen público del panel para enlaces en emails (p. ej. https://app.ejemplo.com). */
   APP_URL: z.url({ protocol: /^https?$/ }),
   /** Canal de email (GATE0 §27.1): resend en producción; mailpit o fake en local/CI. */

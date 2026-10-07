@@ -58,3 +58,17 @@ pnpm dev                         # o: pnpm build && pnpm start -H localhost -p 3
 - Tiendas: `http://{handle}.tiendas.localhost:3000`. El navegador resuelve cualquier `*.localhost` a 127.0.0.1. `stack.sh` configura `platform_settings.storefront.root_domain = {"domain": "tiendas.localhost"}`, así el alta asistida crea ese subdominio. El dominio raíz debe tener al menos un punto.
 - Arranca siempre con `-H localhost`, nunca con `-H 127.0.0.1`. Next normaliza 127.0.0.1 a `localhost` en `request.nextUrl`, y entonces las reescrituras del proxy se tratan como proxy externo.
 - `tests/stack/storefront-routing.test.ts` necesita la app levantada y el mismo `PREVIEW_HMAC_SECRET`: `set -a; . ./.env.local; set +a; pnpm test:stack`.
+
+## Send Email Hook (opcional, F7-T04b)
+
+Por defecto Auth envía sus códigos por SMTP a Mailpit. Para probar el hook que usa
+producción (Auth delega el envío en la app, D-F7-07):
+
+```bash
+SECRET="v1,whsec_$(openssl rand -base64 32)"
+bash scripts/dev/stack.sh down && STACK_EMAIL_HOOK_SECRET="$SECRET" bash scripts/dev/stack.sh up
+SEND_EMAIL_HOOK_SECRET="$SECRET" pnpm start -H localhost -p 3000   # con .env.local cargado
+```
+
+Con el hook activo la app debe estar levantada: sin ella, el login por código falla.
+`pnpm test:stack` corre sin la app, así que úsalo con el stack por defecto.
