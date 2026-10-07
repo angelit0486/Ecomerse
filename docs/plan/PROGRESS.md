@@ -6,7 +6,7 @@
 ## Ahora
 
 - **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F7-T06c (100 checkouts con fallos aleatorios → cero estados inconsistentes); F7-T04b (Send Email Hook); luego Gate F7.
+- **Siguiente tarea:** F7-T04b (Send Email Hook de Supabase Auth con la marca de la tienda); luego Gate F7.
 - **Siguiente paso exacto:** reglas §27.2 sobre los jobs `order.created`, `order.paid`, `payment.failed`, `order.shipped`, `order.cancelled`, `refund.succeeded`, `payment.late_without_stock`; plantillas con la marca de la tienda; `notification_deliveries` con `dedupe_key`; destinatarios de staff configurables.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
@@ -71,6 +71,7 @@ Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.b
 | 7    | F7-T05 Validación de lanzamiento              | hecha                            | 23 pgTAP (cada bloqueo, plantilla legal sin completar, permisos, idempotencia, auditoría) + E2E de lanzamiento y onboarding actualizado                                   |
 | 7    | F7-T06a Operación del pedido en el panel      | hecha                            | E2E: surtir parcial (se conserva lo escrito tras error, rastreo solo https), entregar, reembolso parcial confirmado por job, cancelar pagado con reembolso total          |
 | 7    | F7-T06b Ajustes → Pagos y Notificaciones      | hecha (sandbox real: S-4)        | 15 pgTAP (solo el worker asocia/activa, idempotencia, desactivar no se revierte) + integración Connect (clave por tienda, account.updated re-consulta) + E2E de ajustes   |
+| 7    | F7-T06c 100 checkouts con fallos aleatorios   | hecha                            | `order-chaos` (semilla fija, 11 escenarios, 16 invariantes de inventario, dinero y estados); 20 semillas extra sin violaciones; 2 mutaciones detectadas                   |
 | 5–11 | Ver el plan §4                                | pendiente                        |                                                                                                                                                                           |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
