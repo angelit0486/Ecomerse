@@ -49,6 +49,11 @@ export default async function StoreLayout({ children, params }: Props) {
       label: "Notificaciones",
       show: hasPermission(ctx, "notifications.manage"),
     },
+    {
+      href: `${base}/ajustes/actividad`,
+      label: "Actividad",
+      show: hasPermission(ctx, "audit.read"),
+    },
   ].filter((item) => item.show);
 
   return (
