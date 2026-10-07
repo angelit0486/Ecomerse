@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** 8 — Customer Accounts & Admin Ops (Fase 7 cerrada en local: `docs/phases/PHASE-07-REPORT.md`; CI pendiente por P0).
-- **Siguiente tarea:** F8-T03 (dashboard de KPIs). Antes de F8-T04, decisiones D5 del propietario (`docs/plan/PROJECT-BRIEF.md` §10).
-- **Siguiente paso exacto:** RPC `dashboard_kpis(store, desde, hasta)` en la zona horaria de la tienda (ventas, pedidos, ticket promedio, top productos, stock bajo) con prueba contra un seed conocido.
+- **Siguiente tarea:** F8-T05 (Ajustes → Actividad). F8-T04 (importación y exportación) espera las decisiones D5 del propietario (`docs/plan/PROJECT-BRIEF.md` §10); mientras, se adelanta la exportación CSV, que no depende de ellas.
+- **Siguiente paso exacto:** RPC `audit_list` (paginada, filtros por acción y fecha, sin PII completa) con `audit.read` y la página Ajustes → Actividad.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -76,6 +76,7 @@ Todos desde `7549db7` (Gate 1) hasta la Fase 7 en curso. Bundle de respaldo: `pr
 | 7    | Gate F7                                       | hecha                            | 2 revisiones adversariales; 3 altas + 8 medias + 15 bajas corregidas; pgTAP 36 (34) + integración; mutación contra la base sin correcciones; `PHASE-07-REPORT.md`                                                                             |
 | 8    | F8-T01 Cuenta del comprador por tienda        | hecha                            | 26 pgTAP (vinculación solo tras OTP, aislamiento entre tiendas y clientes, aal1 sin panel, nota interna oculta, límites) + integración del hook con marca + E2E (código, pedido de invitado, dirección, 404 de otra tienda, cierre de sesión) |
 | 8    | F8-T02 Clientes en el panel                   | hecha                            | 20 pgTAP (enmascarado por rol, sin búsqueda sin PII, cursor, consentimiento solo retirable, anonimizar, aislamiento) + E2E de clientes                                                                                                        |
+| 8    | F8-T03 Dashboard de KPIs                      | hecha                            | 16 pgTAP contra un seed conocido (fronteras de zona horaria, reembolsos, ticket, top, rango, permisos, aislamiento) + E2E del inicio (7/30/90 días)                                                                                           |
 | 5–11 | Ver el plan §4                                | pendiente                        |                                                                                                                                                                                                                                               |
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
