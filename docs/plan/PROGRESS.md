@@ -7,7 +7,7 @@
 
 - **Fase actual:** 7 — Payments, Lifecycle & Notifications (Fase 6 cerrada en local: `docs/phases/PHASE-06-REPORT.md`; CI pendiente por P0).
 - **Siguiente tarea:** Gate F7 (revisión adversarial, correcciones e informe `docs/phases/PHASE-07-REPORT.md`).
-- **Siguiente paso exacto:** reglas §27.2 sobre los jobs `order.created`, `order.paid`, `payment.failed`, `order.shipped`, `order.cancelled`, `refund.succeeded`, `payment.late_without_stock`; plantillas con la marca de la tienda; `notification_deliveries` con `dedupe_key`; destinatarios de staff configurables.
+- **Siguiente paso exacto:** revisión adversarial de la Fase 7 (base de datos y dinero; capa de aplicación), correcciones en `20261014000600_phase7_gate_fixes.sql` y el informe.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
 
@@ -15,11 +15,11 @@
 
 | ID  | Bloqueo                                                                                                                                                                    | Desde      | Efecto                                                           | Mitigación activa                                                                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f5.bundle`, todos los commits sin subir). |
+| P0  | `git push` devuelve 403: la app de Claude no tiene acceso de escritura a `angelii33/pruva`. Arreglo: https://claude.ai/connect-github + instalar la app en el repositorio. | 2026-10-05 | El trabajo solo existe en el contenedor; el CI nunca ha corrido. | Bundles de respaldo en el scratchpad (último: `pruva-f7.bundle`, todos los commits sin subir). |
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta el Gate F5. Bundle de respaldo: `pruva-f5.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta la Fase 7 en curso. Bundle de respaldo: `pruva-f7.bundle` en el scratchpad.
 
 ## Tablero
 
