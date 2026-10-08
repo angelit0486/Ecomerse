@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { IMPORT_HEADERS } from "@/server/imports/products";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { linkButton, nativeControl } from "../styles";
@@ -17,17 +18,40 @@ type Props = {
 };
 
 const ERRORS: Record<string, string> = {
-  grande: "El archivo pesa más de 5 MB. Divídelo en varios archivos.",
+  grande: "El archivo pesa más de 4 MB. Divídelo en varios archivos.",
   filas: "El archivo tiene más de 5 000 filas. Divídelo en varios archivos.",
   archivo: "Elige un archivo CSV.",
   vacio: "El archivo no tiene filas debajo del encabezado.",
   modo: "Elige qué hacer con los productos.",
   codificacion:
     "El archivo no está en UTF-8. En Excel usa «Guardar como → CSV UTF-8 (delimitado por comas)».",
-  formato: "No pudimos leer el CSV: revisa las comillas",
-  columnas: "Las columnas no coinciden con la plantilla",
+  formato: "No pudimos leer el CSV",
+  columnas: "Revisa los encabezados del archivo",
   permiso: "No pudimos validar el archivo. Revisa que tu rol permita importar productos.",
 };
+
+const FORMAT: Record<string, string> = {
+  quote: "hay una comilla dentro de una celda sin comillas",
+  unclosed: "unas comillas no se cierran",
+  columns: "una fila tiene más de 100 columnas",
+  field: "una celda tiene más de 20 000 caracteres",
+};
+
+/** El detalle llega como códigos de la ruta de subida; nunca se muestra texto libre de la URL. */
+function errorDetail(code: string, raw: string): string | undefined {
+  if (code === "formato") {
+    const m = /^(\d{1,7}):(quote|unclosed|columns|field)$/.exec(raw);
+    return m ? `fila ${m[1]}: ${FORMAT[m[2]!]}` : undefined;
+  }
+  if (code === "columnas") {
+    const names = raw.split(",");
+    const known = new Set<string>(IMPORT_HEADERS);
+    return names.length > 0 && names.every((n) => known.has(n))
+      ? `falta o está repetida: ${names.join(", ")}`
+      : undefined;
+  }
+  return undefined;
+}
 
 /** Productos → Importar (F8-T04b, §26.1): subir CSV → vista previa → confirmar. */
 export default async function ImportPage({ params, searchParams }: Props) {
@@ -35,8 +59,9 @@ export default async function ImportPage({ params, searchParams }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "imports.run")) notFound();
   const sp = await searchParams;
-  const error = typeof sp.error === "string" ? ERRORS[sp.error] : undefined;
-  const detail = typeof sp.detalle === "string" ? sp.detalle : undefined;
+  const code = typeof sp.error === "string" && Object.hasOwn(ERRORS, sp.error) ? sp.error : null;
+  const error = code ? ERRORS[code] : undefined;
+  const detail = code && typeof sp.detalle === "string" ? errorDetail(code, sp.detalle) : undefined;
   const base = `/admin/${ctx.store.handle}/productos/importar`;
 
   const supabase = await createSupabaseServerClient();
@@ -77,7 +102,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
       >
         <div className="space-y-1">
           <label htmlFor="file" className="text-sm font-medium">
-            Archivo CSV (UTF-8, hasta 5 MB y 5 000 filas)
+            Archivo CSV (UTF-8, hasta 4 MB y 5 000 filas)
           </label>
           <input
             id="file"
@@ -98,8 +123,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
             <option value="update_existing">Solo actualizar productos existentes</option>
           </select>
           <p className="text-[13px] text-fg-muted">
-            Un producto existente se reconoce por su handle. Al actualizarlo, sus variantes quedan
-            como en el archivo: las que no aparezcan se retiran.
+            Un producto existente se reconoce por su handle y cada variante por su SKU o por sus
+            opciones. Importar nunca borra productos ni variantes.
           </p>
         </div>
         <button
@@ -116,20 +141,30 @@ export default async function ImportPage({ params, searchParams }: Props) {
         </h2>
         <ul className="list-disc space-y-1 pl-5 text-fg-muted">
           <li>
-            Obligatorios: <code>handle</code> y <code>price</code>; <code>title</code> en la primera
-            fila de cada producto. Las filas con el mismo handle son variantes del mismo producto.
+            Solo <code>handle</code> es obligatorio. Las filas con el mismo handle son variantes del
+            mismo producto; los datos del producto van en su primera fila. Para crear un producto
+            hacen falta <code>title</code> y <code>price</code>.
+          </li>
+          <li>
+            Una columna que no incluyas no cambia nada. Una celda vacía borra ese dato (descripción,
+            marca, categorías, etiquetas, SEO, código de barras, precio de comparación, peso y
+            medidas); el título, el precio y el estado vacíos se dejan como están.
           </li>
           <li>
             Precios como <code>199.50</code> (también <code>199,50</code>).{" "}
-            <code>inventory_quantity</code> son las existencias físicas de la ubicación principal.
+            <code>inventory_quantity</code> son las existencias físicas de la ubicación principal;
+            vacía, no se tocan.
           </li>
           <li>
             Categorías por nombre separadas con <code>|</code>; subcategorías con{" "}
             <code>Ropa &gt; Camisas</code>. Deben existir antes de importar.
           </li>
           <li>
-            <code>status</code> = <code>active</code> publica el producto si pasa la validación de
-            publicación; vacío o <code>draft</code> lo deja como borrador.
+            <code>status</code>: <code>active</code> publica (si el producto pasa la validación),{" "}
+            <code>draft</code> lo deja en borrador y <code>archived</code> lo archiva.
+          </li>
+          <li>
+            Las columnas que no son de la plantilla se ignoran y se avisan en la vista previa.
           </li>
         </ul>
         <p className="flex flex-wrap gap-2">

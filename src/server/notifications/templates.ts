@@ -99,10 +99,12 @@ const AUTH_SUBJECTS: Record<string, string> = {
   email_change: "Confirma tu nuevo email",
 };
 
-/** Marca de la tienda en la que el comprador pidió el código (F8-T01, D-F7-07). */
+/**
+ * Marca de la tienda en la que el comprador pidió el código (F8-T01, D-F7-07). Sin
+ * Reply-To: nadie debe responder (ni reenviar) un código de acceso (Gate F8).
+ */
 export interface AuthEmailBrand {
   name: string;
-  contactEmail: string | null;
   logoUrl: string | null;
   primaryColor: string | null;
 }
@@ -131,7 +133,6 @@ export function authCodeEmail(input: {
     to: input.to,
     subject,
     ...(brand ? { fromName: brand.name } : {}),
-    ...(brand?.contactEmail ? { replyTo: brand.contactEmail } : {}),
     text: [
       `Tu código es: ${input.code}`,
       "",

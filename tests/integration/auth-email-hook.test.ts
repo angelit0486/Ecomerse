@@ -38,9 +38,9 @@ function call(payload: unknown, opts: { id?: string; secret?: string; ts?: numbe
     otpMinutes: 10,
   });
 }
-const login = (email: string, token = "123456") => ({
+const login = (email: string, token = "123456", redirect_to?: string) => ({
   user: { email },
-  email_data: { token, email_action_type: "magiclink" },
+  email_data: { token, email_action_type: "magiclink", ...(redirect_to ? { redirect_to } : {}) },
 });
 
 beforeEach(() => {
@@ -102,7 +102,7 @@ describe("Send Email Hook", () => {
     expect(channel.sent).toHaveLength(0);
   });
 
-  it("comprador: el código lleva la marca de la tienda donde lo pidió (intento ≤ 15 min)", async () => {
+  it("comprador: el código lleva la marca de la tienda solo con el nonce de SU petición", async () => {
     const run = randomBytes(3).toString("hex");
     const [plan] = await admin<{ id: string }[]>`
       insert into public.plans (key, name) values ('hook_plan', 'hook_plan')
@@ -116,16 +116,24 @@ describe("Send Email Hook", () => {
       insert into public.stores (organization_id, name, handle, currency, country, timezone, status, launched_at, contact_email)
       values (${org!.id}, 'Panadería <La Espiga>', ${`hk-${run}`}, 'MXN', 'MX', 'America/Mexico_City', 'active', now(),
               'hola@espiga.test') returning id`;
-    await admin`select storefront.record_login_intent(${store!.id}, ${`compra-${run}@hook.test`}, ${"a".repeat(64)})`;
-    expect((await call(login(`compra-${run}@hook.test`))).status).toBe(200);
+    const buyer = `compra-${run}@hook.test`;
+    const [intent] = await admin<{ nonce: string }[]>`
+      select storefront.record_login_intent(${store!.id}, ${buyer}, ${"a".repeat(64)}) as nonce`;
+    const redirect = `http://localhost:3000/?pruva_login=${intent!.nonce}`;
+    expect((await call(login(buyer, "123456", redirect))).status).toBe(200);
     const m = channel.sent[0]!;
     expect(m.subject).toBe("Tu código para entrar a Panadería <La Espiga>");
     expect(m.fromName).toBe("Panadería <La Espiga>");
-    expect(m.replyTo).toBe("hola@espiga.test");
+    // Sin Reply-To: un código de acceso no se responde (ni se reenvía a la tienda).
+    expect(m.replyTo).toBeUndefined();
     expect(m.html).toContain("Panadería &lt;La Espiga&gt;");
-    // El staff (sin intento) recibe la plantilla de la plataforma.
+    // La MISMA persona entrando al panel (sin el nonce, aunque haya un intento
+    // reciente de otra tienda para su email) recibe la plantilla de la plataforma.
     channel = fakeChannel();
-    await call(login(`staff-${run}@hook.test`));
+    await call(login(buyer, "654321"));
+    expect(channel.sent[0]!.fromName).toBeUndefined();
+    channel = fakeChannel();
+    await call(login(buyer, "765432", "http://localhost:3000/?pruva_login=" + "0".repeat(32)));
     expect(channel.sent[0]!.fromName).toBeUndefined();
   });
 });

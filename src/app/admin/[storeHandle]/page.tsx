@@ -75,9 +75,12 @@ const dayLabel = (iso: string) =>
 export default async function StoreHomePage({ params, searchParams }: Props) {
   const ctx = await getStoreContextForPage((await params).storeHandle);
   const sp = await searchParams;
-  const rangeKey = typeof sp.rango === "string" && RANGES[sp.rango] ? sp.rango : "30";
+  const rangeKey =
+    typeof sp.rango === "string" && Object.hasOwn(RANGES, sp.rango) ? sp.rango : "30";
   const base = `/admin/${ctx.store.handle}`;
   const m = (cents: number) => formatMoney(cents, ctx.store.currency);
+  // Los atajos a Pedidos solo para quien puede verlos (si no, llevarían a un 404).
+  const canOrders = hasPermission(ctx, "orders.read");
 
   let kpis: Kpis | null = null;
   if (hasPermission(ctx, "analytics.read")) {
@@ -127,14 +130,22 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             </h2>
             <ul className="flex flex-wrap gap-3 text-sm">
               <li className="rounded-md border border-border px-3 py-2">
-                <Link href={`${base}/pedidos?estado=pagados`} className="underline">
-                  {kpis.to_fulfill} por surtir
-                </Link>
+                {canOrders ? (
+                  <Link href={`${base}/pedidos?estado=pagados`} className="underline">
+                    {kpis.to_fulfill} por surtir
+                  </Link>
+                ) : (
+                  `${kpis.to_fulfill} por surtir`
+                )}
               </li>
               <li className="rounded-md border border-border px-3 py-2">
-                <Link href={`${base}/pedidos?estado=pendientes`} className="underline">
-                  {kpis.pending_payment} pendientes de pago
-                </Link>
+                {canOrders ? (
+                  <Link href={`${base}/pedidos?estado=pendientes`} className="underline">
+                    {kpis.pending_payment} pendientes de pago
+                  </Link>
+                ) : (
+                  `${kpis.pending_payment} pendientes de pago`
+                )}
               </li>
               <li
                 className={`rounded-md border px-3 py-2 ${kpis.needs_attention > 0 ? "border-warning" : "border-border"}`}

@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { createLogger } from "@/server/observability/logger";
 
 import { runJobs } from "./runner";
-import { PermanentJobError, type JobHandler, type JobRecord, type JobStore } from "./types";
+import {
+  DeferJobError,
+  PermanentJobError,
+  type JobHandler,
+  type JobRecord,
+  type JobStore,
+} from "./types";
 
 /** JobStore en memoria con la misma semántica observable que system.* */
 function memoryStore(initial: Array<Pick<JobRecord, "id" | "type">>) {
@@ -35,6 +41,12 @@ function memoryStore(initial: Array<Pick<JobRecord, "id" | "type">>) {
     async complete(id) {
       const j = jobs.find((x) => x.id === id)!;
       j.status = "succeeded";
+      return true;
+    },
+    async release(id) {
+      const j = jobs.find((x) => x.id === id)!;
+      j.status = "queued";
+      j.attempts -= 1;
       return true;
     },
     async fail(id, _workerId, error, permanent) {
@@ -77,7 +89,7 @@ describe("runJobs", () => {
 
     const result = await runJobs({ store, registry, workerId: "w", log: silent });
 
-    expect(result).toEqual({ claimed: 4, succeeded: 1, retried: 1, dead: 2 });
+    expect(result).toEqual({ claimed: 4, succeeded: 1, retried: 1, dead: 2, deferred: 0 });
     expect(jobs.map((j) => j.status)).toEqual(["succeeded", "retry", "dead", "dead"]);
     expect(jobs[1]!.lastError).toBe("Error: timeout llamando a [email]");
     expect(jobs[3]!.lastError).toBe("unknown_job_type");
@@ -116,6 +128,44 @@ describe("runJobs", () => {
       succeeded: 0,
       retried: 0,
       dead: 0,
+      deferred: 0,
     });
+  });
+
+  it("aplaza sin gastar intentos lo que no cabe en el tiempo restante", async () => {
+    const { store, jobs } = memoryStore([
+      { id: "1", type: "test.ok" },
+      { id: "2", type: "test.big" },
+      { id: "3", type: "test.ok" },
+    ]);
+    let seenDeadline = 0;
+    const registry = new Map<string, JobHandler>([
+      ["test.ok", async () => {}],
+      [
+        "test.big",
+        async (_job, context) => {
+          seenDeadline = context.deadline;
+          throw new DeferJobError();
+        },
+      ],
+    ]);
+    const result = await runJobs({
+      store,
+      registry,
+      workerId: "w",
+      log: silent,
+      batchSize: 5,
+      deadlineMs: 45_000,
+      hardDeadlineMs: 55_000,
+      now: () => 1_000,
+    });
+    expect(seenDeadline).toBe(56_000);
+    expect(result).toMatchObject({ claimed: 3, succeeded: 1, deferred: 1 });
+    // El aplazado y el que quedaba en el lote vuelven a la cola con sus intentos intactos.
+    expect(jobs.map((j) => [j.id, j.status, j.attempts])).toEqual([
+      ["1", "succeeded", 1],
+      ["2", "queued", 0],
+      ["3", "queued", 0],
+    ]);
   });
 });

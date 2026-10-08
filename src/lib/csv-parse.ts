@@ -7,12 +7,24 @@
 export interface ParsedCsv {
   headers: string[];
   rows: string[][];
+  /** Número de fila de la hoja de cálculo de cada fila (las vacías también cuentan). */
+  rowNumbers: number[];
   delimiter: "," | ";";
 }
+
+export interface CsvLimits {
+  /** Columnas por fila (un encabezado con miles de comas no se procesa). */
+  maxColumns?: number;
+  /** Caracteres por celda. */
+  maxFieldLength?: number;
+}
+
+export type CsvErrorCode = "quote" | "unclosed" | "columns" | "field";
 
 export class CsvParseError extends Error {
   constructor(
     readonly line: number,
+    readonly code: CsvErrorCode,
     message: string,
   ) {
     super(message);
@@ -33,7 +45,9 @@ function detectDelimiter(text: string): "," | ";" {
   return semis > commas ? ";" : ",";
 }
 
-export function parseCsv(input: string): ParsedCsv {
+export function parseCsv(input: string, limits: CsvLimits = {}): ParsedCsv {
+  const maxColumns = limits.maxColumns ?? 100;
+  const maxField = limits.maxFieldLength ?? 20_000;
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
   const delimiter = detectDelimiter(text);
   const records: string[][] = [];
@@ -54,16 +68,22 @@ export function parseCsv(input: string): ParsedCsv {
       } else {
         if (ch === "\n") line += 1;
         field += ch;
+        if (field.length > maxField) {
+          throw new CsvParseError(line, "field", `una celda tiene más de ${maxField} caracteres`);
+        }
       }
       continue;
     }
     if (ch === '"') {
       if (field.length > 0)
-        throw new CsvParseError(line, "comilla dentro de un campo sin comillas");
+        throw new CsvParseError(line, "quote", "comilla dentro de un campo sin comillas");
       inQuotes = true;
     } else if (ch === delimiter) {
       record.push(field);
       field = "";
+      if (record.length >= maxColumns) {
+        throw new CsvParseError(line, "columns", `más de ${maxColumns} columnas`);
+      }
     } else if (ch === "\n" || ch === "\r") {
       if (ch === "\r" && text[i + 1] === "\n") i += 1;
       record.push(field);
@@ -74,14 +94,24 @@ export function parseCsv(input: string): ParsedCsv {
     } else {
       field += ch;
     }
+    if (field.length > maxField)
+      throw new CsvParseError(line, "field", `una celda tiene más de ${maxField} caracteres`);
   }
-  if (inQuotes) throw new CsvParseError(line, "comillas sin cerrar");
+  if (inQuotes) throw new CsvParseError(line, "unclosed", "comillas sin cerrar");
   if (field.length > 0 || record.length > 0) {
     record.push(field);
     records.push(record);
   }
-  // Las filas totalmente vacías (p. ej. al final del archivo) no cuentan.
-  const nonEmpty = records.filter((r) => r.some((c) => c.trim() !== ""));
-  const [headers = [], ...rows] = nonEmpty;
-  return { headers: headers.map((h) => h.trim().toLowerCase()), rows, delimiter };
+  // Las filas totalmente vacías no se procesan, pero cuentan para numerar como la
+  // hoja de cálculo (cada registro CSV es una fila de la hoja).
+  const numbered = records
+    .map((r, i) => ({ r, n: i + 1 }))
+    .filter(({ r }) => r.some((c) => c.trim() !== ""));
+  const [header, ...rest] = numbered;
+  return {
+    headers: (header?.r ?? []).map((h) => h.trim().toLowerCase()),
+    rows: rest.map(({ r }) => r),
+    rowNumbers: rest.map(({ n }) => n),
+    delimiter,
+  };
 }

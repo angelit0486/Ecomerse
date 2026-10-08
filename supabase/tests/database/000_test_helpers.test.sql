@@ -49,6 +49,19 @@ begin
   perform set_config('role', 'authenticated', true);
 end $$;
 
+-- Sesión de comprador recién verificada con un código por email (amr otp, aal1).
+create or replace function tests.login_otp(p_key text, p_seconds_ago integer default 0) returns void
+language plpgsql as $$
+declare v_user uuid := tests.fx(p_key);
+begin
+  perform set_config('request.jwt.claims', json_build_object(
+    'sub', v_user, 'role', 'authenticated', 'aal', 'aal1',
+    'amr', json_build_array(json_build_object('method', 'otp',
+                                              'timestamp', extract(epoch from now())::bigint - p_seconds_ago)),
+    'email', (select u.email from auth.users u where u.id = v_user))::text, true);
+  perform set_config('role', 'authenticated', true);
+end $$;
+
 create or replace function tests.as_role(p_role text) returns void
 language plpgsql as $$
 begin

@@ -13,6 +13,7 @@ import {
   buyerUserId,
   linkCustomer,
   recordLoginIntent,
+  takeCodeAttempt,
 } from "@/server/storefront/account";
 import { getStorefront } from "@/server/storefront/context";
 
@@ -45,7 +46,21 @@ export async function requestCode(
   const raw = String(formData.get("email") ?? "");
   const email = emailSchema.safeParse(raw.trim().toLowerCase());
   if (!email.success) return { error: "Escribe un email válido.", values: { email: raw } };
-  if (!(await recordLoginIntent(store.id, email.data))) {
+  let nonce: string | null;
+  try {
+    nonce = await recordLoginIntent(store.id, email.data);
+  } catch (error) {
+    // La tienda aún no está publicada (vista previa del comerciante).
+    const e = reportActionError("account", error);
+    return {
+      error:
+        e.code === "not_found"
+          ? "Las cuentas de clientes se activan cuando la tienda se publica."
+          : "No pudimos enviar el código. Inténtalo de nuevo.",
+      values: { email: raw },
+    };
+  }
+  if (!nonce) {
     return {
       error: "Pediste demasiados códigos. Espera unos minutos e inténtalo de nuevo.",
       values: { email: raw },
@@ -53,7 +68,15 @@ export async function requestCode(
   }
   const supabase = await buyerClient();
   // Cualquier error se trata igual que un éxito: la respuesta no revela qué emails existen.
-  await supabase.auth.signInWithOtp({ email: email.data, options: { shouldCreateUser: true } });
+  // El nonce viaja en redirect_to hasta el Send Email Hook: solo así el código lleva la
+  // marca de esta tienda (Gate F8). El redirect solo apunta a la plataforma.
+  await supabase.auth.signInWithOtp({
+    email: email.data,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${serverEnv().APP_URL}/?pruva_login=${nonce}`,
+    },
+  });
   (await cookies()).set(EMAIL_COOKIE, email.data, {
     httpOnly: true,
     secure: secure(),
@@ -75,6 +98,11 @@ export async function verifyCode(
   if (!email) redirect("/cuenta");
   const code = codeSchema.safeParse(String(formData.get("code") ?? "").replace(/\s/g, ""));
   if (!code.success) return { error: "El código tiene 6 dígitos." };
+  // Límite propio de intentos (APP-M4): no depende de los límites por IP de Auth,
+  // que comparten todos los compradores detrás del servidor.
+  if (!(await takeCodeAttempt(store.id, email))) {
+    return { error: "Demasiados intentos. Espera unos minutos y pide un código nuevo." };
+  }
   const supabase = await buyerClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code.data, type: "email" });
   if (error || !data.user) {
@@ -150,13 +178,16 @@ export async function saveAddress(
   _: AccountState,
   formData: FormData,
 ): Promise<AccountState> {
-  const values = Object.fromEntries(ADDRESS_KEYS.map((k) => [k, String(formData.get(k) ?? "")]));
+  const values: Record<string, string> = {
+    ...Object.fromEntries(ADDRESS_KEYS.map((k) => [k, String(formData.get(k) ?? "")])),
+    is_default: formData.get("is_default") === "1" ? "1" : "",
+  };
   const { supabase, storeId: id } = await accountClient(storeId);
   try {
     await callRpc(supabase, "account_save_address", {
       p_store_id: id,
       p_address_id: null,
-      p_address: { ...values, is_default: formData.get("is_default") === "1" },
+      p_address: { ...values, is_default: values.is_default === "1" },
     });
   } catch (error) {
     const e = reportActionError("account", error);

@@ -30,11 +30,15 @@ export async function refreshSupabaseSession(input: {
     cookieOptions: { httpOnly: true, secure: input.secureCookies, sameSite: "lax", path: "/" },
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll: (items) => {
+      setAll: (items, headers) => {
         for (const { name, value } of items) request.cookies.set(name, value);
         requestHeaders.set("cookie", request.cookies.toString());
         response = make();
         for (const { name, value, options } of items) response.cookies.set(name, value, options);
+        // Cache-Control: private, no-store… (lo pide @supabase/ssr): una respuesta
+        // con tokens nuevos nunca debe quedar en una caché compartida (robots.txt,
+        // sitemap.xml y páginas públicas de la tienda también pasan por aquí).
+        for (const [key, value] of Object.entries(headers ?? {})) response.headers.set(key, value);
       },
     },
   });

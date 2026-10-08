@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { callRpc } from "@/server/db/rpc";
+import { serverEnv } from "@/server/env";
 
 import { failureFrom, formValues, storeClient, type FormState } from "../_shared/action-state";
+import { SEARCH_COOKIE } from "./search";
 
 const uuid = z.uuid();
 const failure = failureFrom("customers", {
@@ -16,6 +20,27 @@ const failure = failureFrom("customers", {
   reason: "Escribe el motivo (3 a 500 caracteres).",
 });
 
+export async function searchCustomers(storeHandle: string, formData: FormData): Promise<void> {
+  const { ctx } = await storeClient(storeHandle);
+  const base = `/admin/${ctx.store.handle}/clientes`;
+  const q = String(formData.get("q") ?? "")
+    .trim()
+    .slice(0, 100);
+  const jar = await cookies();
+  if (q) {
+    jar.set(SEARCH_COOKIE, q, {
+      httpOnly: true,
+      secure: ["production", "preview"].includes(serverEnv().APP_ENV),
+      sameSite: "strict",
+      path: base,
+      maxAge: 30 * 60,
+    });
+  } else {
+    jar.delete({ name: SEARCH_COOKIE, path: base });
+  }
+  redirect(base);
+}
+
 export async function updateCustomer(
   storeHandle: string,
   customerId: string,
@@ -23,7 +48,11 @@ export async function updateCustomer(
   formData: FormData,
 ): Promise<FormState> {
   if (!uuid.safeParse(customerId).success) return { error: "Cliente no válido." };
-  const values = formValues(formData, ["first_name", "last_name", "phone", "note"]);
+  const values: Record<string, string> = {
+    ...formValues(formData, ["first_name", "last_name", "phone", "note"]),
+    // La casilla también se conserva tras un error (React reinicia el formulario).
+    accepts_marketing: formData.get("accepts_marketing") === "1" ? "1" : "0",
+  };
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
     await callRpc(supabase, "customers_update", {
@@ -50,8 +79,11 @@ export async function anonymizeCustomer(
   formData: FormData,
 ): Promise<FormState> {
   if (!uuid.safeParse(customerId).success) return { error: "Cliente no válido." };
-  const values = formValues(formData, ["reason"]);
-  if (formData.get("confirm") !== "1") {
+  const values: Record<string, string> = {
+    ...formValues(formData, ["reason"]),
+    confirm: formData.get("confirm") === "1" ? "1" : "",
+  };
+  if (values.confirm !== "1") {
     return { error: "Confirma que entiendes que no se puede deshacer.", values };
   }
   try {

@@ -33,6 +33,12 @@ export function createPostgresJobStore(sql: Sql): JobStore {
       `;
       return row?.ok === true;
     },
+    async release(jobId, workerId) {
+      const [row] = await sql<{ ok: boolean }[]>`
+        select system.release_job(${jobId}, ${workerId}) as ok
+      `;
+      return row?.ok === true;
+    },
     async fail(jobId, workerId, error, permanent) {
       const [row] = await sql<{ status: string | null }[]>`
         select system.fail_job(${jobId}, ${workerId}, ${error}, ${permanent}) as status

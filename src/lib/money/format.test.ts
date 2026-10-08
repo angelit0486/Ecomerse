@@ -23,4 +23,11 @@ describe("dinero en centavos", () => {
     expect(centsToInput(null)).toBe("");
     expect(formatMoney(129990, "MXN")).toBe("$1,299.90");
   });
+
+  it("negativos exactos (ventas netas con más reembolsos que ventas)", () => {
+    expect(centsToInput(-150)).toBe("-1.50");
+    expect(centsToInput(-5)).toBe("-0.05");
+    expect(formatMoney(-150, "MXN")).toBe("-$1.50");
+    expect(formatMoney(-129990, "MXN")).toBe("-$1,299.90");
+  });
 });

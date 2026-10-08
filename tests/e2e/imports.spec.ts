@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-import { admin, createAuthUser, createTenant, loginNewStaff, uniq } from "./support";
+import { readFile } from "node:fs/promises";
+
+import { admin, createAuthUser, createTenant, loginNewStaff, runJobs, uniq } from "./support";
 
 /** F8-T04b: importación CSV → vista previa con errores por fila → confirmación todo o nada. */
 const run = uniq();
@@ -25,10 +27,12 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   await page.getByRole("link", { name: "Importar" }).click();
   await expect(page.getByRole("heading", { name: "Importar productos" })).toBeVisible();
 
-  // 1) Archivo con errores: nada se escribe y cada error dice su fila.
+  // 1) Archivo con errores: nada se escribe y cada error dice su fila (la de la hoja,
+  //    contando la línea en blanco). Una columna ajena (store_id) se ignora y se avisa.
   const bad = [
-    HEADER,
-    line({ 0: "taza-roja", 1: "Taza roja", 5: "No existe", 13: sku, 15: "abc" }),
+    `${HEADER},store_id`,
+    "",
+    `${line({ 0: "taza-roja", 1: "Taza roja", 5: "No existe", 13: sku, 15: "abc" })},otra-tienda`,
   ].join("\n");
   await page.getByLabel(/Archivo CSV/).setInputFiles({
     name: "malo.csv",
@@ -39,7 +43,20 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   await expect(page.getByRole("heading", { name: "malo.csv" })).toBeVisible();
   await expect(page.getByText("price: escribe un importe como 199.50")).toBeVisible();
   await expect(page.getByText("categories: no existe la categoría No existe")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "3", exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Se ignoraron columnas que no son de la plantilla: store_id."),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirmar importación" })).toHaveCount(0);
+  // CSV de errores para corregir y volver a subir (§26.1 paso 3).
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Descargar las filas con error (CSV)" }).click(),
+  ]);
+  const errorsCsv = await readFile((await download.path())!, "utf8");
+  expect(errorsCsv).toContain("fila,errores,handle");
+  expect(errorsCsv).toContain("price: escribe un importe como 199.50");
+  expect(errorsCsv).not.toContain("otra-tienda");
 
   // 2) Archivo correcto con dos variantes (punto y coma y coma decimal, como Excel en español).
   const good = [
@@ -67,7 +84,10 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   await page.getByRole("button", { name: "Validar archivo" }).click();
   await expect(page.getByRole("heading", { name: "bueno.csv" })).toBeVisible();
   await page.getByRole("button", { name: "Confirmar importación" }).click();
-  await expect(page.getByText("Importación terminada.")).toBeVisible();
+  // La confirmación la aplica el worker (job import.commit); la página se actualiza sola.
+  await expect(page.getByText(/Importando…/)).toBeVisible();
+  await runJobs();
+  await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 15_000 });
 
   const [variant] = await admin<{ price: string; on_hand: number }[]>`
     select v.price::text, l.on_hand from public.product_variants v

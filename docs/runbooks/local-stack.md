@@ -59,6 +59,18 @@ pnpm dev                         # o: pnpm build && pnpm start -H localhost -p 3
 - Arranca siempre con `-H localhost`, nunca con `-H 127.0.0.1`. Next normaliza 127.0.0.1 a `localhost` en `request.nextUrl`, y entonces las reescrituras del proxy se tratan como proxy externo.
 - `tests/stack/storefront-routing.test.ts` necesita la app levantada y el mismo `PREVIEW_HMAC_SECRET`: `set -a; . ./.env.local; set +a; pnpm test:stack`.
 
+## Jobs en local
+
+En producción, Vercel Cron llama al runner cada minuto. En local nadie lo llama: los
+emails de pedidos, el procesamiento de imágenes y la **confirmación de una importación
+de productos** (job `import.commit`, Gate F8) se quedan en la cola hasta que lo ejecutas:
+
+```bash
+curl -s -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/jobs/run   # con .env.local cargado
+```
+
+Las pruebas E2E lo hacen con `runJobs()` de `tests/e2e/support.ts`.
+
 ## Send Email Hook (opcional, F7-T04b)
 
 Por defecto Auth envía sus códigos por SMTP a Mailpit. Para probar el hook que usa

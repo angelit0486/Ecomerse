@@ -1,7 +1,7 @@
 import type { Logger } from "@/server/observability/logger";
 import { redactString } from "@/server/observability/redact";
 
-import { PermanentJobError, type JobRegistry, type JobStore } from "./types";
+import { DeferJobError, PermanentJobError, type JobRegistry, type JobStore } from "./types";
 
 export interface RunJobsOptions {
   store: JobStore;
@@ -10,8 +10,10 @@ export interface RunJobsOptions {
   log: Logger;
   /** Jobs por reclamo. */
   batchSize?: number;
-  /** Tiempo máximo de la invocación (las funciones serverless tienen límite). */
+  /** Hasta cuándo se reclaman jobs (las funciones serverless tienen límite). */
   deadlineMs?: number;
+  /** Límite duro de la invocación: los handlers largos ajustan su trabajo a él. */
+  hardDeadlineMs?: number;
   now?: () => number;
 }
 
@@ -20,6 +22,7 @@ export interface RunJobsResult {
   succeeded: number;
   retried: number;
   dead: number;
+  deferred: number;
 }
 
 const MAX_ERROR_LENGTH = 500;
@@ -32,10 +35,13 @@ export async function runJobs(options: RunJobsOptions): Promise<RunJobsResult> {
   const { store, registry, workerId, log } = options;
   const batchSize = options.batchSize ?? 10;
   const now = options.now ?? Date.now;
-  const deadline = now() + (options.deadlineMs ?? 50_000);
-  const result: RunJobsResult = { claimed: 0, succeeded: 0, retried: 0, dead: 0 };
+  const started = now();
+  const deadline = started + (options.deadlineMs ?? 50_000);
+  const hardDeadline =
+    started + (options.hardDeadlineMs ?? (options.deadlineMs ?? 50_000) + 10_000);
+  const result: RunJobsResult = { claimed: 0, succeeded: 0, retried: 0, dead: 0, deferred: 0 };
 
-  while (now() < deadline) {
+  claiming: while (now() < deadline) {
     const jobs = await store.claim(workerId, batchSize);
     if (jobs.length === 0) break;
     result.claimed += jobs.length;
@@ -52,10 +58,18 @@ export async function runJobs(options: RunJobsOptions): Promise<RunJobsResult> {
       }
 
       try {
-        await handler(job, { log: jobLog });
+        await handler(job, { log: jobLog, deadline: hardDeadline });
         await store.complete(job.id, workerId);
         result.succeeded += 1;
       } catch (error) {
+        if (error instanceof DeferJobError) {
+          // Sin tiempo: el job y los que queden en el lote vuelven a la cola intactos.
+          for (const pending of jobs.slice(jobs.indexOf(job)))
+            await store.release(pending.id, workerId);
+          result.deferred += 1;
+          jobLog.info("Job aplazado a la siguiente ejecución", { reason: error.message });
+          break claiming;
+        }
         const permanent = error instanceof PermanentJobError;
         const message = redactString(
           error instanceof Error ? `${error.name}: ${error.message}` : String(error),

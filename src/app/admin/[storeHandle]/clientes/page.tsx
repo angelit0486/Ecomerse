@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -8,6 +9,9 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
+
+import { searchCustomers } from "./actions";
+import { SEARCH_COOKIE } from "./search";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -37,7 +41,8 @@ export default async function CustomersPage({ params, searchParams }: Props) {
   if (!hasPermission(ctx, "customers.read")) notFound();
   const canSearch = hasPermission(ctx, "customers.pii.read");
   const sp = await searchParams;
-  const q = canSearch && typeof sp.q === "string" ? sp.q.slice(0, 100) : "";
+  // La búsqueda viaja en una cookie de esta página, no en la URL (APP-L8).
+  const q = canSearch ? ((await cookies()).get(SEARCH_COOKIE)?.value ?? "").slice(0, 100) : "";
   const cursor = typeof sp.despues === "string" ? sp.despues.slice(0, 80) : null;
   const supabase = await createSupabaseServerClient();
   const page = await callRpc<{ items: CustomerRow[]; next_cursor: string | null }>(
@@ -58,7 +63,11 @@ export default async function CustomersPage({ params, searchParams }: Props) {
         ) : null}
       </header>
       {canSearch ? (
-        <form method="get" role="search" className="flex max-w-md gap-2">
+        <form
+          action={searchCustomers.bind(null, ctx.store.handle)}
+          role="search"
+          className="flex max-w-md gap-2"
+        >
           <label htmlFor="q" className="sr-only">
             Buscar por email o nombre
           </label>
@@ -73,6 +82,11 @@ export default async function CustomersPage({ params, searchParams }: Props) {
             Buscar
           </button>
         </form>
+      ) : null}
+      {q ? (
+        <p className="text-sm text-fg-muted">
+          Resultados de la búsqueda. Para ver todos, deja el buscador vacío y pulsa Buscar.
+        </p>
       ) : null}
       {page.items.length === 0 ? (
         <EmptyState
@@ -110,7 +124,7 @@ export default async function CustomersPage({ params, searchParams }: Props) {
       )}
       {page.next_cursor ? (
         <Link
-          href={`${base}?${new URLSearchParams({ ...(q ? { q } : {}), despues: page.next_cursor })}`}
+          href={`${base}?${new URLSearchParams({ despues: page.next_cursor })}`}
           className="text-sm underline"
         >
           Siguientes

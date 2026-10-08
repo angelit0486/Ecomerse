@@ -4,7 +4,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(15);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('viewer', 'viewer@a.io');
@@ -41,18 +41,40 @@ select throws_ok(format($$ select public.exports_rows(%L, 'customers') $$, tests
   'catalog_manager no exporta clientes (sin customers.read)');
 select tests.logout();
 
-select tests.login('inv');
+-- Rol propio de la organización con pedidos y exportación, pero sin PII.
+select tests.create_user('nopii', 'nopii@a.io');
+select tests.add_store_member('a', 'nopii', 'viewer');
+with r as (
+  insert into public.roles (key, organization_id, name, rank) values ('pedidos_sin_pii', tests.fx('org_a'), 'Pedidos', 50)
+  returning id
+), p as (
+  insert into public.role_permissions (role_id, permission_key)
+  select r.id, k from r, unnest(array['store.read', 'orders.read', 'orders.update', 'exports.run']) k
+)
+update public.store_members set role_id = (select id from r)
+ where store_id = tests.fx('store_a') and user_id = tests.fx('nopii');
+select tests.login('nopii');
 select is((select count(*)::int from jsonb_array_elements(public.exports_rows(tests.fx('store_a'), 'orders') -> 'rows') r
             where r ? 'email'), 0, 'sin customers.pii.read: pedidos sin datos de contacto');
+select tests.logout();
+
+select tests.login('inv');
+select throws_ok(format($$ select public.exports_rows(%L, 'orders') $$, tests.fx('store_a')), '42501', 'forbidden',
+  'inventory_manager exporta inventario, no pedidos (§8.3)');
 select tests.logout();
 
 select tests.login('orders');
 select is(public.exports_rows(tests.fx('store_a'), 'orders') -> 'rows' -> 0 ->> 'email', 'test@example.test',
   'con PII: email del pedido');
-select is(public.exports_rows(tests.fx('store_a'), 'customers') -> 'rows' -> 0 ->> 'email', 'luis@compra.io',
-  'clientes completos con PII');
+select throws_ok(format($$ select public.exports_rows(%L, 'customers') $$, tests.fx('store_a')), '42501', 'forbidden',
+  'order_manager no exporta la lista de clientes (§8.3)');
 select throws_ok(format($$ select public.exports_rows(%L, 'secretos') $$, tests.fx('store_a')), 'P0001',
   'validation_failed', 'entidad desconocida: rechazada');
+select tests.logout();
+
+select tests.login('owner');
+select is(public.exports_rows(tests.fx('store_a'), 'customers') -> 'rows' -> 0 ->> 'email', 'luis@compra.io',
+  'clientes completos: solo la administración de la tienda');
 select tests.logout();
 
 select ok(exists (select 1 from audit.audit_logs where action = 'export.requested' and store_id = tests.fx('store_a')

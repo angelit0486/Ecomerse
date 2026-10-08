@@ -26,7 +26,7 @@ insert into public.customers (store_id, email) select tests.fx('store_a'), 'c' |
 
 -- ============================================================================ Sin PII (viewer)
 select tests.login('viewer');
-select is(public.customers_get(tests.fx('store_a'), tests.fx('ana')) ->> 'email', 'an***@compra.io', 'email enmascarado');
+select is(public.customers_get(tests.fx('store_a'), tests.fx('ana')) ->> 'email', 'a***@c***.io', 'email enmascarado (sin parte local ni dominio completos)');
 select is(public.customers_get(tests.fx('store_a'), tests.fx('ana')) ->> 'phone', '••• 5678', 'teléfono enmascarado');
 select is(public.customers_get(tests.fx('store_a'), tests.fx('ana')) ->> 'name', 'A. L.', 'nombre en iniciales');
 select ok(public.customers_get(tests.fx('store_a'), tests.fx('ana')) -> 'note' = 'null'::jsonb

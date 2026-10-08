@@ -22,17 +22,33 @@ export interface AuthHookResult {
 
 interface IntentBrand {
   name: string;
-  contact_email: string | null;
   logo_path: string | null;
   primary_color: string | null;
 }
 
 interface HookPayload {
   user?: { email?: unknown; new_email?: unknown };
-  email_data?: { token?: unknown; token_new?: unknown; email_action_type?: unknown };
+  email_data?: {
+    token?: unknown;
+    token_new?: unknown;
+    email_action_type?: unknown;
+    redirect_to?: unknown;
+  };
 }
 
 const CODE_RE = /^\d{6,10}$/;
+const NONCE_RE = /^[0-9a-f]{32}$/;
+
+/** Nonce del intento de acceso de la tienda (`?pruva_login=` en redirect_to). */
+export function loginNonce(redirectTo: unknown): string | null {
+  if (typeof redirectTo !== "string" || redirectTo.length > 2000) return null;
+  try {
+    const nonce = new URL(redirectTo).searchParams.get("pruva_login");
+    return nonce && NONCE_RE.test(nonce) ? nonce : null;
+  } catch {
+    return null;
+  }
+}
 const ACTION_RE = /^[a-z_]{1,40}$/;
 
 function error(status: number, message: string): AuthHookResult {
@@ -96,16 +112,18 @@ export async function handleSendEmailHook(deps: {
     }
   }
   try {
-    // Marca de la tienda donde se pidió el código (intento de ≤ 15 min); sin intento, plataforma (staff).
-    const [intent] = await deps.db<{ b: IntentBrand | null }[]>`
-      select system.login_intent_store(${(sends[0] as { to: string }).to}) as b`;
+    // Marca de la tienda SOLO si esta petición de código la registró el servidor de
+    // esa tienda (nonce en redirect_to, Gate F8): el login del panel o una llamada
+    // directa a Auth nunca reciben la marca de otra tienda.
+    const nonce = loginNonce(payload.email_data?.redirect_to);
+    const [intent] =
+      nonce && (action === "magiclink" || action === "signup")
+        ? await deps.db<{ b: IntentBrand | null }[]>`
+            select system.login_intent_store(${(sends[0] as { to: string }).to}, ${nonce}) as b`
+        : [];
     const brand: AuthEmailBrand | null = intent?.b
       ? {
           name: intent.b.name,
-          contactEmail:
-            intent.b.contact_email && isEmail(intent.b.contact_email)
-              ? intent.b.contact_email
-              : null,
           logoUrl: intent.b.logo_path && deps.mediaUrl ? deps.mediaUrl(intent.b.logo_path) : null,
           primaryColor: intent.b.primary_color,
         }

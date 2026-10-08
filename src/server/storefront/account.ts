@@ -59,11 +59,22 @@ export interface AccountOrder extends GuestOrder {
   }[];
 }
 
-/** Registra el intento (marca del email del código) y aplica el límite de frecuencia. */
-export async function recordLoginIntent(storeId: string, email: string): Promise<boolean> {
+/**
+ * Registra el intento (marca del email del código) y aplica los límites de
+ * frecuencia. Devuelve el nonce que viaja en redirect_to hasta el Send Email Hook,
+ * o null si se superó un límite.
+ */
+export async function recordLoginIntent(storeId: string, email: string): Promise<string | null> {
+  const [row] = await gatewayDb()<{ nonce: string | null }[]>`
+    select storefront.record_login_intent(${storeId}, ${email}, ${await clientIpHash()}) as nonce`;
+  return row?.nonce ?? null;
+}
+
+/** Cuenta un intento de verificar el código (por email en todas las tiendas y por IP). */
+export async function takeCodeAttempt(storeId: string, email: string): Promise<boolean> {
   const [row] = await gatewayDb()<{ ok: boolean }[]>`
-    select storefront.record_login_intent(${storeId}, ${email}, ${await clientIpHash()}) as ok`;
-  return Boolean(row?.ok);
+    select storefront.take_code_attempt(${storeId}, ${email}, ${await clientIpHash()}) as ok`;
+  return row?.ok === true;
 }
 
 export async function buyerClient(): Promise<SupabaseClient> {

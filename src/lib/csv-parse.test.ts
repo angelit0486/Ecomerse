@@ -31,6 +31,22 @@ describe("parseCsv", () => {
     expect(parseCsv(csv).rows).toEqual([["'=SUMA(A1)", 'x,"y"\nz']]);
   });
 
+  it("numera las filas como la hoja de cálculo, contando las vacías", () => {
+    const p = parseCsv("handle,price\na,1\n,\n\nb,2\n");
+    expect(p.rows).toEqual([
+      ["a", "1"],
+      ["b", "2"],
+    ]);
+    expect(p.rowNumbers).toEqual([2, 5]);
+  });
+
+  it("límites: columnas por fila y caracteres por celda", () => {
+    expect(() => parseCsv(`handle${",".repeat(100)}\n`)).toThrow(/más de 100 columnas/);
+    expect(parseCsv(`handle${",".repeat(99)}\n`).headers).toHaveLength(100);
+    expect(() => parseCsv(`a\n"${"x".repeat(20_001)}"\n`)).toThrow(/más de 20000 caracteres/);
+    expect(() => parseCsv(`a\n${"x".repeat(50)}\n`, { maxFieldLength: 10 })).toThrow(CsvParseError);
+  });
+
   it("errores de formato con número de línea", () => {
     expect(() => parseCsv('a,b\n1,"abierta\n')).toThrow(CsvParseError);
     expect(() => parseCsv('a,b\n1,x"y\n')).toThrow(/comilla/);

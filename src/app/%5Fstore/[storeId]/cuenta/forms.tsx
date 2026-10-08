@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   deleteAddress,
@@ -164,7 +164,7 @@ export function AddressForm({ storeId, country }: { storeId: string; country: st
       />
       <Input label="Teléfono (opcional)" name="phone" type="tel" defaultValue={v.phone} />
       <label className="flex items-center gap-2 self-end text-sm">
-        <input type="checkbox" name="is_default" value="1" />
+        <input type="checkbox" name="is_default" value="1" defaultChecked={v.is_default === "1"} />
         Usar como principal
       </label>
       <div className="flex items-center gap-3 sm:col-span-2">
@@ -180,18 +180,38 @@ export function AddressForm({ storeId, country }: { storeId: string; country: st
 export function DeleteAddressButton({
   storeId,
   addressId,
+  label,
 }: {
   storeId: string;
   addressId: string;
+  /** Qué dirección es (para lectores de pantalla y la confirmación). */
+  label: string;
 }) {
   const [state, action, pending] = useActionState<AccountState>(
     deleteAddress.bind(null, storeId, addressId),
     {},
   );
-  return (
-    <form action={action} className="inline-flex items-center gap-2">
-      <button type="submit" className="text-sm underline" disabled={pending}>
+  const [confirming, setConfirming] = useState(false);
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        className="text-sm underline"
+        aria-label={`Eliminar la dirección ${label}`}
+        onClick={() => setConfirming(true)}
+      >
         Eliminar
+      </button>
+    );
+  }
+  return (
+    <form action={action} className="inline-flex flex-wrap items-center gap-2">
+      <span className="text-sm">¿Eliminar {label}?</span>
+      <button type="submit" className="text-sm underline" disabled={pending}>
+        Sí, eliminar
+      </button>
+      <button type="button" className="text-sm underline" onClick={() => setConfirming(false)}>
+        Cancelar
       </button>
       <Feedback state={state} />
     </form>

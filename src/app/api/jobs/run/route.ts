@@ -48,6 +48,8 @@ async function handle(request: Request): Promise<Response> {
       workerId,
       log: reqLog.child({ worker_id: workerId }),
       deadlineMs: 45_000,
+      // maxDuration = 60: los handlers largos (importación) se ajustan a este límite.
+      hardDeadlineMs: 55_000,
       // Un job por reclamo: el plazo se comprueba antes de cada uno y un medio
       // pesado (≤ 15 s con el timeout de sharp) no arrastra a otros (Gate F3).
       batchSize: 1,

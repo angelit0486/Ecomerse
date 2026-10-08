@@ -62,7 +62,12 @@ export function CustomerForm({
       </label>
       {initial.accepts_marketing ? (
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" name="accepts_marketing" value="1" defaultChecked />
+          <input
+            type="checkbox"
+            name="accepts_marketing"
+            value="1"
+            defaultChecked={state.values?.accepts_marketing !== "0"}
+          />
           Acepta recibir publicidad (desmarca para retirarlo)
         </label>
       ) : null}
@@ -96,11 +101,20 @@ export function AnonymizeForm({
           maxLength={500}
           defaultValue={state.values?.reason}
           placeholder="Por ejemplo: el cliente pidió eliminar sus datos"
+          aria-describedby="reason-hint"
           className={inputClass}
         />
+        <span id="reason-hint" className="text-[13px] font-normal text-fg-muted">
+          Queda en la actividad de la tienda: no escribas datos personales del cliente.
+        </span>
       </label>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="confirm" value="1" />
+        <input
+          type="checkbox"
+          name="confirm"
+          value="1"
+          defaultChecked={state.values?.confirm === "1"}
+        />
         Entiendo que no se puede deshacer
       </label>
       <div className="flex items-center gap-3">

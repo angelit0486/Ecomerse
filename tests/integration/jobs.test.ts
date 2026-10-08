@@ -70,7 +70,7 @@ describe("cola de jobs (system_worker)", () => {
     ]);
 
     const result = await runJobs({ store, registry, workerId: "it-worker", log: silent });
-    expect(result).toEqual({ claimed: 4, succeeded: 1, retried: 1, dead: 2 });
+    expect(result).toEqual({ claimed: 4, succeeded: 1, retried: 1, dead: 2, deferred: 0 });
 
     const rows = await admin<
       { type: string; status: string; attempts: number; last_error: string | null; delay: number }[]

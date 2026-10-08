@@ -99,7 +99,11 @@ export default async function AccountPage({ params }: Props) {
                   {a.line1}
                   {a.line2 ? `, ${a.line2}` : ""}, {a.postal_code} {a.city}, {a.region}, {a.country}
                 </p>
-                <DeleteAddressButton storeId={store.id} addressId={a.id} />
+                <DeleteAddressButton
+                  storeId={store.id}
+                  addressId={a.id}
+                  label={`${a.line1}, ${a.city}`}
+                />
               </li>
             ))}
           </ul>

@@ -17,7 +17,11 @@ const ERRORS: Record<string, string> = {
   permiso: "No pudimos generar el archivo. Revisa que tu rol permita exportar estos datos.",
 };
 
-/** Ajustes → Exportar (F8-T04a): CSV con permisos por entidad; PII solo con customers.pii.read. */
+/**
+ * Ajustes → Exportar (F8-T04a, Gate F8): cada rol exporta su área (GATE0 §8.3) —
+ * catálogo, inventario o pedidos— y los clientes solo la administración de la tienda.
+ * Las mismas reglas que exports_rows; PII solo con customers.pii.read.
+ */
 export default async function ExportPage({ params, searchParams }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
@@ -30,13 +34,13 @@ export default async function ExportPage({ params, searchParams }: Props) {
       key: "products",
       label: "Productos",
       hint: "Una fila por variante, con las columnas de la plantilla de importación.",
-      show: hasPermission(ctx, "products.read"),
+      show: hasPermission(ctx, "products.update"),
     },
     {
       key: "inventory",
       label: "Inventario",
       hint: "Existencias por ubicación.",
-      show: hasPermission(ctx, "inventory.read"),
+      show: hasPermission(ctx, "inventory.adjust"),
     },
     {
       key: "orders",
@@ -44,13 +48,13 @@ export default async function ExportPage({ params, searchParams }: Props) {
       hint: pii
         ? "Incluye email, teléfono y destino."
         : "Sin datos de contacto (tu rol no los incluye).",
-      show: hasPermission(ctx, "orders.read"),
+      show: hasPermission(ctx, "orders.update"),
     },
     {
       key: "customers",
       label: "Clientes",
       hint: pii ? "Con datos de contacto." : "Con datos enmascarados.",
-      show: hasPermission(ctx, "customers.read"),
+      show: hasPermission(ctx, "customers.delete"),
     },
   ].filter((e) => e.show);
   const base = `/admin/${ctx.store.handle}/ajustes/exportar`;

@@ -88,7 +88,11 @@ export default async function CustomerPage({ params }: Props) {
                 <Link href={`/admin/${ctx.store.handle}/pedidos/${o.id}`} className="underline">
                   {o.display_number}
                 </Link>
-                <span>{new Date(o.placed_at).toLocaleDateString("es-MX")}</span>
+                <span>
+                  {new Date(o.placed_at).toLocaleDateString("es-MX", {
+                    timeZone: ctx.store.timezone,
+                  })}
+                </span>
                 <span>{visibleStatus(o)}</span>
                 <span>{m(o.total)}</span>
               </li>

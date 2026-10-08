@@ -33,6 +33,7 @@ const AREAS: Record<string, string> = {
   catalogo: "Catálogo e inventario",
   tienda: "Tienda y apariencia",
   equipo: "Equipo y soporte",
+  datos: "Importaciones y exportaciones",
 };
 
 /** Etiquetas legibles; una acción nueva sin etiqueta muestra su clave. */
@@ -77,17 +78,22 @@ const ACTIONS: Record<string, string> = {
   "export.requested": "Descargó una exportación",
   "import.requested": "Subió un archivo de importación",
   "import.committed": "Confirmó una importación de productos",
+  "import.failed": "Una importación no se aplicó (sin cambios)",
 };
-
-const when = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 
 /** Ajustes → Actividad (F8-T05): auditoría de la tienda, sin IP ni PII completa. */
 export default async function ActivityPage({ params, searchParams }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "audit.read")) notFound();
+  // Hora de la tienda (no la del servidor).
+  const when = new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: ctx.store.timezone,
+  });
   const sp = await searchParams;
-  const area = typeof sp.area === "string" && sp.area in AREAS ? sp.area : "";
+  const area = typeof sp.area === "string" && Object.hasOwn(AREAS, sp.area) ? sp.area : "";
   const cursor = typeof sp.antes === "string" ? sp.antes.slice(0, 80) : null;
   const supabase = await createSupabaseServerClient();
   const page = await callRpc<{ items: AuditItem[]; next_cursor: string | null }>(

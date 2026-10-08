@@ -54,14 +54,14 @@ select tests.set_fx('ana_b', tests.guest_order(tests.fx('store_b'), 'ana@compra.
 select tests.set_fx('beto_a', tests.guest_order(tests.fx('store_a'), 'beto@compra.io', 'beto-a'));
 
 -- ============================================================================ Vinculación
-select tests.login('sin_verificar', 'aal1');
+select tests.login_otp('sin_verificar');
 select throws_ok(format($$ select public.storefront_link_customer(%L) $$, tests.fx('store_a')), '42501', 'forbidden',
   'sin email verificado no se vincula (solo tras OTP)');
 select tests.logout();
 select throws_ok(format($$ select public.storefront_link_customer(%L) $$, tests.fx('store_a')), '42501', 'forbidden',
   'sin sesión no se vincula');
 
-select tests.login('ana', 'aal1');
+select tests.login_otp('ana');
 select isnt(public.storefront_link_customer(tests.fx('store_a')), null, 'Ana vincula su cuenta en la tienda A');
 select is(public.storefront_link_customer(tests.fx('store_a')),
   (select id from public.customers where store_id = tests.fx('store_a') and email = 'ana@compra.io'),
@@ -99,12 +99,12 @@ select tests.logout();
 
 -- Un cliente ya vinculado a otra cuenta no se puede tomar.
 update public.customers set user_id = tests.fx('ana') where store_id = tests.fx('store_b') and email = 'beto@compra.io';
-select tests.login('beto', 'aal1');
+select tests.login_otp('beto');
 select lives_ok(format($$ select public.storefront_link_customer(%L) $$, tests.fx('store_a')), 'Beto vincula en A');
 select tests.logout();
 
 -- ============================================================================ Perfil y direcciones
-select tests.login('ana', 'aal1');
+select tests.login_otp('ana');
 select lives_ok(format($$ select public.account_update_profile(%L, 'Ana', 'López', '+52 55 1234 5678') $$,
   tests.fx('store_a')), 'actualiza su perfil');
 select throws_ok(format($$ select public.account_update_profile(%L, 'Ana', null, '<script>') $$, tests.fx('store_a')),
@@ -115,7 +115,7 @@ select is((public.account_overview(tests.fx('store_a')) -> 'addresses' -> 0 ->> 
 select throws_ok(format($$ select public.account_save_address(%L, null, '{"recipient_name":"","line1":"x","city":"x","region":"x","postal_code":"1","country":"MX"}') $$,
   tests.fx('store_a')), 'P0001', 'validation_failed', 'dirección inválida: rechazada');
 select tests.logout();
-select tests.login('beto', 'aal1');
+select tests.login_otp('beto');
 select throws_ok(format($$ select public.account_delete_address(%L, %L) $$, tests.fx('store_a'), tests.fx('addr')),
   'P0001', 'not_found', 'Beto no borra direcciones de Ana');
 select tests.logout();
@@ -123,13 +123,15 @@ select tests.logout();
 -- ============================================================================ Intentos de acceso
 select ok(not has_function_privilege('authenticated', 'storefront.record_login_intent(uuid,text,text)', 'execute')
        and has_function_privilege('storefront_gateway', 'storefront.record_login_intent(uuid,text,text)', 'execute')
-       and not has_function_privilege('storefront_gateway', 'system.login_intent_store(text)', 'execute'),
+       and not has_function_privilege('storefront_gateway', 'system.login_intent_store(text,text)', 'execute'),
   'el intento lo registra solo el gateway; la marca la lee solo el worker');
-select is((select count(*)::int from generate_series(1, 7) g
-            where storefront.record_login_intent(tests.fx('store_a'), 'Ana@Compra.io', repeat('a', 64))), 5,
+create temp table nonces as
+  select storefront.record_login_intent(tests.fx('store_a'), 'Ana@Compra.io', repeat('a', 64)) as nonce
+    from generate_series(1, 7) g;
+select is((select count(*)::int from nonces where nonce is not null), 5,
   'máximo 5 códigos por email y tienda cada 15 minutos');
-select is(system.login_intent_store(' ana@compra.io ') ->> 'id', tests.fx('store_a')::text,
-  'el hook obtiene la tienda del intento más reciente');
+select is(system.login_intent_store(' ana@compra.io ', (select min(nonce) from nonces)) ->> 'id', tests.fx('store_a')::text,
+  'el hook obtiene la tienda del intento con su nonce');
 select ok(not exists (select 1 from system.auth_login_intents where email_hash = convert_to('ana@compra.io', 'UTF8')),
   'nunca se guarda el email en claro');
 
