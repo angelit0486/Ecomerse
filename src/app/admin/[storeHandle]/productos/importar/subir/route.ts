@@ -97,7 +97,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       p_rows: planProductImport(parsed.headers, parsed.rows, parsed.rowNumbers),
     });
   } catch (error) {
-    reportActionError("imports", error);
+    const e = reportActionError("imports", error);
+    // G-L2: un archivo que la base rechaza por su forma no es un problema de permisos.
+    if (e.fields?.too_many_rows) return back("filas");
+    if (e.fields?.columns) return back("columnas");
     return back("permiso");
   }
   return NextResponse.redirect(new URL(`${base}/${jobId}`, serverEnv().APP_URL), 303);

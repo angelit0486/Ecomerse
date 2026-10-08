@@ -69,7 +69,7 @@ select tests.login('owner');
 select public.customers_anonymize(tests.fx('store_a'),
   (select id from public.customers where store_id = tests.fx('store_a') and email = 'ana@compra.io'), 'Pedido del cliente');
 select tests.logout();
-update public.customers set first_name = 'Real', phone = '555', accepts_marketing = true, marketing_consent_at = now()
+update public.customers set first_name = 'Real', phone = '+52 55 1234 5678', accepts_marketing = true, marketing_consent_at = now()
  where store_id = tests.fx('store_a') and anonymized_at is not null;
 select is((select coalesce(first_name, '') || coalesce(phone, '') || accepts_marketing::text from public.customers
             where store_id = tests.fx('store_a') and anonymized_at is not null), 'false',

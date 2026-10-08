@@ -23,6 +23,7 @@ const log = createLogger({ sink: () => {} });
 const ROWS = 5000;
 
 let storeId = "";
+let otherStoreId = "";
 let ownerId = "";
 
 async function tenant() {
@@ -42,7 +43,10 @@ async function tenant() {
     insert into auth.users (id, email) values (gen_random_uuid(), 'owner-5k@import.test') returning id`;
   await admin`insert into public.organization_members (organization_id, user_id, role)
               values (${org!.id}, ${u!.id}, 'org_owner')`;
-  return { storeId: s!.id, ownerId: u!.id };
+  const [other] = await admin<{ id: string }[]>`
+    insert into public.stores (organization_id, name, handle, currency, country, timezone)
+    values (${org!.id}, 'Tienda 5k B', 'import-5k-b', 'MXN', 'MX', 'America/Mexico_City') returning id`;
+  return { storeId: s!.id, otherStoreId: other!.id, ownerId: u!.id };
 }
 
 /** Un job confirmado de `ROWS` productos (una variante con existencias); `failAt` no se puede publicar. */
@@ -82,7 +86,7 @@ async function run() {
 }
 
 beforeAll(async () => {
-  ({ storeId, ownerId } = await tenant());
+  ({ storeId, otherStoreId, ownerId } = await tenant());
 });
 beforeEach(async () => {
   await admin`delete from system.jobs`;
@@ -133,5 +137,39 @@ describe("import.commit con 5 000 filas", () => {
              (select count(*)::int from public.inventory_movements where reference_id = ${jobId}) as movements,
              (select count(*)::int from audit.audit_logs where action = 'import.failed' and entity_id = ${jobId}) as audits`;
     expect(counts).toEqual({ products: 0, movements: 0, audits: 1 });
+  }, 300_000);
+
+  it("mientras importa, el panel de otra tienda de la organización sigue creando productos (G-M4)", async () => {
+    const jobId = await confirmedJob("con", undefined, 2000);
+    const running = run();
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Como el panel en Supabase: si el lote retuviera el candado de la organización,
+    // esto esperaría hasta el final de la importación y cortaría por tiempo.
+    const started = Date.now();
+    const created = await admin.begin(async (sql) => {
+      await sql`select set_config('request.jwt.claims', ${JSON.stringify({
+        sub: ownerId,
+        role: "authenticated",
+        aal: "aal2",
+      })}, true), set_config('role', 'authenticated', true), set_config('statement_timeout', '4000', true)`;
+      const [row] = await sql<{ product: { id: string } }[]>`
+        select public.catalog_upsert_product(${otherStoreId}, ${sql.json({
+          title: "Concurrente",
+          slug: "concurrente",
+          variants: [{ price: 100 }],
+        })}) as product`;
+      return row!.product.id;
+    });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect(created).toMatch(/^[0-9a-f-]{36}$/);
+    const [during] = await admin<
+      { status: string }[]
+    >`select status from public.import_jobs where id = ${jobId}`;
+    expect(during!.status).toBe("committing"); // la importación seguía en curso
+    expect(await running).toMatchObject({ succeeded: 1 });
+    const [job] = await admin<
+      { status: string }[]
+    >`select status from public.import_jobs where id = ${jobId}`;
+    expect(job!.status).toBe("completed");
   }, 300_000);
 });

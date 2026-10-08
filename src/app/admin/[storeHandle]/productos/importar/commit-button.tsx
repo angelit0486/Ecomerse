@@ -8,7 +8,7 @@ export function CommitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" loading={pending}>
-      {pending ? "Importando…" : label}
+      {pending ? "Confirmando…" : label}
     </Button>
   );
 }

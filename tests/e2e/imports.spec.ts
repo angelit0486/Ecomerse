@@ -85,9 +85,13 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   await expect(page.getByRole("heading", { name: "bueno.csv" })).toBeVisible();
   await page.getByRole("button", { name: "Confirmar importación" }).click();
   // La confirmación la aplica el worker (job import.commit); la página se actualiza sola.
-  await expect(page.getByText(/Importando…/)).toBeVisible();
-  await runJobs();
-  await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 15_000 });
+  // Se espera el aviso de la página (no el texto del botón mientras envía): así el job
+  // ya está en la cola. El runner se llama como lo haría el cron hasta que termine.
+  await expect(page.getByRole("status").filter({ hasText: "Importando…" })).toBeVisible();
+  await expect(async () => {
+    await runJobs();
+    await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
 
   const [variant] = await admin<{ price: string; on_hand: number }[]>`
     select v.price::text, l.on_hand from public.product_variants v

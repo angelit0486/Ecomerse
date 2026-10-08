@@ -164,15 +164,16 @@ select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0
 select tests.logout();
 
 -- ATAQUE 5: comprador de otra tienda ---------------------------------------------------------
-select tests.login('buyer_b', 'aal1');
+select tests.login_otp('buyer_b');
 select is_empty($$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
   'comprador de B: no LEE nada de A');
 select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0::bigint,
   'comprador de B: no MODIFICA nada de A');
 select tests.logout();
 
--- Separación comprador ↔ staff: el comprador de A solo ve SU fila de cliente.
-select tests.login('buyer_a', 'aal1');
+-- Separación comprador ↔ staff: el comprador de A solo ve SU fila de cliente (sesión
+-- con código por email; sin ella no ve ni su propio registro: Gate F8, G-H1).
+select tests.login_otp('buyer_a');
 select set_eq($$ select * from tests.visible_tenant_tables(tests.fx('store_a'), tests.fx('org_a')) $$,
   array['customers'], 'comprador de A: solo ve su registro de cliente, nada de staff');
 select is((select count(*) from public.customers where store_id = tests.fx('store_a'))::int, 1,
