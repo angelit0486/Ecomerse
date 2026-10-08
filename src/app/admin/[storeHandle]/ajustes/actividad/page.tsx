@@ -55,14 +55,21 @@ const ACTIONS: Record<string, string> = {
   "product.deleted": "Archivó un producto",
   "product.restored": "Restauró un producto",
   "product.duplicated": "Duplicó un producto",
+  "product.unpublished": "Se despublicó un producto",
+  "product.regulatory_updated": "Editó la ficha sanitaria de un producto",
+  "product.attributes_updated": "Cambió los atributos de un producto",
   "inventory.adjusted": "Ajustó inventario",
   "inventory.threshold_set": "Cambió un mínimo de inventario",
   "category.saved": "Guardó una categoría",
   "brand.saved": "Guardó una marca",
+  "attribute.saved": "Guardó un atributo",
+  "attribute.deleted": "Eliminó un atributo",
   "store.updated": "Editó los datos de la tienda",
   "store.taxes_updated": "Cambió los impuestos",
   "store.notifications_updated": "Cambió las notificaciones",
   "store.launched": "Publicó la tienda",
+  "store.compliance_category_enabled": "Declaró una categoría regulada",
+  "store.compliance_category_disabled": "Retiró una categoría regulada",
   "theme.published": "Publicó la apariencia",
   "theme.draft_saved": "Guardó un borrador de apariencia",
   "shipping.zone_saved": "Guardó una zona de envío",
@@ -79,6 +86,11 @@ const ACTIONS: Record<string, string> = {
   "import.requested": "Subió un archivo de importación",
   "import.committed": "Confirmó una importación de productos",
   "import.failed": "Una importación no se aplicó (sin cambios)",
+};
+
+/** Motivos que pone el sistema (los del equipo se muestran tal cual). */
+const REASONS: Record<string, string> = {
+  compliance: "dejó de cumplir las reglas sanitarias",
 };
 
 /** Ajustes → Actividad (F8-T05): auditoría de la tienda, sin IP ni PII completa. */
@@ -138,7 +150,11 @@ export default async function ActivityPage({ params, searchParams }: Props) {
                 </span>
                 {" · "}
                 {ACTIONS[e.action] ?? e.action}
-                {e.reason ? <span className="block text-fg-muted">Motivo: {e.reason}</span> : null}
+                {e.reason ? (
+                  <span className="block text-fg-muted">
+                    Motivo: {REASONS[e.reason] ?? e.reason}
+                  </span>
+                ) : null}
               </div>
             </li>
           ))}

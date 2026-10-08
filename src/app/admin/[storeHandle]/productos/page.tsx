@@ -88,6 +88,11 @@ export default async function ProductsPage({ params, searchParams }: Props) {
               Marcas
             </Link>
           ) : null}
+          {hasPermission(ctx, "categories.manage") ? (
+            <Link href={`${base}/atributos`} className={`${linkButton} border border-control`}>
+              Atributos
+            </Link>
+          ) : null}
           {hasPermission(ctx, "imports.run") ? (
             <Link href={`${base}/importar`} className={`${linkButton} border border-control`}>
               Importar

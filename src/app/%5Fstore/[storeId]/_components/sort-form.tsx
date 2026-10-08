@@ -12,11 +12,14 @@ export function SortForm({
   sort,
   available,
   query,
+  hidden = [],
 }: {
   action: string;
   sort: string;
   available: boolean;
   query?: string;
+  /** Filtros de atributos activos: se conservan al ordenar. */
+  hidden?: [string, string][];
 }) {
   const sorts = query
     ? Object.keys(SORT_LABELS)
@@ -24,6 +27,9 @@ export function SortForm({
   return (
     <form method="get" action={action} className="flex flex-wrap items-end gap-3 text-sm">
       {query ? <input type="hidden" name="q" value={query} /> : null}
+      {hidden.map(([name, value]) => (
+        <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
+      ))}
       <label className="flex flex-col gap-1">
         <span className="font-medium">Ordenar por</span>
         <select

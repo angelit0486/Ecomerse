@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { getProductAttributeValues, listAttributes } from "@/server/catalog/attributes";
 import { getProduct, listBrands, listCategories, validateProduct } from "@/server/catalog/queries";
 import { getComplianceStatus, getRegulatoryInfo } from "@/server/compliance/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { ProductAttributesForm } from "../attribute-forms";
 import { toEditorProduct } from "../editor-model";
 import { publishIssueMessage, STATUS_LABELS } from "../messages";
 import { ProductEditor } from "../product-editor";
@@ -33,13 +35,18 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const product = await getProduct(supabase, ctx.store.id, productId, canReadCost);
   if (!product) notFound();
   const canEdit = hasPermission(ctx, "products.update") && !product.deleted_at;
-  const [brands, categories, issues, compliance, regulatory] = await Promise.all([
-    listBrands(supabase, ctx.store.id),
-    listCategories(supabase, ctx.store.id),
-    product.deleted_at ? Promise.resolve([]) : validateProduct(supabase, ctx.store.id, product.id),
-    canEdit ? getComplianceStatus(supabase, ctx.store.id) : Promise.resolve(null),
-    canEdit ? getRegulatoryInfo(supabase, ctx.store.id, product.id) : Promise.resolve(null),
-  ]);
+  const [brands, categories, issues, compliance, regulatory, attributes, attributeValues] =
+    await Promise.all([
+      listBrands(supabase, ctx.store.id),
+      listCategories(supabase, ctx.store.id),
+      product.deleted_at
+        ? Promise.resolve([])
+        : validateProduct(supabase, ctx.store.id, product.id),
+      canEdit ? getComplianceStatus(supabase, ctx.store.id) : Promise.resolve(null),
+      canEdit ? getRegulatoryInfo(supabase, ctx.store.id, product.id) : Promise.resolve(null),
+      canEdit ? listAttributes(supabase, ctx.store.id) : Promise.resolve([]),
+      canEdit ? getProductAttributeValues(supabase, ctx.store.id, product.id) : Promise.resolve([]),
+    ]);
   // La ficha sanitaria aparece cuando la tienda declaró una categoría regulada (ADR-021).
   const declared = compliance?.categories.filter((c) => c.declared) ?? [];
   const regulatoryInitial: RegulatoryInitial = {
@@ -114,6 +121,27 @@ export default async function ProductPage({ params, searchParams }: Props) {
           }))}
           initial={regulatoryInitial}
         />
+      ) : null}
+
+      {canEdit && attributes.length > 0 ? (
+        <ProductAttributesForm
+          storeHandle={ctx.store.handle}
+          productId={product.id}
+          attributes={attributes.map((a) => ({
+            id: a.id,
+            name: a.name,
+            values: a.values.map((v) => ({ id: v.id, label: v.label })),
+          }))}
+          selected={attributeValues}
+        />
+      ) : canEdit && hasPermission(ctx, "categories.manage") ? (
+        <p className="text-sm text-fg-muted">
+          Para filtrar en la tienda por objetivo, sabor u otra característica, crea tus{" "}
+          <Link href={`/admin/${ctx.store.handle}/productos/atributos`} className="underline">
+            atributos
+          </Link>
+          .
+        </p>
       ) : null}
 
       {canEdit ? (

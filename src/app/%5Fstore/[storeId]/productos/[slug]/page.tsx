@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { centsToInput } from "@/lib/money/format";
 import {
   getProduct,
+  getProductAttributes,
   getProductRegulatory,
   mediaUrl,
   type Availability,
@@ -17,6 +18,7 @@ import { SafeHtml } from "@/ui/safe-html";
 import { Breadcrumb } from "../../_components/breadcrumb";
 import { AVAILABILITY_LABELS, money } from "../../_components/format";
 import { JsonLd } from "../../_components/json-ld";
+import { ProductAttributes } from "../../_components/product-attributes";
 import { SupplementInfo } from "../../_components/supplement-info";
 import { AddToCart } from "../../_components/add-to-cart";
 import { VariantSelector } from "../../_components/variant-selector";
@@ -136,7 +138,10 @@ function productJsonLd(store: StorePublic, product: ProductDetail) {
 
 export default async function ProductPage({ params }: Props) {
   const { store, product } = await load(params);
-  const regulatory = await getProductRegulatory(store.id, product.slug);
+  const [regulatory, attributes] = await Promise.all([
+    getProductRegulatory(store.id, product.slug),
+    getProductAttributes(store.id, product.slug),
+  ]);
   const [cover, ...rest] = product.images;
   const single = product.options.length === 0 ? product.variants[0] : undefined;
 
@@ -229,6 +234,7 @@ export default async function ProductPage({ params }: Props) {
           ) : (
             <p className="text-sm">{AVAILABILITY_LABELS.out_of_stock}</p>
           )}
+          <ProductAttributes attributes={attributes} />
           {product.description_html ? (
             <section aria-label="Descripción" className="border-t border-[var(--sf-border)] pt-5">
               <SafeHtml

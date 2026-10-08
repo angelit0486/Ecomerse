@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
 import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
@@ -55,8 +56,25 @@ export interface ListFilters {
   query?: string | undefined;
   sort?: ListSort | undefined;
   available?: boolean | undefined;
+  /** Filtros de atributos (R-T04): OR dentro de un atributo, AND entre atributos. */
+  attributes?: AttributeSelection | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
+}
+
+/** Filtro con conteo por valor (R-T04, ADR-022). */
+export interface Facet {
+  key: string;
+  name: string;
+  values: { key: string; label: string; count: number; selected: boolean }[];
+}
+
+/** Atributos de un producto publicado, para su ficha. */
+export interface ProductAttribute {
+  key: string;
+  name: string;
+  filterable: boolean;
+  values: { key: string; label: string }[];
 }
 
 export interface ProductDetail {
@@ -166,12 +184,28 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
   return (rows[0]?.value as T | null | undefined) ?? null;
 }
 
+/**
+ * Solo se cachea la primera página sin búsqueda ni filtros de atributos:
+ * cursores, textos libres y combinaciones de filtros son ilimitados y llenarían
+ * la caché con claves de un solo uso (Gate F5).
+ */
+function cacheable(filters: Pick<ListFilters, "cursor" | "query" | "attributes">): boolean {
+  return (
+    !filters.cursor && !filters.query && !(filters.attributes && hasSelection(filters.attributes))
+  );
+}
+
+function attributesParam(db: ReturnType<typeof gatewayDb>, filters: ListFilters) {
+  return filters.attributes && hasSelection(filters.attributes)
+    ? db.json(filters.attributes)
+    : null;
+}
+
 export async function listProducts(storeId: string, filters: ListFilters): Promise<ProductPage> {
   assertStore(storeId);
-  // Solo se cachea la primera página sin búsqueda: cursores y textos libres son
-  // ilimitados y llenarían la caché con claves de un solo uso (Gate F5).
-  if (filters.cursor || filters.query) return readListProducts(storeId, filters);
-  return listProductsCached(storeId, filters);
+  return cacheable(filters)
+    ? listProductsCached(storeId, filters)
+    : readListProducts(storeId, filters);
 }
 
 const readListProducts = async (storeId: string, filters: ListFilters): Promise<ProductPage> => {
@@ -181,12 +215,33 @@ const readListProducts = async (storeId: string, filters: ListFilters): Promise<
     select storefront.list_products(
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
       ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null}, null, null,
-      ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24}
+      ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24},
+      ${attributesParam(db, filters)}::jsonb
     ) as value`);
   return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
 };
 
 const listProductsCached = cachedRead("list_products", readListProducts);
+
+/** Filtros con conteo del mismo listado (mismas reglas de caché que el listado). */
+export async function listFacets(storeId: string, filters: ListFilters): Promise<Facet[]> {
+  assertStore(storeId);
+  return cacheable(filters) ? listFacetsCached(storeId, filters) : readListFacets(storeId, filters);
+}
+
+const readListFacets = async (storeId: string, filters: ListFilters): Promise<Facet[]> => {
+  const db = gatewayDb();
+  return (
+    (await call<Facet[]>(db`
+      select storefront.list_facets(
+        ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
+        ${filters.query?.slice(0, 200) ?? null}, ${filters.available ?? false},
+        ${attributesParam(db, filters)}::jsonb
+      ) as value`)) ?? []
+  );
+};
+
+const listFacetsCached = cachedRead("list_facets", readListFacets);
 
 export const getProduct = cache(
   async (storeId: string, slug: string): Promise<ProductDetail | null> => {
@@ -210,6 +265,14 @@ export const getProductRegulatory = cache(
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
     return productRegulatoryCached(storeId, slug);
+  },
+);
+
+export const getProductAttributes = cache(
+  async (storeId: string, slug: string): Promise<ProductAttribute[]> => {
+    assertStore(storeId);
+    if (!SLUG_RE.test(slug) || slug.length > 120) return [];
+    return (await productAttributesCached(storeId, slug)) ?? [];
   },
 );
 
@@ -288,6 +351,13 @@ const productRegulatoryCached = cachedRead(
   (storeId: string, slug: string) =>
     call<ProductRegulatory>(
       gatewayDb()`select storefront.get_product_regulatory(${storeId}::uuid, ${slug}) as value`,
+    ),
+);
+const productAttributesCached = cachedRead(
+  "get_product_attributes",
+  (storeId: string, slug: string) =>
+    call<ProductAttribute[]>(
+      gatewayDb()`select storefront.get_product_attributes(${storeId}::uuid, ${slug}) as value`,
     ),
 );
 const categoryCached = cachedRead("get_category", (storeId: string, path: string) =>

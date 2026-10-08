@@ -25,7 +25,7 @@ export function publishIssueMessage(code: string): string {
     return `Falta en la ficha sanitaria: ${supplementFieldLabel(detail).toLowerCase()}.`;
   }
   if (base === "compliance_forbidden_term") {
-    return "El producto incluye un término que las reglas sanitarias no permiten. Revisa el título, la descripción y la ficha.";
+    return "El producto incluye un término que las reglas sanitarias no permiten. Revisa el título, la descripción, la ficha y los atributos.";
   }
   return Object.hasOwn(PUBLISH_ISSUES, code) ? PUBLISH_ISSUES[code]! : code;
 }
