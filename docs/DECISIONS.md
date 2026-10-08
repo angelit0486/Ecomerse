@@ -178,3 +178,102 @@ Este registro agrega lo que ocurrió **después** del Gate 0: la aprobación del
 | D-F8-09 | Segunda revisión del gate F8 (PHASE-08-REPORT §5): **la cuenta del comprador solo responde a una sesión que entró con un código por email** (`amr` otp/magiclink/email/signup, sin límite de tiempo), en sus RPC y en la lectura o edición directa de su fila de cliente (la matriz §12.3 se conserva con esa sesión). Una regla nueva sobre datos existentes se valida **cuando el dato se escribe o cambia** (trigger), no con `CHECK NOT VALID`, que se vuelve a evaluar en cualquier `UPDATE` de la fila. La importación consulta el límite de productos solo si crea productos: sin candado al empezar y con el candado de la organización al terminar; la marca de lote es una fila de `system.product_limit_bulk` (transacción + tienda), no un GUC. La vista previa valida el conjunto final de variantes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | GoTrue une a un mismo usuario un alta con contraseña y un código posterior; un CHECK `NOT VALID` bloqueaba pagos de clientes antiguos; el candado retenido frenaba el catálogo de toda la organización.                                                                                   | §7.4, §12.3, §19.3, §26.1, T-21. |
 
 **Pendiente de decisión del propietario (Fase 2, parte D):** el paso 3 del onboarding ("conectar cuenta de pagos") usa tablas, proveedor e integración de las Fases 6 y 7, y el paso 4 ("publicar") requiere un método de pago activo (validación de lanzamiento, §14.3). Ver el informe de la Fase 2.
+
+---
+
+## 11. Tienda de suplementos del propietario (Q-B3 revisada) — 2026-10-08
+
+**Petición:** "quiero que sea una super página de suplementos con el nivel de B Life o superior".
+**Respuestas del propietario** (2026-10-08):
+
+- **¿Para quién es la tienda?** "Mi propia tienda": la tienda de suplementos del propietario es el
+  primer tenant real. La plataforma sigue siendo multi-tenant y white-label para vender a otras
+  tiendas.
+- **¿Qué funciones primero?** "Ficha y leyendas" (ingredientes, tabla nutrimental, modo de uso,
+  advertencias, leyendas sanitarias obligatorias comprobadas antes de publicar, filtros por
+  objetivo) y "Pagos y promociones MX" (meses sin intereses, OXXO, paquetes y descuento de primera
+  compra). Suscripciones, reseñas y cuestionario quedan para después, con otra decisión.
+- **¿Hay contenido?** "Todavía no": primero se construye la tienda; el catálogo llega después.
+
+| ID              | Decisión                                                                                                                                                                                                                                                                                                                                                                    | Efecto en el contrato                                                                                                                                                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-B3 (revisada) | **Sí:** la tienda de suplementos del propietario entra antes del piloto, con un módulo regulatorio **acotado a suplementos alimenticios en México**. Reemplaza la respuesta del 2026-10-05.                                                                                                                                                                                 | RQ-28 deja de ser GAP para (México, suplementos). De la lista "NO hacer todavía" de §38 salen solo el módulo regulatorio (ADR-021), los atributos filtrables (ADR-022), los paquetes (ADR-023) y OXXO con meses sin intereses (ADR-024). Nuevas fases R y P antes de la F9. |
+| D-S-01          | **Contenido.** La plataforma nunca redacta leyendas, advertencias, propiedades, tablas nutrimentales ni textos legales. Las reglas por jurisdicción llegan sin texto (`PENDIENTE_DE_DEFINIR`) y bloquean la publicación hasta que el propietario las complete con su asesor regulatorio. Los datos de ejemplo solo existen en las suites de prueba.                         | Regla de origen del proyecto: nunca inventar productos, precios ni contenido legal.                                                                                                                                                                                         |
+| D-S-02          | **Sin copiar a B Life.** El nivel se mide con criterios propios: ficha completa y verificada, filtros por objetivo, velocidad (Lighthouse ≥ 90), accesibilidad (axe sin violaciones) y pagos locales. No se toma nada de su diseño, textos ni imágenes.                                                                                                                     | —                                                                                                                                                                                                                                                                           |
+| D-S-03          | **Orden:** Fase R (ficha regulada, leyendas y atributos) → Fase P (pagos y promociones MX) → F9 (white-label, con secciones de portada por objetivo) → F10 → F11 → F12. La Fase R va primero porque, sin ella, la tienda del propietario no se puede activar (Q-B3: el tenant regulado espera al módulo).                                                                   | `docs/plan/AUTONOMOUS_PLAN.md` §4 y `PROGRESS.md`.                                                                                                                                                                                                                          |
+| D-S-04          | **Descuento de primera compra** (Fase P): `discounts.eligibility ∈ {all, first_order}`. Primera compra = el email del checkout no tiene pedidos pagados ni pendientes en la tienda. Se comprueba al calcular el carrito y otra vez en `place_order`, con un candado por (tienda, email) para que dos checkouts simultáneos no lo usen dos veces. Error: `discount_invalid`. | Sin cambio de contrato: mismo `place_order` y mismos errores (§17.6).                                                                                                                                                                                                       |
+
+### ADR-021 — Módulo regulatorio v1: suplementos alimenticios en México (Fase R)
+
+- **Context:** Q-B3 cambió. GATE0 §14.3 dejó el punto de extensión (validadores por tienda) y §48
+  describió el módulo: reglas por jurisdicción, denegación por defecto, validadores de
+  publicación y de lanzamiento, y auditoría.
+- **Decision:**
+  1. **Reglas de la plataforma por jurisdicción** (`compliance_rules`): país + categoría regulada
+     (`dietary_supplement`) + tipo (`required_field`, `required_legend`, `forbidden_term`) +
+     texto + dónde se muestra (ficha, carrito, checkout) + vigencia + versión. Solo
+     `platform_admin` con aal2 las edita, con auditoría. Una leyenda sin texto bloquea.
+  2. **La tienda declara lo que vende** (`store_regulated_categories`). Mientras declare una
+     categoría, **todo producto necesita una clasificación explícita** para publicarse (la
+     categoría o "no regulado"): denegación por defecto.
+  3. **Ficha estructurada** (`product_regulatory_info`, 1:1 con el producto, `store_id` y FK
+     compuestas), con esquema versionado por categoría (Zod en código; forma y tamaños en SQL).
+     Suplementos v1: presentación, porción, porciones por envase, ingredientes, tabla nutrimental
+     (nutrimento, cantidad, unidad y %VNR opcional), modo de uso, advertencias, conservación,
+     alérgenos y aviso o registro sanitario si aplica. Todo lo captura la tienda.
+  4. **Validadores:** `app.validate_product_for_publish` llama a `app.validate_product_compliance`
+     (campos obligatorios, leyendas definidas y vigentes, términos prohibidos);
+     `validate_store_for_launch` exige reglas completas para las categorías declaradas.
+  5. **Storefront:** `storefront.*` devuelve la ficha y las leyendas vigentes como texto, nunca
+     HTML. La ficha muestra la tabla nutrimental (tabla accesible) y las leyendas; el carrito y el
+     checkout muestran las que la regla pida. Sin `AggregateRating` ni afirmaciones de salud en el
+     JSON-LD.
+- **Alternatives:** leyendas como texto libre en la descripción (no se puede verificar); reglas por
+  tienda (cada tienda redacta y se equivoca a su manera); un proveedor externo de cumplimiento.
+- **Why:** el cumplimiento lo verifica la base de datos, igual que el precio y el stock, y el texto
+  legal tiene un dueño (la plataforma con su asesor) y una versión.
+- **Consequences:** tablas nuevas de plataforma y de tienda; la consola de plataforma gana una
+  página de reglas (mínima en la Fase R, completa en la F10); columnas nuevas en la importación.
+- **Fuera de v1:** verificación de edad y restricciones de envío por jurisdicción. El modelo de
+  reglas las admite después si una categoría las exige.
+
+### ADR-022 — Atributos filtrables (Fase R)
+
+- **Decision:** `attributes` (los define la tienda: nombre, clave, lista de valores, filtrable,
+  orden), `attribute_values` y `product_attribute_values` (varios valores por producto), como en
+  GATE0 §14.4. Filtros con conteo por valor en categorías y búsqueda, en PostgreSQL (ADR-020).
+  "Objetivo" es un atributo más que crea la tienda. `specs` sigue siendo solo de presentación.
+- **Rejected:** filtrar por `tags` (sin estructura ni nombres visibles); colecciones por reglas
+  (P2).
+
+### ADR-023 — Paquetes (Fase P) · **propuesta: requiere aprobación del propietario**
+
+- **Context:** la petición incluye combos. Un paquete real toca el snapshot del pedido (contrato
+  crítico, §43) y los flujos de inventario.
+- **Decision propuesta:** un paquete es un producto con una sola variante cuyo contenido son
+  variantes de la tienda × cantidad (`bundle_components`, FK compuestas; GATE0 §14.4). No tiene
+  existencias propias: su disponibilidad es el mínimo de `floor(disponible / cantidad)` de sus
+  componentes. Reservar, vender, liberar y devolver se expande a los componentes, siempre con
+  `app.apply_inventory_movement`. El pedido guarda el paquete como un renglón normal, con su
+  propio precio, más `order_item_components` inmutable con lo que contenía al comprarse: el
+  snapshot v1 conserva sus columnas y se **extiende**. Surtir y reembolsar un paquete trabaja
+  sobre sus componentes.
+- **Alternatives:** combo como descuento automático cuando el carrito trae A + B (no aparece en el
+  catálogo con foto, ficha y SEO propios); paquete con existencias propias (doble conteo).
+- **Consequences:** cambios en la reserva, `finalize_paid_order`, envíos y reembolsos; las suites
+  de concurrencia y de caos se amplían.
+- **Estado:** propuesta. Se implementa al final de la Fase P, solo con la aprobación del
+  propietario.
+
+### ADR-024 — OXXO y meses sin intereses con Stripe (Fase P)
+
+- **Decision:** por tienda, en Ajustes → Pagos:
+  1. **OXXO:** Checkout con `oxxo` y vigencia de la ficha configurable (días). Cuando Stripe
+     completa la sesión sin pago (método diferido), la reserva y el pago pendiente se extienden
+     hasta el vencimiento de la ficha más un margen (Q-N8: "vouchers según su vigencia"). Al
+     vencer se cancela como hoy, y un pago tardío sigue la ruta CF-04.
+  2. **Meses sin intereses:** `installments` de tarjeta en Checkout a partir de un monto mínimo;
+     Stripe decide los planes según la tarjeta. El texto promocional lo escribe la tienda.
+  - `NormalizedPayment` no cambia: el método ya viaja en `method`.
+- **Verificar contra el sandbox (S-4):** planes disponibles, montos mínimos y eventos de OXXO.
+- **Rejected:** Mercado Pago por ahora (segundo adaptador, P2).
