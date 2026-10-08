@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getCart, paymentMethods } from "@/server/storefront/cart";
+import { getCart, getCartLegends, paymentMethods } from "@/server/storefront/cart";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
+import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
 import { CheckoutForm } from "./checkout-form";
 
@@ -17,7 +18,11 @@ type Props = { params: Promise<{ storeId: string }> };
 /** Checkout de una página (§17): todo lo calcula la base en cada render. */
 export default async function CheckoutPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
-  const [cart, methods] = await Promise.all([getCart(store.id), paymentMethods(store.id)]);
+  const [cart, methods, legends] = await Promise.all([
+    getCart(store.id),
+    paymentMethods(store.id),
+    getCartLegends(store.id, "checkout"),
+  ]);
   if (!cart || cart.item_count === 0) redirect("/carrito");
 
   const labels = Object.fromEntries(
@@ -79,6 +84,7 @@ export default async function CheckoutPage({ params }: Props) {
           }}
           store={store}
         />
+        <PurchaseLegends legends={legends} />
         <Link href="/carrito" className="text-sm underline">
           Modificar el carrito
         </Link>

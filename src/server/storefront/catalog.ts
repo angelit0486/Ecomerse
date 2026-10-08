@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 
@@ -195,6 +196,23 @@ export const getProduct = cache(
   },
 );
 
+/** Ficha sanitaria pública de un producto regulado (ADR-021, R-T03). */
+export interface ProductRegulatory {
+  category: string;
+  category_name: string;
+  data: SupplementSheet;
+  /** Leyendas vigentes para la ficha del producto: solo el texto. */
+  legends: { key: string; text: string }[];
+}
+
+export const getProductRegulatory = cache(
+  async (storeId: string, slug: string): Promise<ProductRegulatory | null> => {
+    assertStore(storeId);
+    if (!SLUG_RE.test(slug) || slug.length > 120) return null;
+    return productRegulatoryCached(storeId, slug);
+  },
+);
+
 export const getCategory = cache(
   async (storeId: string, path: string): Promise<CategoryDetail | null> => {
     assertStore(storeId);
@@ -264,6 +282,13 @@ const productCached = cachedRead("get_product", (storeId: string, slug: string) 
   call<ProductDetail>(
     gatewayDb()`select storefront.get_product(${storeId}::uuid, ${slug}) as value`,
   ),
+);
+const productRegulatoryCached = cachedRead(
+  "get_product_regulatory",
+  (storeId: string, slug: string) =>
+    call<ProductRegulatory>(
+      gatewayDb()`select storefront.get_product_regulatory(${storeId}::uuid, ${slug}) as value`,
+    ),
 );
 const categoryCached = cachedRead("get_category", (storeId: string, path: string) =>
   call<CategoryDetail>(

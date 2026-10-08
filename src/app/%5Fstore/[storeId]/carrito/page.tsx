@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { getCart } from "@/server/storefront/cart";
+import { getCart, getCartLegends } from "@/server/storefront/cart";
 import { mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
+import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
 import { DiscountForm, LineForm } from "./cart-forms";
 
@@ -20,7 +21,7 @@ const STATE_NOTES = {
 
 export default async function CartPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
-  const cart = await getCart(store.id);
+  const [cart, legends] = await Promise.all([getCart(store.id), getCartLegends(store.id, "cart")]);
 
   if (!cart || cart.lines.length === 0) {
     return (
@@ -99,6 +100,7 @@ export default async function CartPage({ params }: Props) {
           }}
           store={store}
         />
+        <PurchaseLegends legends={legends} />
         {cart.has_unavailable ? (
           <p className="text-sm">Quita los productos no disponibles para continuar.</p>
         ) : (

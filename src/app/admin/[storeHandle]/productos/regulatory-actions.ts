@@ -12,6 +12,7 @@ import {
 } from "@/server/catalog/regulatory";
 import { rpcDetail } from "@/server/compliance/errors";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateStore } from "@/server/storefront/cache";
 
 import { storeClient, type FormState } from "../_shared/action-state";
 import { publishIssueMessage } from "./messages";
@@ -103,6 +104,8 @@ export async function saveRegulatoryInfo(
       p_category_key: category,
       p_data: sheet,
     });
+    // La ficha se ve en la tienda pública (§21.4).
+    invalidateStore(storeId);
   } catch (error) {
     const e = reportActionError("catalog", error);
     const { hint } = rpcDetail(error);

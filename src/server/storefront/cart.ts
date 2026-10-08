@@ -135,6 +135,20 @@ export async function getCart(storeId: string): Promise<CartView | null> {
   );
 }
 
+/** Leyendas sanitarias de lo que trae el carrito (ADR-021): carrito o checkout. */
+export async function getCartLegends(
+  storeId: string,
+  placement: "cart" | "checkout",
+): Promise<{ key: string; text: string }[]> {
+  const token = await cartToken();
+  if (!token) return [];
+  return (
+    (await value<{ key: string; text: string }[] | null>(
+      gatewayDb()`select storefront.cart_legends(${storeId}, ${token}, ${placement}) as value`,
+    )) ?? []
+  );
+}
+
 /** Agrega unidades; crea el carrito (y su cookie) si hace falta. */
 export async function addToCart(
   storeId: string,
