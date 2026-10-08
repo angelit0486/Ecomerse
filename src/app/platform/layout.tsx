@@ -22,6 +22,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           <span className="font-semibold">Consola</span>
           <Link href="/platform">Organizaciones</Link>
           <Link href="/platform/soporte">Soporte</Link>
+          <Link href="/platform/cumplimiento">Cumplimiento</Link>
         </nav>
         <div className="flex items-center gap-3 text-[13px] text-fg-muted">
           <span>{ROLE[role]}</span>

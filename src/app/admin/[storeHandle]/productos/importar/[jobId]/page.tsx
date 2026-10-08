@@ -10,7 +10,8 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { commitImport } from "../actions";
 import { AutoRefresh } from "../auto-refresh";
 import { CommitButton } from "../commit-button";
-import { JOB_STATUS, MODE } from "../labels";
+import { publishIssueMessage } from "../../messages";
+import { importErrorText, JOB_STATUS, MODE } from "../labels";
 
 export const metadata: Metadata = { title: "Vista previa de la importación" };
 
@@ -110,7 +111,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {job.status === "failed" ? (
         <div role="alert" className="space-y-1 rounded-md border border-danger p-3 text-sm">
           <p>La importación se detuvo y no se cambió nada.</p>
-          {job.error ? <p>{job.error}</p> : null}
+          {job.error ? <p>{importErrorText(job.error, publishIssueMessage)}</p> : null}
           <p>Corrige el archivo y vuelve a subirlo.</p>
         </div>
       ) : null}

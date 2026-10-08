@@ -1,3 +1,5 @@
+import { supplementFieldLabel } from "@/lib/compliance/labels";
+
 /**
  * Textos del catálogo compartidos por acciones y componentes. Los códigos vienen
  * de la base (app.validate_product_for_publish y detalles de validation_failed).
@@ -16,26 +18,11 @@ export const PUBLISH_ISSUES: Record<string, string> = {
     "Las reglas sanitarias de esta categoría aún no están revisadas: no se puede publicar todavía.",
 };
 
-/** Campos de la ficha de suplementos, para los avisos de publicación. */
-const REGULATORY_FIELDS: Record<string, string> = {
-  form: "presentación",
-  serving_size: "porción",
-  servings_per_container: "porciones por envase",
-  ingredients: "ingredientes",
-  nutrition: "información nutrimental",
-  usage: "modo de uso",
-  warnings: "advertencias",
-  storage: "conservación",
-  allergens: "alérgenos",
-  sanitary_notice: "aviso o registro sanitario",
-};
-
 /** Texto de un aviso de publicación. Los de cumplimiento traen el campo o la regla tras ":". */
 export function publishIssueMessage(code: string): string {
   const [base, detail = ""] = code.split(":", 2);
   if (base === "compliance_field_missing") {
-    const field = Object.hasOwn(REGULATORY_FIELDS, detail) ? REGULATORY_FIELDS[detail] : detail;
-    return `Falta en la ficha sanitaria: ${field}.`;
+    return `Falta en la ficha sanitaria: ${supplementFieldLabel(detail).toLowerCase()}.`;
   }
   if (base === "compliance_forbidden_term") {
     return "El producto incluye un término que las reglas sanitarias no permiten. Revisa el título, la descripción y la ficha.";

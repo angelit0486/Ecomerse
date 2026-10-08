@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { getProduct, listBrands, listCategories, validateProduct } from "@/server/catalog/queries";
+import { getComplianceStatus, getRegulatoryInfo } from "@/server/compliance/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { toEditorProduct } from "../editor-model";
@@ -12,6 +13,7 @@ import { publishIssueMessage, STATUS_LABELS } from "../messages";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
 import { ProductStatusPanel } from "../product-status";
+import { RegulatoryForm, type RegulatoryInitial } from "../regulatory-form";
 
 export const metadata: Metadata = { title: "Producto" };
 
@@ -30,12 +32,30 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const canReadCost = hasPermission(ctx, "products.cost.read");
   const product = await getProduct(supabase, ctx.store.id, productId, canReadCost);
   if (!product) notFound();
-  const [brands, categories, issues] = await Promise.all([
+  const canEdit = hasPermission(ctx, "products.update") && !product.deleted_at;
+  const [brands, categories, issues, compliance, regulatory] = await Promise.all([
     listBrands(supabase, ctx.store.id),
     listCategories(supabase, ctx.store.id),
     product.deleted_at ? Promise.resolve([]) : validateProduct(supabase, ctx.store.id, product.id),
+    canEdit ? getComplianceStatus(supabase, ctx.store.id) : Promise.resolve(null),
+    canEdit ? getRegulatoryInfo(supabase, ctx.store.id, product.id) : Promise.resolve(null),
   ]);
-  const canEdit = hasPermission(ctx, "products.update") && !product.deleted_at;
+  // La ficha sanitaria aparece cuando la tienda declaró una categoría regulada (ADR-021).
+  const declared = compliance?.categories.filter((c) => c.declared) ?? [];
+  const regulatoryInitial: RegulatoryInitial = {
+    classification: regulatory ? (regulatory.category_key ?? "none") : undefined,
+    data: Object.fromEntries(
+      Object.entries(regulatory?.data ?? {})
+        .filter(([key]) => key !== "nutrition")
+        .map(([key, v]) => [key, String(v)]),
+    ),
+    nutrition: (regulatory?.data.nutrition ?? []).map((r) => ({
+      name: r.name,
+      amount: r.amount,
+      unit: r.unit ?? "",
+      dv: r.dv ?? "",
+    })),
+  };
 
   return (
     <section className="space-y-6">
@@ -80,6 +100,21 @@ export default async function ProductPage({ params, searchParams }: Props) {
         images={product.media}
         canEdit={canEdit}
       />
+
+      {canEdit && (declared.length > 0 || regulatory) ? (
+        <RegulatoryForm
+          storeHandle={ctx.store.handle}
+          productId={product.id}
+          categories={declared.map((c) => ({
+            key: c.key,
+            name: c.name,
+            profileStatus: c.profile.status,
+            requiredFields: c.required_fields,
+            legends: c.legends,
+          }))}
+          initial={regulatoryInitial}
+        />
+      ) : null}
 
       {canEdit ? (
         <ProductEditor
