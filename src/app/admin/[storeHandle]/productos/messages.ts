@@ -9,7 +9,39 @@ export const PUBLISH_ISSUES: Record<string, string> = {
   compare_at_price_invalid: "El precio de comparación debe ser mayor que el precio.",
   product_type_not_supported: "Este tipo de producto aún no se puede vender.",
   image_alt_missing: "Hay imágenes sin texto alternativo (recomendado para accesibilidad y SEO).",
+  // Cumplimiento (ADR-021): la tienda declaró una categoría regulada.
+  compliance_classification_missing:
+    "Indica en la ficha sanitaria si es un suplemento alimenticio o un producto no regulado.",
+  compliance_profile_pending:
+    "Las reglas sanitarias de esta categoría aún no están revisadas: no se puede publicar todavía.",
 };
+
+/** Campos de la ficha de suplementos, para los avisos de publicación. */
+const REGULATORY_FIELDS: Record<string, string> = {
+  form: "presentación",
+  serving_size: "porción",
+  servings_per_container: "porciones por envase",
+  ingredients: "ingredientes",
+  nutrition: "información nutrimental",
+  usage: "modo de uso",
+  warnings: "advertencias",
+  storage: "conservación",
+  allergens: "alérgenos",
+  sanitary_notice: "aviso o registro sanitario",
+};
+
+/** Texto de un aviso de publicación. Los de cumplimiento traen el campo o la regla tras ":". */
+export function publishIssueMessage(code: string): string {
+  const [base, detail = ""] = code.split(":", 2);
+  if (base === "compliance_field_missing") {
+    const field = Object.hasOwn(REGULATORY_FIELDS, detail) ? REGULATORY_FIELDS[detail] : detail;
+    return `Falta en la ficha sanitaria: ${field}.`;
+  }
+  if (base === "compliance_forbidden_term") {
+    return "El producto incluye un término que las reglas sanitarias no permiten. Revisa el título, la descripción y la ficha.";
+  }
+  return Object.hasOwn(PUBLISH_ISSUES, code) ? PUBLISH_ISSUES[code]! : code;
+}
 
 export const FIELD_MESSAGES: Record<string, string> = {
   title: "Escribe un título de hasta 200 caracteres.",

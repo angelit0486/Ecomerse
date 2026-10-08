@@ -14,7 +14,7 @@ import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { FIELD_MESSAGES, PUBLISH_ISSUES } from "./messages";
+import { FIELD_MESSAGES, publishIssueMessage } from "./messages";
 
 /**
  * Acciones del catálogo (F3-T05). La tienda sale siempre de la URL y se vuelve
@@ -164,7 +164,7 @@ export async function productStatusAction(
         const issues = await validateProduct(supabase, storeId, productId);
         const errors = issues.filter((i) => i.level === "error");
         if (errors.length > 0) {
-          throw new PublishBlocked(errors.map((i) => PUBLISH_ISSUES[i.code] ?? i.code));
+          throw new PublishBlocked(errors.map((i) => publishIssueMessage(i.code)));
         }
       }
       const result = await applyStatus(supabase, storeId, productId, action);

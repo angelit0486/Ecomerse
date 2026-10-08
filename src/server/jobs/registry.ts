@@ -1,3 +1,4 @@
+import { createComplianceHandlers } from "@/server/compliance/handlers";
 import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 import { createMediaHandlers } from "@/server/media/handlers";
@@ -54,6 +55,8 @@ const orderNotifications = () => {
 const orders = () => createOrderHandlers({ db: workerDb(), stripe: stripeProvider });
 const refunds = () => createRefundHandlers({ db: workerDb(), stripe: stripeProvider });
 const imports = () => createImportHandlers({ db: workerDb(), onCommitted: invalidateStore });
+const compliance = () =>
+  createComplianceHandlers({ db: workerDb(), onUnpublished: invalidateStore });
 
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
@@ -75,6 +78,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["order.created", lazy("order.created", orderNotifications)],
   ["order.paid", lazy("order.paid", orderNotifications)],
   ["import.commit", lazy("import.commit", imports)],
+  ["compliance.recheck", lazy("compliance.recheck", compliance)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

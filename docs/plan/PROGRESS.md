@@ -6,8 +6,8 @@
 ## Ahora
 
 - **Fase actual:** R — Productos regulados: suplementos en México (Fase 8 cerrada en local: `docs/phases/PHASE-08-REPORT.md`; CI pendiente por P0). Decisión del propietario del 2026-10-08: tienda de suplementos propia (`docs/DECISIONS.md` §11; plan §4, fases R y P antes de la F9).
-- **Siguiente tarea:** R-T01 (modelo regulatorio y validadores de publicación, ADR-021).
-- **Siguiente paso exacto:** terminar R-T01: la migración `20261016000100_regulatory_model.sql` y su pgTAP están en borrador; faltan el handler `compliance.recheck` en el registro de jobs, los mensajes de publicación del panel y la mutación.
+- **Siguiente tarea:** R-T02 (panel: ficha del suplemento, Ajustes → Cumplimiento y reglas en la consola de plataforma).
+- **Siguiente paso exacto:** R-T02: sección "Ficha sanitaria" en el editor de producto (clasificación, campos y tabla nutrimental con `normalizeSupplementSheet`; vista previa de las leyendas de `compliance_store_status`), Ajustes → Cumplimiento (declarar la categoría y clasificar en bloque) y la página de reglas en `/platform`.
 - **Pendiente del propietario para estas fases:** aprobar ADR-023 (paquetes) antes de P-T04; las reglas y leyendas sanitarias con su asesor regulatorio (el perfil de México nace pendiente y bloquea la publicación de suplementos); D1–D6.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
@@ -84,7 +84,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase 8 y el plan de supleme
 | 8    | F8-T04b Importación CSV (núcleo)              | hecha                              | 30 pgTAP (permisos por fila, modo, SKU ajeno, categoría por ruta, todo o nada, repetición, ida y vuelta con la exportación, aislamiento) + 7 unit del planificador + 5 del parser + E2E (errores por fila, `;` y coma decimal, confirmar, Origin ajeno → 403) |
 | 8    | Gate F8                                       | hecha                              | 3 revisiones adversariales (base de datos, aplicación y una segunda sobre las correcciones): 5 altas y 13 medias corregidas, 27 bajas corregidas y 2 aceptadas; 15 mutaciones; 1310 pgTAP, 96 integración, 30 E2E; `PHASE-08-REPORT.md`                       |
 | 8    | F8-T06 Más de 5 000 filas (`export_jobs`)     | pendiente (diferida, D-F8-08)      | —                                                                                                                                                                                                                                                             |
-| R    | R-T01 Modelo regulatorio y validadores        | en curso                           | Borrador de migración y pgTAP                                                                                                                                                                                                                                 |
+| R    | R-T01 Modelo regulatorio y validadores        | hecha                              | 53 pgTAP (denegación por defecto, perfil pendiente, campos, términos, ficha normalizada, activo ⇒ cumple, revisión por lotes, permisos de plataforma, aislamiento) + 7 mutaciones + integración del job `compliance.recheck` + 5 unit                         |
 | R    | R-T02..R-T05 y Gate R                         | pendiente                          | Plan §4                                                                                                                                                                                                                                                       |
 | P    | P-T01..P-T03 y Gate P                         | pendiente                          | Plan §4                                                                                                                                                                                                                                                       |
 | P    | P-T04 Paquetes                                | pendiente (espera aprobar ADR-023) | —                                                                                                                                                                                                                                                             |
@@ -100,6 +100,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase 8 y el plan de supleme
 
 ## Pendientes menores registrados
 
+- Fase R (R-T02): la importación muestra los códigos de cumplimiento tal cual en su error ("no se puede publicar (compliance_field_missing:usage)"); traducirlos con `publishIssueMessage` en la página del job.
 - Fase 7 (notificaciones completas): aviso al dueño de suspensión/reactivación de tenant (D-F2-20) y de transferencia de propiedad (D-F2-16), con el mismo canal y `notification_deliveries`.
 - Consola de plataforma: el selector de tienda para conceder soporte lista todas las tiendas; con cientos de tenants necesita búsqueda (el `Select` ya limita su altura y desplaza).
 - Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).

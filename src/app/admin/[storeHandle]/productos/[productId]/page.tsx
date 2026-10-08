@@ -8,7 +8,7 @@ import { getProduct, listBrands, listCategories, validateProduct } from "@/serve
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { toEditorProduct } from "../editor-model";
-import { PUBLISH_ISSUES, STATUS_LABELS } from "../messages";
+import { publishIssueMessage, STATUS_LABELS } from "../messages";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
 import { ProductStatusPanel } from "../product-status";
@@ -71,7 +71,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         }}
         warnings={issues
           .filter((i) => i.level === "warning")
-          .map((i) => PUBLISH_ISSUES[i.code] ?? i.code)}
+          .map((i) => publishIssueMessage(i.code))}
       />
 
       <ProductImages
