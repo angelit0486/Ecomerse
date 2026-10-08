@@ -55,4 +55,18 @@ describe("normalizeSupplementSheet (espejo de app.regulatory_normalize)", () => 
       fields: ["nutrition"],
     });
   });
+
+  it("la tabla nutrimental no lleva «|» ni «;» (separan celdas y renglones en el CSV)", () => {
+    expect(
+      normalizeSupplementSheet({ nutrition: [{ name: "Omega 3|EPA", amount: "1000" }] }),
+    ).toEqual({ ok: false, fields: ["nutrition"] });
+    expect(
+      normalizeSupplementSheet({ nutrition: [{ name: "Omega 3", amount: "1000", unit: "mg;" }] }),
+    ).toEqual({ ok: false, fields: ["nutrition"] });
+    expect(normalizeSupplementSheet({ ingredients: "Aceite; gelatina | glicerina" })).toMatchObject(
+      {
+        ok: true,
+      },
+    );
+  });
 });

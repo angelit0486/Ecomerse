@@ -23,7 +23,7 @@ const CELLS = ["name", "amount", "unit", "dv"] as const;
 function fieldMessage(field: SheetErrorField): string {
   if (field === "data") return "La ficha tiene datos que no se reconocen. Recarga la página.";
   if (field === "nutrition") {
-    return "Cada renglón con datos necesita nutrimento y cantidad (máximo 60 renglones).";
+    return "Cada renglón con datos necesita nutrimento y cantidad, sin «|» ni «;» (máximo 60 renglones).";
   }
   if (field === "servings_per_container") return "Escribe un número entero entre 1 y 100 000.";
   const max = SUPPLEMENT_TEXT_LIMITS[field as keyof typeof SUPPLEMENT_TEXT_LIMITS];

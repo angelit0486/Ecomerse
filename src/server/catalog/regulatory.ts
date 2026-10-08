@@ -48,12 +48,14 @@ const text = (max: number) =>
     .trim()
     .max(max)
     .refine((v) => !CONTROL_IN_TEXT.test(v), "caracteres no permitidos");
+// `|` y `;` separan renglones y celdas de la tabla en el CSV (R-T05, lib/catalog/compact).
+const CSV_SEPARATORS = /[|;]/;
 const cell = (max: number) =>
   z
     .string()
     .trim()
     .max(max)
-    .refine((v) => !CONTROL_IN_CELL.test(v), "caracteres no permitidos");
+    .refine((v) => !CONTROL_IN_CELL.test(v) && !CSV_SEPARATORS.test(v), "caracteres no permitidos");
 
 const nutritionRow = z.object({
   name: cell(NUTRITION_CELL_LIMITS.name).optional(),
