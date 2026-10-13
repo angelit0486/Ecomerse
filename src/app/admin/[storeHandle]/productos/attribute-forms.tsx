@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { type FormEvent, startTransition, useActionState, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
@@ -9,6 +9,18 @@ import { Input } from "@/ui/primitives/input";
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { deleteAttribute, saveAttribute, saveProductAttributes } from "./attribute-actions";
+
+/**
+ * Envía sin el reinicio automático de React 19: tras la acción, `form.reset()`
+ * desmarca también las casillas controladas. Sin JS queda `action` como respaldo.
+ */
+function submitKeepingState(dispatch: (data: FormData) => void) {
+  return (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    startTransition(() => dispatch(data));
+  };
+}
 
 export interface AttributeFormData {
   id: string;
@@ -41,7 +53,7 @@ export function AttributeForm({
     saveAttribute.bind(null, storeHandle),
     {},
   );
-  // Controlados: React reinicia el formulario al terminar la acción, también tras un error.
+  // Controlados y sin reinicio automático (submitKeepingState): un error no borra lo elegido.
   const [filterable, setFilterable] = useState(attribute?.is_filterable ?? true);
   const [rows, setRows] = useState<Row[]>(
     attribute ? attribute.values.map((v) => ({ ...v })) : [{ ...EMPTY_ROW }, { ...EMPTY_ROW }],
@@ -52,6 +64,7 @@ export function AttributeForm({
   return (
     <form
       action={action}
+      onSubmit={submitKeepingState(action)}
       aria-label={attribute ? `Atributo ${attribute.name}` : "Nuevo atributo"}
       className="space-y-4 rounded-md border border-border p-4"
       noValidate
@@ -234,7 +247,7 @@ export function ProductAttributesForm({
           Con ellos se filtra en la tienda (por ejemplo, por objetivo o sabor).
         </p>
       </header>
-      <form action={action} className="space-y-4">
+      <form action={action} onSubmit={submitKeepingState(action)} className="space-y-4">
         {attributes.map((attribute) => (
           <fieldset key={attribute.id} className="space-y-1">
             <legend className="text-[13px] font-medium">{attribute.name}</legend>

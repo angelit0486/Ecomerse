@@ -6,10 +6,9 @@
 ## Ahora
 
 - **Orden acordado (D-S-05):** Gate R → Fase 9 (tienda insignia de suplementos) → Fase P → F10 → F11.
-- **Fase actual:** R — Productos regulados: suplementos en México (Fase 8 cerrada en local: `docs/phases/PHASE-08-REPORT.md`; CI pendiente por P0). Decisión del propietario del 2026-10-08: tienda de suplementos propia (`docs/DECISIONS.md` §11; plan §4, fases R y P antes de la F9).
-- **Siguiente tarea:** Gate R (revisión adversarial e informe `PHASE-R-REPORT.md`).
-- **Siguiente paso exacto:** revisiones adversariales de base de datos y aplicación sobre R-T01..R-T05; corregir; informe.
-- **Para el Gate R:** evaluar si el texto que revisa el cumplimiento debe incluir también la marca, el texto alternativo de las imágenes y las opciones de variante (hoy: título, descripción, SEO, ficha y atributos).
+- **Fase actual:** 9 — Tienda insignia de suplementos (Fase R cerrada en local: `docs/phases/PHASE-R-REPORT.md`; CI pendiente por P0). Decisión del propietario del 2026-10-13: la primera tienda, de suplementos, al nivel de GNC, Birdman y B Life (D-S-05; sin copiar a ninguna).
+- **Siguiente tarea:** F9-T01 editor de marca (white-label) del plan §4, Fase 9.
+- **Siguiente paso exacto:** revisar lo que ya existe del tema (Theme schema v1, `draft_settings`, `appearance_publish_theme`) y construir F9-T01 sin cambiar el contrato del tema.
 - **Pendiente del propietario para estas fases:** aprobar ADR-023 (paquetes) antes de P-T04; las reglas y leyendas sanitarias con su asesor regulatorio (el perfil de México nace pendiente y bloquea la publicación de suplementos); D1–D6.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
 - **Arranque del entorno:** `pg_ctlcluster 16 main start` si PostgreSQL está apagado; `pnpm stack up` para el stack local; `pnpm build && (set -a; . ./.env.local; set +a; pnpm start -H localhost -p 3000)` para la app.
@@ -23,7 +22,7 @@
 
 ## Commits sin subir
 
-Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase 8 y el plan de suplementos. Bundle de respaldo: `pruva-f8.bundle` en el scratchpad.
+Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo: `pruva-f8.bundle` en el scratchpad (se rehace con `git bundle create … --all`).
 
 ## Tablero
 
@@ -91,7 +90,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase 8 y el plan de supleme
 | R     | R-T03 Ficha y leyendas en la tienda                            | hecha                              | 12 pgTAP (solo publicado y vigente, por lugar, sin la etiqueta interna, sin cruzar tiendas) + 7 mutaciones de base y 1 de la app (sin invalidar la caché) + 3 unit + E2E en dos tiendas (ficha, leyendas del carrito y del checkout, JSON-LD sin la ficha, edición visible al instante; la no regulada no cambia) con axe; Lighthouse móvil 99/100/100/100 en la ficha                        |
 | R     | R-T04 Atributos filtrables                                     | hecha                              | 54 pgTAP (permisos sin claves nuevas, validación, lista completa, OR/AND, conteos sin el propio atributo, solo publicados, búsqueda por valor, cumplimiento, aislamiento) + 8 mutaciones de base y 1 de la app (sin invalidar la caché) + 6 unit + E2E (panel, asignación, filtros con conteo, orden con filtros, ficha, otra tienda, renombrar al instante) con axe; Lighthouse móvil 97-100 |
 | R     | R-T05 Ficha y atributos en el CSV                              | hecha                              | 16 pgTAP (columnas, errores por fila, ausente = sin cambios, vacía = borrar, aislamiento, exportación condicional) + 3 pgTAP del formato + 9 unit (formato compacto y planificador) + integración de ida y vuelta + E2E de importación y exportación                                                                                                                                          |
-| R     | Gate R                                                         | pendiente                          | Plan §4                                                                                                                                                                                                                                                                                                                                                                                       |
+| R     | Gate R                                                         | hecha                              | informe `docs/phases/PHASE-R-REPORT.md` · 11 hallazgos corregidos (1 alto) · 26 pgTAP + 15 mutaciones                                                                                                                                                                                                                                                                                         |
 | 9     | F9-T01..F9-T04 y Gate F9 (tienda insignia, adelantada: D-S-05) | pendiente                          | Plan §4                                                                                                                                                                                                                                                                                                                                                                                       |
 | P     | P-T01..P-T03 y Gate P                                          | pendiente                          | Plan §4                                                                                                                                                                                                                                                                                                                                                                                       |
 | P     | P-T04 Paquetes                                                 | pendiente (espera aprobar ADR-023) | —                                                                                                                                                                                                                                                                                                                                                                                             |
