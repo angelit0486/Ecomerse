@@ -49,6 +49,9 @@ function attributeFailure(
       ...(values ? { values } : {}),
     };
   }
+  if (e.code === "conflict") {
+    return { error: "Alguien más cambió los valores de este atributo. Recarga la página." };
+  }
   if (e.code === "not_found") {
     return { error: "El atributo o uno de sus valores ya no existe. Recarga la página." };
   }
@@ -95,9 +98,14 @@ export async function saveAttribute(
   }
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
+    const known = String(formData.get("known_value_ids") ?? "")
+      .split(",")
+      .filter((id) => uuid.safeParse(id).success);
     await callRpc(supabase, "catalog_save_attribute", {
       p_store_id: storeId,
-      p_attribute: result.attribute,
+      p_attribute: result.attribute.id
+        ? { ...result.attribute, known_value_ids: known }
+        : result.attribute,
     });
     // Los filtros y las fichas de la tienda pública cambian (§21.4).
     invalidateStore(storeId);

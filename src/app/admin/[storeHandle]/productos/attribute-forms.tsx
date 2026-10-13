@@ -41,6 +41,8 @@ export function AttributeForm({
     saveAttribute.bind(null, storeHandle),
     {},
   );
+  // Controlados: React reinicia el formulario al terminar la acción, también tras un error.
+  const [filterable, setFilterable] = useState(attribute?.is_filterable ?? true);
   const [rows, setRows] = useState<Row[]>(
     attribute ? attribute.values.map((v) => ({ ...v })) : [{ ...EMPTY_ROW }, { ...EMPTY_ROW }],
   );
@@ -56,6 +58,14 @@ export function AttributeForm({
     >
       {attribute ? <input type="hidden" name="id" value={attribute.id} /> : null}
       <input type="hidden" name="value_count" value={rows.length} />
+      {attribute ? (
+        // Valores que había al abrir: si otra persona agregó uno, guardar no lo borra.
+        <input
+          type="hidden"
+          name="known_value_ids"
+          value={attribute.values.map((v) => v.id).join(",")}
+        />
+      ) : null}
       <div className="flex flex-wrap items-end gap-4">
         <Field
           label={attribute ? `Nombre de ${title}` : "Nombre del atributo"}
@@ -82,7 +92,8 @@ export function AttributeForm({
             type="checkbox"
             name="is_filterable"
             value="1"
-            defaultChecked={attribute?.is_filterable ?? true}
+            checked={filterable}
+            onChange={(e) => setFilterable(e.target.checked)}
           />
           Usar como filtro en la tienda
         </label>
@@ -209,6 +220,7 @@ export function ProductAttributesForm({
     saveProductAttributes.bind(null, storeHandle, productId),
     {},
   );
+  const [checked, setChecked] = useState<Set<string>>(() => new Set(selected));
   return (
     <section
       aria-labelledby="atributos-producto"
@@ -233,7 +245,15 @@ export function ProductAttributesForm({
                     type="checkbox"
                     name="value"
                     value={value.id}
-                    defaultChecked={selected.includes(value.id)}
+                    checked={checked.has(value.id)}
+                    onChange={(e) =>
+                      setChecked((all) => {
+                        const next = new Set(all);
+                        if (e.target.checked) next.add(value.id);
+                        else next.delete(value.id);
+                        return next;
+                      })
+                    }
                   />
                   {value.label}
                 </label>

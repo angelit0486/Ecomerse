@@ -137,10 +137,8 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
   await page.goto(`${store()}/productos`);
   const filters = page.getByRole("form", { name: "Filtros" });
   const objetivo = filters.getByRole("group", { name: "Objetivo" });
-  await expect(
-    objetivo.getByRole("checkbox", { name: "Masa muscular (2 productos)" }),
-  ).toBeVisible();
-  await expect(objetivo.getByRole("checkbox", { name: "Energía (1 producto)" })).toBeVisible();
+  await expect(objetivo.getByRole("checkbox", { name: "Masa muscular (2)" })).toBeVisible();
+  await expect(objetivo.getByRole("checkbox", { name: "Energía (1)" })).toBeVisible();
   await expect
     .poll(() => cardTitles(page))
     .toEqual(["Cafeína", "Proteína Choco", "Proteína Vainilla"]);
@@ -158,7 +156,7 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
   await page.goto(`${store()}/productos?objetivo=masa-muscular`);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco", "Proteína Vainilla"]);
   const sabor = page.getByRole("form", { name: "Filtros" }).getByRole("group", { name: "Sabor" });
-  await expect(sabor.getByRole("checkbox", { name: "Chocolate (1 producto)" })).toBeVisible();
+  await expect(sabor.getByRole("checkbox", { name: "Chocolate (1)" })).toBeVisible();
   await sabor.getByRole("checkbox", { name: /Chocolate/ }).check();
   await page
     .getByRole("form", { name: "Filtros" })
@@ -219,9 +217,7 @@ test("renombrar un valor se ve al instante en la tienda", async ({ page }) => {
   const objetivo = page
     .getByRole("form", { name: "Filtros" })
     .getByRole("group", { name: "Objetivo" });
-  await expect(
-    objetivo.getByRole("checkbox", { name: "Energía y enfoque (1 producto)" }),
-  ).toBeVisible();
+  await expect(objetivo.getByRole("checkbox", { name: "Energía y enfoque (1)" })).toBeVisible();
   // La clave de la URL no cambió al renombrar.
   await page.goto(`${store()}/productos?objetivo=energia`);
   await expect.poll(() => cardTitles(page)).toEqual(["Cafeína"]);

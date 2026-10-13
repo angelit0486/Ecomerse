@@ -7,7 +7,7 @@ import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 
-import { cachedRead } from "./cache";
+import { cachedRead, COMPLIANCE_TAG } from "./cache";
 
 /**
  * Lecturas del catálogo publicado (funciones storefront.*, rol
@@ -352,6 +352,7 @@ const productRegulatoryCached = cachedRead(
     call<ProductRegulatory>(
       gatewayDb()`select storefront.get_product_regulatory(${storeId}::uuid, ${slug}) as value`,
     ),
+  [COMPLIANCE_TAG],
 );
 const productAttributesCached = cachedRead(
   "get_product_attributes",

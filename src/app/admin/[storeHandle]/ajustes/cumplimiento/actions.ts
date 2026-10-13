@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { reportActionError } from "@/server/actions/report";
 import { rpcDetail } from "@/server/compliance/errors";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateStore } from "@/server/storefront/cache";
 
 import { storeClient, type FormState } from "../../_shared/action-state";
 
@@ -30,6 +31,7 @@ export async function setRegulatedCategory(
       p_category_key: categoryKey,
       p_enabled: enabled,
     });
+    invalidateStore(storeId);
   } catch (error) {
     const e = reportActionError("compliance", error);
     const { detail, hint } = rpcDetail(error);
@@ -68,6 +70,7 @@ export async function classifyPublishedAsUnregulated(
     count = await callRpc<number>(supabase, "catalog_classify_active_unregulated", {
       p_store_id: storeId,
     });
+    invalidateStore(storeId);
   } catch (error) {
     const e = reportActionError("compliance", error);
     return {

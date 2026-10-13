@@ -19,10 +19,11 @@ export function storeTag(storeId: string): string {
 export function cachedRead<A extends [string, ...unknown[]], R>(
   name: string,
   read: (...args: A) => Promise<R>,
+  extraTags: readonly string[] = [],
 ): (...args: A) => Promise<R> {
   return (...args: A) =>
     unstable_cache(read, ["storefront", name, args[0]], {
-      tags: [storeTag(args[0])],
+      tags: [storeTag(args[0]), ...extraTags],
       revalidate: STOREFRONT_TTL_SECONDS,
     })(...args);
 }
@@ -30,4 +31,11 @@ export function cachedRead<A extends [string, ...unknown[]], R>(
 /** Invalida todo lo cacheado de una tienda (catálogo, contenido, tema, inventario). */
 export function invalidateStore(storeId: string): void {
   revalidateTag(storeTag(storeId), { expire: 0 });
+}
+
+/** Las leyendas salen de las reglas de la plataforma: un cambio llega a todas las tiendas. */
+export const COMPLIANCE_TAG = "storefront:compliance";
+
+export function invalidateCompliance(): void {
+  revalidateTag(COMPLIANCE_TAG, { expire: 0 });
 }

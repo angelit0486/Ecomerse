@@ -36,7 +36,6 @@ export function FacetFilters({
                     name={facet.key}
                     value={value.key}
                     defaultChecked={value.selected}
-                    aria-label={`${value.label} (${value.count} ${value.count === 1 ? "producto" : "productos"})`}
                   />
                   <span>
                     {value.label} <span className="text-[var(--sf-muted)]">({value.count})</span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { parseAttributeParams, selectionPairs } from "@/lib/catalog/attributes";
+import { hasSelection, parseAttributeParams, selectionPairs } from "@/lib/catalog/attributes";
 import type { StorePublic } from "@/server/storefront/store-public";
 import {
   encodeListCursor,
@@ -46,7 +46,20 @@ export async function ProductListing({
   const available = one(searchParams.disponible) === "1";
   const cursor = one(searchParams.desde);
   // Filtros de atributos de la URL (R-T04); la base ignora los que la tienda no tiene.
-  const requested = parseAttributeParams(searchParams);
+  // Solo lo que la tienda tiene filtra (y salta la caché): un parámetro cualquiera
+  // con forma de filtro no abre lecturas sin caché (Gate R).
+  const parsed = parseAttributeParams(searchParams);
+  const known = hasSelection(parsed)
+    ? await listFacets(store.id, { categoryPath, brandSlug, query, available })
+    : [];
+  const requested = Object.fromEntries(
+    Object.entries(parsed)
+      .map(([key, values]) => {
+        const facet = known.find((f) => f.key === key);
+        return [key, values.filter((v) => facet?.values.some((x) => x.key === v))] as const;
+      })
+      .filter(([, values]) => values.length > 0),
+  );
   const [page, facets] = await Promise.all([
     listProducts(store.id, {
       categoryPath,

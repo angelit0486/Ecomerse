@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { reportActionError } from "@/server/actions/report";
 import { requirePlatformRole } from "@/server/auth/platform";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateCompliance } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import type { ConsoleState } from "../actions";
@@ -83,6 +84,8 @@ export async function saveComplianceRule(
         position: values.position === "" ? 0 : Number(values.position),
       },
     });
+    // Las leyendas de todas las tiendas del país cambian (R-T03).
+    invalidateCompliance();
     return "Regla guardada.";
   }, values);
 }
@@ -95,6 +98,8 @@ export async function retireComplianceRule(
   return attempt(async () => {
     const supabase = await createSupabaseServerClient();
     await callRpc(supabase, "platform_compliance_rule_retire", { p_rule_id: ruleId });
+    // Las leyendas de todas las tiendas del país cambian (R-T03).
+    invalidateCompliance();
     return "Regla retirada.";
   });
 }
@@ -122,6 +127,8 @@ export async function setComplianceProfileStatus(
       p_reviewed_by: values.reviewed_by,
       p_notes: values.review_notes,
     });
+    // Las leyendas de todas las tiendas del país cambian (R-T03).
+    invalidateCompliance();
     return values.status === "active" ? "Reglas marcadas como revisadas." : "Estado actualizado.";
   }, values);
 }
