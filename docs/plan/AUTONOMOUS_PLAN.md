@@ -228,13 +228,18 @@ Ya hecho: A + B (commit `4b74b5d`): tablas, RLS, autorización, auditoría, RPC 
 | P-T04      | Paquetes (ADR-023, **solo con su aprobación**): componentes, disponibilidad, reserva, venta, liberación y devolución expandidas, `order_item_components`, panel y storefront.             | L    | Concurrencia (un componente compartido entre un paquete y una venta suelta), caos ampliado, pgTAP del snapshot.                 |
 | **Gate P** | Revisión adversarial e informe `PHASE-P-REPORT.md`; verificación con el sandbox de Stripe pendiente (S-4).                                                                                |      |                                                                                                                                 |
 
-### FASE 9 — White-label completo (§20)
+### FASE 9 — White-label completo y tienda insignia de suplementos (§20; adelantada antes de la Fase P, D-S-05)
 
-| ID          | Tarea                                                                                                                                                     | Tam. | Pruebas                                                      |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------ |
-| F9-T01      | Editor de branding completo (tipografía curada, forma, header con anuncio, footer, redes, contacto, SEO global) con vista previa y publicación.           | L    | Contraste bloquea; vista previa no se filtra al público.     |
-| F9-T02      | Editor de secciones de la home (agregar, quitar, ordenar, editar), con secciones para comprar por objetivo (atributo de la Fase R) y paquetes destacados. | L    | Dos tiendas visualmente distintas, ambas ≥ 90 en Lighthouse. |
-| **Gate F9** |                                                                                                                                                           |      |                                                              |
+Nivel objetivo (D-S-02, criterios propios, sin copiar a nadie): una tienda de suplementos a la altura de las grandes
+del mercado (GNC, Birdman, B Life), con portada por objetivo, ficha completa, navegación rápida y confianza visible.
+
+| ID          | Tarea                                                                                                                                                                                                                                        | Tam. | Pruebas                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ |
+| F9-T01      | Editor de branding completo (tipografía curada, forma, header con barra de anuncio, footer, redes, contacto, SEO global) con vista previa y publicación.                                                                                     | L    | Contraste bloquea; vista previa no se filtra al público.                       |
+| F9-T02      | Secciones de la portada (los 8 tipos de §20.2: agregar, quitar, ordenar, editar, vista previa y publicación). `featured_products` con fuente: novedades, más vendidos, categoría, marca o **valor de atributo** (comprar por objetivo).      | L    | pgTAP de validación por tipo + E2E (editar → vista previa → publicar) con axe. |
+| F9-T03      | Ficha de producto insignia: galería con miniaturas, precio con ahorro y % de descuento, insignias (oferta, nuevo, últimas piezas, agotado), "más para tu objetivo" (relacionados por atributo y categoría), envío y formas de pago visibles. | M    | E2E + Lighthouse ≥ 90 en la ficha.                                             |
+| F9-T04      | Navegación y listados: tarjetas con insignias, menú principal de 2 niveles (categorías y objetivos), sugerencias de búsqueda, barra de "te faltan $X para envío gratis" en el carrito.                                                       | M    | E2E con teclado + axe; Lighthouse ≥ 90 en inicio y listado.                    |
+| **Gate F9** | Revisión adversarial e informe; dos tiendas visualmente distintas, ambas ≥ 90 en Lighthouse.                                                                                                                                                 |      |                                                                                |
 
 ### FASE 10 — Platform Console & Plans (§19)
 
