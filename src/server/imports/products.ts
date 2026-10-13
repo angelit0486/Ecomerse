@@ -1,5 +1,7 @@
+import { parseAttributes, parseNutrition } from "@/lib/catalog/compact";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { productInputSchema } from "@/server/catalog/product-input";
+import { normalizeSupplementSheet, REGULATED_CATEGORIES } from "@/server/catalog/regulatory";
 
 /**
  * Plan de importación de productos (F8-T04b + Gate F8, GATE0 §26.1). Una fila por
@@ -43,7 +45,32 @@ export const IMPORT_HEADERS = [
   "seo_title",
   "seo_description",
 ] as const;
-export type ImportColumn = (typeof IMPORT_HEADERS)[number];
+
+/**
+ * Columnas opcionales (R-T05): la ficha sanitaria y los atributos. La exportación
+ * las incluye solo si la tienda las usa; la importación las acepta siempre.
+ * `regulatory_category`: dietary_supplement, none (no regulado) o vacío (sin cambios).
+ */
+export const REGULATORY_FIELD_COLUMNS = [
+  "regulatory_form",
+  "regulatory_serving_size",
+  "regulatory_servings_per_container",
+  "regulatory_ingredients",
+  "regulatory_nutrition",
+  "regulatory_usage",
+  "regulatory_warnings",
+  "regulatory_storage",
+  "regulatory_allergens",
+  "regulatory_sanitary_notice",
+] as const;
+export const REGULATORY_HEADERS = ["regulatory_category", ...REGULATORY_FIELD_COLUMNS] as const;
+export const ATTRIBUTE_HEADERS = ["attributes"] as const;
+export const ALL_IMPORT_HEADERS = [
+  ...IMPORT_HEADERS,
+  ...REGULATORY_HEADERS,
+  ...ATTRIBUTE_HEADERS,
+] as const;
+export type ImportColumn = (typeof ALL_IMPORT_HEADERS)[number];
 
 export const MAX_IMPORT_ROWS = 5000;
 /** Vercel rechaza cuerpos de más de 4.5 MB: 4 MB de archivo + el multipart. */
@@ -78,6 +105,10 @@ export interface PlannedProduct {
     seo_description?: string | null;
   };
   status?: "draft" | "active" | "archived";
+  /** category null = no regulado; data: campo → valor (null = se borra). */
+  regulatory?: { category: string | null; data: Record<string, unknown> };
+  /** Clave del atributo → claves de sus valores; {} = sin atributos. */
+  attributes?: Record<string, string[]>;
   brand?: string | null;
   categories?: string[];
   /** null: el archivo no trae columnas de opciones. */
@@ -97,7 +128,7 @@ export type HeaderCheck =
   | { ok: true; columns: ImportColumn[]; ignored: string[] }
   | { ok: false; missing: string[]; duplicated: string[] };
 
-const KNOWN = new Set<string>(IMPORT_HEADERS);
+const KNOWN = new Set<string>(ALL_IMPORT_HEADERS);
 
 export function checkHeaders(headers: string[]): HeaderCheck {
   const seen = new Set<string>();
@@ -107,10 +138,14 @@ export function checkHeaders(headers: string[]): HeaderCheck {
     seen.add(h);
   }
   const missing = seen.has("handle") ? [] : ["handle"];
+  // La ficha necesita su clasificación para guardarse.
+  if (REGULATORY_FIELD_COLUMNS.some((c) => seen.has(c)) && !seen.has("regulatory_category")) {
+    missing.push("regulatory_category");
+  }
   if (missing.length || duplicated.size) return { ok: false, missing, duplicated: [...duplicated] };
   return {
     ok: true,
-    columns: IMPORT_HEADERS.filter((h) => seen.has(h)),
+    columns: ALL_IMPORT_HEADERS.filter((h) => seen.has(h)),
     // Columnas ajenas (p. ej. store_id) se ignoran y se avisan: la tienda la fija
     // la URL del panel y el job, nunca el archivo (§26.1, CF-10).
     ignored: [...new Set(headers.filter((h) => h && !KNOWN.has(h)))].map((h) => h.slice(0, 100)),
@@ -227,6 +262,12 @@ export function planProductImport(
     }
     if (has("brand")) normalized.brand = f("brand") || null;
     if (has("categories")) normalized.categories = list(f("categories"));
+    if (has("regulatory_category")) planRegulatory(f, has, normalized, fe);
+    if (has("attributes")) {
+      const parsed = parseAttributes(f("attributes"));
+      if (parsed.ok) normalized.attributes = parsed.value;
+      else fe.push(`attributes: ${parsed.error}`);
+    }
 
     // Opciones: mismos nombres en todas las filas del producto.
     const optionColumns = ([1, 2, 3] as const).filter((n) => has(`option${n}_name`));
@@ -377,4 +418,65 @@ export function planProductImport(
     first.normalized = normalized;
   }
   return planned;
+}
+
+/** Ficha sanitaria de la primera fila del producto (R-T05). La base vuelve a validar. */
+function planRegulatory(
+  f: (k: ImportColumn) => string,
+  has: (k: ImportColumn) => boolean,
+  normalized: PlannedProduct,
+  errors: string[],
+) {
+  const category = f("regulatory_category").toLowerCase();
+  const present = REGULATORY_FIELD_COLUMNS.filter((c) => has(c));
+  const filled = present.filter((c) => f(c));
+  if (!category) {
+    if (filled.length > 0) {
+      errors.push("regulatory_category: indica dietary_supplement o none para guardar la ficha");
+    }
+    return;
+  }
+  if (category === "none") {
+    if (filled.length > 0) {
+      errors.push("regulatory_category: un producto no regulado no lleva ficha sanitaria");
+    }
+    normalized.regulatory = { category: null, data: {} };
+    return;
+  }
+  if (!(REGULATED_CATEGORIES as readonly string[]).includes(category)) {
+    errors.push("regulatory_category: usa dietary_supplement o none");
+    return;
+  }
+  const data: Record<string, unknown> = {};
+  let ok = true;
+  for (const column of present) {
+    const field = column.slice("regulatory_".length);
+    const value = f(column);
+    if (!value) {
+      data[field] = null;
+    } else if (field === "servings_per_container") {
+      if (/^\d{1,6}$/.test(value)) data[field] = Number(value);
+      else {
+        errors.push(`${column}: escribe un número entero`);
+        ok = false;
+      }
+    } else if (field === "nutrition") {
+      const rows = parseNutrition(value);
+      if (rows.ok) data[field] = rows.value.length > 0 ? rows.value : null;
+      else {
+        errors.push(`${column}: ${rows.error}`);
+        ok = false;
+      }
+    } else {
+      data[field] = value;
+    }
+  }
+  if (ok) {
+    const filledData = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null));
+    const check = normalizeSupplementSheet(filledData);
+    if (!check.ok) {
+      for (const field of check.fields) errors.push(`regulatory_${field}: valor no válido`);
+    }
+  }
+  normalized.regulatory = { category, data };
 }

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
-import { IMPORT_HEADERS } from "@/server/imports/products";
+import { ALL_IMPORT_HEADERS } from "@/server/imports/products";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { linkButton, nativeControl } from "../styles";
@@ -45,7 +45,7 @@ function errorDetail(code: string, raw: string): string | undefined {
   }
   if (code === "columnas") {
     const names = raw.split(",");
-    const known = new Set<string>(IMPORT_HEADERS);
+    const known = new Set<string>(ALL_IMPORT_HEADERS);
     return names.length > 0 && names.every((n) => known.has(n))
       ? `falta o está repetida: ${names.join(", ")}`
       : undefined;
@@ -162,6 +162,19 @@ export default async function ImportPage({ params, searchParams }: Props) {
           <li>
             <code>status</code>: <code>active</code> publica (si el producto pasa la validación),{" "}
             <code>draft</code> lo deja en borrador y <code>archived</code> lo archiva.
+          </li>
+          <li>
+            Ficha sanitaria (opcional): <code>regulatory_category</code> con{" "}
+            <code>dietary_supplement</code> o <code>none</code> (vacía, sin cambios) y las columnas{" "}
+            <code>regulatory_ingredients</code>, <code>regulatory_usage</code>,{" "}
+            <code>regulatory_warnings</code>… La tabla nutrimental va en{" "}
+            <code>regulatory_nutrition</code> como <code>Omega 3|1000|mg; EPA|180|mg|10%</code>.
+            Exporta tu catálogo para ver todas las columnas.
+          </li>
+          <li>
+            Atributos (opcional): <code>attributes</code> con las claves de Productos → Atributos,
+            por ejemplo <code>objetivo:energia|fuerza; sabor:chocolate</code>. Vacía, el producto
+            queda sin atributos.
           </li>
           <li>
             Las columnas que no son de la plantilla se ignoran y se avisan en la vista previa.

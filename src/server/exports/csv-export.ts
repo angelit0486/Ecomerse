@@ -1,6 +1,12 @@
 import { centsToInput } from "@/lib/money/format";
 import { toCsv, type CsvValue } from "@/lib/csv";
-import { IMPORT_HEADERS } from "@/server/imports/products";
+import { formatAttributes, formatNutrition, type NutritionCells } from "@/lib/catalog/compact";
+import {
+  ATTRIBUTE_HEADERS,
+  IMPORT_HEADERS,
+  REGULATORY_FIELD_COLUMNS,
+  REGULATORY_HEADERS,
+} from "@/server/imports/products";
 
 /**
  * Filas de `exports_rows` → CSV (F8-T04a, §26.2). Los productos usan las mismas
@@ -21,10 +27,39 @@ const ORDER_LABELS: Record<string, string> = {
   cancelled: "cancelado",
 };
 
-export function exportCsv(entity: ExportEntity, rows: Row[], pii: boolean): string {
+/** Columnas opcionales de productos: solo si la tienda las usa (R-T05). */
+export interface ProductCsvOptions {
+  regulated?: boolean;
+  attributes?: boolean;
+}
+
+function regulatoryCells(value: unknown): CsvValue[] {
+  const info = value as { category: string | null; data: Record<string, unknown> } | null;
+  const category = info ? (info.category ?? "none") : null;
+  return [
+    category,
+    ...REGULATORY_FIELD_COLUMNS.map((column) => {
+      const v = info?.data?.[column.slice("regulatory_".length)];
+      if (v === undefined || v === null) return null;
+      if (column === "regulatory_nutrition") return formatNutrition(v as NutritionCells[]);
+      return v as CsvValue;
+    }),
+  ];
+}
+
+export function exportCsv(
+  entity: ExportEntity,
+  rows: Row[],
+  pii: boolean,
+  options: ProductCsvOptions = {},
+): string {
   switch (entity) {
     case "products": {
-      const headers = IMPORT_HEADERS;
+      const headers = [
+        ...IMPORT_HEADERS,
+        ...(options.regulated ? REGULATORY_HEADERS : []),
+        ...(options.attributes ? ATTRIBUTE_HEADERS : []),
+      ];
       return toCsv(
         headers,
         rows.map((r) => {
@@ -55,6 +90,10 @@ export function exportCsv(entity: ExportEntity, rows: Row[], pii: boolean): stri
             str(r.variant_status),
             str(r.seo_title),
             str(r.seo_description),
+            ...(options.regulated ? regulatoryCells(r.regulatory) : []),
+            ...(options.attributes
+              ? [formatAttributes((r.attributes as { key: string; values: string[] }[]) ?? [])]
+              : []),
           ];
         }),
       );

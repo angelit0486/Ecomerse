@@ -4,7 +4,7 @@ import { z } from "zod";
 import { toCsv } from "@/lib/csv";
 import { reportActionError } from "@/server/actions/report";
 import { hasPermission } from "@/server/auth/context";
-import { IMPORT_HEADERS } from "@/server/imports/products";
+import { ALL_IMPORT_HEADERS } from "@/server/imports/products";
 
 import { storeClient } from "../../../../_shared/action-state";
 
@@ -37,7 +37,7 @@ export async function GET(_request: Request, { params }: Params) {
       .order("row_number")
       .limit(5000);
     if (error) throw error;
-    const columns = IMPORT_HEADERS.filter((h) => (job.columns as string[]).includes(h));
+    const columns = ALL_IMPORT_HEADERS.filter((h) => (job.columns as string[]).includes(h));
     const csv = toCsv(
       ["fila", "errores", ...columns],
       (rows ?? []).map((r) => {

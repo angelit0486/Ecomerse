@@ -200,3 +200,85 @@ describe("planProductImport", () => {
     expect(plan!.errors).toEqual(["compare_at_price: debe ser mayor que price"]);
   });
 });
+
+describe("ficha sanitaria y atributos (R-T05)", () => {
+  const RH = [
+    "handle",
+    "title",
+    "price",
+    "regulatory_category",
+    "regulatory_ingredients",
+    "regulatory_nutrition",
+    "regulatory_servings_per_container",
+    "regulatory_usage",
+    "attributes",
+  ];
+
+  it("arma la ficha (vacío = se borra) y los atributos por clave", () => {
+    const [first] = planProductImport(RH, [
+      row(
+        {
+          handle: "omega-3",
+          title: "Omega 3",
+          price: "299",
+          regulatory_category: "dietary_supplement",
+          regulatory_ingredients: "Aceite de pescado",
+          regulatory_nutrition: "Omega 3|1000|mg; EPA|180",
+          regulatory_servings_per_container: "60",
+          attributes: "objetivo:energia|corazon; sabor:limon",
+        },
+        RH,
+      ),
+    ]);
+    expect(first!.errors).toEqual([]);
+    expect(first!.normalized!.regulatory).toEqual({
+      category: "dietary_supplement",
+      data: {
+        ingredients: "Aceite de pescado",
+        nutrition: [
+          { name: "Omega 3", amount: "1000", unit: "mg" },
+          { name: "EPA", amount: "180" },
+        ],
+        servings_per_container: 60,
+        usage: null,
+      },
+    });
+    expect(first!.normalized!.attributes).toEqual({
+      objetivo: ["energia", "corazon"],
+      sabor: ["limon"],
+    });
+  });
+
+  it("explica los errores de la ficha y de los atributos", () => {
+    const [a] = planProductImport(RH, [
+      row({ handle: "a", regulatory_ingredients: "Algo", attributes: "Objetivo:Energía" }, RH),
+    ]);
+    expect(a!.errors).toEqual([
+      "regulatory_category: indica dietary_supplement o none para guardar la ficha",
+      "attributes: «Objetivo:Energía»: usa clave:valor|valor con las claves del atributo.",
+    ]);
+    const [b] = planProductImport(RH, [
+      row({ handle: "b", regulatory_category: "none", regulatory_usage: "x" }, RH),
+    ]);
+    expect(b!.errors).toEqual([
+      "regulatory_category: un producto no regulado no lleva ficha sanitaria",
+    ]);
+    const [c] = planProductImport(RH, [
+      row(
+        { handle: "c", regulatory_category: "dietary_supplement", regulatory_nutrition: "EPA" },
+        RH,
+      ),
+    ]);
+    expect(c!.errors).toEqual(["regulatory_nutrition: Renglón 1: falta el nombre o la cantidad."]);
+  });
+
+  it("las columnas de la ficha piden regulatory_category; vacío = sin cambios", () => {
+    expect(checkHeaders(["handle", "regulatory_usage"])).toEqual({
+      ok: false,
+      missing: ["regulatory_category"],
+      duplicated: [],
+    });
+    const [first] = planProductImport(["handle", "regulatory_category"], [["x", ""]]);
+    expect(first!.normalized!.regulatory).toBeUndefined();
+  });
+});

@@ -28,15 +28,19 @@ export async function POST(request: NextRequest, { params }: Params) {
   }
   try {
     const { supabase, storeId, ctx } = await storeClient(storeHandle);
-    const data = await callRpc<{ pii: boolean; rows: Record<string, unknown>[] }>(
-      supabase,
-      "exports_rows",
-      {
-        p_store_id: storeId,
-        p_entity: entity,
-      },
-    );
-    const csv = exportCsv(entity as ExportEntity, data.rows, data.pii);
+    const data = await callRpc<{
+      pii: boolean;
+      rows: Record<string, unknown>[];
+      regulated?: boolean;
+      has_attributes?: boolean;
+    }>(supabase, "exports_rows", {
+      p_store_id: storeId,
+      p_entity: entity,
+    });
+    const csv = exportCsv(entity as ExportEntity, data.rows, data.pii, {
+      regulated: data.regulated ?? false,
+      attributes: data.has_attributes ?? false,
+    });
     const date = new Date().toISOString().slice(0, 10);
     return new NextResponse(csv, {
       headers: {
