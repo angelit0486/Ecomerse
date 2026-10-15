@@ -14,7 +14,11 @@ import { ThemeLink } from "./theme-link";
 export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme["announcement"] }) {
   if (!announcement) return null;
   return (
-    <div className="bg-[var(--sf-announce-bg)] px-4 py-2 text-center text-sm text-[var(--sf-announce-fg)]">
+    // Región con nombre: ningún contenido queda fuera de un landmark (axe `region`).
+    <aside
+      aria-label="Aviso de la tienda"
+      className="bg-[var(--sf-announce-bg)] px-4 py-2 text-center text-sm text-[var(--sf-announce-fg)]"
+    >
       {announcement.link ? (
         <ThemeLink href={announcement.link} className="underline underline-offset-2">
           {announcement.text}
@@ -22,7 +26,7 @@ export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme[
       ) : (
         <p>{announcement.text}</p>
       )}
-    </div>
+    </aside>
   );
 }
 
@@ -40,13 +44,13 @@ export function StoreHeader({
   const centered = logoPosition === "center";
   return (
     <header className="border-b border-[var(--sf-border)]">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:gap-x-6">
         <Link
           href="/"
           className={
             centered
               ? "flex w-full items-center justify-center gap-2 text-lg font-semibold"
-              : "flex items-center gap-2 text-lg font-semibold"
+              : "flex min-w-0 flex-1 items-center gap-2 text-lg font-semibold sm:flex-none"
           }
         >
           {store.logo ? (
@@ -59,15 +63,16 @@ export function StoreHeader({
               className="h-10 w-auto max-w-40 object-contain"
             />
           ) : null}
-          {store.logo ? null : <span>{store.name}</span>}
+          {/* En móvil, un nombre largo se recorta: cuenta y carrito caben en el renglón. */}
+          {store.logo ? null : <span className="truncate">{store.name}</span>}
         </Link>
         <SearchBox />
-        <Link href="/cuenta" className="ml-auto text-sm font-medium underline sm:ml-0">
+        <Link href="/cuenta" className="shrink-0 text-sm font-medium underline">
           Mi cuenta
         </Link>
         <Link
           href="/carrito"
-          className="inline-flex h-10 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium"
+          className="inline-flex h-10 shrink-0 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium"
         >
           Carrito<span className="sr-only">, productos:</span>
           <span className="ml-2 rounded-full bg-[var(--sf-fg)] px-2 text-xs text-[var(--sf-bg)]">
@@ -162,7 +167,7 @@ export function StoreFooter({
         </div>
         {hasContact ? (
           <section aria-labelledby="sf-contacto" className="space-y-2">
-            <h2 id="sf-contacto" className="font-medium">
+            <h2 id="sf-contacto" className="font-semibold">
               Contacto
             </h2>
             <address className="flex flex-col gap-1 not-italic text-[var(--sf-muted)]">
@@ -200,7 +205,7 @@ export function StoreFooter({
         ) : null}
         {social.length > 0 ? (
           <section aria-labelledby="sf-redes" className="space-y-2">
-            <h2 id="sf-redes" className="font-medium">
+            <h2 id="sf-redes" className="font-semibold">
               Síguenos
             </h2>
             <ul className="flex flex-wrap gap-2">
@@ -221,7 +226,7 @@ export function StoreFooter({
         ) : null}
         {payments.length > 0 ? (
           <section aria-labelledby="sf-pagos" className="space-y-2">
-            <h2 id="sf-pagos" className="font-medium">
+            <h2 id="sf-pagos" className="font-semibold">
               Formas de pago
             </h2>
             <ul className="flex flex-wrap gap-2 text-[var(--sf-muted)]">

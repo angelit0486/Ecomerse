@@ -21,8 +21,35 @@ const DB_URL =
   process.env.STACK_ADMIN_DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/pruva_dev";
 const API = process.env.STACK_API_URL ?? "http://127.0.0.1:54321";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const HANDLE = "demo";
-const OWNER_EMAIL = "demo@example.test";
+// `--neutral`: segunda tienda (demo2.localhost) con el estilo «Neutral», para
+// medir que el rendimiento y la accesibilidad no dependen de un tema (§16).
+const NEUTRAL = process.argv.includes("--neutral");
+const HANDLE = NEUTRAL ? "demo2" : "demo";
+const OWNER_EMAIL = `${HANDLE}@example.test`;
+// Mismos valores que src/lib/theme/presets.ts (este script no importa TypeScript).
+const STYLE = NEUTRAL
+  ? {
+      colors: {
+        primary: "#1d4ed8",
+        accent: "#b45309",
+        background: "#ffffff",
+        foreground: "#111827",
+        muted: "#4b5563",
+      },
+      typography: { heading: "inter", body: "inter" },
+      shape: { radius: "md", button_style: "solid" },
+    }
+  : {
+      colors: {
+        primary: "#0b5d4b",
+        accent: "#b4500c",
+        background: "#fbfaf7",
+        foreground: "#14181f",
+        muted: "#4a5260",
+      },
+      typography: { heading: "barlow-condensed", body: "inter" },
+      shape: { radius: "sm", button_style: "solid" },
+    };
 
 function assertLocal(url) {
   const host = new URL(url).hostname;
@@ -335,12 +362,12 @@ async function main() {
             on conflict do nothing`;
   const [org] = await sql`
     insert into public.organizations (name, slug, country)
-    values ('Organización de demostración', 'org-demo', 'MX') returning id`;
+    values (${`Organización ${HANDLE}`}, ${`org-${HANDLE}`}, 'MX') returning id`;
   await sql`insert into public.subscriptions (organization_id, plan_id, status) values (${org.id}, ${plan.id}, 'active')`;
   await sql`insert into public.organization_members (organization_id, user_id, role) values (${org.id}, ${ownerId}, 'org_owner')`;
   const [store] = await sql`
     insert into public.stores (organization_id, name, handle, currency, country, timezone, status, launched_at)
-    values (${org.id}, 'Tienda de demostración', ${HANDLE}, 'MXN', 'MX', 'America/Mexico_City', 'active', now())
+    values (${org.id}, ${NEUTRAL ? "Tienda de demostración 2" : "Tienda de demostración"}, ${HANDLE}, 'MXN', 'MX', 'America/Mexico_City', 'active', now())
     returning id`;
   const storeId = store.id;
   await sql`insert into public.store_domains (store_id, hostname, type, status, is_primary)
@@ -447,20 +474,12 @@ async function main() {
       await tx`select public.shipping_upsert_zone(${storeId}, ${tx.json({ name: "México", countries: ["MX"] })}) as id`;
     await tx`select public.shipping_upsert_rate(${storeId}, ${tx.json({ zone_id: zone[0].id, name: "Envío estándar", type: "free_over", price: 9900, free_over_subtotal: 99900, est_days_min: 2, est_days_max: 5 })})`;
 
-    // Tema: estilo «Deportivo» (F9-DESIGN §15) + aviso de demostración + portada.
+    // Tema: estilo «Deportivo» (F9-DESIGN §15) o «Neutral» + aviso de demostración + portada.
     const rev = async () =>
       (await tx`select draft_revision from public.store_themes where store_id = ${storeId}`)[0]
         .draft_revision;
     await tx`select public.appearance_save_theme_draft(${storeId}, ${tx.json({
-      colors: {
-        primary: "#0b5d4b",
-        accent: "#b4500c",
-        background: "#fbfaf7",
-        foreground: "#14181f",
-        muted: "#4a5260",
-      },
-      typography: { heading: "barlow-condensed", body: "inter" },
-      shape: { radius: "sm", button_style: "solid" },
+      ...STYLE,
       header: {
         announcement: {
           text: "Tienda de demostración: los productos son ejemplos y no están a la venta.",

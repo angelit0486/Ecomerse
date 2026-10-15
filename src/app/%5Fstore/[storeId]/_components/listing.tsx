@@ -16,7 +16,6 @@ import {
 } from "@/server/storefront/catalog";
 
 import { ActiveFilters, FacetFilters } from "./facet-filters";
-import { MobileDisclosure } from "./mobile-disclosure";
 import { Pagination } from "./pagination";
 import { ProductGrid } from "./product-card";
 import { SortForm } from "./sort-form";
@@ -112,8 +111,16 @@ export async function ProductListing({
     const qs = new URLSearchParams(pairs).toString();
     return qs ? `${basePath}?${qs}` : basePath;
   };
-  const next = encodeListCursor(page.next_cursor);
   const filtered = selected.length > 0;
+  const filterForm = (
+    <FacetFilters
+      action={basePath}
+      facets={facets}
+      hidden={baseParams}
+      clearHref={filtered ? href(baseParams) : null}
+    />
+  );
+  const next = encodeListCursor(page.next_cursor);
 
   return (
     <div className="space-y-6">
@@ -127,16 +134,15 @@ export async function ProductListing({
       <div className={facets.length > 0 ? "grid gap-6 md:grid-cols-[15rem_1fr]" : ""}>
         {facets.length > 0 ? (
           <div>
-            <MobileDisclosure
-              summary={selected.length > 0 ? `Filtros (${selected.length})` : "Filtros"}
-            >
-              <FacetFilters
-                action={basePath}
-                facets={facets}
-                hidden={baseParams}
-                clearHref={filtered ? href(baseParams) : null}
-              />
-            </MobileDisclosure>
+            {/* Móvil: plegados tras «Filtros (n)» (sin JS ni saltos de diseño); escritorio:
+                siempre visibles. Solo uno de los dos está en pantalla. */}
+            <details className="md:hidden">
+              <summary className="mb-3 inline-flex min-h-11 cursor-pointer items-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium">
+                {selected.length > 0 ? `Filtros (${selected.length})` : "Filtros"}
+              </summary>
+              {filterForm}
+            </details>
+            <div className="hidden md:block">{filterForm}</div>
           </div>
         ) : null}
         <div className="min-w-0 space-y-4">
@@ -172,7 +178,7 @@ export async function ProductListing({
             </section>
           ) : (
             <section aria-labelledby="sf-resultados">
-              <h2 id="sf-resultados" className="sr-only">
+              <h2 id="sf-resultados" className="sr-only font-semibold">
                 Productos
               </h2>
               <ProductGrid products={page.items} store={store} eager={cursor ? 0 : 4} />
