@@ -8,8 +8,8 @@
 // reescribe una migración ya aplicada; si su contenido cambió, se detiene.
 //
 // Sin MIGRATION_DATABASE_URL no hace nada (builds locales y de CI).
-// Con `--seed-demo` siembra además las tiendas de demostración, solo con
-// APP_ENV=preview (el script de siembra lo vuelve a comprobar).
+// Con `--seed-demo` y DEMO_HOSTS siembra además las tiendas de demostración,
+// solo con APP_ENV=preview (el script de siembra lo vuelve a comprobar).
 // =============================================================================
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -75,7 +75,9 @@ try {
   await sql.end();
 }
 
-if (!process.exitCode && process.argv.includes("--seed-demo")) {
+// Solo donde se declararon hosts de demostración (la vista previa); la
+// siembra vuelve a exigir APP_ENV=preview y falla en cualquier otro entorno.
+if (!process.exitCode && process.argv.includes("--seed-demo") && process.env.DEMO_HOSTS) {
   for (const args of [[], ["--neutral"]]) {
     const run = spawnSync(process.execPath, ["scripts/dev/demo-seed.mjs", "--remote", ...args], {
       stdio: "inherit",

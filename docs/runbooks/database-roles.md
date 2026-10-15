@@ -76,7 +76,7 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
 ## 7. Vista previa de demostración (D-F9-17)
 
 - Proyecto Supabase `pruva-staging` y proyecto Vercel con `APP_ENV=preview`, `EMAIL_PROVIDER=fake`.
-- El build ejecuta `node scripts/deploy/migrate.mjs --seed-demo && pnpm build`. Sin `MIGRATION_DATABASE_URL`
+- `pnpm build` ejecuta `node scripts/deploy/migrate.mjs --seed-demo` antes de `next build`. Sin `MIGRATION_DATABASE_URL`
   no migra (builds locales y de CI). La conexión usa el pooler en modo sesión (puerto 5432).
 - La siembra solo corre con `APP_ENV=preview` y publica cada tienda en el host de `DEMO_HOSTS`.
 - El cron de Vercel Hobby es diario (`vercel.json`); volver a `* * * * *` al pasar a Pro (N-4).
