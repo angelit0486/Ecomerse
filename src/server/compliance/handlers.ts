@@ -28,8 +28,9 @@ function optionalId(job: JobRecord, key: string): string | null {
 /**
  * Job `compliance.recheck` (ADR-021): tras un cambio de reglas de la plataforma o
  * al declarar una categoría regulada, despublica los productos activos que dejaron
- * de cumplir (denegación por defecto). Cada job revisa un lote; la función encola
- * la continuación si quedan productos.
+ * de cumplir (denegación por defecto) y oculta las secciones de la portada con
+ * términos prohibidos. Cada job revisa un lote; la función encola la
+ * continuación si quedan productos.
  */
 export function createComplianceHandlers(deps: ComplianceDeps): Array<[string, JobHandler]> {
   const recheck: JobHandler = async (job, { log }) => {
@@ -44,6 +45,15 @@ export function createComplianceHandlers(deps: ComplianceDeps): Array<[string, J
     `;
     const result = row!.result;
     for (const store of result.stores) deps.onUnpublished?.(store);
+    // La portada publicada también (F9-DESIGN §13 M1): una vez por revisión, en su
+    // primer lote. Una sección con un término prohibido se oculta.
+    if (after === null) {
+      const [home] = await deps.db<{ stores: string[] }[]>`
+        select system.compliance_recheck_home(${profileId}, ${storeId}) as stores
+      `;
+      for (const store of home!.stores ?? []) deps.onUnpublished?.(store);
+      if (home!.stores?.length) log.info("Portadas revisadas", { hidden_in: home!.stores.length });
+    }
     log.info("Cumplimiento revisado", {
       checked: result.checked,
       unpublished: result.unpublished,

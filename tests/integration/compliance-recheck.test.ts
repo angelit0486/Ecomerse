@@ -135,4 +135,48 @@ describe("compliance.recheck", () => {
        where action = 'product.unpublished' and entity_id = ${productId}`;
     expect(audit).toEqual({ reason: "compliance", codes: ["compliance_field_missing:warnings"] });
   });
+
+  it("un término prohibido nuevo oculta la sección de la portada que lo usa (F9 §13 M1)", async () => {
+    const sectionId = "00000000-0000-4000-8000-0000000000a1";
+    await as(ownerId, async (sql) => {
+      const [t] = await sql<{ rev: number }[]>`
+        select coalesce((select draft_revision from public.store_themes where store_id = ${storeId}), 0) as rev`;
+      const rev = await sql<{ r: number }[]>`
+        select public.appearance_save_home_draft(${storeId}, ${sql.json([
+          {
+            id: sectionId,
+            type: "rich_text",
+            enabled: true,
+            props: { html: "<p>Recupera tu energía con constancia</p>" },
+          },
+        ])}, ${t!.rev}) as r`;
+      await sql`select public.appearance_publish_theme(${storeId}, ${rev[0]!.r})`;
+    });
+    await admin`delete from system.jobs where status = 'queued' or type = 'compliance.recheck'`;
+    await as(adminId, async (sql) => {
+      await sql`select public.platform_compliance_rule_save(${profileId}, ${sql.json({
+        kind: "forbidden_term",
+        key: "no_constancia",
+        label: "Prueba",
+        body: "constancia",
+      })})`;
+    });
+    const invalidated: string[] = [];
+    const summary = await runJobs({
+      store,
+      registry: new Map(
+        createComplianceHandlers({ db: worker, onUnpublished: (id) => invalidated.push(id) }),
+      ),
+      workerId: "test-compliance-home",
+      log,
+      deadlineMs: 30_000,
+      hardDeadlineMs: 40_000,
+    });
+    expect(summary).toMatchObject({ succeeded: 1, retried: 0, dead: 0 });
+    const [theme] = await admin<{ enabled: boolean }[]>`
+      select (home_sections -> 0 ->> 'enabled')::boolean as enabled
+        from public.store_themes where store_id = ${storeId}`;
+    expect(theme!.enabled).toBe(false);
+    expect(invalidated).toContain(storeId);
+  });
 });

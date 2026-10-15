@@ -10,6 +10,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { LogoForm, type LogoCandidate } from "../configuracion/logo-form";
 import { BrandForm, HeaderFooterForm, PublishBar, SeoForm, SocialContactForm } from "./forms";
+import { HomeEditor, type HomeEditorOptions } from "./home-editor";
 
 export const metadata: Metadata = { title: "Apariencia" };
 
@@ -23,6 +24,7 @@ const TABS = [
   { key: "encabezado", label: "Encabezado y pie" },
   { key: "redes", label: "Redes y contacto" },
   { key: "seo", label: "SEO" },
+  { key: "portada", label: "Portada" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -45,7 +47,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
     supabase
       .from("store_themes")
       .select(
-        "settings, draft_settings, draft_revision, logo_media_id, draft_logo_media_id, published_at",
+        "settings, draft_settings, home_sections, draft_home_sections, draft_revision, logo_media_id, draft_logo_media_id, published_at",
       )
       .eq("store_id", ctx.store.id)
       .maybeSingle(),
@@ -86,6 +88,9 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const images = rows
     .filter((m) => m.status === "ready")
     .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text }));
+  const homeOptions = tab === "portada" ? await loadHomeOptions(ctx.store.id, rows) : null;
+  const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
+    []) as Parameters<typeof HomeEditor>[0]["initial"];
   // Tras descartar, los formularios se montan de nuevo con lo publicado.
   const formKey = discarded ? `d${sp.descartado}` : "editor";
 
@@ -173,6 +178,15 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           phone={store?.contact_phone ?? null}
         />
       ) : null}
+      {tab === "portada" && homeOptions ? (
+        <HomeEditor
+          key={formKey}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          initial={homeSections}
+          options={homeOptions}
+        />
+      ) : null}
       {tab === "seo" ? (
         <SeoForm
           key={formKey}
@@ -185,4 +199,58 @@ export default async function AppearancePage({ params, searchParams }: Props) {
       ) : null}
     </section>
   );
+}
+
+/** Lo que se puede elegir en la portada: imágenes, categorías, marcas y objetivos. */
+async function loadHomeOptions(
+  storeId: string,
+  media: {
+    id: string;
+    owner_type: string;
+    status: string;
+    storage_path: string;
+    alt_text: string | null;
+  }[],
+): Promise<HomeEditorOptions> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: categories }, { data: brands }, { data: attributes }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, depth")
+      .eq("store_id", storeId)
+      .eq("is_visible", true)
+      .is("deleted_at", null)
+      .order("path"),
+    supabase
+      .from("brands")
+      .select("id, name, logo_media_id")
+      .eq("store_id", storeId)
+      .is("deleted_at", null)
+      .order("name"),
+    supabase
+      .from("attributes")
+      .select("name, is_filterable, attribute_values(id, label, position)")
+      .eq("store_id", storeId)
+      .eq("is_filterable", true)
+      .order("position"),
+  ]);
+  return {
+    banners: media
+      .filter((m) => m.owner_type === "banner" && m.status === "ready")
+      .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text })),
+    categories: (categories ?? []).map((c) => ({
+      id: c.id,
+      name: `${"— ".repeat(c.depth ?? 0)}${c.name}`,
+    })),
+    brands: (brands ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      hasLogo: Boolean(b.logo_media_id),
+    })),
+    goals: (attributes ?? []).flatMap((a) =>
+      [...((a.attribute_values ?? []) as { id: string; label: string; position: number }[])]
+        .sort((x, y) => x.position - y.position)
+        .map((v) => ({ id: v.id, label: `${a.name}: ${v.label}` })),
+    ),
+  };
 }

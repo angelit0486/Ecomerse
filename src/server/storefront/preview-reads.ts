@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { gatewayDb } from "@/server/db/role-clients";
 
+import type { HomeData } from "./catalog";
 import { parseStorePublic, type StorePublic, UUID_RE } from "./store-public";
 
 /**
@@ -18,4 +19,12 @@ export const getStorePreview = cache(async (storeId: string): Promise<StorePubli
   const rows = await gatewayDb()<{ store: unknown }[]>`
     select storefront.get_store_preview(${storeId}::uuid) as store`;
   return parseStorePublic(rows[0]?.store ?? null);
+});
+
+/** Portada del borrador (secciones resueltas con los mismos filtros públicos). */
+export const getHomePreview = cache(async (storeId: string): Promise<HomeData> => {
+  if (!UUID_RE.test(storeId)) return { sections: null, featured: [], categories: [] };
+  const rows = await gatewayDb()<{ home: HomeData | null }[]>`
+    select storefront.get_home_preview(${storeId}::uuid) as home`;
+  return rows[0]?.home ?? { sections: null, featured: [], categories: [] };
 });

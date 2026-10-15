@@ -309,9 +309,74 @@ export const getMenus = cache(
   },
 );
 
-interface HomeData {
-  featured: ProductCard[];
-  categories: { name: string; path: string; image: ImageRef | null }[];
+/** Una sección de la portada ya resuelta por la base (app.home_resolve, F9-T02). */
+export type HomeSectionData =
+  | {
+      id: string;
+      type: "hero";
+      heading: string;
+      subheading?: string | null;
+      align: "left" | "center";
+      cta?: { label: string; link: string } | null;
+      image: ImageRef | null;
+    }
+  | {
+      id: string;
+      type: "featured_products";
+      title: string;
+      show_view_all: boolean;
+      source:
+        | { type: "newest" | "best_selling" }
+        | { type: "category"; path: string }
+        | { type: "brand"; slug: string }
+        | { type: "attribute_value"; attribute: string; value: string };
+      items: ProductCard[];
+    }
+  | {
+      id: string;
+      type: "category_grid";
+      title: string;
+      categories: { name: string; path: string; image: ImageRef | null }[];
+    }
+  | {
+      id: string;
+      type: "promo_banner";
+      heading?: string;
+      text?: string;
+      cta?: { label: string; link: string };
+      image: ImageRef;
+    }
+  | {
+      id: string;
+      type: "image_with_text";
+      heading: string;
+      body: string;
+      cta?: { label: string; link: string };
+      image_position: "left" | "right";
+      image: ImageRef;
+    }
+  | {
+      id: string;
+      type: "brand_logos";
+      title: string;
+      brands: { name: string; slug: string; logo: Omit<ImageRef, "alt"> }[];
+    }
+  | {
+      id: string;
+      type: "testimonials";
+      title: string;
+      items: { quote: string; author: string; detail?: string }[];
+    }
+  | { id: string; type: "rich_text"; heading?: string; html: string };
+
+/**
+ * Portada: secciones publicadas (o del borrador en la vista previa) o, si la
+ * tienda no configuró ninguna, la plantilla del tema (§20.2).
+ */
+export interface HomeData {
+  sections: HomeSectionData[] | null;
+  featured?: ProductCard[];
+  categories?: { name: string; path: string; image: ImageRef | null }[];
 }
 
 export const getHome = cache(async (storeId: string): Promise<HomeData> => {
@@ -323,6 +388,7 @@ const homeCached = cachedRead(
   "get_home",
   async (storeId: string) =>
     (await call<HomeData>(gatewayDb()`select storefront.get_home(${storeId}::uuid) as value`)) ?? {
+      sections: null,
       featured: [],
       categories: [],
     },

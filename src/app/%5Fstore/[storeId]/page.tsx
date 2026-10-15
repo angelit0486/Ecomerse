@@ -3,12 +3,17 @@ import Link from "next/link";
 
 import { getHome, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { getHomePreview } from "@/server/storefront/preview-reads";
 import { canonicalUrl, pageMetadata } from "@/server/storefront/seo";
 
+import { HomeSections } from "./_components/home-sections";
 import { JsonLd } from "./_components/json-ld";
 import { ProductGrid } from "./_components/product-card";
 
-/** Inicio de la tienda: categorías y novedades (las secciones configurables llegan en F9). */
+/**
+ * Inicio de la tienda (§20.2, F9-T02): las secciones que configuró la tienda
+ * (del borrador en la vista previa) o, sin ellas, la plantilla del tema.
+ */
 type Props = { params: Promise<{ storeId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,8 +27,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StoreHomePage({ params }: Props) {
-  const { store } = await getStorefront((await params).storeId);
-  const home = await getHome(store.id);
+  const { store, preview } = await getStorefront((await params).storeId);
+  const home = preview ? await getHomePreview(store.id) : await getHome(store.id);
+  const sections = home.sections ?? [];
+  const categories = home.categories ?? [];
+  const featured = home.featured ?? [];
   return (
     <div className="space-y-12">
       <JsonLd
@@ -49,14 +57,35 @@ export default async function StoreHomePage({ params }: Props) {
           ],
         }}
       />
+      {home.sections ? (
+        <HomeSections sections={sections} store={store} storeName={store.name} />
+      ) : (
+        <TemplateHome store={store} categories={categories} featured={featured} />
+      )}
+    </div>
+  );
+}
+
+/** Plantilla del tema (§20.2): el nombre, las categorías raíz y las novedades. */
+function TemplateHome({
+  store,
+  categories,
+  featured,
+}: {
+  store: { name: string; currency: string; locale: string };
+  categories: NonNullable<Awaited<ReturnType<typeof getHome>>["categories"]>;
+  featured: NonNullable<Awaited<ReturnType<typeof getHome>>["featured"]>;
+}) {
+  return (
+    <div className="space-y-12">
       <h1 className="text-2xl font-semibold sm:text-3xl">{store.name}</h1>
-      {home.categories.length > 0 ? (
+      {categories.length > 0 ? (
         <section aria-labelledby="sf-categorias" className="space-y-4">
           <h2 id="sf-categorias" className="text-lg font-semibold">
             Categorías
           </h2>
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {home.categories.map((category) => (
+            {categories.map((category) => (
               <li key={category.path}>
                 <Link
                   href={`/categoria/${category.path}`}
@@ -89,8 +118,8 @@ export default async function StoreHomePage({ params }: Props) {
             Ver todo
           </Link>
         </div>
-        {home.featured.length > 0 ? (
-          <ProductGrid products={home.featured} store={store} eager={4} />
+        {featured.length > 0 ? (
+          <ProductGrid products={featured} store={store} eager={4} />
         ) : (
           <p className="text-[var(--sf-muted)]">Muy pronto encontrarás aquí nuestros productos.</p>
         )}

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import {
   admin,
@@ -22,8 +22,9 @@ let ownerId = "";
 const store = () => `http://${tenant.handle}.localhost:3000`;
 const BAR = "Envío gratis en compras desde $999";
 
-async function trackCsp(page: Page) {
-  await page.addInitScript(() => {
+/** Registra las violaciones de CSP de todas las páginas del contexto (también las pestañas nuevas). */
+async function trackCsp(target: Page | BrowserContext) {
+  await target.addInitScript(() => {
     (window as unknown as { __csp: string[] }).__csp = [];
     document.addEventListener("securitypolicyviolation", (e) =>
       (window as unknown as { __csp: string[] }).__csp.push(
@@ -34,7 +35,8 @@ async function trackCsp(page: Page) {
 }
 
 async function cspViolations(page: Page): Promise<string[]> {
-  return page.evaluate(() => (window as unknown as { __csp: string[] }).__csp ?? []);
+  // Sin `?? []`: si el registro no se instaló, la prueba falla en lugar de pasar vacía.
+  return page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
 }
 
 async function choose(page: Page, label: string, option: string) {
@@ -115,11 +117,11 @@ test("editar por pestañas, vista previa privada y publicar", async ({ page, bro
   await expect(shopper.getByText(BAR)).toHaveCount(0);
 
   // Vista previa: el borrador, con su aviso.
+  await trackCsp(page.context());
   const [preview] = await Promise.all([
     page.context().waitForEvent("page"),
     page.getByRole("link", { name: /Vista previa/ }).click(),
   ]);
-  await trackCsp(preview);
   await preview.waitForURL(`${store()}/`);
   await expect(
     preview.getByText("Vista previa del borrador: tus clientes ven la versión publicada."),

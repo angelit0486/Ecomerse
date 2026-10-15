@@ -1,32 +1,12 @@
 import Link from "next/link";
 
-import { isExternalLink, isValidLink, type SocialNetwork } from "@/lib/theme/links";
+import type { SocialNetwork } from "@/lib/theme/links";
 import type { ResolvedTheme } from "@/lib/theme/resolve-theme";
 import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
 import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
-/** Enlace de la tienda: interno con Link; externo con rel seguro (F9-DESIGN §2.4). */
-function ThemeLink({
-  href,
-  className,
-  children,
-}: {
-  href: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  if (!isValidLink(href)) return <span className={className}>{children}</span>;
-  return isExternalLink(href) ? (
-    <a href={href} rel="noopener noreferrer" className={className}>
-      {children}
-    </a>
-  ) : (
-    <Link href={href} className={className}>
-      {children}
-    </Link>
-  );
-}
+import { ThemeLink } from "./theme-link";
 
 /** Barra de anuncio (§20.2): colores validados con contraste ≥ 4.5:1 al guardar. */
 export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme["announcement"] }) {

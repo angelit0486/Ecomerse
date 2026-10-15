@@ -59,7 +59,7 @@ export function codePoints(value: string): number {
 
 function text(min: number, max: number, multiline = false) {
   const control = multiline ? CONTROL_EXCEPT_NEWLINE_RE : CONTROL_RE;
-  return z.string().superRefine((value, ctx) => {
+  return z.string({ error: "Escribe este campo." }).superRefine((value, ctx) => {
     if (value !== value.trim()) {
       ctx.addIssue({ code: "custom", message: "Quita los espacios al inicio y al final." });
     } else if (control.test(value)) {
@@ -72,11 +72,13 @@ function text(min: number, max: number, multiline = false) {
   });
 }
 
-const hex = z.string().regex(/^#[0-9a-f]{6}$/, "Usa un color como #1d4ed8.");
+const hex = z
+  .string({ error: "Elige un color." })
+  .regex(/^#[0-9a-f]{6}$/, "Usa un color como #1d4ed8.");
 const link = z
-  .string()
+  .string({ error: "Escribe el enlace." })
   .refine(isValidLink, "Usa una ruta de tu tienda (/…) o una dirección https://.");
-const uuid = z.uuid("Identificador no válido.");
+const uuid = z.uuid({ error: "Elige una opción." });
 
 function uniqueBy<T>(items: readonly T[], key: (item: T) => string): boolean {
   return new Set(items.map(key)).size === items.length;
@@ -184,7 +186,10 @@ const productSource = z.discriminatedUnion("type", [
 const featuredProducts = z.strictObject({
   title: text(1, 60),
   source: productSource,
-  limit: z.int().min(4).max(12),
+  limit: z
+    .int({ error: "Usa un número entero de 4 a 12." })
+    .min(4, "Muestra al menos 4 productos.")
+    .max(12, "Muestra hasta 12 productos."),
   show_view_all: z.boolean(),
 });
 
@@ -239,7 +244,7 @@ const testimonials = z.strictObject({
 const richText = z.strictObject({
   heading: text(1, 80).optional(),
   html: z
-    .string()
+    .string({ error: "Escribe el contenido." })
     .min(1, "Escribe el contenido.")
     .refine(
       (html) => new TextEncoder().encode(html).length <= MAX_RICH_TEXT_BYTES,
