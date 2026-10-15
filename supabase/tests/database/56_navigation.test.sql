@@ -6,7 +6,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(24);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('owner_b', 'owner@b.io');
@@ -79,6 +79,12 @@ insert into public.categories (store_id, name, slug, path) values
   (tests.fx('store_a'), 'Creatinas', 'creatinas', 'creatinas'),
   (tests.fx('store_a'), 'Creatinas ocultas', 'creatinas-ocultas', 'creatinas-ocultas');
 update public.categories set is_visible = false where store_id = tests.fx('store_a') and slug = 'creatinas-ocultas';
+-- Categoría visible bajo un padre oculto: tampoco es pública.
+insert into public.categories (store_id, name, slug, path, is_visible) values
+  (tests.fx('store_a'), 'Padre oculto', 'padre-oculto', 'padre-oculto', false);
+insert into public.categories (store_id, parent_id, name, slug, path) values
+  (tests.fx('store_a'), (select id from public.categories where store_id = tests.fx('store_a') and slug = 'padre-oculto'),
+   'Creatinas hija', 'creatinas-hija', 'x');
 
 -- 1. Tarjetas.
 select ok((pg_temp.gw(format('select storefront.list_products(%L)', tests.fx('store_a'))) #>> '{items,0,published_at}')
@@ -114,6 +120,11 @@ select is(pg_temp.gw(format('select storefront.list_facets(%L)', tests.fx('store
           'una tienda sin marcas ni atributos no tiene filtros (y no falla)');
 
 -- 3. Sugerencias.
+-- Siete productos que coinciden con «gluta»: las sugerencias muestran 6.
+select tests.login('owner');
+select pg_temp.product(tests.fx('store_a'), 'glutamina-' || g, 'Glutamina lote ' || g, 'ninguna')
+  from generate_series(1, 7) g;
+select tests.logout();
 select is((select array_agg(p ->> 'slug') from jsonb_array_elements(pg_temp.suggest(tests.fx('store_a'), 'crea') -> 'products') p),
           array['creatina'], 'productos que contienen lo escrito; nunca un borrador ni otra tienda');
 select is((select array_agg(p ->> 'slug') from jsonb_array_elements(pg_temp.suggest(tests.fx('store_a'), 'CAFEINA') -> 'products') p),
@@ -132,6 +143,14 @@ select is(pg_temp.suggest(tests.fx('store_a'), 'c'),
           '{"products":[],"categories":[],"brands":[],"values":[]}'::jsonb, 'menos de 2 caracteres: nada');
 select is(jsonb_array_length(pg_temp.suggest(tests.fx('store_a'), '%%') -> 'products'), 0,
           'los comodines de LIKE se escapan');
+select is(jsonb_array_length(pg_temp.suggest(tests.fx('store_a'), 'gluta') -> 'products'), 6,
+          'como máximo 6 productos sugeridos');
+select ok(not (pg_temp.suggest(tests.fx('store_a'), 'crea') -> 'categories')::text like '%Creatinas hija%',
+          'una categoría bajo un padre oculto no se sugiere');
+update public.stores set status = 'suspended' where id = tests.fx('store_a');
+select is(pg_temp.suggest(tests.fx('store_a'), 'crea'),
+          '{"products":[],"categories":[],"brands":[],"values":[]}'::jsonb,
+          'una tienda que no es pública no sugiere nada');
 
 select * from finish();
 rollback;

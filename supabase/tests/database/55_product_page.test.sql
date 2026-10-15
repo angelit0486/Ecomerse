@@ -6,7 +6,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(17);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('owner_b', 'owner@b.io');
@@ -70,14 +70,18 @@ update public.product_variants set track_inventory = true, inventory_policy = 'd
 insert into public.categories (store_id, name, slug, path, is_visible) values
   (tests.fx('store_a'), 'Salud', 'salud', 'salud', true),
   (tests.fx('store_a'), 'Oculta', 'oculta', 'oculta', false);
+-- Una sola categoría principal por producto (índice único): la oculta de la
+-- cafeína es secundaria. Sin `on conflict`: si una fila no entra, la prueba falla.
 insert into public.product_categories (store_id, product_id, category_id, is_primary)
-select tests.fx('store_a'), p.id, c.id, true
-  from (values ('cafeina', 'salud'), ('omega', 'salud'), ('vitamina', 'oculta'), ('cafeina', 'oculta')) x(prod, cat)
+select tests.fx('store_a'), p.id, c.id, x.is_primary
+  from (values ('cafeina', 'salud', true), ('omega', 'salud', true), ('vitamina', 'oculta', true),
+               ('cafeina', 'oculta', false)) x(prod, cat, is_primary)
   join public.products p on p.store_id = tests.fx('store_a') and p.slug = x.prod
-  join public.categories c on c.store_id = tests.fx('store_a') and c.slug = x.cat
-on conflict do nothing;
--- Más ventas desempatan entre iguales.
+  join public.categories c on c.store_id = tests.fx('store_a') and c.slug = x.cat;
+-- Más ventas desempatan solo entre iguales: el omega (solo categoría) vende más
+-- que el preentreno (objetivo en común) y aun así va después.
 update public.products set sales_count = 5 where id = tests.fx('creatina');
+update public.products set sales_count = 10 where id = tests.fx('omega');
 
 -- 1. Ficha.
 select ok((pg_temp.gw(format('select storefront.get_product(%L, ''cafeina'')', tests.fx('store_a'))) ->> 'published_at')
@@ -85,7 +89,7 @@ select ok((pg_temp.gw(format('select storefront.get_product(%L, ''cafeina'')', t
 
 -- 2. Relacionados.
 select is(pg_temp.related('cafeina'), array['preentreno', 'omega'],
-          'cafeína: primero quien comparte objetivo, luego la misma categoría; sin agotados ni borradores');
+          'cafeína: primero quien comparte objetivo, luego la misma categoría (aunque venda más); sin agotados ni borradores');
 select ok(not ('cafeina' = any (pg_temp.related('cafeina'))), 'nunca el propio producto');
 select ok(not ('guarana' = any (pg_temp.related('cafeina'))), 'nunca un agotado');
 select ok(not ('borrador' = any (pg_temp.related('cafeina'))), 'nunca un producto sin publicar');
@@ -94,6 +98,8 @@ select ok(not ('vitamina' = any (pg_temp.related('cafeina'))), 'una categoría o
 select is(pg_temp.related('preentreno'), array['creatina', 'cafeina'],
           'preentreno: comparte un valor con cada uno; desempata por ventas solo entre iguales');
 select is(pg_temp.related('preentreno', 1), array['creatina'], 'respeta el límite');
+select is(pg_temp.related('cafeina', 1), array['preentreno'],
+          'al recortar manda lo que se comparte, no las ventas (el omega vende más)');
 select is(pg_temp.related('vitamina'), '{}'::text[], 'sin nada en común no se recomienda nada');
 select is(pg_temp.related('no-existe'), '{}'::text[], 'un slug inexistente devuelve una lista vacía');
 select is(pg_temp.gw(format('select storefront.related_products(%L, ''cafeina'', 8)', tests.fx('store_b'))), '[]'::jsonb,
