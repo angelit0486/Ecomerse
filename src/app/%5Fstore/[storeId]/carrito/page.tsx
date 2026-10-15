@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { freeShippingProgress } from "@/lib/catalog/merchandising";
 import { getCart, getCartLegends } from "@/server/storefront/cart";
-import { mediaUrl } from "@/server/storefront/catalog";
+import { getShippingPromo, mediaUrl, type ShippingPromo } from "@/server/storefront/catalog";
+import type { StorePublic } from "@/server/storefront/store-public";
 import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
@@ -21,7 +23,11 @@ const STATE_NOTES = {
 
 export default async function CartPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
-  const [cart, legends] = await Promise.all([getCart(store.id), getCartLegends(store.id, "cart")]);
+  const [cart, legends, promo] = await Promise.all([
+    getCart(store.id),
+    getCartLegends(store.id, "cart"),
+    getShippingPromo(store.id),
+  ]);
 
   if (!cart || cart.lines.length === 0) {
     return (
@@ -39,6 +45,14 @@ export default async function CartPage({ params }: Props) {
     <section className="grid gap-8 md:grid-cols-[2fr_1fr]">
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">Tu carrito</h1>
+        {promo && cart.requires_shipping ? (
+          <FreeShippingBar
+            promo={promo}
+            subtotal={cart.subtotal}
+            discountTotal={cart.discount_total}
+            store={store}
+          />
+        ) : null}
         <ul className="divide-y divide-[var(--sf-border)]" aria-label="Productos en el carrito">
           {cart.lines.map((line) => (
             <li key={line.variant_id} className="flex gap-4 py-4">
@@ -113,5 +127,42 @@ export default async function CartPage({ params }: Props) {
         )}
       </aside>
     </section>
+  );
+}
+
+/**
+ * «Te faltan $X para el envío gratis» (F9-T04): sale de la regla `free_over`
+ * real de la tienda y del subtotal descontado del carrito; sin regla no se
+ * muestra. Informativa: el envío lo calcula la base en el pago.
+ */
+function FreeShippingBar({
+  promo,
+  subtotal,
+  discountTotal,
+  store,
+}: {
+  promo: ShippingPromo;
+  subtotal: number;
+  discountTotal: number;
+  store: StorePublic;
+}) {
+  const progress = freeShippingProgress(subtotal, discountTotal, promo.free_over);
+  if (!progress) return null;
+  const where = promo.conditional ? " (según destino)" : "";
+  return (
+    <div className="space-y-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4 text-sm">
+      <p id="sf-envio-gratis" className="font-medium">
+        {progress.reached
+          ? `Tu pedido tiene envío gratis${where}.`
+          : `Te faltan ${money(progress.remaining, store)} para el envío gratis${where}.`}
+      </p>
+      {/* <progress> nativo: sin atributo style (la CSP no permite estilos en línea). */}
+      <progress
+        aria-labelledby="sf-envio-gratis"
+        max={100}
+        value={progress.percent}
+        className="block h-2 w-full appearance-none overflow-hidden rounded-full [&::-moz-progress-bar]:bg-[var(--sf-btn-bg)] [&::-webkit-progress-bar]:bg-[var(--sf-bg)] [&::-webkit-progress-value]:bg-[var(--sf-btn-bg)]"
+      />
+    </div>
   );
 }

@@ -13,5 +13,12 @@ export const LINK_TYPE_LABELS: Record<string, string> = {
   product: "Producto",
   page: "Página",
   search: "Búsqueda",
+  filter: "Objetivo o filtro",
   url: "Dirección web",
 };
+
+/** "objetivo=energia" → "/productos?objetivo=energia". */
+export function filterHref(id: string): string {
+  const [attribute = "", value = ""] = id.split("=");
+  return `/productos?${new URLSearchParams([[attribute, value]]).toString()}`;
+}

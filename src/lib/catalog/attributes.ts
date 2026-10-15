@@ -62,6 +62,20 @@ export function parseAttributeParams(
   return Object.fromEntries(entries);
 }
 
+/** Marcas elegidas en la URL (`?marca=a&marca=b`, F9-T04): slugs válidos, máximo 20. */
+export function parseBrandParams(params: Record<string, string | string[] | undefined>): string[] {
+  const raw = params.marca;
+  return [
+    ...new Set(
+      (Array.isArray(raw) ? raw : [raw]).filter(
+        (v): v is string => typeof v === "string" && v.length <= 120 && VALUE_KEY_RE.test(v),
+      ),
+    ),
+  ]
+    .sort()
+    .slice(0, MAX_SELECTED_VALUES);
+}
+
 /** Pares (clave, valor) para enlaces y campos ocultos de formularios GET. */
 export function selectionPairs(selection: AttributeSelection): [string, string][] {
   return Object.entries(selection).flatMap(([key, values]) =>

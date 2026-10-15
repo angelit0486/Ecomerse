@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-import { hasSelection, parseAttributeParams, selectionPairs } from "@/lib/catalog/attributes";
+import {
+  hasSelection,
+  parseAttributeParams,
+  parseBrandParams,
+  selectionPairs,
+} from "@/lib/catalog/attributes";
 import type { StorePublic } from "@/server/storefront/store-public";
 import {
   encodeListCursor,
@@ -49,9 +54,14 @@ export async function ProductListing({
   // Solo lo que la tienda tiene filtra (y salta la caché): un parámetro cualquiera
   // con forma de filtro no abre lecturas sin caché (Gate R).
   const parsed = parseAttributeParams(searchParams);
-  const known = hasSelection(parsed)
-    ? await listFacets(store.id, { categoryPath, brandSlug, query, available })
-    : [];
+  // Marca como filtro (F9-T04); en la página de una marca no aplica.
+  const parsedBrands = brandSlug ? [] : parseBrandParams(searchParams);
+  const known =
+    hasSelection(parsed) || parsedBrands.length > 0
+      ? await listFacets(store.id, { categoryPath, brandSlug, query, available })
+      : [];
+  const brandFacet = known.find((f) => f.key === "marca");
+  const brands = parsedBrands.filter((b) => brandFacet?.values.some((v) => v.key === b));
   const requested = Object.fromEntries(
     Object.entries(parsed)
       .map(([key, values]) => {
@@ -68,9 +78,17 @@ export async function ProductListing({
       sort,
       available,
       attributes: requested,
+      brands,
       cursor,
     }),
-    listFacets(store.id, { categoryPath, brandSlug, query, available, attributes: requested }),
+    listFacets(store.id, {
+      categoryPath,
+      brandSlug,
+      query,
+      available,
+      attributes: requested,
+      brands,
+    }),
   ]);
 
   // Solo lo que la tienda reconoció queda en los enlaces.

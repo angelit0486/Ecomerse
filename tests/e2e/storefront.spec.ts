@@ -119,7 +119,7 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
 
   // Búsqueda sin acentos; nunca devuelve productos de B.
   await page.goto(`${origin(a)}/`);
-  await page.getByRole("searchbox", { name: "Buscar productos" }).fill("algodon");
+  await page.getByRole("combobox", { name: "Buscar productos" }).fill("algodon");
   await page.getByRole("button", { name: "Buscar" }).click();
   await expect(page.getByRole("heading", { name: "Resultados para «algodon»" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Playera A de algodón" })).toBeVisible();

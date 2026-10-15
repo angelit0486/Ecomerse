@@ -6,6 +6,8 @@ import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
 import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
+import { MainNav } from "./main-nav";
+import { SearchBox } from "./search-box";
 import { ThemeLink } from "./theme-link";
 
 /** Barra de anuncio (§20.2): colores validados con contraste ≥ 4.5:1 al guardar. */
@@ -59,29 +61,7 @@ export function StoreHeader({
           ) : null}
           {store.logo ? null : <span>{store.name}</span>}
         </Link>
-        <form
-          method="get"
-          action="/buscar"
-          role="search"
-          className="order-last flex w-full gap-2 sm:order-none sm:ml-auto sm:w-auto"
-        >
-          <label htmlFor="sf-search" className="sr-only">
-            Buscar productos
-          </label>
-          <input
-            id="sf-search"
-            name="q"
-            type="search"
-            placeholder="Buscar productos"
-            className="h-10 min-w-0 flex-1 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm sm:w-64"
-          />
-          <button
-            type="submit"
-            className="h-10 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-4 text-sm font-medium text-[var(--sf-btn-fg)]"
-          >
-            Buscar
-          </button>
-        </form>
+        <SearchBox />
         <Link href="/cuenta" className="ml-auto text-sm font-medium underline sm:ml-0">
           Mi cuenta
         </Link>
@@ -95,41 +75,7 @@ export function StoreHeader({
           </span>
         </Link>
       </div>
-      {menu.length > 0 ? (
-        <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 pb-3">
-          <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-            <li>
-              <Link href="/productos" className="hover:underline">
-                Todos los productos
-              </Link>
-            </li>
-            {menu.map((item) => (
-              <li key={item.href + item.label} className="group relative">
-                <Link href={item.href} className="hover:underline">
-                  {item.label}
-                </Link>
-                {item.children.length > 0 ? (
-                  <ul className="mt-1 flex flex-col gap-1 pl-3 text-[var(--sf-muted)] sm:absolute sm:z-10 sm:hidden sm:min-w-40 sm:rounded-[var(--sf-radius-control)] sm:border sm:border-[var(--sf-border)] sm:bg-[var(--sf-bg)] sm:p-2 sm:group-focus-within:flex sm:group-hover:flex">
-                    {item.children.map((child) => (
-                      <li key={child.href + child.label}>
-                        <Link href={child.href} className="hover:underline">
-                          {child.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : (
-        <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 pb-3 text-sm">
-          <Link href="/productos" className="hover:underline">
-            Todos los productos
-          </Link>
-        </nav>
-      )}
+      <MainNav menu={menu} />
     </header>
   );
 }

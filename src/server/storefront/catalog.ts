@@ -33,7 +33,7 @@ export interface ProductCard {
   compare_at_price: number | null;
   availability: Availability;
   image: ImageRef | null;
-  /** Solo en relacionados por ahora (insignia «Nuevo»); el listado lo sumará en F9-T04. */
+  /** Insignia «Nuevo» (F9-T03/T04). */
   published_at?: string | null;
 }
 
@@ -60,6 +60,8 @@ export interface ListFilters {
   available?: boolean | undefined;
   /** Filtros de atributos (R-T04): OR dentro de un atributo, AND entre atributos. */
   attributes?: AttributeSelection | undefined;
+  /** Filtro de marca por slug (F9-T04): OR entre marcas, AND con lo demás. */
+  brands?: string[] | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
 }
@@ -192,10 +194,19 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
  * cursores, textos libres y combinaciones de filtros son ilimitados y llenarían
  * la caché con claves de un solo uso (Gate F5).
  */
-function cacheable(filters: Pick<ListFilters, "cursor" | "query" | "attributes">): boolean {
+function cacheable(
+  filters: Pick<ListFilters, "cursor" | "query" | "attributes" | "brands">,
+): boolean {
   return (
-    !filters.cursor && !filters.query && !(filters.attributes && hasSelection(filters.attributes))
+    !filters.cursor &&
+    !filters.query &&
+    !(filters.attributes && hasSelection(filters.attributes)) &&
+    !filters.brands?.length
   );
+}
+
+function brandsParam(filters: ListFilters): string[] | null {
+  return filters.brands?.length ? filters.brands.slice(0, 20) : null;
 }
 
 function attributesParam(db: ReturnType<typeof gatewayDb>, filters: ListFilters) {
@@ -219,7 +230,7 @@ const readListProducts = async (storeId: string, filters: ListFilters): Promise<
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
       ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null}, null, null,
       ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24},
-      ${attributesParam(db, filters)}::jsonb
+      ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[]
     ) as value`);
   return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
 };
@@ -239,7 +250,7 @@ const readListFacets = async (storeId: string, filters: ListFilters): Promise<Fa
       select storefront.list_facets(
         ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
         ${filters.query?.slice(0, 200) ?? null}, ${filters.available ?? false},
-        ${attributesParam(db, filters)}::jsonb
+        ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[]
       ) as value`)) ?? []
   );
 };
@@ -472,3 +483,43 @@ const brandCached = cachedRead("get_brand", (storeId: string, slug: string) =>
 const pageCached = cachedRead("get_page", (storeId: string, slug: string) =>
   call<PageDetail>(gatewayDb()`select storefront.get_page(${storeId}::uuid, ${slug}) as value`),
 );
+
+/** Sugerencias del buscador (F9-T04): lo publicado que coincide con lo escrito. */
+export interface SearchSuggestions {
+  products: {
+    slug: string;
+    title: string;
+    brand: string | null;
+    min_price: number | null;
+    image: ImageRef | null;
+  }[];
+  categories: { name: string; path: string }[];
+  brands: { name: string; slug: string }[];
+  values: { attribute: string; attribute_name: string; key: string; label: string }[];
+}
+
+const EMPTY_SUGGESTIONS: SearchSuggestions = {
+  products: [],
+  categories: [],
+  brands: [],
+  values: [],
+};
+
+/**
+ * Sin caché de datos: cada texto es una clave nueva y llenaría la caché con
+ * entradas de un solo uso (mismo criterio que la búsqueda, Gate F5). La base
+ * acota cada grupo y exige al menos 2 caracteres.
+ */
+export async function searchSuggestions(
+  storeId: string,
+  query: string,
+): Promise<SearchSuggestions> {
+  assertStore(storeId);
+  const q = query.trim().slice(0, 60);
+  if (q.length < 2) return EMPTY_SUGGESTIONS;
+  return (
+    (await call<SearchSuggestions>(
+      gatewayDb()`select storefront.search_suggestions(${storeId}::uuid, ${q}) as value`,
+    )) ?? EMPTY_SUGGESTIONS
+  );
+}

@@ -70,3 +70,30 @@ export function productBadges(input: {
   if (input.availability === "low_stock") badges.push("low_stock");
   return badges;
 }
+
+export interface FreeShippingProgress {
+  /** Centavos que faltan; 0 si ya se alcanzó. */
+  remaining: number;
+  reached: boolean;
+  /** Avance de 0 a 100, hacia abajo (la barra nunca se adelanta). */
+  percent: number;
+}
+
+/**
+ * Avance hacia el envío gratis (F9-T04). Misma base que `app.calculate_cart`:
+ * el subtotal ya descontado (§17.3.4). La barra es informativa: el envío lo
+ * calcula siempre la base.
+ */
+export function freeShippingProgress(
+  subtotal: number,
+  discountTotal: number,
+  threshold: number,
+): FreeShippingProgress | null {
+  if (![subtotal, discountTotal, threshold].every(Number.isSafeInteger) || threshold <= 0) {
+    return null;
+  }
+  const base = BigInt(Math.max(subtotal - discountTotal, 0));
+  const goal = BigInt(threshold);
+  if (base >= goal) return { remaining: 0, reached: true, percent: 100 };
+  return { remaining: Number(goal - base), reached: false, percent: Number((base * 100n) / goal) };
+}

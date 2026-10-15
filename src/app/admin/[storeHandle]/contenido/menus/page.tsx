@@ -13,6 +13,7 @@ import {
 } from "@/server/content/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { filterHref } from "../labels";
 import { MenuEditor, type MenuDraft, type TargetOptions } from "./menu-editor";
 
 export const metadata: Metadata = { title: "Menús" };
@@ -22,6 +23,19 @@ type Props = { params: Promise<{ storeHandle: string }> };
 /** Un destino que ya no está entre las opciones (borrado) se vacía y se marca. */
 function toDrafts(rows: MenuItemRow[], targets: TargetOptions): MenuDraft[] {
   const draft = (r: MenuItemRow): MenuDraft => {
+    // Un enlace `/productos?atributo=valor` conocido se edita como «Objetivo o filtro».
+    const filter =
+      r.link_type === "url" ? targets.filter.find((o) => filterHref(o.id) === r.url) : undefined;
+    if (filter) {
+      return {
+        key: r.id,
+        label: r.label,
+        link_type: "filter",
+        target_id: filter.id,
+        url: "",
+        children: [],
+      };
+    }
     const options = targets[r.link_type as keyof TargetOptions];
     const stale = Boolean(options && r.target_id && !options.some((o) => o.id === r.target_id));
     return {
@@ -53,11 +67,17 @@ export default async function MenusPage({ params }: Props) {
   const linkedProducts = [...main, ...footer].flatMap((i) =>
     i.link_type === "product" && i.target_id ? [i.target_id] : [],
   );
-  const [categories, brands, pages, products] = await Promise.all([
+  const [categories, brands, pages, products, { data: attributes }] = await Promise.all([
     listCategories(supabase, ctx.store.id),
     listBrands(supabase, ctx.store.id),
     listPages(supabase, ctx.store.id),
     listProductTargets(supabase, ctx.store.id, linkedProducts),
+    supabase
+      .from("attributes")
+      .select("key, name, position, attribute_values(key, label, position)")
+      .eq("store_id", ctx.store.id)
+      .eq("is_filterable", true)
+      .order("position"),
   ]);
   const targets: TargetOptions = {
     category: categories.map((c) => ({ id: c.id, name: `${"— ".repeat(c.depth)}${c.name}` })),
@@ -67,6 +87,12 @@ export default async function MenusPage({ params }: Props) {
       name: p.is_published ? p.title : `${p.title} (borrador)`,
     })),
     product: products,
+    // Valores de atributos filtrables (objetivo, sabor…): id = "atributo=valor".
+    filter: (attributes ?? []).flatMap((a) =>
+      [...(a.attribute_values ?? [])]
+        .sort((x, y) => x.position - y.position)
+        .map((v) => ({ id: `${a.key}=${v.key}`, name: `${a.name}: ${v.label}` })),
+    ),
   };
 
   return (

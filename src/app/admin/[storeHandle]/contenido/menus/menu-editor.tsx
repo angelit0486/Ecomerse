@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/ui/primitives/button";
 
 import { saveMenu, type ContentActionState } from "../actions";
-import { LINK_TYPE_LABELS } from "../labels";
+import { filterHref, LINK_TYPE_LABELS } from "../labels";
 
 const control =
   "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
@@ -22,11 +22,17 @@ export interface MenuDraft {
 }
 
 export type TargetOptions = Record<
-  "category" | "brand" | "page" | "product",
+  "category" | "brand" | "page" | "product" | "filter",
   { id: string; name: string }[]
 >;
 
-const TARGET_TYPES = ["category", "brand", "page", "product"] as const;
+/**
+ * Destinos que se eligen de una lista. `filter` (F9-T04) no existe en la base:
+ * es un enlace interno `/productos?atributo=valor` (p. ej. «Objetivos» →
+ * Energía) que se guarda como `url`.
+ */
+const TARGET_TYPES = ["category", "brand", "page", "product", "filter"] as const;
+
 const MAX_ITEMS = 50;
 
 let counter = 0;
@@ -37,14 +43,22 @@ function blank(): MenuDraft {
 }
 
 function toPayload(items: MenuDraft[]): unknown[] {
-  const one = (i: MenuDraft) => ({
-    label: i.label.trim(),
-    link_type: i.link_type,
-    target_id: (TARGET_TYPES as readonly string[]).includes(i.link_type)
-      ? i.target_id || null
-      : null,
-    url: i.link_type === "url" ? i.url.trim() || null : null,
-  });
+  const one = (i: MenuDraft) =>
+    i.link_type === "filter"
+      ? {
+          label: i.label.trim(),
+          link_type: "url",
+          target_id: null,
+          url: i.target_id ? filterHref(i.target_id) : null,
+        }
+      : {
+          label: i.label.trim(),
+          link_type: i.link_type,
+          target_id: (TARGET_TYPES as readonly string[]).includes(i.link_type)
+            ? i.target_id || null
+            : null,
+          url: i.link_type === "url" ? i.url.trim() || null : null,
+        };
   return items.map((i) => ({ ...one(i), children: i.children.map(one) }));
 }
 

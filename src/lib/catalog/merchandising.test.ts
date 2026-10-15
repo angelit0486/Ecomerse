@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { NEW_DAYS, pricePerServing, productBadges, savings } from "./merchandising";
+import {
+  freeShippingProgress,
+  NEW_DAYS,
+  pricePerServing,
+  productBadges,
+  savings,
+} from "./merchandising";
 
 describe("savings", () => {
   it("calcula el ahorro en centavos y el porcentaje hacia abajo", () => {
@@ -93,5 +99,43 @@ describe("productBadges", () => {
         publishedAt: daysAgo(3),
       }),
     ).toEqual(["sale", "new", "low_stock"]);
+  });
+});
+
+describe("freeShippingProgress", () => {
+  it("cuenta sobre el subtotal ya descontado, como la base", () => {
+    expect(freeShippingProgress(60000, 0, 99900)).toEqual({
+      remaining: 39900,
+      reached: false,
+      percent: 60,
+    });
+    expect(freeShippingProgress(120000, 30000, 99900)).toEqual({
+      remaining: 9900,
+      reached: false,
+      percent: 90,
+    });
+  });
+
+  it("al alcanzar el umbral: envío gratis", () => {
+    expect(freeShippingProgress(99900, 0, 99900)).toEqual({
+      remaining: 0,
+      reached: true,
+      percent: 100,
+    });
+    expect(freeShippingProgress(150000, 0, 99900)?.reached).toBe(true);
+  });
+
+  it("el avance redondea hacia abajo y nunca es negativo", () => {
+    expect(freeShippingProgress(99899, 0, 99900)?.percent).toBe(99);
+    expect(freeShippingProgress(1000, 5000, 99900)).toEqual({
+      remaining: 99900,
+      reached: false,
+      percent: 0,
+    });
+  });
+
+  it("datos inválidos: no hay barra", () => {
+    expect(freeShippingProgress(1000, 0, 0)).toBeNull();
+    expect(freeShippingProgress(1.5, 0, 99900)).toBeNull();
   });
 });

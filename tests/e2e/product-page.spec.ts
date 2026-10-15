@@ -86,7 +86,7 @@ test.beforeAll(async () => {
 
 test("la ficha muestra datos verificables, galería accesible y relacionados", async ({ page }) => {
   await page.goto(`${origin()}/productos/cafeina-anhidra`);
-  const badges = page.getByRole("list", { name: "Destacados" });
+  const badges = page.getByRole("list", { name: "Destacados", exact: true });
   await expect(badges.getByRole("listitem")).toHaveText(["Oferta", "Nuevo"]);
   await expect(page.getByText("Ahorras $100.00 (33 %)")).toBeVisible();
   await expect(page.getByText("Envío gratis en compras desde $999.00.")).toBeVisible();

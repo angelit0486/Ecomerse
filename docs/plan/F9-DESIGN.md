@@ -280,14 +280,35 @@ así que nunca borra lo configurado en Apariencia (§13 C2), y apunta aquí para
   `product-page.spec.ts` (datos, galería, relacionados, compra en 3 clics) y `home.spec.ts` (espacio
   pendiente solo en la vista previa).
 
-## 10. F9-T04 Navegación y listados (diseño a detallar antes de empezarla)
+## 10. F9-T04 Navegación y listados (construida 2026-10-15)
 
-Puntos ya decididos: las mismas insignias de F9-T03 en las tarjetas (una sola función de
-servidor); menú `main` de 2 niveles con teclado (patrón de navegación de divulgación, no menú de
-aplicación); "Objetivos" como entrada del menú que enlaza a `?objetivo=…`; sugerencias de búsqueda
-con títulos, categorías y marcas publicados (límite y tiempo de respuesta medidos); barra de envío
-gratis calculada en el servidor desde la regla `free_over` real de la tienda y el subtotal del
-carrito (sin regla, no se muestra).
+- **Insignias en las tarjetas:** las mismas de la ficha (`productBadges`, una sola función), sobre
+  la imagen; `storefront.list_products` trae `published_at`. Cada lista se nombra «Destacados de
+  {producto}». "Agotado" como insignia; "Bajo pedido" sigue como texto.
+- **Filtro de marca:** parámetro `marca` (reservado para atributos desde R-T04), varias a la vez (OR
+  entre marcas, AND con los atributos). `storefront.list_facets` devuelve primero la faceta «Marca»
+  con conteo (cumple los atributos elegidos, no la propia marca); no se muestra con una sola marca
+  sin elegir ni en la página de una marca. Solo las marcas que la tienda reconoce filtran (las demás
+  se ignoran, sin lecturas sin caché).
+- **Buscador con sugerencias:** `storefront.search_suggestions(store, q)`: desde 2 caracteres y hasta
+  60; productos publicados que contienen lo escrito (sin acentos ni mayúsculas) o cuyas palabras
+  empiezan así (máx. 6), categorías visibles (3), marcas con productos (3) y valores de atributos
+  filtrables con productos (4). Comodines de LIKE escapados. Medido: **7–12 ms** con 5 000 productos.
+  Ruta `/buscar/sugerencias` (JSON, sin caché de datos: cada texto sería una clave nueva). En la
+  página: patrón combobox de ARIA con `aria-activedescendant`, flechas, Enter y Escape; Enter sin
+  opción elegida busca el texto; sin JavaScript es un formulario GET.
+- **Menú de 2 niveles:** patrón de navegación de divulgación (botón «Más de {entrada}» con
+  `aria-expanded`; Escape cierra y devuelve el foco; se cierra al salir del grupo). En móvil, un botón
+  «Menú» abre la lista con los subniveles visibles. «Objetivos» se arma en el panel con el nuevo
+  destino **«Objetivo o filtro»** del editor de menús, que guarda un enlace interno
+  `/productos?atributo=valor` (sin cambio de esquema, D-F9-13).
+- **Barra de envío gratis en el carrito:** «Te faltan $X para el envío gratis» o «Tu pedido tiene
+  envío gratis», con `<progress>` nativo (la CSP no permite estilos en línea). Misma base que
+  `app.calculate_cart`: subtotal ya descontado; umbral de `storefront.shipping_promo`; sin regla o
+  sin envío, no se muestra.
+- **Pruebas:** pgTAP `56_navigation` (21), unitarias de `freeShippingProgress`, E2E
+  `navigation.spec.ts` (insignias, marca, sugerencias con teclado, menú desde el panel en escritorio
+  y móvil, barra del carrito).
 
 ## 11. Decisiones a registrar al construir
 
