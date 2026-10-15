@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/deploy/migrate.mjs --seed-demo && next build",
+    "build": "node scripts/deploy/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
