@@ -22,7 +22,7 @@ export function RetryPayment({
       <button
         type="submit"
         disabled={pending}
-        className="h-11 rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] px-5 font-medium text-[var(--sf-on-primary)] disabled:opacity-60"
+        className="h-11 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-medium text-[var(--sf-btn-fg)] disabled:opacity-60"
       >
         {pending ? "Redirigiendo…" : "Reintentar el pago"}
       </button>

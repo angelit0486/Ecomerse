@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, startTransition, useActionState, useState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
@@ -8,19 +8,8 @@ import { Input } from "@/ui/primitives/input";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
+import { submitKeepingState } from "../_shared/submit";
 import { deleteAttribute, saveAttribute, saveProductAttributes } from "./attribute-actions";
-
-/**
- * Envía sin el reinicio automático de React 19: tras la acción, `form.reset()`
- * desmarca también las casillas controladas. Sin JS queda `action` como respaldo.
- */
-function submitKeepingState(dispatch: (data: FormData) => void) {
-  return (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    startTransition(() => dispatch(data));
-  };
-}
 
 export interface AttributeFormData {
   id: string;

@@ -55,6 +55,18 @@ export function excerpt(text: string | null | undefined, max = 160): string | un
   return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 20))}…`;
 }
 
+function globalSeo(store: StorePublic): { title?: string; description?: string } {
+  const seo = (
+    store.theme?.settings as { seo?: { title?: unknown; description?: unknown } } | undefined
+  )?.seo;
+  return {
+    ...(typeof seo?.title === "string" && seo.title ? { title: seo.title } : {}),
+    ...(typeof seo?.description === "string" && seo.description
+      ? { description: seo.description }
+      : {}),
+  };
+}
+
 export function pageMetadata(input: {
   store: StorePublic;
   preview: boolean;
@@ -64,13 +76,22 @@ export function pageMetadata(input: {
   image?: ImageRef | null | undefined;
   type?: "website" | "product";
 }): Metadata {
-  const { store, preview, path, title, image } = input;
+  const { store, preview, path, title } = input;
   const url = canonicalUrl(store, path);
-  const fullTitle = title === store.name ? title : `${title} · ${store.name}`;
+  const home = title === store.name;
+  // SEO global de la tienda (§20.2): título y descripción de la portada, y
+  // descripción e imagen por defecto de las demás páginas.
+  const seo = globalSeo(store);
+  const fullTitle = home ? (seo.title ?? title) : `${title} · ${store.name}`;
   // Sin texto propio, una descripción neutra con datos reales (nunca inventados).
   const description =
     input.description ||
-    (title === store.name ? `Tienda en línea de ${store.name}.` : `${title} en ${store.name}.`);
+    seo.description ||
+    (home ? `Tienda en línea de ${store.name}.` : `${title} en ${store.name}.`);
+  const image =
+    input.image ??
+    (store.seo_image ? { ...store.seo_image, alt: store.seo_image.alt ?? store.name } : null) ??
+    (home && store.logo ? { ...store.logo, alt: store.name } : null);
   const images = image
     ? [
         {

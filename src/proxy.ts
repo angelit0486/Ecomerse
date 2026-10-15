@@ -119,6 +119,19 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     case "redirect":
       return finish(NextResponse.redirect(decision.location, 301));
     case "rewrite": {
+      if (pathname === "/_preview/salir" && request.method === "POST") {
+        // Salir de la vista previa (F9-DESIGN §13 M7): borra la cookie de esta tienda.
+        const response = NextResponse.redirect(new URL("/", request.nextUrl), 303);
+        response.cookies.set(PREVIEW_COOKIE, "", {
+          httpOnly: true,
+          secure,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 0,
+        });
+        response.headers.set("cache-control", "no-store");
+        return finish(response);
+      }
       if (pathname === "/_preview" && resolution) {
         // Canje del token del panel por la cookie host-only de esta tienda.
         const token = verifyPreviewToken(

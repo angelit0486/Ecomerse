@@ -29,7 +29,22 @@ const storePublicSchema = z.object({
       key: z.string().nullable(),
       version: z.number().nullable(),
       settings: z.record(z.string(), z.unknown()),
+      published_at: z.string().nullable().optional(),
+      // Solo en la vista previa del borrador (preview-reads.ts).
+      revision: z.number().nullable().optional(),
     })
+    .optional(),
+  // Contacto comercial (§20.2); WhatsApp, dirección y horario van en el tema.
+  contact: z.object({ email: z.string().optional(), phone: z.string().optional() }).optional(),
+  // Imagen social del SEO global (§20.2).
+  seo_image: z
+    .object({
+      path: z.string(),
+      width: z.number().nullable(),
+      height: z.number().nullable(),
+      alt: z.string().nullable(),
+    })
+    .nullable()
     .optional(),
   // Logo publicado (F3-T06): ruta en store-media, ya re-codificado por el worker.
   logo: z
@@ -40,12 +55,17 @@ const storePublicSchema = z.object({
 
 export type StorePublic = z.infer<typeof storePublicSchema>;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** Valida la forma de lo que devuelve la base (pública o vista previa). */
+export function parseStorePublic(value: unknown): StorePublic | null {
+  const parsed = storePublicSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export const getStorePublic = cache(async (storeId: string): Promise<StorePublic | null> => {
   if (!UUID_RE.test(storeId)) return null;
-  const parsed = storePublicSchema.safeParse(await readStorePublic(storeId));
-  return parsed.success ? parsed.data : null;
+  return parseStorePublic(await readStorePublic(storeId));
 });
 
 const readStorePublic = cachedRead("get_store_public", async (storeId: string) => {

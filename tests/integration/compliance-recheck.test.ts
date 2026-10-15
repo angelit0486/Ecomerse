@@ -99,7 +99,10 @@ describe("compliance.recheck", () => {
       await sql`select public.catalog_publish_product(${storeId}, ${id})`;
       return id;
     });
-    await admin`delete from system.jobs where type = 'compliance.recheck'`;
+    // El runner toma cualquier job en cola: los de otros archivos (p. ej. order.created
+    // de checkout-concurrency, según el orden en que Vitest corra los archivos) no son
+    // de esta prueba y morirían por no tener handler aquí.
+    await admin`delete from system.jobs where status = 'queued' or type = 'compliance.recheck'`;
 
     // La plataforma agrega un campo obligatorio que el producto no tiene.
     await as(adminId, async (sql) => {

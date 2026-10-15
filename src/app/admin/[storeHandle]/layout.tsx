@@ -38,6 +38,11 @@ export default async function StoreLayout({ children, params }: Props) {
     { href: `${base}/envios`, label: "Envíos", show: hasPermission(ctx, "shipping.manage") },
     { href: `${base}/impuestos`, label: "Impuestos", show: hasPermission(ctx, "taxes.manage") },
     {
+      href: `${base}/apariencia`,
+      label: "Apariencia",
+      show: hasPermission(ctx, "appearance.manage"),
+    },
+    {
       href: `${base}/contenido`,
       label: "Contenido",
       show: hasPermission(ctx, "content.manage") || hasPermission(ctx, "appearance.manage"),

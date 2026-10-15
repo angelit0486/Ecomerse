@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { resolvePalette, type Palette } from "@/lib/theme/palette";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
-import { serverEnv } from "@/server/env";
-import { createPreviewToken } from "@/server/storefront/preview";
+import { previewUrl } from "@/server/storefront/preview-url";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { publicMediaUrl } from "@/server/catalog/queries";
@@ -36,16 +35,6 @@ const TIMEZONES = [
 interface ThemeSettings {
   colors?: Partial<Palette>;
   shape?: { radius?: string; button_style?: string };
-}
-
-/** Enlace de vista previa del borrador en el dominio de la tienda (CF-09). */
-function previewUrl(hostname: string, storeId: string): string {
-  const env = serverEnv();
-  const secure = env.APP_ENV === "production" || env.APP_ENV === "preview";
-  const port = env.APP_HOSTNAME.split(":")[1];
-  const origin = `${secure ? "https" : "http"}://${hostname}${!secure && port ? `:${port}` : ""}`;
-  const token = createPreviewToken(env.PREVIEW_HMAC_SECRET, storeId, Math.floor(Date.now() / 1000));
-  return `${origin}/_preview?token=${token}`;
 }
 
 interface LaunchIssue {

@@ -7,6 +7,7 @@ import { cache } from "react";
 import { serverEnv } from "@/server/env";
 
 import { STORE_ROUTE_HEADER, verifyStoreRoute } from "./route-signature";
+import { getStorePreview } from "./preview-reads";
 import { getStorePublic, type StorePublic } from "./store-public";
 
 /**
@@ -22,7 +23,8 @@ export const getStorefront = cache(
       (await headers()).get(STORE_ROUTE_HEADER),
     );
     if (!route) notFound();
-    const store = await getStorePublic(storeId);
+    // En vista previa, el tema y el logo del borrador (sin caché, §5).
+    const store = route.preview ? await getStorePreview(storeId) : await getStorePublic(storeId);
     if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
       notFound();
     return { store, preview: route.preview };
@@ -40,7 +42,7 @@ export async function storefrontForRoute(
     requestHeaders.get(STORE_ROUTE_HEADER),
   );
   if (!route) return null;
-  const store = await getStorePublic(storeId);
+  const store = route.preview ? await getStorePreview(storeId) : await getStorePublic(storeId);
   if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
     return null;
   return { store, preview: route.preview };

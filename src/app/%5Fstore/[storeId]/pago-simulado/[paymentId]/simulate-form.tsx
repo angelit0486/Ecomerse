@@ -29,7 +29,7 @@ export function SimulateForm(props: {
           name="outcome"
           value="succeeded"
           disabled={pending}
-          className="h-11 flex-1 rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] font-medium text-[var(--sf-on-primary)]"
+          className="h-11 flex-1 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-medium text-[var(--sf-btn-fg)]"
         >
           Aprobar pago
         </button>

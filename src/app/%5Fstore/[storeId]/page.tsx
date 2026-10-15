@@ -18,7 +18,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     preview,
     path: "/",
     title: store.name,
-    image: store.logo ? { ...store.logo, alt: store.name } : null,
   });
 }
 

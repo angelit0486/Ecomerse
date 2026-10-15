@@ -39,7 +39,7 @@ export function AddToCart({
           type="submit"
           disabled={!variantId || !available || pending}
           aria-busy={pending || undefined}
-          className="h-11 flex-1 rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] px-5 font-medium text-[var(--sf-on-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-11 flex-1 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-medium text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {available ? (pending ? "Agregando…" : "Agregar al carrito") : "Agotado"}
         </button>

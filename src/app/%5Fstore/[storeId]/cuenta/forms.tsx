@@ -15,7 +15,7 @@ import {
 const input =
   "h-11 w-full rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm";
 const primary =
-  "h-11 rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] px-5 text-sm font-medium text-[var(--sf-on-primary)] disabled:opacity-60";
+  "h-11 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 text-sm font-medium text-[var(--sf-btn-fg)] disabled:opacity-60";
 const secondary =
   "h-10 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium";
 

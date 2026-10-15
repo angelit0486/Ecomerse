@@ -34,6 +34,46 @@ describe("resolveTheme", () => {
     expect(theme.palette).toEqual(DEFAULT_COLORS);
     const css = themeCss(theme);
     expect(css).not.toMatch(/[{}<>]|url\(|;;/);
-    expect(css.split(";").every((d) => /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px)$/.test(d))).toBe(true);
+    expect(
+      css
+        .split(";")
+        .every((d) => /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px|var\(--font-[a-z-]+\))$/.test(d)),
+    ).toBe(true);
+  });
+
+  it("fuentes solo de la lista curada; cualquier otra cae en la de por defecto", () => {
+    const theme = resolveTheme({ typography: { heading: "oswald", body: "x);}*{y:z" } });
+    expect(theme.fonts).toEqual({ heading: "oswald", body: "inter" });
+    expect(themeCss(theme)).toContain("--sf-font-heading:var(--font-oswald)");
+    expect(themeCss(theme)).toContain("--sf-font-body:var(--font-inter)");
+  });
+
+  it("botón de contorno: fondo de la página, texto y borde primary", () => {
+    const css = themeCss(
+      resolveTheme({ colors: { primary: "#0f766e" }, shape: { button_style: "outline" } }),
+    );
+    expect(css).toContain("--sf-btn-bg:#ffffff");
+    expect(css).toContain("--sf-btn-fg:#0f766e");
+    expect(css).toContain("--sf-btn-border:#0f766e");
+  });
+
+  it("barra de anuncio solo con texto y colores válidos", () => {
+    const ok = resolveTheme({
+      header: {
+        announcement: { text: "Envío gratis", background: "#111827", foreground: "#ffffff" },
+      },
+    });
+    expect(ok.announcement).toEqual({
+      text: "Envío gratis",
+      link: null,
+      background: "#111827",
+      foreground: "#ffffff",
+    });
+    expect(themeCss(ok)).toContain("--sf-announce-bg:#111827");
+    const bad = resolveTheme({
+      header: { announcement: { text: "x", background: "red", foreground: "#ffffff" } },
+    });
+    expect(bad.announcement).toBeNull();
+    expect(themeCss(bad)).not.toContain("announce");
   });
 });

@@ -106,7 +106,7 @@ export default async function CartPage({ params }: Props) {
         ) : (
           <Link
             href="/checkout"
-            className="flex h-11 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] font-medium text-[var(--sf-on-primary)]"
+            className="flex h-11 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-medium text-[var(--sf-btn-fg)]"
           >
             Continuar al pago
           </Link>

@@ -180,6 +180,7 @@ export async function setLogoDraft(
     return result.fields?.logo ? { error: "Ese logo aún no está listo o no es válido." } : result;
   }
   revalidatePath(`/admin/${storeHandle}/configuracion`);
+  revalidatePath(`/admin/${storeHandle}/apariencia`);
   return {
     ok: true,
     message: mediaId ? "Logo guardado en el borrador." : "Logo quitado del borrador.",

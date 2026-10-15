@@ -287,7 +287,7 @@ export function CheckoutForm({
         value="place"
         disabled={pending || methods.length === 0}
         aria-busy={pending || undefined}
-        className="h-12 w-full rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] font-medium text-[var(--sf-on-primary)] disabled:opacity-60"
+        className="h-12 w-full rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-medium text-[var(--sf-btn-fg)] disabled:opacity-60"
       >
         {pending ? "Procesando…" : "Confirmar pedido"}
       </button>
