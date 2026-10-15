@@ -24,7 +24,8 @@
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
     "test:e2e": "playwright test",
     "demo:seed": "node --env-file=.env.local scripts/dev/demo-seed.mjs",
-    "demo:seed:neutral": "node --env-file=.env.local scripts/dev/demo-seed.mjs --neutral"
+    "demo:seed:neutral": "node --env-file=.env.local scripts/dev/demo-seed.mjs --neutral",
+    "deploy:migrate": "node scripts/deploy/migrate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.3.0",

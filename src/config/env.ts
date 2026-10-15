@@ -75,7 +75,11 @@ export const serverEnvSchema = z.object({
  */
 const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   const deployed = env.APP_ENV === "production" || env.APP_ENV === "preview";
-  if (deployed && env.EMAIL_PROVIDER !== "resend") {
+  // Producción siempre con Resend. La vista previa puede no enviar nada
+  // (`fake`): la demostración pública nunca escribe a direcciones reales (D-F9-17).
+  const emailOk =
+    env.EMAIL_PROVIDER === "resend" || (env.APP_ENV === "preview" && env.EMAIL_PROVIDER === "fake");
+  if (deployed && !emailOk) {
     ctx.addIssue({ code: "custom", path: ["EMAIL_PROVIDER"], message: "resend obligatorio" });
   }
   if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {

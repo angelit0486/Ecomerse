@@ -11,20 +11,37 @@
 //
 // Uso:  pnpm demo:seed   (con el stack arriba y .env.local cargado)
 // Tienda: http://demo.localhost:3000 · dueña: demo@example.test
+//
+// Vista previa pública (D-F9-17): con `--remote`, solo si APP_ENV=preview, la
+// misma siembra va a la base de la vista previa (DEMO_DATABASE_URL) y la
+// tienda se publica en el host de DEMO_HOSTS ("demo=host,demo2=host").
+// Nunca con APP_ENV=production.
 // =============================================================================
 import { randomUUID } from "node:crypto";
 
 import postgres from "postgres";
 import sharp from "sharp";
 
-const DB_URL =
-  process.env.STACK_ADMIN_DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/pruva_dev";
-const API = process.env.STACK_API_URL ?? "http://127.0.0.1:54321";
+const REMOTE = process.argv.includes("--remote");
+const DB_URL = REMOTE
+  ? process.env.DEMO_DATABASE_URL
+  : (process.env.STACK_ADMIN_DATABASE_URL ??
+    "postgres://postgres:postgres@localhost:5432/pruva_dev");
+const API = REMOTE
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL
+  : (process.env.STACK_API_URL ?? "http://127.0.0.1:54321");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // `--neutral`: segunda tienda (demo2.localhost) con el estilo «Neutral», para
 // medir que el rendimiento y la accesibilidad no dependen de un tema (§16).
 const NEUTRAL = process.argv.includes("--neutral");
 const HANDLE = NEUTRAL ? "demo2" : "demo";
+const HOSTS = Object.fromEntries(
+  (process.env.DEMO_HOSTS ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map((pair) => pair.split("=").map((x) => x.trim())),
+);
+const HOSTNAME = REMOTE ? HOSTS[HANDLE] : `${HANDLE}.localhost`;
 const OWNER_EMAIL = `${HANDLE}@example.test`;
 // Mismos valores que src/lib/theme/presets.ts (este script no importa TypeScript).
 const STYLE = NEUTRAL
@@ -58,8 +75,18 @@ function assertLocal(url) {
     process.exit(1);
   }
 }
-assertLocal(DB_URL);
-assertLocal(API);
+if (REMOTE) {
+  // Solo la vista previa: producción nunca recibe datos de demostración.
+  if (process.env.APP_ENV !== "preview" || !DB_URL || !API || !HOSTNAME) {
+    console.error(
+      "✗ --remote exige APP_ENV=preview, DEMO_DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL y DEMO_HOSTS.",
+    );
+    process.exit(1);
+  }
+} else {
+  assertLocal(DB_URL);
+  assertLocal(API);
+}
 if (!SERVICE_KEY) {
   console.error("✗ Falta SUPABASE_SERVICE_ROLE_KEY: carga .env.local (pnpm stack env).");
   process.exit(1);
@@ -346,7 +373,10 @@ async function main() {
   if (already) {
     // Los E2E de cumplimiento reinician el perfil de México: se restauran las reglas de prueba.
     await ensureDemoCompliance();
-    console.log(`✓ La tienda de demostración ya existe: http://${HANDLE}.localhost:3000`);
+    await sql`insert into public.store_domains (store_id, hostname, type, status, is_primary)
+              values (${already.id}, ${HOSTNAME}, 'platform_subdomain', 'active', false)
+              on conflict do nothing`;
+    console.log(`✓ La tienda de demostración ya existe: ${HOSTNAME}`);
     console.log("  Para rehacerla desde cero: pnpm stack reset && pnpm demo:seed");
     return;
   }
@@ -371,7 +401,7 @@ async function main() {
     returning id`;
   const storeId = store.id;
   await sql`insert into public.store_domains (store_id, hostname, type, status, is_primary)
-            values (${storeId}, ${`${HANDLE}.localhost`}, 'platform_subdomain', 'active', true)`;
+            values (${storeId}, ${HOSTNAME}, 'platform_subdomain', 'active', true)`;
   await sql`insert into public.store_themes (store_id) values (${storeId})`;
 
   await ensureDemoCompliance();

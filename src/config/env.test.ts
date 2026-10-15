@@ -74,6 +74,22 @@ describe("parseServerEnv", () => {
     ).toBe("resend");
   });
 
+  it("la vista previa puede no enviar emails (fake), nunca mailpit; producción no (D-F9-17)", () => {
+    const preview = {
+      ...valid,
+      APP_ENV: "preview",
+      SUPABASE_SERVICE_ROLE_KEY: "s".repeat(40),
+      APP_URL: "https://app.x.test",
+    };
+    expect(parseServerEnv(preview).EMAIL_PROVIDER).toBe("fake");
+    expect(() => parseServerEnv({ ...preview, EMAIL_PROVIDER: "mailpit" })).toThrow(
+      /EMAIL_PROVIDER: resend obligatorio/,
+    );
+    expect(() => parseServerEnv({ ...preview, APP_ENV: "production" })).toThrow(
+      /EMAIL_PROVIDER: resend obligatorio/,
+    );
+  });
+
   it("el remitente debe tener formato 'Nombre <email>'", () => {
     expect(() => parseServerEnv({ ...valid, EMAIL_FROM: "no-reply@example.test" })).toThrow(
       /EMAIL_FROM/,

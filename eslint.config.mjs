@@ -58,6 +58,8 @@ export default defineConfig([
       // Datos de demostración del stack local (F9-T05): como los E2E, preparan
       // datos con el superusuario local y el script se niega a correr fuera de localhost.
       "scripts/dev/demo-seed.mjs",
+      // Migraciones en el build de la vista previa (D-F9-17): conexión de dueño del esquema.
+      "scripts/deploy/migrate.mjs",
     ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
