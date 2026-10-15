@@ -84,7 +84,7 @@ function ProductCard({
             </div>
           )}
         </div>
-        <h3 className="text-sm font-medium leading-snug">{product.title}</h3>
+        <h3 className="sf-text-font text-sm font-medium leading-snug">{product.title}</h3>
       </Link>
       {product.brand ? <p className="text-xs text-[var(--sf-muted)]">{product.brand}</p> : null}
       <p className="mt-auto text-sm">

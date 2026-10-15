@@ -16,6 +16,7 @@ import {
 } from "@/server/storefront/catalog";
 
 import { ActiveFilters, FacetFilters } from "./facet-filters";
+import { MobileDisclosure } from "./mobile-disclosure";
 import { Pagination } from "./pagination";
 import { ProductGrid } from "./product-card";
 import { SortForm } from "./sort-form";
@@ -126,12 +127,16 @@ export async function ProductListing({
       <div className={facets.length > 0 ? "grid gap-6 md:grid-cols-[15rem_1fr]" : ""}>
         {facets.length > 0 ? (
           <div>
-            <FacetFilters
-              action={basePath}
-              facets={facets}
-              hidden={baseParams}
-              clearHref={filtered ? href(baseParams) : null}
-            />
+            <MobileDisclosure
+              summary={selected.length > 0 ? `Filtros (${selected.length})` : "Filtros"}
+            >
+              <FacetFilters
+                action={basePath}
+                facets={facets}
+                hidden={baseParams}
+                clearHref={filtered ? href(baseParams) : null}
+              />
+            </MobileDisclosure>
           </div>
         ) : null}
         <div className="min-w-0 space-y-4">

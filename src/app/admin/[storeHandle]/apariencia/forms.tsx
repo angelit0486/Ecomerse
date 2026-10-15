@@ -5,6 +5,7 @@ import { useActionState, useMemo, useState } from "react";
 import { contrastRatio } from "@/lib/color/contrast";
 import { SOCIAL_NETWORKS, type SocialNetwork } from "@/lib/theme/links";
 import { COLOR_KEYS, contrastIssues, resolvePalette, type Palette } from "@/lib/theme/palette";
+import { THEME_PRESETS, type ThemePreset } from "@/lib/theme/presets";
 import {
   FONT_KEYS,
   PAYMENT_METHODS,
@@ -105,10 +106,50 @@ export function BrandForm({
   const issues = useMemo(() => contrastIssues(palette, style), [palette, style]);
   const failing = new Set(issues.map((i) => i.key));
   const fontOptions = FONT_KEYS.map((k) => ({ value: k, label: FONT_LABELS[k] }));
+  const [applied, setApplied] = useState<string | null>(null);
+
+  function applyPreset(preset: ThemePreset) {
+    setPalette(preset.colors);
+    setHeading(preset.heading);
+    setBody(preset.body);
+    setRadius(preset.radius);
+    setStyle(preset.buttonStyle);
+    setApplied(preset.name);
+  }
 
   return (
     <form action={action} onSubmit={submitKeepingState(action)} className="space-y-6" noValidate>
       <input type="hidden" name="revision" value={revision} />
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-semibold">Estilos sugeridos</legend>
+        <p className="text-sm text-fg-muted">
+          Llenan los campos de abajo; revisa, ajusta y guarda en el borrador.
+        </p>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {THEME_PRESETS.map((preset) => (
+            <li
+              key={preset.key}
+              className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-border p-3"
+            >
+              <span className="text-sm font-medium">{preset.name}</span>
+              <span className="text-[13px] text-fg-muted">{preset.description}</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPreset(preset)}
+              >
+                Usar el estilo {preset.name}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <p aria-live="polite" className="text-sm">
+          {applied
+            ? `Estilo ${applied} listo en el formulario. Guárdalo para verlo en la vista previa.`
+            : ""}
+        </p>
+      </fieldset>
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-2 text-sm font-semibold">Colores</legend>
         {COLOR_KEYS.map((key) => (

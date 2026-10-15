@@ -31,8 +31,10 @@ const BASE_CSS = [
 ].join(";");
 
 // Títulos con la fuente de títulos del tema (lista curada, D-F9-01).
+// `.sf-text-font`: títulos que van con la tipografía de texto (nombres en
+// tarjetas, donde una condensada a 14 px se lee peor).
 const HEADING_CSS =
-  ".sf-root :is(h1,h2,h3,h4){font-family:var(--sf-font-heading),system-ui,sans-serif}";
+  ".sf-root :is(h1,h2,h3,h4):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
 
 /** Favicon, ícono de Apple y manifiesto de la tienda (§20.2, D-F9-06). */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

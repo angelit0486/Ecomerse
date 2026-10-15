@@ -413,6 +413,20 @@ tonos rosados y claros (observado en su marca, no copiado).
 | Tono        | Español de México, de tú, directo y honesto. Habla de **objetivos y hábitos** ("para tu entrenamiento", "para tu día a día"), nunca de curar, tratar o prevenir; nunca promete resultados. Cada texto de la portada pasa por los términos prohibidos del perfil sanitario (D-F9-03).                                 |
 | Componentes | Tarjeta con imagen 1:1, nombre, porciones, precio, ahorro e insignias (Oferta, Nuevo, Últimas piezas, Agotado); objetivos como "chips" grandes y tocables (≥ 44 px).                                                                                                                                                 |
 
+**Construido (F9-T05, 2026-10-15).** _Estilos sugeridos_ en Apariencia → Marca («Deportivo» = esta
+identidad, y «Neutral»): llenan el formulario y la persona guarda en el borrador; cada estilo pasa
+el contraste y el esquema del tema (prueba unitaria). En las tarjetas, los nombres van con la
+tipografía de texto (`sf-text-font`): la condensada a 14 px se lee peor. Los objetivos de la ficha
+son chips de 44 px que llevan al listado filtrado. En móvil, los filtros quedan detrás de
+«Filtros (n)» (abiertos sin JavaScript) y ninguna página tiene scroll horizontal a 375 px.
+
+**Datos de demostración (`pnpm demo:seed`, solo local).** Tienda `demo.localhost` con el estilo
+«Deportivo», aviso permanente de demostración, 10 productos «(ejemplo)» de 3 marcas ficticias,
+ilustraciones generadas (envases con la palabra EJEMPLO, sin personas ni sellos), objetivos y
+sabores, envío gratis desde $999, portada por objetivos y menú «Objetivos». El perfil sanitario
+de México de la base **local** se activa con reglas y una leyenda **de prueba** marcadas «pendiente
+de contenido real» (D-F9-15). El script se niega a correr fuera de localhost.
+
 ## 16. Criterios de cierre de la fase pedidos por el propietario (2026-10-15)
 
 Estos criterios se suman a §0 y mandan sobre el plan donde son más exigentes. Se reportan siempre

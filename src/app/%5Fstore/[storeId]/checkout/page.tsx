@@ -37,8 +37,8 @@ export default async function CheckoutPage({ params }: Props) {
   );
 
   return (
-    <section className="grid gap-10 md:grid-cols-[3fr_2fr]">
-      <div className="space-y-6">
+    <section className="grid grid-cols-1 gap-10 md:grid-cols-[3fr_2fr]">
+      <div className="min-w-0 space-y-6">
         <h1 className="text-2xl font-semibold">Pago</h1>
         {cart.has_unavailable ? (
           <p role="alert">

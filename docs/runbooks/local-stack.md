@@ -84,3 +84,11 @@ SEND_EMAIL_HOOK_SECRET="$SECRET" pnpm start -H localhost -p 3000   # con .env.lo
 
 Con el hook activo la app debe estar levantada: sin ella, el login por código falla.
 `pnpm test:stack` corre sin la app, así que úsalo con el stack por defecto.
+
+## Tienda de demostración (F9-T05)
+
+`pnpm demo:seed` (con el stack arriba y `.env.local`) crea `http://demo.localhost:3000` con productos
+«(ejemplo)», el estilo «Deportivo», portada y menú por objetivos; dueña `demo@example.test`. Es
+idempotente: si la tienda ya existe, solo restaura las reglas sanitarias de prueba (los E2E de
+cumplimiento las reinician). Para rehacerla: `pnpm stack reset && pnpm demo:seed`. Solo local
+(D-F9-15).

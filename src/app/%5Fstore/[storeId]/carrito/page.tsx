@@ -42,8 +42,9 @@ export default async function CartPage({ params }: Props) {
   }
 
   return (
-    <section className="grid gap-8 md:grid-cols-[2fr_1fr]">
-      <div className="space-y-4">
+    <section className="grid grid-cols-1 gap-8 md:grid-cols-[2fr_1fr]">
+      {/* min-w-0: un nombre largo no ensancha la columna en móvil (sin scroll horizontal). */}
+      <div className="min-w-0 space-y-4">
         <h1 className="text-2xl font-semibold">Tu carrito</h1>
         {promo && cart.requires_shipping ? (
           <FreeShippingBar
@@ -68,7 +69,7 @@ export default async function CartPage({ params }: Props) {
               ) : (
                 <div className="h-20 w-20 rounded bg-[var(--sf-surface)]" />
               )}
-              <div className="flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex justify-between gap-4">
                   <div>
                     <Link

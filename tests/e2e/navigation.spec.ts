@@ -116,6 +116,17 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
   await page.getByRole("link", { name: "Quitar el filtro Marca: Bruma Labs" }).click();
   await expect(page.getByRole("heading", { name: "Cafeína anhidra" })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
+
+  // Móvil: los productos arriba y los filtros detrás de «Filtros (n)».
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto(`${origin()}/productos?objetivo=energia`);
+  const summary = page.getByText("Filtros (1)", { exact: true });
+  await expect(summary).toBeVisible();
+  await expect(filters.getByRole("button", { name: "Filtrar" })).toBeHidden();
+  await summary.click();
+  await expect(filters.getByRole("button", { name: "Filtrar" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await expectNoSeriousA11yViolations(page);
 });
 
 test("buscador con sugerencias: escribir, moverse con flechas y elegir", async ({ page }) => {
@@ -203,8 +214,11 @@ test("carrito: barra «te faltan $X para el envío gratis» con la regla real", 
   await page.goto(`${origin()}/productos/cafeina-anhidra`);
   await page.getByRole("button", { name: "Agregar al carrito" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Agregado al carrito." })).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 800 });
   await page.goto(`${origin()}/carrito`);
   await expect(page.getByText("Te faltan $400.00 para el envío gratis.")).toBeVisible();
+  // Sin scroll horizontal en móvil (un nombre largo no ensancha la columna).
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   await expect(page.getByRole("progressbar")).toHaveAttribute("value", "33");
   await expectNoSeriousA11yViolations(page);
 

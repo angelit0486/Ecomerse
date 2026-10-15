@@ -55,6 +55,9 @@ export default defineConfig([
       "tests/integration/**",
       "tests/stack/**",
       "tests/e2e/**",
+      // Datos de demostración del stack local (F9-T05): como los E2E, preparan
+      // datos con el superusuario local y el script se niega a correr fuera de localhost.
+      "scripts/dev/demo-seed.mjs",
     ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
