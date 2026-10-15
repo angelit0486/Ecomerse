@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { preferredRate } from "@/lib/checkout/shipping";
 import { formatMoney } from "@/lib/money/format";
 import { reportActionError } from "@/server/actions/report";
 import { toAppError } from "@/server/db/errors";
@@ -186,6 +187,30 @@ function addressFrom(fd: FormData) {
   return address;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Campos obligatorios vacíos o inválidos al confirmar (mensajes por campo). */
+function missingFields(fd: FormData, email: string, requiresShipping: boolean) {
+  const fields: Record<string, string> = {};
+  if (!EMAIL_RE.test(email)) fields.email = ERRORS.email!;
+  if (!text(fd, "customer_name", 160)) fields.customer_name = ERRORS.customer_name!;
+  if (requiresShipping) {
+    const required: [string, string][] = [
+      ["line1", "Escribe la calle y el número."],
+      ["city", "Escribe la ciudad."],
+      ["region", "Escribe el estado."],
+      ["postal_code", "Escribe el código postal."],
+    ];
+    for (const [name, message] of required) if (!text(fd, name)) fields[name] = message;
+    // Las paqueterías de México piden colonia y teléfono.
+    if (text(fd, "country", 2).toUpperCase() === "MX" && !text(fd, "line2")) {
+      fields.line2 = "Escribe la colonia.";
+    }
+    if (!text(fd, "phone", 20)) fields.phone = "Escribe un teléfono para la paquetería.";
+  }
+  return fields;
+}
+
 /**
  * Un solo formulario: «Calcular envío» guarda contacto y dirección para mostrar
  * las tarifas; «Confirmar pedido» llama a place_order con el total que vio el
@@ -201,27 +226,46 @@ export async function checkout(
   const requiresShipping = formData.get("requires_shipping") === "1";
   const email = text(formData, "email", 254).toLowerCase();
   const rate = text(formData, "shipping_rate_id", 40) || undefined;
+  // Confirmar: todos los datos que faltan a la vez, cada uno en su campo (Gate F9).
+  if (intent === "place") {
+    const missing = missingFields(formData, email, requiresShipping);
+    if (Object.keys(missing).length > 0) {
+      return {
+        error: `Faltan ${Object.keys(missing).length} datos. Revisa los campos marcados.`,
+        fields: missing,
+      };
+    }
+  }
+  let preselected: string | null = null;
   try {
     const cart = await setCartDetails(s.id, {
       email: email || null,
       ...(requiresShipping ? { shipping_address: addressFrom(formData) } : {}),
       ...(rate ? { shipping_rate_id: rate } : {}),
     });
-    // Al cotizar sin tarifa elegida se preselecciona el envío a domicilio más
-    // barato (F9-T03; recoger en tienda solo si no hay otro): el comprador ve el
-    // total con envío antes de confirmar y se ahorra un clic. Lo elige el
-    // servidor entre las opciones que calculó la base.
-    if (intent === "quote" && !rate && cart.shipping.status === "rate_required") {
-      const cheapest = [...cart.shipping_options].sort(
-        (a, b) => Number(a.type === "pickup") - Number(b.type === "pickup") || a.price - b.price,
-      )[0];
-      if (cheapest) await setCartDetails(s.id, { shipping_rate_id: cheapest.rate_id });
+    // Sin tarifa elegida se preselecciona la de menor costo efectivo para este
+    // carrito (F9-T03, Gate F9: «gratis desde» cuenta como gratis si ya se
+    // alcanzó; recoger en tienda solo si no hay otra). La elige el servidor
+    // entre las opciones de la base; el total lo vuelve a calcular la base.
+    if (!rate && cart.shipping.status === "rate_required") {
+      const best = preferredRate(cart.shipping_options, cart);
+      if (best) {
+        await setCartDetails(s.id, { shipping_rate_id: best.rate_id });
+        preselected = best.name;
+      }
     }
   } catch (error) {
     return failure(error);
   }
   refresh();
   if (intent === "quote") return { ok: true, message: "Formas de envío actualizadas." };
+  // Confirmó sin que se hubiera cotizado (clic directo): el comprador ve primero
+  // el total con envío y confirma otra vez.
+  if (preselected) {
+    return {
+      error: `Elegimos «${preselected}» para tu dirección. Revisa el total y confirma tu pedido.`,
+    };
+  }
 
   const account = uuid.safeParse(formData.get("payment_account_id"));
   if (!account.success)

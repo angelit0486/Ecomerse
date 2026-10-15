@@ -30,7 +30,11 @@ export function Totals({
       <div className="flex justify-between">
         <dt>Envío</dt>
         <dd>
-          {cart.shippingKnown ? money(cart.shipping_total, store) : "Se calcula con tu dirección"}
+          {!cart.shippingKnown
+            ? "Se calcula con tu dirección"
+            : cart.shipping_total === 0
+              ? "Gratis"
+              : money(cart.shipping_total, store)}
         </dd>
       </div>
       {cart.tax_total > 0 ? (

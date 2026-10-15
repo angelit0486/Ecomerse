@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { ImageResponse } from "next/og";
 
 import { monogramInitial, monogramSvg } from "@/lib/theme/monogram";
@@ -95,8 +97,12 @@ export async function manifest(request: Request, { params }: Params): Promise<Re
   );
 }
 
-/** Versión de los íconos: cambia al publicar el tema. */
+/**
+ * Versión de los íconos y del manifiesto: cambia al publicar el tema y al
+ * renombrar la tienda (el monograma y el nombre salen de `store.name`; Gate F9).
+ */
 export function iconVersion(store: StorePublic): string {
   const published = store.theme?.published_at;
-  return published ? String(Math.floor(Date.parse(published) / 1000)) : "0";
+  const theme = published ? String(Math.floor(Date.parse(published) / 1000)) : "0";
+  return `${theme}-${createHash("sha256").update(store.name).digest("hex").slice(0, 8)}`;
 }

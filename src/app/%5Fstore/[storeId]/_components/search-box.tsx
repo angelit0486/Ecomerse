@@ -53,16 +53,19 @@ export function SearchBox() {
   const expanded = open && options.length > 0;
 
   useEffect(() => {
+    // Cada texto cancela la petición del anterior (Gate F9): una respuesta
+    // vieja no vuelve a llenar la lista con sugerencias de otro texto.
+    abort.current?.abort();
     if (q.length < 2) return;
+    const controller = new AbortController();
+    abort.current = controller;
     const timer = setTimeout(() => {
-      abort.current?.abort();
-      const controller = new AbortController();
-      abort.current = controller;
       fetch(`/buscar/sugerencias?${new URLSearchParams([["q", q]]).toString()}`, {
         signal: controller.signal,
       })
         .then((r) => (r.ok ? (r.json() as Promise<{ items: SuggestionItem[] }>) : { items: [] }))
         .then((data) => {
+          if (controller.signal.aborted) return;
           setItems(data.items);
           setActive(-1);
         })
@@ -70,7 +73,10 @@ export function SearchBox() {
           // Cancelada o sin red: se queda lo anterior; Enter sigue buscando.
         });
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [q]);
 
   function go(item: SuggestionItem) {

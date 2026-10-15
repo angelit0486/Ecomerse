@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useRef, type FocusEvent } from "react";
+import { useActionState, useEffect, useRef, useSyncExternalStore, type FocusEvent } from "react";
+
+const noSubscribe = () => () => {};
 
 import type { CartView, PaymentMethod } from "@/server/storefront/cart";
 import { submitKeepingState } from "@/ui/submit";
@@ -71,6 +73,7 @@ export function CheckoutForm({
   methods,
   idempotencyKey,
   shippingLabels,
+  totalLabel,
 }: {
   storeId: string;
   storeCountry: string;
@@ -79,6 +82,8 @@ export function CheckoutForm({
   idempotencyKey: string;
   /** Precio ya formateado de cada tarifa (rate_id → texto). */
   shippingLabels: Record<string, string>;
+  /** Total ya formateado, repetido en el botón de confirmar. */
+  totalLabel: string;
 }) {
   const [state, action, pending] = useActionState<CartActionState, FormData>(
     checkout.bind(null, storeId),
@@ -93,6 +98,26 @@ export function CheckoutForm({
     ...(COUNTRIES[storeCountry] ? {} : { [storeCountry]: storeCountry }),
   };
   const submit = submitKeepingState(action);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Con JS se cotiza solo: el botón «Calcular envío» queda para quien no tiene JS.
+  // (en el servidor vale false, en el cliente true; sin estado en un efecto).
+  const hydrated = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+  // Un clic en un botón de envío no dispara la cotización al salir del campo
+  // (en Safari el clic no enfoca el botón y el «blur» llegaba antes; Gate F9).
+  const submitting = useRef(false);
+  // Tras un error por campo, el foco va al primero (en el orden del formulario).
+  useEffect(() => {
+    const names = Object.keys(state.fields ?? {});
+    if (names.length === 0) return;
+    const first = formRef.current?.querySelector<HTMLElement>(
+      names.map((n) => `[name="${n}"]`).join(","),
+    );
+    first?.focus();
+  }, [state]);
   const quoteButton = useRef<HTMLButtonElement>(null);
   const quotedKey = useRef<string | null>(
     a
@@ -111,6 +136,7 @@ export function CheckoutForm({
   function quoteOnBlur(event: FocusEvent<HTMLFieldSetElement>) {
     const next = event.relatedTarget;
     if (next instanceof HTMLButtonElement && next.type === "submit") return;
+    if (submitting.current) return;
     const form = event.currentTarget.form;
     if (!form || pending) return;
     const key = addressKey(form);
@@ -121,8 +147,14 @@ export function CheckoutForm({
 
   return (
     <form
+      ref={formRef}
       action={action}
+      onPointerDownCapture={(event) => {
+        if ((event.target as HTMLElement).closest('button[type="submit"]'))
+          submitting.current = true;
+      }}
       onSubmit={(event) => {
+        submitting.current = false;
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
         if (submitter === quoteButton.current) quotedKey.current = addressKey(event.currentTarget);
         submit(event);
@@ -154,7 +186,8 @@ export function CheckoutForm({
           error={f.customer_name}
         />
         <Field
-          label="Teléfono (opcional)"
+          label={cart.requires_shipping ? "Teléfono (para la paquetería)" : "Teléfono (opcional)"}
+          inputMode="tel"
           name="phone"
           type="tel"
           autoComplete="tel"
@@ -176,39 +209,46 @@ export function CheckoutForm({
             </p>
           ) : null}
           <Field
-            label="Calle y número"
+            label="Calle, número e interior"
             name="line1"
             autoComplete="address-line1"
             required
             defaultValue={a?.line1 ?? ""}
+            error={f.line1}
           />
           <Field
-            label="Colonia, interior (opcional)"
+            label="Colonia"
             name="line2"
             autoComplete="address-line2"
             defaultValue={a?.line2 ?? ""}
+            error={f.line2}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
-              label="Ciudad"
+              label="Ciudad o municipio"
               name="city"
               autoComplete="address-level2"
               required
               defaultValue={a?.city ?? ""}
+              error={f.city}
             />
             <Field
-              label="Estado o región"
+              label="Estado"
               name="region"
               autoComplete="address-level1"
               required
               defaultValue={a?.region ?? ""}
+              error={f.region}
             />
             <Field
               label="Código postal"
               name="postal_code"
               autoComplete="postal-code"
+              inputMode="numeric"
+              maxLength={10}
               required
               defaultValue={a?.postal_code ?? ""}
+              error={f.postal_code}
             />
             <div className="flex flex-col gap-1">
               <label htmlFor="co-country" className="text-sm font-medium">
@@ -234,7 +274,7 @@ export function CheckoutForm({
             name="intent"
             value="quote"
             disabled={pending}
-            className="h-11 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-5 text-sm font-medium"
+            className={`h-11 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-5 text-sm font-medium ${hydrated ? "hidden" : ""}`}
           >
             Calcular envío
           </button>
@@ -246,7 +286,7 @@ export function CheckoutForm({
             {cart.shipping_options.length === 0 ? (
               <p className="text-sm text-[var(--sf-muted)]">
                 {cart.shipping.status === "address_required"
-                  ? "Escribe tu dirección y pulsa «Calcular envío»."
+                  ? "Escribe tu dirección completa para ver las formas de envío."
                   : "No hay envíos disponibles para esta dirección."}
               </p>
             ) : (
@@ -319,7 +359,7 @@ export function CheckoutForm({
       </div>
 
       <div aria-live="polite">
-        {state.error && !Object.keys(f).length ? (
+        {state.error ? (
           <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
             {state.error}
           </p>
@@ -337,7 +377,7 @@ export function CheckoutForm({
         aria-busy={pending || undefined}
         className="h-12 w-full rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-medium text-[var(--sf-btn-fg)] disabled:opacity-60"
       >
-        {pending ? "Procesando…" : "Confirmar pedido"}
+        {pending ? "Procesando…" : `Confirmar pedido · ${totalLabel}`}
       </button>
     </form>
   );

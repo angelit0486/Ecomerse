@@ -125,13 +125,13 @@ insert into public.shipping_rates (store_id, zone_id, name, type, price, free_ov
   (tests.fx('store_a'), tests.fx('z_centro'), 'Local', 'free_over', 9900, 49900, true),
   (tests.fx('store_a'), tests.fx('z_nac'), 'Nacional', 'free_over', 9900, 99900, true);
 select is(pg_temp.gw(format('select storefront.shipping_promo(%L)', tests.fx('store_a'))),
-          '{"free_over":49900,"conditional":true}'::jsonb,
+          '{"free_over":49900,"conditional":true,"price":9900,"est_days_min":null,"est_days_max":null}'::jsonb,
           'el menor umbral activo del país de la tienda; marcado condicional si depende de la región');
-insert into public.shipping_rates (store_id, zone_id, name, type, price, free_over_subtotal) values
-  (tests.fx('store_a'), tests.fx('z_nac'), 'Nacional promo', 'free_over', 9900, 49900);
+insert into public.shipping_rates (store_id, zone_id, name, type, price, free_over_subtotal, est_days_min, est_days_max)
+values (tests.fx('store_a'), tests.fx('z_nac'), 'Nacional promo', 'free_over', 9900, 49900, 2, 5);
 select is(pg_temp.gw(format('select storefront.shipping_promo(%L)', tests.fx('store_a'))),
-          '{"free_over":49900,"conditional":false}'::jsonb,
-          'con el mismo umbral se prefiere la tarifa sin condiciones');
+          '{"free_over":49900,"conditional":false,"price":9900,"est_days_min":2,"est_days_max":5}'::jsonb,
+          'con el mismo umbral se prefiere la tarifa sin condiciones; trae su precio y sus días');
 
 select * from finish();
 rollback;

@@ -64,6 +64,8 @@ select public.catalog_set_product_attributes(tests.fx('store_a'), tests.fx('cafe
 
 -- Sin secciones: la plantilla del tema.
 select tests.logout();
+-- Con existencias: la portada no muestra agotados (Gate F9, prueba 57).
+update public.product_variants set track_inventory = false where store_id = tests.fx('store_a');
 select ok(pg_temp.gw('get_home') ? 'featured' and pg_temp.gw('get_home') -> 'sections' = 'null'::jsonb,
           'sin secciones publicadas: productos recientes y categorías (plantilla del tema)');
 

@@ -25,6 +25,9 @@ export function AddToCart({
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="variant_id" value={variantId ?? ""} />
+      {/* Enter en «Cantidad» envía con el primer botón de envío: que sea «agregar»,
+          no «comprar ahora» (Gate F9). Oculto; funciona también sin JavaScript. */}
+      <button type="submit" name="intent" value="add" hidden tabIndex={-1} />
       <label className="flex w-fit flex-col gap-1 text-sm font-medium">
         Cantidad
         <input

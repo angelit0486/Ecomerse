@@ -165,7 +165,7 @@ test("editar por pestañas, vista previa privada y publicar", async ({ page, bro
   );
   await expect(shopper).toHaveTitle("Suplementos para tu objetivo");
   const icon = await shopper.locator('link[rel="icon"]').getAttribute("href");
-  expect(icon).toMatch(/^\/icon\.svg\?v=\d+$/);
+  expect(icon).toMatch(/^\/icon\.svg\?v=\d+-[0-9a-f]{8}$/);
   // Desde el navegador (Node no resuelve *.localhost): mismo origen que la tienda.
   const iconResponse = await shopper.evaluate(async (url) => {
     const r = await fetch(url);

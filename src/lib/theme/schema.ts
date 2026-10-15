@@ -199,7 +199,7 @@ const categoryGrid = z.strictObject({
     .array(uuid)
     .min(1)
     .max(12)
-    .refine((l) => uniqueBy(l, (id) => id), "Una categoría está repetida.")
+    .refine((l) => uniqueBy(l, (id) => id.toLowerCase()), "Una categoría está repetida.")
     .optional(),
 });
 
@@ -224,7 +224,7 @@ const brandLogos = z.strictObject({
     .array(uuid)
     .min(2)
     .max(12)
-    .refine((l) => uniqueBy(l, (id) => id), "Una marca está repetida."),
+    .refine((l) => uniqueBy(l, (id) => id.toLowerCase()), "Una marca está repetida."),
 });
 
 const testimonials = z.strictObject({

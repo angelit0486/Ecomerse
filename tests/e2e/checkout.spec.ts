@@ -90,16 +90,27 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   await expectNoSeriousA11yViolations(page);
 
   await page.getByRole("link", { name: "Continuar al pago" }).click();
-  await expect(page.getByRole("heading", { name: "Pago", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Finalizar compra", exact: true })).toBeVisible();
+  // Confirmar con todo vacío: todos los faltantes a la vez y el foco en el primero (Gate F9).
+  await page.getByRole("button", { name: /Confirmar pedido/ }).click();
+  await expect(page.getByRole("alert").filter({ hasText: /Faltan \d+ datos/ })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
+  await expect(page.getByText("Escribe la colonia.")).toBeVisible();
+  await expect(page.getByText("Escribe un teléfono para la paquetería.")).toBeVisible();
+
   await page.getByRole("textbox", { name: "Email" }).fill("Comprador@Example.test");
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel("Calle y número").fill("Av. Juárez 10");
-  await page.getByLabel("Ciudad").fill("Puebla");
-  await page.getByLabel("Estado o región").fill("Puebla");
+  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
+  await page.getByLabel("Colonia").fill("Centro");
+  await page.getByLabel("Ciudad o municipio").fill("Puebla");
+  await page.getByLabel("Estado", { exact: true }).fill("Puebla");
   await page.getByLabel("Código postal").fill("72000");
-  await page.getByRole("button", { name: "Calcular envío" }).click();
-  await page.getByRole("radio", { name: /Estándar/ }).check();
-  await page.getByRole("button", { name: "Calcular envío" }).click();
+  // Clic directo en «Confirmar» sin salir del campo: el servidor elige el envío
+  // y pide confirmar con el total a la vista (no se pierde el clic, Gate F9).
+  await page.getByRole("button", { name: /Confirmar pedido/ }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Elegimos «Estándar»" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Estándar/ })).toBeChecked();
   const resumen = page.getByRole("complementary", { name: "Resumen del pedido" });
   await expect(resumen).toContainText("$549.00");
   await expectNoSeriousA11yViolations(page);
@@ -108,7 +119,7 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   await page
     .locator('input[name="expected_total"]')
     .evaluate((el: HTMLInputElement) => (el.value = "100"));
-  await page.getByRole("button", { name: "Confirmar pedido" }).click();
+  await page.getByRole("button", { name: /Confirmar pedido/ }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "El total cambió a $549.00" }),
   ).toBeVisible();
@@ -116,7 +127,7 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
     select count(*)::int as n from public.orders where store_id = ${tenant.storeId}`;
   expect(orders!.n).toBe(0);
 
-  await page.getByRole("button", { name: "Confirmar pedido" }).click();
+  await page.getByRole("button", { name: /Confirmar pedido/ }).click();
   await expect(page.getByRole("heading", { name: "Pago de prueba" })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
   await page.getByRole("button", { name: "Aprobar pago" }).click();

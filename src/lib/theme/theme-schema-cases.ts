@@ -352,6 +352,20 @@ export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
     valid: false,
   },
   {
+    // Gate F9 (G9-5): el mismo id en mayúsculas y minúsculas es el mismo.
+    name: "categorías repetidas con distinta caja",
+    value: [
+      sec(1, "category_grid", {
+        title: "Categorías",
+        category_ids: [
+          "aaaaaaaa-0000-4000-8000-000000000001",
+          "AAAAAAAA-0000-4000-8000-000000000001",
+        ],
+      }),
+    ],
+    valid: false,
+  },
+  {
     name: "categorías lista vacía",
     value: [sec(1, "category_grid", { title: "Categorías", category_ids: [] })],
     valid: false,
