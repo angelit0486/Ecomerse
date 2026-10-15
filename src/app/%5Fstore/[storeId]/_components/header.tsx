@@ -145,7 +145,7 @@ const NETWORK_LABELS: Record<SocialNetwork, string> = {
   linkedin: "LinkedIn",
 };
 
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   visa: "Visa",
   mastercard: "Mastercard",
   amex: "American Express",

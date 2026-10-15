@@ -15,6 +15,8 @@ export interface SelectorVariant {
   options: Record<string, string>;
   price: string;
   compareAt: string | null;
+  /** «Ahorras $X (Y %)» calculado en el servidor; null sin descuento. */
+  saving: string | null;
   availability: string;
   available: boolean;
   imageUrl: string | null;
@@ -85,7 +87,7 @@ export function VariantSelector({
       <div aria-live="polite" className="space-y-1">
         {selected ? (
           <>
-            <p className="text-xl font-semibold">
+            <p className="text-2xl font-bold">
               {selected.price}
               {selected.compareAt ? (
                 <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
@@ -94,6 +96,7 @@ export function VariantSelector({
                 </s>
               ) : null}
             </p>
+            {selected.saving ? <p className="text-sm font-semibold">{selected.saving}</p> : null}
             <p className="text-sm">{selected.availability}</p>
             {selected.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- imagen de la variante, re-codificada

@@ -108,13 +108,16 @@ export async function addItem(
   const variant = uuid.safeParse(formData.get("variant_id"));
   const qty = quantity.safeParse(formData.get("quantity") ?? 1);
   if (!variant.success || !qty.success || qty.data < 1) return { error: ERRORS.quantity };
+  let count: number;
   try {
-    const cart = await addToCart(s.id, variant.data, qty.data);
-    refresh();
-    return { ok: true, message: "Agregado al carrito.", count: cart.item_count };
+    count = (await addToCart(s.id, variant.data, qty.data)).item_count;
   } catch (error) {
     return failure(error);
   }
+  // «Comprar ahora» (F9-T03): mismo carrito, directo al pago (compra en ≤ 3 clics).
+  if (formData.get("intent") === "buy") redirect("/checkout");
+  refresh();
+  return { ok: true, message: "Agregado al carrito.", count };
 }
 
 export async function updateLine(
@@ -199,11 +202,21 @@ export async function checkout(
   const email = text(formData, "email", 254).toLowerCase();
   const rate = text(formData, "shipping_rate_id", 40) || undefined;
   try {
-    await setCartDetails(s.id, {
+    const cart = await setCartDetails(s.id, {
       email: email || null,
       ...(requiresShipping ? { shipping_address: addressFrom(formData) } : {}),
       ...(rate ? { shipping_rate_id: rate } : {}),
     });
+    // Al cotizar sin tarifa elegida se preselecciona el envío a domicilio más
+    // barato (F9-T03; recoger en tienda solo si no hay otro): el comprador ve el
+    // total con envío antes de confirmar y se ahorra un clic. Lo elige el
+    // servidor entre las opciones que calculó la base.
+    if (intent === "quote" && !rate && cart.shipping.status === "rate_required") {
+      const cheapest = [...cart.shipping_options].sort(
+        (a, b) => Number(a.type === "pickup") - Number(b.type === "pickup") || a.price - b.price,
+      )[0];
+      if (cheapest) await setCartDetails(s.id, { shipping_rate_id: cheapest.rate_id });
+    }
   } catch (error) {
     return failure(error);
   }

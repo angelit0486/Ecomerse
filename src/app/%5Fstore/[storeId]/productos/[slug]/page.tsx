@@ -1,23 +1,34 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+
+import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
 
 import { centsToInput } from "@/lib/money/format";
 import {
   getProduct,
   getProductAttributes,
   getProductRegulatory,
+  getRelatedProducts,
+  getShippingPromo,
   mediaUrl,
+  type ShippingPromo,
   type Availability,
   type ProductDetail,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
+import { ThemeSettingsV1, type PaymentMethod } from "@/lib/theme/schema";
 import { SafeHtml } from "@/ui/safe-html";
 
+import { Badges } from "../../_components/badges";
 import { Breadcrumb } from "../../_components/breadcrumb";
 import { AVAILABILITY_LABELS, money } from "../../_components/format";
+import { PAYMENT_LABELS } from "../../_components/header";
 import { JsonLd } from "../../_components/json-ld";
+import { ProductGallery } from "../../_components/product-gallery";
+import { ProductGrid } from "../../_components/product-card";
 import { ProductAttributes } from "../../_components/product-attributes";
 import { SupplementInfo } from "../../_components/supplement-info";
 import { AddToCart } from "../../_components/add-to-cart";
@@ -136,17 +147,63 @@ function productJsonLd(store: StorePublic, product: ProductDetail) {
   };
 }
 
+/** "Ahorras $200.00 (20 %)"; sin el porcentaje si es menor a 1 %. */
+function savingText(price: number, compareAt: number | null, store: StorePublic): string | null {
+  const s = savings(price, compareAt);
+  if (!s) return null;
+  return `Ahorras ${money(s.amount, store)}${s.percent >= 1 ? ` (${s.percent} %)` : ""}`;
+}
+
+/** Espacio para contenido que la tienda aún no tiene (D-F9-09): solo en la vista previa. */
+function PendingContent({ title, text }: { title: string; text: string }) {
+  return (
+    <section
+      aria-label={title}
+      className="rounded-[var(--sf-radius-card)] border-2 border-dashed border-[var(--sf-border-strong)] p-5 text-sm"
+    >
+      <p className="font-semibold">{title}: pendiente de contenido real</p>
+      <p className="text-[var(--sf-muted)]">{text}</p>
+    </section>
+  );
+}
+
 export default async function ProductPage({ params }: Props) {
-  const { store, product } = await load(params);
-  const [regulatory, attributes] = await Promise.all([
+  const { store, preview, product } = await load(params);
+  const [regulatory, attributes, related, shipping] = await Promise.all([
     getProductRegulatory(store.id, product.slug),
     getProductAttributes(store.id, product.slug),
+    getRelatedProducts(store.id, product.slug),
+    getShippingPromo(store.id),
   ]);
-  const [cover, ...rest] = product.images;
+  const parsed = ThemeSettingsV1.safeParse(store.theme?.settings ?? {});
+  const settings = parsed.success ? parsed.data : {};
+  const payments = settings.footer?.payment_methods ?? [];
+  const whatsapp = settings.contact?.whatsapp;
   const single = product.options.length === 0 ? product.variants[0] : undefined;
+  const cheapest = product.variants.reduce<(typeof product.variants)[number] | undefined>(
+    (min, v) => (!min || v.price < min.price ? v : min),
+    undefined,
+  );
+  const badges = productBadges({
+    price: cheapest?.price ?? null,
+    compareAt: cheapest?.compare_at_price,
+    availability: product.availability,
+    publishedAt: product.published_at,
+    now: new Date(),
+  });
+  // Precio por porción solo sin variantes: las presentaciones cambian las porciones.
+  const perServing = single
+    ? pricePerServing(single.price, regulatory?.data.servings_per_container)
+    : null;
+  const gallery = product.images.map((image) => ({
+    src: mediaUrl(image.path),
+    alt: image.alt ?? product.title,
+    width: image.width ?? 1024,
+    height: image.height ?? 1024,
+  }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       <JsonLd data={productJsonLd(store, product)} />
       <Breadcrumb
         items={[
@@ -155,62 +212,52 @@ export default async function ProductPage({ params }: Props) {
           { label: product.title },
         ]}
       />
-      <div className="grid gap-8 md:grid-cols-2">
-        <section aria-label="Imágenes" className="space-y-3">
-          {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage
-            <img
-              src={mediaUrl(cover.path)}
-              alt={cover.alt ?? product.title}
-              width={cover.width ?? 1024}
-              height={cover.height ?? 1024}
-              fetchPriority="high"
-              className="aspect-square w-full rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] object-cover"
-            />
-          ) : (
-            <div className="flex aspect-square items-center justify-center rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] text-[var(--sf-muted)]">
-              Sin imagen
-            </div>
-          )}
-          {rest.length > 0 ? (
-            <ul className="grid grid-cols-4 gap-2">
-              {rest.map((image) => (
-                <li key={image.path}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
-                  <img
-                    src={mediaUrl(image.path)}
-                    alt={image.alt ?? ""}
-                    width={image.width ?? 320}
-                    height={image.height ?? 320}
-                    loading="lazy"
-                    className="aspect-square w-full rounded object-cover"
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+      <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+        <section aria-label="Imágenes">
+          <ProductGallery images={gallery} title={product.title} />
         </section>
         <section aria-labelledby="sf-producto" className="space-y-5">
-          <header className="space-y-1">
+          <header className="space-y-2">
+            <Badges badges={badges} />
             {product.brand ? (
-              <p className="text-sm text-[var(--sf-muted)]">{product.brand.name}</p>
+              <p className="text-sm font-medium uppercase tracking-wide text-[var(--sf-muted)]">
+                <Link
+                  href={`/marca/${encodeURIComponent(product.brand.slug)}`}
+                  className="hover:underline"
+                >
+                  {product.brand.name}
+                </Link>
+              </p>
             ) : null}
-            <h1 id="sf-producto" className="text-2xl font-semibold">
+            <h1 id="sf-producto" className="text-2xl font-bold leading-tight sm:text-3xl">
               {product.title}
             </h1>
           </header>
           {single ? (
-            <div className="space-y-1">
-              <p className="text-xl font-semibold">
-                {money(single.price, store)}
-                {single.compare_at_price ? (
-                  <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
-                    <span className="sr-only">Antes </span>
-                    {money(single.compare_at_price, store)}
-                  </s>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">
+                  {money(single.price, store)}
+                  {single.compare_at_price && single.compare_at_price > single.price ? (
+                    <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
+                      <span className="sr-only">Antes </span>
+                      {money(single.compare_at_price, store)}
+                    </s>
+                  ) : null}
+                </p>
+                {savingText(single.price, single.compare_at_price, store) ? (
+                  <p className="text-sm font-semibold">
+                    {savingText(single.price, single.compare_at_price, store)}
+                  </p>
                 ) : null}
-              </p>
-              <p className="text-sm">{AVAILABILITY_LABELS[single.availability]}</p>
+                {perServing !== null ? (
+                  <p className="text-sm text-[var(--sf-muted)]">
+                    {money(perServing, store)} por porción (
+                    {regulatory?.data.servings_per_container} porciones)
+                  </p>
+                ) : null}
+                <p className="text-sm">{AVAILABILITY_LABELS[single.availability]}</p>
+              </div>
               <AddToCart
                 storeId={store.id}
                 variantId={single.id}
@@ -225,7 +272,11 @@ export default async function ProductPage({ params }: Props) {
                 id: v.id,
                 options: parseSignature(v.signature),
                 price: money(v.price, store),
-                compareAt: v.compare_at_price ? money(v.compare_at_price, store) : null,
+                compareAt:
+                  v.compare_at_price && v.compare_at_price > v.price
+                    ? money(v.compare_at_price, store)
+                    : null,
+                saving: savingText(v.price, v.compare_at_price, store),
                 availability: AVAILABILITY_LABELS[v.availability],
                 available: v.availability !== "out_of_stock",
                 imageUrl: v.image ? mediaUrl(v.image.path) : null,
@@ -234,6 +285,13 @@ export default async function ProductPage({ params }: Props) {
           ) : (
             <p className="text-sm">{AVAILABILITY_LABELS.out_of_stock}</p>
           )}
+          <PurchaseInfo
+            store={store}
+            shipping={shipping}
+            payments={payments}
+            whatsapp={whatsapp}
+            productTitle={product.title}
+          />
           <ProductAttributes attributes={attributes} />
           {product.description_html ? (
             <section aria-label="Descripción" className="border-t border-[var(--sf-border)] pt-5">
@@ -246,6 +304,68 @@ export default async function ProductPage({ params }: Props) {
           {regulatory ? <SupplementInfo info={regulatory} /> : null}
         </section>
       </div>
+      {preview ? (
+        <PendingContent
+          title="Opiniones"
+          text="Aquí irán las opiniones verificadas de compradores reales. Solo tú ves este espacio en la vista previa; tus clientes no lo ven."
+        />
+      ) : null}
+      {related.length > 0 ? (
+        <section aria-labelledby="sf-relacionados" className="space-y-4">
+          <h2 id="sf-relacionados" className="text-xl font-bold sm:text-2xl">
+            Más para tu objetivo
+          </h2>
+          <ProductGrid products={related} store={store} />
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+/** Envío gratis real, formas de pago declaradas y WhatsApp (F9-DESIGN §9): nunca texto fijo. */
+function PurchaseInfo({
+  store,
+  shipping,
+  payments,
+  whatsapp,
+  productTitle,
+}: {
+  store: StorePublic;
+  shipping: ShippingPromo | null;
+  payments: PaymentMethod[];
+  whatsapp: string | undefined;
+  productTitle: string;
+}) {
+  if (!shipping && payments.length === 0 && !whatsapp) return null;
+  const message = encodeURIComponent(`Hola, tengo una duda sobre ${productTitle}.`);
+  return (
+    <ul className="space-y-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4 text-sm">
+      {shipping ? (
+        <li>
+          <span className="font-semibold">Envío gratis</span> en compras desde{" "}
+          {money(shipping.free_over, store)}
+          {shipping.conditional ? " (según destino)" : ""}.
+        </li>
+      ) : null}
+      {payments.length > 0 ? (
+        <li>
+          <span className="font-semibold">Paga con</span>{" "}
+          {payments.map((m) => PAYMENT_LABELS[m]).join(", ")}.
+        </li>
+      ) : null}
+      {whatsapp ? (
+        <li>
+          ¿Dudas?{" "}
+          <a
+            href={`https://wa.me/${whatsapp.slice(1)}?text=${message}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold underline underline-offset-4"
+          >
+            Escríbenos por WhatsApp
+          </a>
+        </li>
+      ) : null}
+    </ul>
   );
 }

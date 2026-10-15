@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { parseMoneyToCents } from "@/lib/money/format";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateStore } from "@/server/storefront/cache";
 
 import { failureFrom, formValues, storeClient, type FormState } from "../_shared/action-state";
 
@@ -42,6 +43,8 @@ export async function saveZone(
         ...(values.regions ? { regions: list(values.regions) } : {}),
       },
     });
+    // La ficha muestra el umbral de envío gratis (F9-T03): se invalida su caché.
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error, values);
   }
@@ -59,6 +62,7 @@ export async function deleteZone(
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
     await callRpc(supabase, "shipping_delete_zone", { p_store_id: storeId, p_zone_id: id.data });
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error);
   }
@@ -109,6 +113,7 @@ export async function saveRate(
         is_active: formData.get("is_active") !== "0",
       },
     });
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error, values);
   }
@@ -126,6 +131,7 @@ export async function deleteRate(
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
     await callRpc(supabase, "shipping_delete_rate", { p_store_id: storeId, p_rate_id: id.data });
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error);
   }

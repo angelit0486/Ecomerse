@@ -5,7 +5,10 @@ import { useActionState } from "react";
 
 import { addItem, type CartActionState } from "../carrito/actions";
 
-/** Agregar al carrito: solo variante y cantidad; el precio lo pone la base (§17.2). */
+/**
+ * Agregar al carrito o comprar ahora: solo variante y cantidad; el precio lo pone
+ * la base (§17.2).
+ */
 export function AddToCart({
   storeId,
   variantId,
@@ -22,28 +25,50 @@ export function AddToCart({
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="variant_id" value={variantId ?? ""} />
-      <div className="flex items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Cantidad
-          <input
-            type="number"
-            name="quantity"
-            min={1}
-            max={999}
-            defaultValue={1}
-            inputMode="numeric"
-            className="h-11 w-20 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3"
-          />
-        </label>
+      <label className="flex w-fit flex-col gap-1 text-sm font-medium">
+        Cantidad
+        <input
+          type="number"
+          name="quantity"
+          min={1}
+          max={999}
+          defaultValue={1}
+          inputMode="numeric"
+          className="h-11 w-24 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3"
+        />
+      </label>
+      {available ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* «Comprar ahora» (F9-T03): agrega y lleva directo al pago. */}
+          <button
+            type="submit"
+            name="intent"
+            value="buy"
+            disabled={!variantId || pending}
+            aria-busy={pending || undefined}
+            className="h-12 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-semibold text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Comprar ahora
+          </button>
+          <button
+            type="submit"
+            name="intent"
+            value="add"
+            disabled={!variantId || pending}
+            className="h-12 rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-fg)] bg-[var(--sf-bg)] px-5 font-semibold text-[var(--sf-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? "Agregando…" : "Agregar al carrito"}
+          </button>
+        </div>
+      ) : (
         <button
-          type="submit"
-          disabled={!variantId || !available || pending}
-          aria-busy={pending || undefined}
-          className="h-11 flex-1 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-medium text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          disabled
+          className="h-12 w-full cursor-not-allowed rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] bg-[var(--sf-surface)] px-5 font-semibold text-[var(--sf-muted)]"
         >
-          {available ? (pending ? "Agregando…" : "Agregar al carrito") : "Agotado"}
+          Agotado
         </button>
-      </div>
+      )}
       <div aria-live="polite" className="text-sm">
         {state.ok ? (
           <p role="status">

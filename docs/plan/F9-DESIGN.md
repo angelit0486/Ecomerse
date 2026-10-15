@@ -249,16 +249,36 @@ así que nunca borra lo configurado en Apariencia (§13 C2), y apunta aquí para
 | Lighthouse  | Dos tiendas de prueba con temas distintos (tipografía, colores, forma y secciones): ≥ 90 en inicio, listado y ficha.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Mutación    | Quitar: lista blanca de tipografía, dominio de redes, `https` de enlaces, contraste de la barra, referencias de otra tienda, revalidación al publicar, cumplimiento de la portada, `no-store` de la vista previa, filtro de borrador en la lectura pública. Más un control sin cambios.                                                                                                                                                                                                                                                                              |
 
-## 9. F9-T03 Ficha insignia (diseño a detallar antes de empezarla)
+## 9. F9-T03 Ficha insignia (construida 2026-10-15)
 
-Puntos ya decididos: precio con `compare_at_price` → ahorro en pesos y % redondeado hacia abajo
-(nunca exagera el descuento), calculados en el servidor desde centavos `bigint`; insignias
-estructurales y verificables: **Oferta** (hay precio de comparación mayor), **Nuevo** (publicado
-hace ≤ 30 días), **Últimas piezas** (disponible ≤ umbral de stock bajo de la tienda, sin mostrar
-la cantidad exacta), **Agotado**; "más para tu objetivo" = productos publicados que comparten
-valores de atributo filtrable y luego categoría, sin el propio, máximo 8; envío y formas de pago
-desde la configuración real de la tienda (nunca texto fijo). Pendiente de detallar: galería
-accesible (miniaturas como botones, flechas, sin carrusel automático), datos estructurados.
+- **Precio y ahorro:** con `compare_at_price` mayor que el precio, "Ahorras $X (Y %)": el porcentaje
+  se redondea hacia abajo (nunca exagera) y se omite si es menor a 1 %; todo en centavos con BigInt
+  (`src/lib/catalog/merchandising.ts`). Con variantes, el ahorro es el de la variante elegida.
+- **Precio por porción:** precio ÷ `servings_per_container` de la ficha sanitaria, al centavo.
+  Solo en productos sin variantes: cada presentación cambia las porciones (D-F9-12).
+- **Insignias estructurales:** Oferta, Nuevo (publicado hace ≤ 30 días, `published_at` en
+  `storefront.get_product`), Últimas piezas (estado `low_stock`, nunca la cantidad), Agotado (las
+  reemplaza a todas). Colores con contraste garantizado (los del botón y texto sobre fondo; el
+  acento solo garantiza 3:1).
+- **Galería:** imagen principal con prioridad alta, miniaturas como botones (`aria-pressed`),
+  flechas anterior/siguiente, anuncio "Imagen n de m", sin avance automático.
+- **Comprar ahora:** segundo botón del mismo formulario (`intent=buy`): agrega al carrito y lleva al
+  pago. En el pago, al salir de un campo con la dirección completa se cotiza el envío solo y el
+  servidor preselecciona el envío a domicilio más barato (D-F9-11); el formulario ya no se reinicia
+  tras cotizar. Resultado medido: **3 clics** (Comprar ahora → Confirmar pedido → Aprobar pago).
+- **Más para tu objetivo:** `storefront.related_products(store, slug, limit)`: mismo universo que el
+  listado, sin el propio ni agotados; cuenta valores de atributos **filtrables** en común y luego una
+  categoría pública compartida; sin nada en común no recomienda; desempate por ventas, novedad e id.
+- **Envío gratis:** `storefront.shipping_promo(store)`: el menor umbral `free_over` activo en una
+  zona que cubre el país de la tienda; "(según destino)" si esa tarifa depende de región o peso. Los
+  cambios de envíos en el panel invalidan la caché de la tienda.
+- **Formas de pago y WhatsApp:** las que la tienda declara en Apariencia (pie) y su WhatsApp con un
+  mensaje que nombra el producto. Nada fijo.
+- **Opiniones:** espacio "Opiniones: pendiente de contenido real" solo en la vista previa (D-F9-09).
+  JSON-LD sin calificaciones ni reseñas.
+- **Pruebas:** pgTAP `55_product_page` (16), unitarias `merchandising.test.ts` (9), E2E
+  `product-page.spec.ts` (datos, galería, relacionados, compra en 3 clics) y `home.spec.ts` (espacio
+  pendiente solo en la vista previa).
 
 ## 10. F9-T04 Navegación y listados (diseño a detallar antes de empezarla)
 

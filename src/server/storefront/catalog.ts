@@ -33,6 +33,8 @@ export interface ProductCard {
   compare_at_price: number | null;
   availability: Availability;
   image: ImageRef | null;
+  /** Solo en relacionados por ahora (insignia «Nuevo»); el listado lo sumará en F9-T04. */
+  published_at?: string | null;
 }
 
 export interface ProductPage {
@@ -88,6 +90,7 @@ export interface ProductDetail {
   min_price: number | null;
   max_price: number | null;
   updated_at: string;
+  published_at: string | null;
   availability: Availability;
   brand: { name: string; slug: string } | null;
   options: { name: string; values: string[] }[];
@@ -249,6 +252,37 @@ export const getProduct = cache(
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
     return productCached(storeId, slug);
   },
+);
+
+/** «Más para tu objetivo» (F9-T03): comparten objetivo, sabor… y luego categoría. */
+export const getRelatedProducts = cache(
+  async (storeId: string, slug: string): Promise<ProductCard[]> => {
+    assertStore(storeId);
+    if (!SLUG_RE.test(slug) || slug.length > 120) return [];
+    return (await relatedCached(storeId, slug)) ?? [];
+  },
+);
+
+const relatedCached = cachedRead("related_products", (storeId: string, slug: string) =>
+  call<ProductCard[]>(
+    gatewayDb()`select storefront.related_products(${storeId}::uuid, ${slug}, 8) as value`,
+  ),
+);
+
+/** Umbral real de envío gratis para el país de la tienda (F9-T03); null si no hay. */
+export interface ShippingPromo {
+  free_over: number;
+  /** Solo en algunas regiones o pesos: la tienda dice «según destino». */
+  conditional: boolean;
+}
+
+export const getShippingPromo = cache(async (storeId: string): Promise<ShippingPromo | null> => {
+  assertStore(storeId);
+  return shippingPromoCached(storeId);
+});
+
+const shippingPromoCached = cachedRead("shipping_promo", (storeId: string) =>
+  call<ShippingPromo>(gatewayDb()`select storefront.shipping_promo(${storeId}::uuid) as value`),
 );
 
 /** Ficha sanitaria pública de un producto regulado (ADR-021, R-T03). */

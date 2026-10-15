@@ -135,6 +135,10 @@ test("armar la portada por secciones, vista previa y publicar", async ({ page, b
   expect(await preview.evaluate(() => (window as unknown as { __csp: string[] }).__csp)).toEqual(
     [],
   );
+  // Lo que la tienda aún no tiene se marca solo en la vista previa (D-F9-09).
+  await preview.goto(`${store()}/productos/cafeina-anhidra`);
+  await expect(preview.getByText("Opiniones: pendiente de contenido real")).toBeVisible();
+  await expectNoSeriousA11yViolations(preview);
   await preview.close();
 
   // Publicar: el comprador la ve y "Ver todos" lleva al listado filtrado.
@@ -148,6 +152,9 @@ test("armar la portada por secciones, vista previa y publicar", async ({ page, b
     "href",
     "/productos",
   );
+  await shopper.goto(`${store()}/productos/cafeina-anhidra`);
+  await expect(shopper.getByText(/pendiente de contenido real/)).toHaveCount(0);
+  await shopper.goto(store());
   await shopper.getByRole("link", { name: "Ver todos de Para tu energía" }).click();
   await expect(shopper).toHaveURL(`${store()}/productos?objetivo=energia`);
   await expect(shopper.getByRole("heading", { name: "Cafeína anhidra" })).toBeVisible();

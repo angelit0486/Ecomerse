@@ -1,13 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, type FocusEvent } from "react";
 
 import type { CartView, PaymentMethod } from "@/server/storefront/cart";
+import { submitKeepingState } from "@/ui/submit";
 
 import { checkout, type CartActionState } from "../carrito/actions";
 
 const input =
   "h-11 w-full rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm";
+
+/** Campos que definen la cotización del envío. */
+const ADDRESS_FIELDS = ["line1", "line2", "city", "region", "postal_code", "country"] as const;
+const REQUIRED_ADDRESS = ["line1", "city", "region", "postal_code"] as const;
+
+function addressKey(form: HTMLFormElement): string | null {
+  const data = new FormData(form);
+  const value = (name: string) => String(data.get(name) ?? "").trim();
+  if (REQUIRED_ADDRESS.some((name) => !value(name))) return null;
+  return ADDRESS_FIELDS.map(value).join("\u0000");
+}
 
 const COUNTRIES: Record<string, string> = {
   MX: "México",
@@ -80,9 +92,44 @@ export function CheckoutForm({
     ...COUNTRIES,
     ...(COUNTRIES[storeCountry] ? {} : { [storeCountry]: storeCountry }),
   };
+  const submit = submitKeepingState(action);
+  const quoteButton = useRef<HTMLButtonElement>(null);
+  const quotedKey = useRef<string | null>(
+    a
+      ? [a.line1, a.line2 ?? "", a.city, a.region, a.postal_code, a.country]
+          .map((v) => v.trim())
+          .join("\u0000")
+      : null,
+  );
+
+  /**
+   * Cotiza el envío sola al terminar la dirección (F9-T03, compra en ≤ 3 clics):
+   * al salir de un campo con la dirección completa y distinta de la cotizada. Si
+   * el foco va a un botón de envío, ese botón ya envía el formulario. Sin JS
+   * queda el botón «Calcular envío».
+   */
+  function quoteOnBlur(event: FocusEvent<HTMLFieldSetElement>) {
+    const next = event.relatedTarget;
+    if (next instanceof HTMLButtonElement && next.type === "submit") return;
+    const form = event.currentTarget.form;
+    if (!form || pending) return;
+    const key = addressKey(form);
+    if (!key || key === quotedKey.current) return;
+    quotedKey.current = key;
+    form.requestSubmit(quoteButton.current);
+  }
 
   return (
-    <form action={action} className="space-y-8" noValidate>
+    <form
+      action={action}
+      onSubmit={(event) => {
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        if (submitter === quoteButton.current) quotedKey.current = addressKey(event.currentTarget);
+        submit(event);
+      }}
+      className="space-y-8"
+      noValidate
+    >
       <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       <input type="hidden" name="expected_total" value={cart.total} />
       <input type="hidden" name="requires_shipping" value={cart.requires_shipping ? "1" : "0"} />
@@ -121,7 +168,7 @@ export function CheckoutForm({
       </fieldset>
 
       {cart.requires_shipping ? (
-        <fieldset className="space-y-4">
+        <fieldset className="space-y-4" onBlur={quoteOnBlur}>
           <legend className="text-lg font-semibold">Dirección de envío</legend>
           {f.shipping_address ? (
             <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
@@ -182,6 +229,7 @@ export function CheckoutForm({
             </div>
           </div>
           <button
+            ref={quoteButton}
             type="submit"
             name="intent"
             value="quote"
