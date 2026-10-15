@@ -34,12 +34,40 @@ export function resolvePalette(partial: Partial<Palette> | undefined): Palette {
   return { ...DEFAULT_COLORS, ...partial };
 }
 
-/** Comprobaciones que fallan, en el mismo orden que la base. */
-export function contrastIssues(palette: Palette): ContrastIssue[] {
+/**
+ * Comprobaciones que fallan, en el mismo orden que la base. Con botones
+ * `outline` el texto del botón es `primary` sobre el fondo: exige 4.5:1 como
+ * cualquier texto (F9-DESIGN §13 M5).
+ */
+export function contrastIssues(
+  palette: Palette,
+  buttonStyle: "solid" | "outline" = "solid",
+): ContrastIssue[] {
   return RULES.flatMap(({ key, required }) => {
+    const min = key === "primary" && buttonStyle === "outline" ? 4.5 : required;
     const ratio = contrastRatio(palette[key], palette.background);
-    return ratio < required ? [{ key, ratio, required }] : [];
+    return ratio < min ? [{ key, ratio, required: min }] : [];
   });
+}
+
+export type ThemeContrastKey = ColorKey | "announcement";
+
+/**
+ * Todas las comprobaciones de contraste de un tema (paleta + barra de anuncio),
+ * con las mismas claves y el mismo orden que `app.theme_contrast_issues`.
+ */
+export function themeContrastIssues(settings: {
+  colors?: Partial<Palette>;
+  shape?: { button_style?: "solid" | "outline" };
+  header?: { announcement?: { background: string; foreground: string } };
+}): ThemeContrastKey[] {
+  const keys: ThemeContrastKey[] = contrastIssues(
+    resolvePalette(settings.colors),
+    settings.shape?.button_style ?? "solid",
+  ).map((i) => i.key);
+  const bar = settings.header?.announcement;
+  if (bar && contrastRatio(bar.foreground, bar.background) < 4.5) keys.push("announcement");
+  return keys;
 }
 
 /** Texto de los botones: blanco o negro, el de mayor contraste con primary (siempre ≥ 4.5:1). */

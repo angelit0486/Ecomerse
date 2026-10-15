@@ -174,7 +174,7 @@ select lives_ok(format('select public.access_accept_invitation(%L)', (select t1 
 select ok(app.has_store_permission(tests.fx('store_n'), 'store.read')
           and not app.has_store_permission(tests.fx('store_n'), 'store.update'),
   'el viewer obtiene exactamente su rol (lee, no escribe)');
-select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_n')) $$, '42501', 'forbidden',
+select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_n'), tests.theme_rev(tests.fx('store_n'))) $$, '42501', 'forbidden',
   'el viewer no puede publicar el branding');
 select tests.logout();
 
@@ -191,11 +191,11 @@ select tests.logout();
 -- Branding: borrador → publicar --------------------------------------------------------------
 select tests.login('duena');
 -- Desde F2-T11 el borrador se guarda con la RPC que valida contraste (D-F2-31).
-select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#be123c"}}');
-select lives_ok($$ select public.appearance_publish_theme(tests.fx('store_n')) $$, 'la dueña publica su branding');
-select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_n')) $$, 'P0001', 'validation_failed',
+select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#be123c"}}', tests.theme_rev(tests.fx('store_n')));
+select lives_ok($$ select public.appearance_publish_theme(tests.fx('store_n'), tests.theme_rev(tests.fx('store_n'))) $$, 'la dueña publica su branding');
+select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_n'), tests.theme_rev(tests.fx('store_n'))) $$, 'P0001', 'validation_failed',
   'publicar sin borrador pendiente es un error explícito');
-select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#000000"}}');
+select public.appearance_save_theme_draft(tests.fx('store_n'), '{"colors":{"primary":"#000000"}}', tests.theme_rev(tests.fx('store_n')));
 select tests.logout();
 
 select is(tests.gateway_store_public(tests.fx('store_n')) #>> '{theme,settings,colors,primary}', '#be123c',

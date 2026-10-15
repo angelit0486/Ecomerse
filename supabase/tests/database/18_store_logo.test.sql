@@ -41,22 +41,22 @@ select fk_ok('public', 'store_themes', array['store_id', 'draft_logo_media_id'],
   array['store_id', 'id'], 'FK compuesta del logo del borrador');
 
 select tests.login('owner');
-select lives_ok(format($$ select public.appearance_set_logo_draft(%L, %L) $$, tests.fx('store_a'), tests.fx('logo')),
+select lives_ok(format($$ select public.appearance_set_logo_draft(%1$L, %2$L, tests.theme_rev(%1$L)) $$, tests.fx('store_a'), tests.fx('logo')),
   'el dueño elige un logo listo de su tienda');
 select is((tests.theme('a')).draft_logo_media_id, tests.fx('logo'), 'queda en el borrador');
 select is((tests.theme('a')).logo_media_id, null, 'no se publica hasta publicar el tema');
-select throws_ok(format($$ select public.appearance_set_logo_draft(%L, %L) $$, tests.fx('store_a'), tests.fx('pending')),
+select throws_ok(format($$ select public.appearance_set_logo_draft(%1$L, %2$L, tests.theme_rev(%1$L)) $$, tests.fx('store_a'), tests.fx('pending')),
   'P0001', 'validation_failed', 'un medio sin procesar no es logo');
-select throws_ok(format($$ select public.appearance_set_logo_draft(%L, %L) $$, tests.fx('store_a'), tests.fx('product_img')),
+select throws_ok(format($$ select public.appearance_set_logo_draft(%1$L, %2$L, tests.theme_rev(%1$L)) $$, tests.fx('store_a'), tests.fx('product_img')),
   'P0001', 'validation_failed', 'una imagen de producto no es logo');
-select throws_ok(format($$ select public.appearance_set_logo_draft(%L, %L) $$, tests.fx('store_a'), tests.fx('logo_b')),
+select throws_ok(format($$ select public.appearance_set_logo_draft(%1$L, %2$L, tests.theme_rev(%1$L)) $$, tests.fx('store_a'), tests.fx('logo_b')),
   'P0001', 'validation_failed', 'el logo de otra tienda no sirve');
 
-select lives_ok(format($$ select public.appearance_save_theme_draft(%L,
-  '{"colors":{"primary":"#111111","accent":"#0055aa","background":"#ffffff","foreground":"#111111","muted":"#555555"}}') $$,
+select lives_ok(format($$ select public.appearance_save_theme_draft(%1$L,
+  '{"colors":{"primary":"#111111","accent":"#0055aa","background":"#ffffff","foreground":"#111111","muted":"#555555"}}', tests.theme_rev(%1$L)) $$,
   tests.fx('store_a')), 'guardar colores con el borrador abierto');
 select is((tests.theme('a')).draft_logo_media_id, tests.fx('logo'), 'guardar colores conserva el logo del borrador');
-select lives_ok(format($$ select public.appearance_publish_theme(%L) $$, tests.fx('store_a')), 'publicar el tema');
+select lives_ok(format($$ select public.appearance_publish_theme(%1$L, tests.theme_rev(%1$L)) $$, tests.fx('store_a')), 'publicar el tema');
 select is((tests.theme('a')).logo_media_id, tests.fx('logo'), 'el logo se publica con el tema');
 select tests.logout();
 
@@ -64,7 +64,7 @@ select is((storefront.get_store_public(tests.fx('store_a')) -> 'logo' ->> 'path'
   (select storage_path from public.media where id = tests.fx('logo')), 'el storefront ve el logo publicado');
 
 select tests.login('cat');
-select throws_ok(format($$ select public.appearance_set_logo_draft(%L, null) $$, tests.fx('store_a')),
+select throws_ok(format($$ select public.appearance_set_logo_draft(%1$L, null, tests.theme_rev(%1$L)) $$, tests.fx('store_a')),
   '42501', 'forbidden', 'sin appearance.manage no se cambia el logo');
 select tests.logout(); select tests.login('owner');
 select lives_ok(format($$ select public.media_delete(%L, %L) $$, tests.fx('store_a'), tests.fx('logo')),

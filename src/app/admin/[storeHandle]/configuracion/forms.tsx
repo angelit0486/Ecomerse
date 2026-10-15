@@ -117,20 +117,26 @@ export function BrandingForm({
   initial,
   radius,
   buttonStyle,
+  revision,
 }: {
   storeHandle: string;
   storeName: string;
   initial: Palette;
   radius: string;
   buttonStyle: string;
+  revision: number;
 }) {
   const [palette, setPalette] = useState<Palette>(initial);
+  const [style, setStyle] = useState<"solid" | "outline">(
+    buttonStyle === "outline" ? "outline" : "solid",
+  );
   const [state, action, pending] = useActionState(saveBranding.bind(null, storeHandle), {});
-  const issues = useMemo(() => contrastIssues(palette), [palette]);
+  const issues = useMemo(() => contrastIssues(palette, style), [palette, style]);
   const failing = new Set(issues.map((i) => i.key));
 
   return (
     <form action={action} className="grid gap-6 lg:grid-cols-2" noValidate>
+      <input type="hidden" name="revision" value={revision} />
       <div className="grid gap-4">
         {COLOR_KEYS.map((key) => (
           <Field
@@ -170,7 +176,8 @@ export function BrandingForm({
             <Select
               {...c}
               name="button_style"
-              defaultValue={buttonStyle}
+              value={style}
+              onValueChange={(v) => setStyle(v === "outline" ? "outline" : "solid")}
               options={[
                 { value: "solid", label: "Relleno" },
                 { value: "outline", label: "Contorno" },

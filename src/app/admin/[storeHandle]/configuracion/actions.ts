@@ -18,6 +18,7 @@ export interface StepState {
   error?: string;
   fields?: Record<string, string>;
   values?: Record<string, string>;
+  code?: string;
 }
 
 const FIELD_MESSAGES: Record<string, string> = {
@@ -27,6 +28,15 @@ const FIELD_MESSAGES: Record<string, string> = {
   timezone: "Elige una zona horaria.",
 };
 
+const CONFLICT_MESSAGE =
+  "Otra persona cambió la apariencia mientras tanto. Recarga la página para ver sus cambios.";
+
+/** Revisión del borrador que tenía la página al abrirse (F9-DESIGN §13 H1). */
+function readRevision(formData: FormData): number | null {
+  const raw = String(formData.get("revision") ?? "");
+  return /^\d{1,9}$/.test(raw) ? Number(raw) : null;
+}
+
 function failure(error: unknown, messages: Record<string, string> = {}): StepState {
   const appError = reportActionError("onboarding", error);
   const fields = appError.fields
@@ -34,7 +44,7 @@ function failure(error: unknown, messages: Record<string, string> = {}): StepSta
         Object.keys(appError.fields).map((k) => [k, messages[k] ?? "Revisa este dato."]),
       )
     : undefined;
-  return { error: appError.message, ...(fields ? { fields } : {}) };
+  return { error: appError.message, code: appError.code, ...(fields ? { fields } : {}) };
 }
 
 export async function saveStoreProfile(
@@ -74,18 +84,23 @@ export async function saveBranding(
     if (!/^#[0-9a-f]{6}$/.test(value)) return { error: "Elige colores válidos." };
     colors[key] = value;
   }
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
   const radius = String(formData.get("radius") ?? "md");
   const buttonStyle = String(formData.get("button_style") ?? "solid");
   try {
     const ctx = await getStoreContext(storeHandle);
     const supabase = await createSupabaseServerClient();
+    // Parche por claves: solo colores y forma; lo configurado en Apariencia se conserva.
     await callRpc(supabase, "appearance_save_theme_draft", {
       p_store_id: ctx.store.id,
-      p_settings: { colors, shape: { radius, button_style: buttonStyle } },
+      p_patch: { colors, shape: { radius, button_style: buttonStyle } },
+      p_expected_revision: revision,
     });
     invalidateStore(ctx.store.id);
   } catch (error) {
     const result = failure(error);
+    if (result.code === "conflict") return { error: CONFLICT_MESSAGE };
     if (result.fields?.contrast) {
       return { error: "El contraste de los colores no es suficiente. Ajusta los marcados." };
     }
@@ -148,16 +163,20 @@ export async function setLogoDraft(
 ): Promise<StepState> {
   const mediaId = String(formData.get("media_id") ?? "");
   if (mediaId && !/^[0-9a-f-]{36}$/.test(mediaId)) return { error: "Logo no válido." };
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
   try {
     const ctx = await getStoreContext(storeHandle);
     const supabase = await createSupabaseServerClient();
     await callRpc(supabase, "appearance_set_logo_draft", {
       p_store_id: ctx.store.id,
       p_media_id: mediaId || null,
+      p_expected_revision: revision,
     });
     invalidateStore(ctx.store.id);
   } catch (error) {
     const result = failure(error);
+    if (result.code === "conflict") return { error: CONFLICT_MESSAGE };
     return result.fields?.logo ? { error: "Ese logo aún no está listo o no es válido." } : result;
   }
   revalidatePath(`/admin/${storeHandle}/configuracion`);

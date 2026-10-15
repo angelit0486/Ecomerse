@@ -21,6 +21,12 @@ language sql security definer set search_path = '' as $$
   returning id
 $$;
 
+-- Revisión actual del borrador del tema (F9: las RPC de apariencia la exigen).
+create or replace function tests.theme_rev(p_store_id uuid) returns integer
+language sql stable security definer set search_path = '' as $$
+  select coalesce((select t.draft_revision from public.store_themes t where t.store_id = p_store_id), 0)
+$$;
+
 create or replace function tests.fx(p_key text) returns uuid
 language plpgsql stable security definer set search_path = '' as $$
 declare v uuid;

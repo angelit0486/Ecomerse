@@ -28,32 +28,33 @@ select is(app.theme_contrast_issues('{"colors":{"accent":"#fde68a","muted":"#d1d
 -- Guardar borrador.
 select tests.logout(); select tests.login('owner');
 select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'),
-  '{"colors":{"primary":"#0f766e","background":"#ffffff","foreground":"#0b1320"},"shape":{"radius":"md","button_style":"solid"}}') $$,
+  '{"colors":{"primary":"#0f766e","background":"#ffffff","foreground":"#0b1320"},"shape":{"radius":"md","button_style":"solid"}}', tests.theme_rev(tests.fx('store_a'))) $$,
   'paleta con buen contraste: se guarda');
-select throws_like($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"foreground":"#cccccc"}}') $$,
+select throws_like($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"foreground":"#cccccc"}}', tests.theme_rev(tests.fx('store_a'))) $$,
   'validation_failed', 'contraste insuficiente: no se guarda');
-select throws_like($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"css":"body{}"}') $$,
+select throws_like($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"css":"body{}"}', tests.theme_rev(tests.fx('store_a'))) $$,
   'validation_failed', 'forma inválida (CSS libre): no se guarda');
 select is(tests.sqlstate_as('authenticated', $$ update public.store_themes set draft_settings = '{}' $$), '42501',
   'el borrador ya no se edita por tabla');
 select tests.logout(); select tests.login('mkt');
-select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"accent":"#9a3412"}}') $$,
+select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"accent":"#9a3412"}}', tests.theme_rev(tests.fx('store_a'))) $$,
   'marketing_manager tiene appearance.manage');
 select tests.logout(); select tests.login('cat');
-select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}') $$,
+select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}', tests.theme_rev(tests.fx('store_a'))) $$,
   '42501', 'forbidden', 'catalog_manager no edita la apariencia');
 select tests.logout(); select tests.login('owner_b');
-select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}') $$,
+select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}', tests.theme_rev(tests.fx('store_a'))) $$,
   '42501', 'forbidden', 'otro tenant no edita la apariencia');
 select tests.logout(); select tests.login('owner', 'aal1');
-select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}') $$,
+select throws_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{}', tests.theme_rev(tests.fx('store_a'))) $$,
   '42501', 'mfa_required', 'exige 2FA');
 select tests.logout();
 
 -- Publicar exige contraste aunque el borrador hubiera llegado por otra vía.
-update public.store_themes set draft_settings = '{"colors":{"foreground":"#dddddd"}}' where store_id = tests.fx('store_a');
+update public.store_themes set draft_settings = '{"colors":{"foreground":"#dddddd"}}', draft_home_sections = '[]'
+ where store_id = tests.fx('store_a');
 select tests.logout(); select tests.login('owner');
-select throws_like($$ select public.appearance_publish_theme(tests.fx('store_a')) $$,
+select throws_like($$ select public.appearance_publish_theme(tests.fx('store_a'), tests.theme_rev(tests.fx('store_a'))) $$,
   'validation_failed', 'publicar con contraste insuficiente: bloqueado');
 select tests.logout();
 

@@ -9,6 +9,7 @@
 - **Fase actual:** 9 — Tienda insignia de suplementos (Fase R cerrada en local: `docs/phases/PHASE-R-REPORT.md`; CI pendiente por P0). Decisión del propietario del 2026-10-13: la primera tienda, de suplementos, al nivel de GNC, Birdman y B Life (D-S-05; sin copiar a ninguna).
 - **Siguiente tarea:** F9-T01 editor de marca (white-label) del plan §4, Fase 9.
 - **Siguiente paso exacto:** construir F9-T01 contra `docs/plan/F9-DESIGN.md` (diseño detallado de la fase, revisado de forma adversarial antes de programar; su §0 define "terminado"). Orden de construcción: §12 del diseño.
+- **Para el Gate F9:** investigar un problema de aislamiento de pgTAP: si un archivo de prueba muere a mitad de la corrida, en la misma base queda estado que hace fallar `29_payments_expiry` ("con un intento abierto se devuelve el mismo") en corridas siguientes. En una base nueva (`pnpm db:test` siempre crea una) pasa siempre.
 - **Repositorio:** el trabajo se subió a `angelit0486/Ecomerse` (rama `claude/ecommerce-regulated-platform-41vu1e`), porque la cuenta conectada no tiene acceso a `angelii33/pruva`.
 - **Pendiente del propietario para estas fases:** aprobar ADR-023 (paquetes) antes de P-T04; las reglas y leyendas sanitarias con su asesor regulatorio (el perfil de México nace pendiente y bloquea la publicación de suplementos); D1–D6.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.

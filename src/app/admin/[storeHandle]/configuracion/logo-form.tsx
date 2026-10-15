@@ -23,11 +23,13 @@ export function LogoForm({
   storeName,
   current,
   candidates,
+  revision,
 }: {
   storeHandle: string;
   storeName: string;
   current: { id: string; url: string } | null;
   candidates: LogoCandidate[];
+  revision: number;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<StepState, FormData>(
@@ -104,6 +106,7 @@ export function LogoForm({
         )}
         {current ? (
           <form action={action}>
+            <input type="hidden" name="revision" value={revision} />
             <input type="hidden" name="media_id" value="" />
             <Button type="submit" variant="ghost" size="sm" disabled={pending}>
               Quitar logo
@@ -153,6 +156,7 @@ export function LogoForm({
                 alt="Logo nuevo"
                 className="h-12 w-auto max-w-40 rounded border border-border object-contain p-1"
               />
+              <input type="hidden" name="revision" value={revision} />
               <input type="hidden" name="media_id" value={latest.id} />
               <Button type="submit" size="sm" loading={pending}>
                 Usar este logo

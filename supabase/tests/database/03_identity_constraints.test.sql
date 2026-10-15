@@ -102,11 +102,11 @@ select throws_ok($$ insert into public.support_access_grants
 -- Branding ----------------------------------------------------------------------------
 select lives_ok($$ update public.store_themes
   set draft_settings = '{"colors":{"primary":"#1d4ed8","background":"#ffffff"},"shape":{"radius":"md"}}'
-  where store_id = tests.fx('store_a') $$, 'tokens de marca válidos aceptados');
+    , draft_home_sections = '[]' where store_id = tests.fx('store_a') $$, 'tokens de marca válidos aceptados');
 select throws_ok($$ update public.store_themes set draft_settings = '{"colors":{"primary":"red"}}'
-  where store_id = tests.fx('store_a') $$, '23514', null, 'color que no es hexadecimal rechazado');
+    , draft_home_sections = '[]' where store_id = tests.fx('store_a') $$, '23514', null, 'color que no es hexadecimal rechazado');
 select throws_ok($$ update public.store_themes set draft_settings = '{"css":"body{}"}'
-  where store_id = tests.fx('store_a') $$, '23514', null, 'claves desconocidas (p. ej. CSS libre) rechazadas');
+    , draft_home_sections = '[]' where store_id = tests.fx('store_a') $$, '23514', null, 'claves desconocidas (p. ej. CSS libre) rechazadas');
 
 -- Límites del plan (aplicados por trigger, también para roles privilegiados) ---------
 select tests.ensure_plan('plan_una_tienda', 1, 2);

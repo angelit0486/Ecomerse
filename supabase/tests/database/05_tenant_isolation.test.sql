@@ -123,7 +123,7 @@ select set_eq(
 select is(tests.row_count($$ update public.stores set name = name where id = tests.fx('store_a') $$), 1::bigint,
   'control positivo: el dueño de A puede modificar su tienda');
 -- Desde F2-T11 el borrador solo se guarda con la RPC que valida contraste (D-F2-31).
-select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"primary":"#1d4ed8"}}') $$,
+select lives_ok($$ select public.appearance_save_theme_draft(tests.fx('store_a'), '{"colors":{"primary":"#1d4ed8"}}', tests.theme_rev(tests.fx('store_a'))) $$,
   'control positivo: el dueño de A puede editar el borrador de su branding');
 select tests.logout();
 
@@ -133,7 +133,7 @@ select is_empty($$ select * from tests.visible_tenant_tables(tests.fx('store_a')
   'dueño de B: no LEE nada de A');
 select is(tests.updatable_tenant_rows(tests.fx('store_a'), tests.fx('org_a')), 0::bigint,
   'dueño de B: no MODIFICA ni BORRA nada de A');
-select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_a')) $$, '42501', 'forbidden',
+select throws_ok($$ select public.appearance_publish_theme(tests.fx('store_a'), tests.theme_rev(tests.fx('store_a'))) $$, '42501', 'forbidden',
   'dueño de B: no puede publicar el tema de A');
 select tests.logout();
 

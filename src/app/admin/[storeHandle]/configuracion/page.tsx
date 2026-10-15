@@ -80,7 +80,7 @@ export default async function OnboardingPage({ params }: Props) {
         .single(),
       supabase
         .from("store_themes")
-        .select("settings, draft_settings, logo_media_id, draft_logo_media_id")
+        .select("settings, draft_settings, logo_media_id, draft_logo_media_id, draft_revision")
         .eq("store_id", ctx.store.id)
         .maybeSingle(),
       supabase
@@ -203,6 +203,7 @@ export default async function OnboardingPage({ params }: Props) {
             storeHandle={ctx.store.handle}
             storeName={ctx.store.name}
             current={currentLogo ? { id: currentLogo.id, url: currentLogo.url! } : null}
+            revision={theme?.draft_revision ?? 0}
             candidates={logos.map(({ id, status, url }) => ({ id, status, url }))}
           />
         </section>
@@ -219,6 +220,7 @@ export default async function OnboardingPage({ params }: Props) {
             initial={resolvePalette(settings.colors)}
             radius={settings.shape?.radius ?? "md"}
             buttonStyle={settings.shape?.button_style ?? "solid"}
+            revision={theme?.draft_revision ?? 0}
           />
         </section>
       ) : null}
