@@ -8,7 +8,7 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { listSupplierVariants, listSuppliers } from "@/server/catalog/suppliers";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { SupplierForm, SupplierVariantForm, UnlinkVariantButton } from "../forms";
+import { SupplierCsvForm, SupplierForm, SupplierVariantForm, UnlinkVariantButton } from "../forms";
 import { AVAILABILITY_LABELS } from "../labels";
 
 export const metadata: Metadata = { title: "Proveedor" };
@@ -40,7 +40,7 @@ export default async function SupplierPage({ params }: Props) {
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{supplier.name}</h1>
         <p className="text-sm text-fg-muted">
-          Captura manual (sin conexión automática con el proveedor).
+          Captura manual o por CSV (sin conexión automática con el proveedor).
         </p>
       </header>
 
@@ -54,6 +54,16 @@ export default async function SupplierPage({ params }: Props) {
           <div className="rounded-md border border-border p-4">
             <SupplierVariantForm storeHandle={ctx.store.handle} supplierId={supplier.id} />
           </div>
+        ) : null}
+        {canStock ? (
+          <details className="rounded-md border border-border p-4">
+            <summary className="cursor-pointer text-sm font-medium">
+              Cargar la lista del proveedor (CSV)
+            </summary>
+            <div className="mt-3">
+              <SupplierCsvForm storeHandle={ctx.store.handle} supplierId={supplier.id} />
+            </div>
+          </details>
         ) : null}
         {variants.length === 0 ? (
           <p className="text-sm text-fg-muted">Aún no hay variantes vinculadas.</p>

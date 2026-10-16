@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import {
+  parseSupplierCsv,
+  SUPPLIER_CSV_MESSAGES,
+  type SupplierCsvError,
+} from "@/lib/catalog/supplier-csv";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { rpcDetail } from "@/server/compliance/errors";
 import { callRpc } from "@/server/db/rpc";
@@ -194,4 +199,65 @@ export async function unlinkSupplierVariant(
   }
   revalidatePath(path(storeHandle, supplierId));
   return { ok: true, message: "Variante desvinculada." };
+}
+
+export interface SupplierCsvState {
+  ok?: boolean;
+  message?: string;
+  error?: string;
+  rowErrors?: { row: number; message: string }[];
+}
+
+const CSV_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Lista de disponibilidad del proveedor en CSV (ADR-025 paso 2): todo o nada.
+ * El formato se valida aquí; SKU, repetidos y permisos, en la base.
+ */
+export async function importSupplierCsv(
+  storeHandle: string,
+  supplierId: string,
+  _: SupplierCsvState,
+  formData: FormData,
+): Promise<SupplierCsvState> {
+  if (!uuid.safeParse(supplierId).success) return { error: "Proveedor no válido." };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Elige un archivo CSV." };
+  if (file.size > CSV_MAX_BYTES) return { error: "El archivo pasa de 2 MB." };
+  const parsed = parseSupplierCsv(await file.text());
+  const rowErrors = (errors: SupplierCsvError[]) =>
+    errors.slice(0, 50).map((e) => ({ row: e.row, message: SUPPLIER_CSV_MESSAGES[e.field] }));
+  if (!parsed.ok) {
+    return {
+      error:
+        parsed.message ?? `Hay ${parsed.errors.length} problema(s); no se aplicó ningún cambio.`,
+      rowErrors: parsed.message ? [] : rowErrors(parsed.errors),
+    };
+  }
+  let result: { applied: boolean; errors: SupplierCsvError[]; updated: number; clamped: number };
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    result = await callRpc(supabase, "suppliers_import_variants", {
+      p_store_id: storeId,
+      p_supplier_id: supplierId,
+      p_rows: parsed.rows,
+    });
+    if (result.applied) invalidateStore(storeId);
+  } catch (error) {
+    const failure = variantFailure(error);
+    return { error: failure.error ?? "No se pudo cargar el archivo." };
+  }
+  if (!result.applied) {
+    return {
+      error: `Hay ${result.errors.length} problema(s); no se aplicó ningún cambio.`,
+      rowErrors: rowErrors(result.errors),
+    };
+  }
+  revalidatePath(path(storeHandle, supplierId));
+  return {
+    ok: true,
+    message:
+      `${result.updated} ${result.updated === 1 ? "variante actualizada" : "variantes actualizadas"}.` +
+      (result.clamped > 0 ? ` En ${result.clamped} se conservó lo ya reservado por pedidos.` : ""),
+  };
 }

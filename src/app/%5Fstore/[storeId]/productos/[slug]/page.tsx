@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
+import { leadTimeLabel } from "@/lib/catalog/lead-time";
 
 import { centsToInput } from "@/lib/money/format";
 import {
@@ -260,7 +261,9 @@ export default async function ProductPage({ params }: Props) {
                     {regulatory?.data.servings_per_container} porciones)
                   </p>
                 ) : null}
-                <p className="text-sm">{AVAILABILITY_LABELS[single.availability]}</p>
+                <p className="text-sm">
+                  {availabilityText(single.availability, single.ships_in_days)}
+                </p>
               </div>
               <AddToCart
                 storeId={store.id}
@@ -284,7 +287,7 @@ export default async function ProductPage({ params }: Props) {
                     ? money(v.compare_at_price, store)
                     : null,
                 saving: savingText(v.price, v.compare_at_price, store),
-                availability: AVAILABILITY_LABELS[v.availability],
+                availability: availabilityText(v.availability, v.ships_in_days),
                 available: v.availability !== "out_of_stock",
                 imageUrl: v.image ? mediaUrl(v.image.path) : null,
               }))}
@@ -327,6 +330,17 @@ export default async function ProductPage({ params }: Props) {
       ) : null}
     </div>
   );
+}
+
+/** «Disponible · Se prepara en 2 a 4 días antes de enviarse» (ADR-025 §5). */
+function availabilityText(
+  availability: keyof typeof AVAILABILITY_LABELS,
+  shipsIn: { min: number; max: number } | null | undefined,
+): string {
+  const lead = availability === "out_of_stock" ? null : leadTimeLabel(shipsIn);
+  return lead
+    ? `${AVAILABILITY_LABELS[availability]} · ${lead}`
+    : AVAILABILITY_LABELS[availability];
 }
 
 /** «2–5 días» o «3 días» (mismo formato que el checkout). */

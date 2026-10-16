@@ -9,6 +9,7 @@ import { visibleStatus } from "@/lib/orders/visible-status";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
+import { getOrderSupplierOrders } from "@/server/orders/supplier-orders";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import {
@@ -21,6 +22,7 @@ import {
   RefundForm,
   StaffNoteForm,
 } from "../order-forms";
+import { SupplierOrderCard } from "../despachos/supplier-order-card";
 
 export const metadata: Metadata = { title: "Pedido" };
 
@@ -68,6 +70,9 @@ const EVENT_LABELS: Record<string, string> = {
   "refund.stuck": "Reembolso sin confirmar",
   "attention.resolved": "Atención resuelta",
   "order.unshipped_closed": "Unidades no enviadas cerradas",
+  "supplier_order.created": "Despacho de proveedor",
+  "supplier_order.updated": "Despacho de proveedor",
+  "supplier_order.cancelled": "Despacho de proveedor cancelado",
 };
 
 const SHIPMENT_STATUS: Record<string, string> = {
@@ -152,6 +157,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       .order("created_at"),
   ]);
   for (const r of [items, events, shipments, shipmentItems, refunds]) if (r.error) throw r.error;
+  const supplierOrders = await getOrderSupplierOrders(supabase, ctx.store.id, orderId);
   const m = (cents: number) => formatMoney(cents, order.currency as string);
   const lastPayment = payments.data?.at(-1) as { provider: string; status: string } | undefined;
   const canConfirm =
@@ -350,6 +356,26 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {supplierOrders.length > 0 ? (
+        <section aria-labelledby="despachos" className="space-y-2">
+          <h2 id="despachos" className="font-semibold">
+            Despachos de proveedores
+          </h2>
+          <p className="text-sm text-fg-muted">
+            Estas piezas las envía el proveedor. Regístralas en «Surtir y enviar» cuando el
+            proveedor te dé la guía.
+          </p>
+          {supplierOrders.map((so) => (
+            <SupplierOrderCard
+              key={so.id}
+              storeHandle={ctx.store.handle}
+              supplierOrder={so}
+              canUpdate={hasPermission(ctx, "orders.update")}
+            />
+          ))}
         </section>
       ) : null}
 

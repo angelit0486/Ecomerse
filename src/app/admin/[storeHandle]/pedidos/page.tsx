@@ -53,8 +53,17 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   if (before) {
     query = query.or(`placed_at.lt.${before.at},and(placed_at.eq.${before.at},id.lt.${before.id})`);
   }
-  const { data, error } = await query;
+  const [{ data, error }, dispatches] = await Promise.all([
+    query,
+    // Enlace a la bandeja de despachos solo si la tienda ya tiene alguno (ADR-025).
+    supabase
+      .from("supplier_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", ctx.store.id)
+      .in("status", ["pending", "requested", "confirmed", "shipped", "failed"]),
+  ]);
   if (error) throw error;
+  if (dispatches.error) throw dispatches.error;
   const rows = (data ?? []).slice(0, PAGE) as {
     id: string;
     display_number: string;
@@ -73,7 +82,14 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold">Pedidos</h1>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-xl font-semibold">Pedidos</h1>
+          {(dispatches.count ?? 0) > 0 ? (
+            <Link href={`${base}/despachos`} className="text-sm underline">
+              Despachos de proveedores por atender ({dispatches.count})
+            </Link>
+          ) : null}
+        </div>
         <nav aria-label="Filtrar pedidos" className="flex flex-wrap gap-3 text-sm">
           {Object.entries(FILTERS).map(([key, label]) => (
             <Link

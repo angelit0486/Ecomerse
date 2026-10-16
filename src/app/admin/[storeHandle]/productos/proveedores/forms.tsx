@@ -9,7 +9,13 @@ import { Input } from "@/ui/primitives/input";
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { nativeControl } from "../styles";
-import { saveSupplier, setSupplierVariant, unlinkSupplierVariant } from "./actions";
+import {
+  importSupplierCsv,
+  saveSupplier,
+  setSupplierVariant,
+  unlinkSupplierVariant,
+  type SupplierCsvState,
+} from "./actions";
 import { AVAILABILITY_LABELS } from "./labels";
 
 const area =
@@ -225,6 +231,50 @@ export function UnlinkVariantButton({
         Desvincular
       </Button>
       <FormFeedback state={state} />
+    </form>
+  );
+}
+
+/** Lista de disponibilidad del proveedor en CSV: todo o nada, con el error de cada fila. */
+export function SupplierCsvForm({
+  storeHandle,
+  supplierId,
+}: {
+  storeHandle: string;
+  supplierId: string;
+}) {
+  const [state, action, pending] = useActionState<SupplierCsvState, FormData>(
+    importSupplierCsv.bind(null, storeHandle, supplierId),
+    {},
+  );
+  return (
+    <form action={action} className="space-y-3">
+      <p className="text-sm text-fg-muted">
+        Columnas: <code>sku</code> (el de tu tienda), <code>disponibilidad</code> (disponible,
+        limitado, no disponible o desconocido), <code>cantidad</code>, <code>sku_proveedor</code> y{" "}
+        <code>costo</code>. Si una columna no viene, se conserva lo guardado. Si alguna fila tiene
+        un problema no se aplica ningún cambio.
+      </p>
+      <Field label="Archivo CSV" required>
+        {(c) => <Input {...c} name="file" type="file" accept=".csv,text/csv" required />}
+      </Field>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="sm" loading={pending}>
+          Cargar disponibilidad
+        </Button>
+        <p role="status" className={state.error ? "text-sm text-danger" : "text-sm"}>
+          {state.error ?? state.message ?? ""}
+        </p>
+      </div>
+      {state.rowErrors && state.rowErrors.length > 0 ? (
+        <ul aria-label="Problemas por fila" className="list-disc space-y-1 pl-5 text-sm">
+          {state.rowErrors.map((e, i) => (
+            <li key={`${e.row}-${i}`}>
+              Fila {e.row}: {e.message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </form>
   );
 }

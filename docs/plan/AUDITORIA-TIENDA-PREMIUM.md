@@ -127,3 +127,10 @@ Auditoría no destructiva del repositorio y de la vista previa. Contrato técnic
 - **Calidad de datos:** Productos → Revisión (D-SP-07, `20261018000600`).
 - **Proveedores y despacho directo, paso 1** (ADR-025 aprobado; D-SP-08, `20261018000700`): Productos → Proveedores; la disponibilidad del proveedor se vende sin sobreventa (prueba de concurrencia: 20 compradores, 1 propia y 2 del proveedor → 3 pedidos).
 - **Guía para elegir:** sin desarrollo nuevo. Es una página de contenido (Contenido → Páginas, `/paginas/guia`) que se enlaza desde el menú. El texto lo escribe la tienda; la plataforma no redacta recomendaciones de uso.
+
+## J. Tercera entrega (2026-10-16): proveedores, paso 2
+
+- **Despachos por proveedor** (D-SP-09, `20261018000800`): al pagarse un pedido con piezas del proveedor nace su despacho, con lo que hay que pedirle (SKU del proveedor incluido, sin costos). La dueña registra cada paso en el pedido o en Pedidos → Despachos.
+- **Lista del proveedor por CSV** (`20261018000900`): todo o nada, error por fila, mismas existencias que la captura manual.
+- **Plazo del proveedor en la ficha:** solo cuando las piezas salen del proveedor y su plazo está capturado.
+- **Adaptador `SupplierProvider`:** solo `manual`; ninguna pantalla dice «sincronizado» o «enviado al proveedor» si no lo registró una persona.

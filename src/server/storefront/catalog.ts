@@ -113,6 +113,8 @@ export interface ProductDetail {
     price: number;
     compare_at_price: number | null;
     availability: Availability;
+    /** Plazo del proveedor cuando solo él tiene existencias (ADR-025); nunca el proveedor. */
+    ships_in_days?: { min: number; max: number } | null;
     image: ImageRef | null;
   }[];
   images: ImageRef[];
