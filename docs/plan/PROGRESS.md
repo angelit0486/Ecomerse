@@ -11,6 +11,7 @@
 - **Siguiente tarea:** Gate F9 (F9-DESIGN §16): Lighthouse móvil ≥ 95 en portada, listado y ficha (dos tiendas), axe, capturas 375/1280 de las 5 páginas, revisiones adversariales (base, app, diseño y conversión), mutaciones e informe `PHASE-09-REPORT.md`.
 - **Siguiente paso exacto:** `pnpm demo:seed` y medir Lighthouse móvil en `demo.localhost` (portada, listado, ficha); después las revisiones adversariales. Pendiente de diseño anotado: en móvil, «Carrito» queda en su propio renglón del encabezado.
 - **Para el Gate F9:** investigar un problema de aislamiento de pgTAP: si un archivo de prueba muere a mitad de la corrida, en la misma base queda estado que hace fallar `29_payments_expiry` ("con un intento abierto se devuelve el mismo") en corridas siguientes. En una base nueva (`pnpm db:test` siempre crea una) pasa siempre.
+- **Vista previa en línea (D-F9-17, 2026-10-16):** tiendas en https://pruva-tienda-demo.vercel.app (estilo «Deportivo») y https://pruva-tienda-demo2.vercel.app («Neutral»); panel en https://pruva-panel-demo.vercel.app (el acceso al panel aún no funciona: la vista previa no envía correos). Vercel `ecomerse` (cuenta `angelit0486`, se despliega solo con cada push a la rama) + Supabase `pruva-staging` (`epgiglysldwoiulnwamf`). Nuevas migraciones en la vista previa: aplicarlas desde el repo con pg_net y sha256 (runbook `database-roles.md` §7). Re-sembrar: boleto en `supabase_migrations.pruva_seed_ticket` + Edge Function `demo-seed`. Pendiente de limpiar (pide confirmación en la consola): `supabase_migrations.pruva_apply` y `pruva_fetch`; mover `pg_net` fuera de `public`.
 - **Repositorio:** el trabajo se subió a `angelit0486/Ecomerse` (rama `claude/ecommerce-regulated-platform-41vu1e`), porque la cuenta conectada no tiene acceso a `angelii33/pruva`.
 - **Pendiente del propietario para estas fases:** aprobar ADR-023 (paquetes) antes de P-T04; las reglas y leyendas sanitarias con su asesor regulatorio (el perfil de México nace pendiente y bloquea la publicación de suplementos); D1–D6.
 - **E2E:** `eval "$(node scripts/dev/keys.mjs | sed 's/^/export /')"; pnpm test:e2e` con la app levantada.
@@ -101,9 +102,9 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 
-- S-1: roles personalizados a través de Supavisor.
+- ~~S-1: roles personalizados a través de Supavisor.~~ Verificado el 2026-10-16 en `pruva-staging` (runbook §7).
 - S-2: Supabase Auth **alojado** (recovery, Send Email Hook). El claim `aal` y TOTP ya se verificaron con GoTrue v2.197.0 en local.
-- `supabase test db` contra el proyecto real (PG17).
+- `supabase test db` contra el proyecto real (PG17). Parcial: las 64 migraciones se aplicaron sin errores y los 12 metatests de seguridad (`00_schema_security`) dan 0 fallas en `pruva-staging`; falta correr toda la batería pgTAP allí.
 - S-3 (Storage alojado): vigencia real de la URL firmada de subida (2 h por defecto), que `postgres` lea `storage.objects` desde funciones SECURITY DEFINER (`media_finalize`, purga) y costo de las transformaciones de imagen (§25.3.5).
 - CI de GitHub Actions (primer run, incluido el job nuevo `stack`).
 
