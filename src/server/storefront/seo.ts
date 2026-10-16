@@ -29,7 +29,9 @@ export function canonicalUrl(
 }
 
 export function indexable(store: Pick<StorePublic, "status">, preview: boolean): boolean {
-  return store.status === "active" && !preview;
+  // Un entorno de vista previa (APP_ENV=preview, D-F9-17) nunca se indexa: sus
+  // tiendas son de demostración aunque estén activas.
+  return store.status === "active" && !preview && serverEnv().APP_ENV !== "preview";
 }
 
 /** Recorta a ~160 caracteres sin cortar palabras (descripción por defecto). */

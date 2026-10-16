@@ -40,6 +40,15 @@ describe("SEO por tienda", () => {
     });
   });
 
+  it("entorno de vista previa (D-F9-17): ni una tienda activa se indexa", () => {
+    env.APP_ENV = "preview";
+    expect(indexable(store, false)).toBe(false);
+    expect(pageMetadata({ store, preview: false, path: "/", title: "Moda Ana" }).robots).toEqual({
+      index: false,
+      follow: false,
+    });
+  });
+
   it("título, OG y Twitter con la imagen", () => {
     const meta = pageMetadata({
       store,
