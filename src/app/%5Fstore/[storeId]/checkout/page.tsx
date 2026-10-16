@@ -64,7 +64,9 @@ export default async function CheckoutPage({ params }: Props) {
   return (
     <section className="grid grid-cols-1 gap-10 md:grid-cols-[3fr_2fr]">
       <div className="min-w-0 space-y-6">
-        <h1 className="text-2xl font-semibold">Finalizar compra</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          Finalizar compra
+        </h1>
         {/* Móvil: el resumen y el total arriba del formulario, plegables (Gate F9). */}
         <details className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-4 md:hidden">
           <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-4 font-medium">

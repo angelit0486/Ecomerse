@@ -65,7 +65,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
     <section className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-1">
         <p className="text-sm text-[var(--sf-muted)]">Pedido {order.display_number}</p>
-        <h1 className="text-2xl font-semibold">
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
           {order.status === "pending_payment" ? "Recibimos tu pedido" : "Gracias por tu compra"}
         </h1>
         <p role="status">

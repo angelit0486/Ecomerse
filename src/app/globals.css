@@ -36,6 +36,11 @@
 @layer components {
   .sf-root {
     font-size: 16px;
+    /* Red de seguridad: ningún contenido de la tienda abre desplazamiento
+       horizontal en móvil (clip no crea contenedor de scroll: sticky sigue igual). */
+    overflow-x: clip;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
   .sf-root :focus-visible {
     outline-color: var(--sf-primary);

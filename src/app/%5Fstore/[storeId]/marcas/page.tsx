@@ -27,7 +27,9 @@ export default async function BrandsPage({ params }: Props) {
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Inicio", href: "/" }, { label: "Marcas" }]} />
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Marcas</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          Marcas
+        </h1>
         <p className="text-sm text-[var(--sf-muted)]">
           {brands.length === 1 ? "1 marca" : `${brands.length} marcas`} con productos en la tienda.
         </p>

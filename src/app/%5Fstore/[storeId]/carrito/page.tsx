@@ -47,7 +47,9 @@ export default async function CartPage({ params }: Props) {
       .map(({ key, label }) => ({ key, label }));
     return (
       <section className="mx-auto max-w-xl space-y-5 py-6 text-center">
-        <h1 className="text-2xl font-semibold">Tu carrito está vacío</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          Tu carrito está vacío
+        </h1>
         <p className="text-[var(--sf-muted)]">Encuentra lo que necesitas para tu objetivo.</p>
         <Link
           href="/productos"
@@ -81,7 +83,9 @@ export default async function CartPage({ params }: Props) {
     <section className="grid grid-cols-1 gap-8 md:grid-cols-[2fr_1fr]">
       {/* min-w-0: un nombre largo no ensancha la columna en móvil (sin scroll horizontal). */}
       <div className="min-w-0 space-y-4">
-        <h1 className="text-2xl font-semibold">Tu carrito</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          Tu carrito
+        </h1>
         {promo && cart.requires_shipping ? (
           <FreeShippingBar
             promo={promo}

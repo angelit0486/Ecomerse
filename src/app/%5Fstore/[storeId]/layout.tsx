@@ -80,7 +80,7 @@ export default async function StoreLayout({ children, params }: Props) {
 
   return (
     <div
-      className={`sf-root ${fonts} flex min-h-dvh flex-col bg-[var(--sf-bg)] text-[var(--sf-fg)]`}
+      className={`sf-root relative ${fonts} flex min-h-dvh flex-col bg-[var(--sf-bg)] text-[var(--sf-fg)]`}
     >
       <style nonce={nonce}>{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}`}</style>
       {preview ? (

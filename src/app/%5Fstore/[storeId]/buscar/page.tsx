@@ -22,7 +22,9 @@ export default async function SearchPage({ params, searchParams }: Props) {
   const query = typeof sp.q === "string" ? sp.q.trim().slice(0, 200) : "";
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{query ? `Resultados para «${query}»` : "Buscar"}</h1>
+      <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+        {query ? `Resultados para «${query}»` : "Buscar"}
+      </h1>
       {query ? (
         <ProductListing
           store={store}

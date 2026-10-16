@@ -185,13 +185,19 @@ export function StoreFooter({
   const payments = settings.footer?.payment_methods ?? [];
   const legal = settings.footer?.legal_text;
   return (
-    <footer className="mt-16 border-t border-[var(--sf-border)] bg-[var(--sf-surface)]">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-2 lg:grid-cols-4">
+    // Pie invertido (texto del tema sobre su color de texto): el contraste es el
+    // mismo par fg/bg que ya valida el tema; el gris sale de mezclar ambos.
+    <footer className="mt-24 bg-[var(--sf-fg)] text-[var(--sf-bg)] [--sf-footer-muted:color-mix(in_srgb,var(--sf-bg)_72%,var(--sf-fg))] [--sf-footer-rule:color-mix(in_srgb,var(--sf-bg)_22%,var(--sf-fg))]">
+      <div className="mx-auto max-w-6xl px-4 pt-14">
+        <p className="text-4xl font-bold leading-none tracking-tight text-balance [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-6xl">
+          {store.name}
+        </p>
+      </div>
+      <div className="mx-auto mt-10 grid max-w-6xl gap-10 px-4 py-10 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
-          <p className="text-base font-semibold">{store.name}</p>
           {/* Accesos que toda tienda tiene (pulido visual): el pie nunca queda vacío. */}
           <nav aria-label="Tienda">
-            <ul className="flex flex-col gap-2 text-[var(--sf-muted)]">
+            <ul className="flex flex-col gap-2.5 text-base">
               <li>
                 <Link href="/productos" className="hover:underline">
                   Ver el catálogo
@@ -218,7 +224,7 @@ export function StoreFooter({
           </nav>
           {menu.length > 0 ? (
             <nav aria-label="Pie de página">
-              <ul className="flex flex-col gap-2 text-[var(--sf-muted)]">
+              <ul className="flex flex-col gap-2.5 text-base">
                 {menu
                   .flatMap((item) => [item, ...item.children])
                   .map((item) => (
@@ -234,10 +240,13 @@ export function StoreFooter({
         </div>
         {hasContact ? (
           <section aria-labelledby="sf-contacto" className="space-y-2">
-            <h2 id="sf-contacto" className="font-semibold">
+            <h2
+              id="sf-contacto"
+              className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--sf-footer-muted)]"
+            >
               Contacto
             </h2>
-            <address className="flex flex-col gap-1 not-italic text-[var(--sf-muted)]">
+            <address className="flex flex-col gap-1 not-italic text-[var(--sf-footer-muted)]">
               {email ? (
                 <a href={`mailto:${email}`} className="hover:underline">
                   {email}
@@ -272,7 +281,10 @@ export function StoreFooter({
         ) : null}
         {social.length > 0 ? (
           <section aria-labelledby="sf-redes" className="space-y-2">
-            <h2 id="sf-redes" className="font-semibold">
+            <h2
+              id="sf-redes"
+              className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--sf-footer-muted)]"
+            >
               Síguenos
             </h2>
             <ul className="flex flex-wrap gap-2">
@@ -281,7 +293,7 @@ export function StoreFooter({
                   <a
                     href={s.url}
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border)] px-3 hover:bg-[var(--sf-surface)]"
+                    className="inline-flex min-h-10 items-center rounded-full border border-[var(--sf-footer-rule)] px-4 hover:border-[var(--sf-bg)]"
                   >
                     {NETWORK_LABELS[s.network]}
                     <span className="sr-only"> de {store.name}</span>
@@ -293,14 +305,17 @@ export function StoreFooter({
         ) : null}
         {payments.length > 0 ? (
           <section aria-labelledby="sf-pagos" className="space-y-2">
-            <h2 id="sf-pagos" className="font-semibold">
+            <h2
+              id="sf-pagos"
+              className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--sf-footer-muted)]"
+            >
               Formas de pago
             </h2>
             <ul className="flex flex-wrap gap-2">
               {payments.map((m) => (
                 <li
                   key={m}
-                  className="rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] bg-[var(--sf-bg)] px-2.5 py-1 text-xs font-semibold"
+                  className="rounded-[var(--sf-radius-control)] border border-[var(--sf-footer-rule)] px-2.5 py-1 text-xs font-semibold"
                 >
                   {PAYMENT_LABELS[m]}
                 </li>
@@ -309,8 +324,8 @@ export function StoreFooter({
           </section>
         ) : null}
       </div>
-      <div className="border-t border-[var(--sf-border)]">
-        <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs text-[var(--sf-muted)]">
+      <div className="border-t border-[var(--sf-footer-rule)]">
+        <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs text-[var(--sf-footer-muted)]">
           {legal ? (
             <p>
               <Lines text={legal} />

@@ -63,20 +63,22 @@ export function TrustBar({
     });
   }
   if (items.length === 0) return null;
+  // Franja tipo ficha técnica: reglas finas, antetítulo pequeño y el dato; sin
+  // cajas ni íconos en círculos.
   return (
     <section aria-label="Compra con confianza">
-      <ul className="grid gap-3 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-surface)] p-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 lg:p-5">
-        {items.map((item) => (
-          <li key={item.key} className="flex items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sf-bg)] text-[var(--sf-primary)]"
-            >
+      <ul className="grid border-y border-[var(--sf-border)] sm:grid-cols-2 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr">
+        {items.map((item, i) => (
+          <li
+            key={item.key}
+            className={`flex items-start gap-3 py-4 lg:px-6 lg:first:pl-0 ${i > 0 ? "border-t border-[var(--sf-border)] sm:border-t-0 lg:border-l" : ""} ${i > 1 ? "sm:border-t lg:border-t-0" : ""}`}
+          >
+            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--sf-primary)]">
               {item.icon}
             </span>
             <span className="min-w-0 text-sm">
               <span className="block font-semibold">{item.title}</span>
-              <span className="block text-[var(--sf-muted)]">{item.text}</span>
+              {item.text ? <span className="block text-[var(--sf-muted)]">{item.text}</span> : null}
             </span>
           </li>
         ))}
@@ -90,7 +92,7 @@ const ICON = {
   className: "h-5 w-5",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 2,
+  strokeWidth: 1.5,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };

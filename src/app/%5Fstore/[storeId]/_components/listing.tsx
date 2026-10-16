@@ -192,7 +192,11 @@ export async function ProductListing({
 
   return (
     <div className="space-y-6">
-      {heading ? <h1 className="text-2xl font-semibold">{heading}</h1> : null}
+      {heading ? (
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          {heading}
+        </h1>
+      ) : null}
       {nothing && query ? (
         <NoResults store={store} />
       ) : (
@@ -322,7 +326,7 @@ async function NoResults({ store }: { store: StorePublic }) {
       </section>
       {best.items.length > 0 ? (
         <section aria-labelledby="sf-mas-vendido" className="space-y-4">
-          <h2 id="sf-mas-vendido" className="text-xl font-bold">
+          <h2 id="sf-mas-vendido" className="text-2xl font-semibold tracking-tight">
             Lo más vendido
           </h2>
           <ProductGrid products={best.items} store={store} />

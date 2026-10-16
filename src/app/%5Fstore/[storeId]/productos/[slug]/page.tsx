@@ -225,7 +225,7 @@ export default async function ProductPage({ params }: Props) {
           <header className="space-y-2">
             <Badges badges={badges} />
             {product.brand ? (
-              <p className="text-sm font-medium uppercase tracking-wide text-[var(--sf-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sf-muted)]">
                 <Link
                   href={`/marca/${encodeURIComponent(product.brand.slug)}`}
                   className="hover:underline"
@@ -234,14 +234,17 @@ export default async function ProductPage({ params }: Props) {
                 </Link>
               </p>
             ) : null}
-            <h1 id="sf-producto" className="text-2xl font-bold leading-tight sm:text-3xl">
+            <h1
+              id="sf-producto"
+              className="text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-5xl"
+            >
               {product.title}
             </h1>
           </header>
           {single ? (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-2xl font-bold">
+                <p className="text-3xl font-semibold tabular-nums tracking-tight">
                   {money(single.price, store)}
                   {single.compare_at_price && single.compare_at_price > single.price ? (
                     <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
@@ -321,8 +324,11 @@ export default async function ProductPage({ params }: Props) {
         />
       ) : null}
       {related.length > 0 ? (
-        <section aria-labelledby="sf-relacionados" className="space-y-4">
-          <h2 id="sf-relacionados" className="text-xl font-bold sm:text-2xl">
+        <section aria-labelledby="sf-relacionados" className="space-y-6">
+          <h2
+            id="sf-relacionados"
+            className="border-t border-[var(--sf-fg)] pt-3 text-2xl font-semibold leading-none tracking-tight sm:text-4xl"
+          >
             Más para tu objetivo
           </h2>
           <ProductGrid products={related} store={store} />
@@ -365,7 +371,7 @@ function PurchaseInfo({
   if (!shipping && payments.length === 0 && !whatsapp) return null;
   const message = encodeURIComponent(`Hola, tengo una duda sobre ${productTitle}.`);
   return (
-    <ul className="space-y-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4 text-sm">
+    <ul className="divide-y divide-[var(--sf-border)] border-y border-[var(--sf-border)] text-sm [&>li]:py-3">
       {shipping ? (
         <li>
           <span className="font-semibold">Envío gratis</span> en compras desde{" "}

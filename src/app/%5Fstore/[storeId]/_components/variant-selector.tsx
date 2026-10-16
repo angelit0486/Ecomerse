@@ -64,7 +64,7 @@ export function VariantSelector({
       <div aria-live="polite" className="space-y-1">
         {selected ? (
           <>
-            <p className="text-2xl font-bold">
+            <p className="text-3xl font-semibold tabular-nums tracking-tight">
               {selected.price}
               {selected.compareAt ? (
                 <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">

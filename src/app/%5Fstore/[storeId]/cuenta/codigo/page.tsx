@@ -19,7 +19,9 @@ export default async function AccountCodePage({ params }: Props) {
   if (!(await cookies()).get("buyer_login_email")) redirect("/cuenta");
   return (
     <section className="mx-auto max-w-md space-y-4">
-      <h1 className="text-2xl font-semibold">Revisa tu email</h1>
+      <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+        Revisa tu email
+      </h1>
       <p className="text-sm text-[var(--sf-muted)]">
         Te enviamos un código de 6 dígitos. Caduca en 10 minutos.
       </p>

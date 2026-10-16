@@ -29,7 +29,7 @@ export function GoalChips({
           <li key={goal.key} className="shrink-0">
             <Link
               href={`/productos?${new URLSearchParams([[GOAL_KEY, goal.key]])}`}
-              className="inline-flex min-h-11 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-5 text-sm font-semibold hover:bg-[var(--sf-surface)]"
+              className="inline-flex min-h-11 items-center rounded-full border border-[var(--sf-border-strong)] px-4 text-sm font-medium transition-colors hover:border-[var(--sf-fg)] hover:bg-[var(--sf-fg)] hover:text-[var(--sf-bg)]"
             >
               {goal.label}
             </Link>

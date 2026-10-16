@@ -20,7 +20,9 @@ export default async function AccountPage({ params }: Props) {
   if (!account) {
     return (
       <section className="mx-auto max-w-md space-y-4">
-        <h1 className="text-2xl font-semibold">Mi cuenta</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          Mi cuenta
+        </h1>
         <p className="text-sm text-[var(--sf-muted)]">
           Te enviaremos un código a tu email para entrar. Sin contraseñas. Verás tus pedidos de{" "}
           {store.name}, incluidos los que hiciste sin cuenta con ese email.
@@ -35,7 +37,9 @@ export default async function AccountPage({ params }: Props) {
     <section className="mx-auto max-w-3xl space-y-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Mi cuenta</h1>
+          <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+            Mi cuenta
+          </h1>
           <p className="text-sm text-[var(--sf-muted)]">{c.email}</p>
         </div>
         <SignOutButton storeId={store.id} />

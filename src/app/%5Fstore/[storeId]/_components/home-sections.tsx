@@ -34,6 +34,38 @@ function Paragraphs({ text, className }: { text: string; className?: string }) {
   );
 }
 
+/**
+ * Encabezado de sección editorial: regla fina, número de sección y título
+ * grande (sin cajas). El número es decorativo (aria-hidden): el nombre accesible
+ * del encabezado sigue siendo solo el título.
+ */
+function SectionHeading({
+  id,
+  number,
+  title,
+  action,
+}: {
+  id: string;
+  number: number;
+  title: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4 border-t border-[var(--sf-fg)] pt-3">
+      <h2 id={id} className="text-2xl font-semibold leading-none tracking-tight sm:text-4xl">
+        <span
+          aria-hidden="true"
+          className="sf-text-font mr-3 inline-block align-top text-xs font-semibold tabular-nums tracking-normal text-[var(--sf-muted)] sm:text-sm"
+        >
+          {String(number).padStart(2, "0")}
+        </span>
+        {title}
+      </h2>
+      {action}
+    </div>
+  );
+}
+
 export function viewAllHref(
   source: Extract<HomeSectionData, { type: "featured_products" }>["source"],
 ) {
@@ -64,8 +96,14 @@ function Hero({
     <div
       className={`flex max-w-2xl flex-col gap-4 ${centered ? "mx-auto items-center text-center" : "items-start"}`}
     >
-      <Heading className="text-3xl font-bold leading-tight sm:text-5xl">{section.heading}</Heading>
-      {section.subheading ? <p className="text-base sm:text-lg">{section.subheading}</p> : null}
+      <Heading className="text-4xl font-bold leading-[1.02] tracking-tight text-balance sm:text-6xl">
+        {section.heading}
+      </Heading>
+      {section.subheading ? (
+        <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+          {section.subheading}
+        </p>
+      ) : null}
       {section.cta ? (
         <ThemeLink href={section.cta.link} className={BUTTON}>
           {section.cta.label}
@@ -96,7 +134,12 @@ function Hero({
         className="block aspect-[16/9] w-full object-cover sm:absolute sm:inset-0 sm:-z-10 sm:aspect-auto sm:h-full"
       />
       {/* Velo fijo del tema: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
-      <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-black/60 sm:block" />
+      {/* Alineado a la izquierda, el velo se degrada hacia la derecha para dejar ver la
+          imagen; bajo el texto mantiene la misma opacidad (contraste garantizado). */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 -z-10 hidden sm:block ${centered ? "bg-black/60" : "bg-gradient-to-r from-black/75 from-45% via-black/60 via-65% to-black/20"}`}
+      />
       <div className="px-5 py-6 sm:px-12 sm:py-24 sm:text-white">{content}</div>
     </section>
   );
@@ -120,8 +163,17 @@ export function HomeSections({
   const heroFirst = sections[0]?.type === "hero";
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
+  // Numeración de las secciones con título (01, 02…), en el orden en que se ven.
+  const numbered = new Map<number, number>();
+  sections.forEach((section, index) => {
+    if (
+      ["featured_products", "category_grid", "brand_logos", "testimonials"].includes(section.type)
+    ) {
+      numbered.set(index, numbered.size + 1);
+    }
+  });
   return (
-    <div className="space-y-14">
+    <div className="space-y-16 sm:space-y-24">
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
       {heroFirst ? null : (
         <div className="space-y-4">
@@ -146,36 +198,42 @@ export function HomeSections({
           case "featured_products": {
             const eager = index === eagerIndex ? 4 : 0;
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
-                    {section.title}
-                  </h2>
-                  {section.show_view_all ? (
-                    <Link
-                      href={viewAllHref(section.source)}
-                      className="shrink-0 text-sm underline underline-offset-4"
-                    >
-                      Ver todos<span className="sr-only"> de {section.title}</span>
-                    </Link>
-                  ) : null}
-                </div>
+              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
+                <SectionHeading
+                  id={headingId}
+                  number={numbered.get(index) ?? 0}
+                  title={section.title}
+                  action={
+                    section.show_view_all ? (
+                      <Link
+                        href={viewAllHref(section.source)}
+                        className="shrink-0 pb-0.5 text-sm font-medium underline decoration-1 underline-offset-4 hover:decoration-2"
+                      >
+                        Ver todos<span className="sr-only"> de {section.title}</span>
+                      </Link>
+                    ) : null
+                  }
+                />
                 <ProductGrid products={section.items} store={store} eager={eager} carousel />
               </section>
             );
           }
           case "category_grid":
+            // Índice tipográfico: nombres grandes en renglones con regla fina. Con
+            // imágenes de categoría, la miniatura acompaña al nombre.
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
-                  {section.title}
-                </h2>
-                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] sm:gap-4">
+              <section key={section.id} aria-labelledby={headingId} className="space-y-2">
+                <SectionHeading
+                  id={headingId}
+                  number={numbered.get(index) ?? 0}
+                  title={section.title}
+                />
+                <ul className="grid sm:grid-cols-2 sm:gap-x-10">
                   {section.categories.map((category) => (
-                    <li key={category.path}>
+                    <li key={category.path} className="border-b border-[var(--sf-border)]">
                       <Link
                         href={`/categoria/${category.path}`}
-                        className="group flex h-full flex-col gap-3 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-surface)] p-4 transition-colors hover:border-[var(--sf-fg)]"
+                        className="group flex min-h-16 items-center gap-4 py-3"
                       >
                         {category.image ? (
                           // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
@@ -186,17 +244,17 @@ export function HomeSections({
                             height={category.image.height ?? 320}
                             loading="lazy"
                             decoding="async"
-                            className="aspect-square w-full rounded object-cover"
+                            className="h-12 w-12 shrink-0 rounded-[var(--sf-radius-control)] object-cover"
                           />
                         ) : null}
-                        <span className="flex items-center justify-between gap-2 font-semibold">
+                        <span className="text-xl font-medium tracking-tight decoration-1 underline-offset-[6px] group-hover:underline sm:text-2xl">
                           {category.name}
-                          <span
-                            aria-hidden="true"
-                            className="text-[var(--sf-muted)] transition-transform group-hover:translate-x-0.5"
-                          >
-                            →
-                          </span>
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="ml-auto text-lg text-[var(--sf-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--sf-fg)]"
+                        >
+                          →
                         </span>
                       </Link>
                     </li>
@@ -281,10 +339,12 @@ export function HomeSections({
             );
           case "brand_logos":
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
-                  {section.title}
-                </h2>
+              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
+                <SectionHeading
+                  id={headingId}
+                  number={numbered.get(index) ?? 0}
+                  title={section.title}
+                />
                 <ul className="grid grid-cols-3 items-center gap-6 sm:grid-cols-6">
                   {section.brands.map((brand) => (
                     <li key={brand.slug}>
@@ -310,15 +370,17 @@ export function HomeSections({
             );
           case "testimonials":
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
-                  {section.title}
-                </h2>
-                <ul className="grid gap-4 sm:grid-cols-3">
+              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
+                <SectionHeading
+                  id={headingId}
+                  number={numbered.get(index) ?? 0}
+                  title={section.title}
+                />
+                <ul className="grid gap-8 sm:grid-cols-3 sm:gap-10">
                   {section.items.map((item, i) => (
                     <li key={i}>
-                      <figure className="flex h-full flex-col gap-3 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5">
-                        <blockquote>
+                      <figure className="flex h-full flex-col gap-4 border-l-2 border-[var(--sf-fg)] pl-5">
+                        <blockquote className="text-lg leading-relaxed">
                           <Paragraphs text={item.quote} />
                         </blockquote>
                         <figcaption className="mt-auto text-sm text-[var(--sf-muted)]">

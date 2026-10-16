@@ -38,7 +38,9 @@ export default async function BrandPage({ params, searchParams }: Props) {
   return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Inicio", href: "/" }, { label: brand.name }]} />
-      <h1 className="text-2xl font-semibold">{brand.name}</h1>
+      <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+        {brand.name}
+      </h1>
       <ProductListing
         store={store}
         basePath={`/marca/${brand.slug}`}

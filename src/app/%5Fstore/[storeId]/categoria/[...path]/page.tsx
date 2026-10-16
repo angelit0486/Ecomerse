@@ -70,7 +70,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         ]}
       />
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">{category.name}</h1>
+        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+          {category.name}
+        </h1>
         {category.description ? (
           <p className="max-w-prose text-[var(--sf-muted)]">{category.description}</p>
         ) : null}

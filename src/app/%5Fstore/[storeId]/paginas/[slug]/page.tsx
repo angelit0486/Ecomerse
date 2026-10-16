@@ -31,7 +31,9 @@ export default async function StorePage({ params }: Props) {
   const { page } = await load(params);
   return (
     <article className="max-w-prose space-y-4">
-      <h1 className="text-2xl font-semibold">{page.title}</h1>
+      <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+        {page.title}
+      </h1>
       <SafeHtml html={page.body_html} className="sf-prose space-y-3" />
     </article>
   );
