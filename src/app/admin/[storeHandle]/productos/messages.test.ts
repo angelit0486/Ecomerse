@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { publishIssueMessage } from "./messages";
+import { publishIssueMessage, qualityIssueMessage } from "./messages";
 
 describe("publishIssueMessage", () => {
   it("traduce los avisos de §14.3 y los de cumplimiento con su campo", () => {
@@ -18,5 +18,13 @@ describe("publishIssueMessage", () => {
     expect(publishIssueMessage("compliance_field_missing:constructor")).toBe(
       "Falta en la ficha sanitaria: constructor.",
     );
+  });
+});
+
+describe("qualityIssueMessage (revisión del catálogo)", () => {
+  it("traduce los avisos y deja los bloqueos de publicación a publishIssueMessage", () => {
+    expect(qualityIssueMessage("image_missing")).toBe("No tiene imágenes.");
+    expect(qualityIssueMessage("price_zero")).toBe(publishIssueMessage("price_zero"));
+    expect(qualityIssueMessage("constructor")).toBe("constructor");
   });
 });

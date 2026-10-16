@@ -157,3 +157,66 @@ describe("CSV de productos con ficha y atributos", () => {
     expect(await snapshot()).toEqual(before);
   });
 });
+
+describe("borrador del catálogo desde la investigación (docs/catalogo)", () => {
+  it("sin precio de venta no se crea nada: la vista previa lo pide en cada variante y nada más", async () => {
+    const { readFileSync } = await import("node:fs");
+    const parsed = parseCsv(
+      readFileSync("docs/catalogo/borrador-catalogo-investigacion.csv", "utf8"),
+    );
+    const headers = checkHeaders(parsed.headers);
+    if (!headers.ok) throw new Error("encabezados");
+    const plan = planProductImport(parsed.headers, parsed.rows, parsed.rowNumbers);
+    expect(plan.flatMap((r) => r.errors)).toEqual([]);
+    const errors = await asOwner(async (sql) => {
+      const [j] = await sql<{ id: string }[]>`
+        select public.imports_create(${storeId}, 'create_only', 'borrador.csv', ${headers.columns}::text[],
+                                     ${headers.ignored}::text[], ${sql.json(plan as unknown as postgres.JSONValue)}) as id`;
+      return sql<{ e: string }[]>`
+        select jsonb_array_elements_text(errors) as e from public.import_job_rows where import_job_id = ${j!.id}`;
+    });
+    // El precio de venta lo decide la tienda: los precios observados en otras
+    // tiendas van solo como referencia (columna ignorada), nunca como precio.
+    expect(new Set(errors.map((r) => r.e))).toEqual(
+      new Set(["price: es obligatorio para una variante nueva"]),
+    );
+    expect(errors).toHaveLength(63);
+  });
+
+  it("con los precios de la tienda se importa completo como borrador: nada se publica ni se puede comprar", async () => {
+    const { readFileSync } = await import("node:fs");
+    const parsed = parseCsv(
+      readFileSync("docs/catalogo/borrador-catalogo-investigacion.csv", "utf8"),
+    );
+    const priceAt = parsed.headers.indexOf("price");
+    // Precio de prueba (no es un precio real): solo para comprobar la importación.
+    const rows = parsed.rows.map((r) => r.map((c, i) => (i === priceAt ? "100" : c)));
+    const headers = checkHeaders(parsed.headers);
+    if (!headers.ok) throw new Error("encabezados");
+    const plan = planProductImport(parsed.headers, rows, parsed.rowNumbers);
+    const job = await asOwner(async (sql) => {
+      const [j] = await sql<{ id: string }[]>`
+        select public.imports_create(${storeId}, 'create_only', 'borrador.csv', ${headers.columns}::text[],
+                                     ${headers.ignored}::text[], ${sql.json(plan as unknown as postgres.JSONValue)}) as id`;
+      const errors = await sql<{ e: string }[]>`
+        select jsonb_array_elements_text(errors) as e from public.import_job_rows where import_job_id = ${j!.id}`;
+      expect(errors.map((r) => r.e)).toEqual([]);
+      await sql`select public.imports_commit(${storeId}, ${j!.id})`;
+      return j!.id;
+    });
+    const [result] = await worker<
+      { r: { status: string } }[]
+    >`select system.import_commit(${job}) as r`;
+    expect(result!.r.status).toBe("completed");
+    const [counts] = await admin<
+      { products: number; drafts: number; variants: number; active_variants: number }[]
+    >`
+      select count(distinct p.id)::int as products,
+             count(distinct p.id) filter (where p.status = 'draft')::int as drafts,
+             count(v.id)::int as variants,
+             count(v.id) filter (where v.status = 'active')::int as active_variants
+        from public.products p join public.product_variants v on v.product_id = p.id and v.deleted_at is null
+       where p.store_id = ${storeId} and p.slug <> 'omega-3'`;
+    expect(counts).toEqual({ products: 19, drafts: 19, variants: 63, active_variants: 0 });
+  });
+});

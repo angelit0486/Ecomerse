@@ -296,3 +296,18 @@ export async function validateProduct(
     p_product_id: productId,
   });
 }
+
+/** Revisión del catálogo (super prompt §16): avisos y bloqueos por producto. */
+export interface CatalogQuality {
+  checked: number;
+  total: number;
+  by_code: Record<string, number>;
+  products: Array<{ id: string; title: string; status: string; codes: string[] }>;
+}
+
+export function getCatalogQuality(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<CatalogQuality> {
+  return callRpc<CatalogQuality>(supabase, "catalog_quality_report", { p_store_id: storeId });
+}

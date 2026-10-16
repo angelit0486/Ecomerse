@@ -325,3 +325,21 @@ describe("plantilla del catálogo de suplementos (docs/catalogo)", () => {
     expect(header.split(",")).toEqual([...ALL_IMPORT_HEADERS]);
   });
 });
+
+describe("borrador del catálogo desde la investigación (docs/catalogo)", () => {
+  it("se importa sin errores: borrador, variantes inactivas y columnas de referencia ignoradas", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { parseCsv } = await import("@/lib/csv-parse");
+    const parsed = parseCsv(
+      readFileSync("docs/catalogo/borrador-catalogo-investigacion.csv", "utf8"),
+    );
+    const check = checkHeaders(parsed.headers);
+    expect(check.ok && check.ignored.every((c) => c.startsWith("ref_"))).toBe(true);
+    const plan = planProductImport(parsed.headers, parsed.rows);
+    expect(plan.flatMap((r) => r.errors.map((e) => `${r.row_number}: ${e}`))).toEqual([]);
+    const products = plan.filter((r) => r.normalized).map((r) => r.normalized!);
+    expect(products.length).toBe(19);
+    expect(products.every((p) => p.status === "draft")).toBe(true);
+    expect(products.flatMap((p) => p.variants).every((v) => v.status === "inactive")).toBe(true);
+  });
+});

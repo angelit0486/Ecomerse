@@ -119,3 +119,11 @@ Auditoría no destructiva del repositorio y de la vista previa. Contrato técnic
   - `/marcas`, con buscador por nombre a partir de 9 marcas, logo y conteo.
 - Menú y pie de página: «Marcas» (con 2 o más) y «Ofertas» (con al menos una), sin duplicar lo que ya esté en el menú de la tienda.
 - Formularios: los campos de número no navegan con cada tecla; se aplican con el botón o con Enter.
+
+## I. Segunda entrega (2026-10-16)
+
+- **Sistema visual:** estilo «Grafito y oliva» en Apariencia → Estilos sugeridos (D-SP-05).
+- **Búsqueda tolerante:** errores de escritura en nombre, marca, categoría, atributos y sabor o tamaño; también en las sugerencias (D-SP-06, migración `20261018000500`).
+- **Calidad de datos:** Productos → Revisión (D-SP-07, `20261018000600`).
+- **Proveedores y despacho directo, paso 1** (ADR-025 aprobado; D-SP-08, `20261018000700`): Productos → Proveedores; la disponibilidad del proveedor se vende sin sobreventa (prueba de concurrencia: 20 compradores, 1 propia y 2 del proveedor → 3 pedidos).
+- **Guía para elegir:** sin desarrollo nuevo. Es una página de contenido (Contenido → Páginas, `/paginas/guia`) que se enlaza desde el menú. El texto lo escribe la tienda; la plataforma no redacta recomendaciones de uso.

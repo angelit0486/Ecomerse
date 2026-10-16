@@ -54,4 +54,23 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
     radius: "md",
     buttonStyle: "solid",
   },
+  {
+    key: "grafito",
+    name: "Grafito y oliva",
+    description:
+      "Grafito sobre blanco cálido, verde oliva profundo para comprar y terracota moderado para ofertas; títulos Space Grotesk. Editorial y sobrio.",
+    // Dirección de arte del super prompt (§4): contraste ≥ 4.5:1 en texto, botón y
+    // ofertas (presets.test.ts). Sin degradados ni efectos.
+    colors: {
+      primary: "#3d4a26",
+      accent: "#a3471a",
+      background: "#faf8f3",
+      foreground: "#1d2023",
+      muted: "#53595f",
+    },
+    heading: "space-grotesk",
+    body: "inter",
+    radius: "sm",
+    buttonStyle: "solid",
+  },
 ];

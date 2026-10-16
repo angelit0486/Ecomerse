@@ -32,6 +32,32 @@ export function publishIssueMessage(code: string): string {
   return Object.hasOwn(PUBLISH_ISSUES, code) ? PUBLISH_ISSUES[code]! : code;
 }
 
+/**
+ * Avisos de la revisión del catálogo (super prompt §16): recomendaciones, no
+ * bloqueos. Los códigos de publicación se traducen con publishIssueMessage.
+ */
+export const QUALITY_ISSUES: Record<string, { short: string; message: string }> = {
+  brand_missing: { short: "Sin marca", message: "No tiene marca." },
+  category_missing: { short: "Sin categoría", message: "No está en ninguna categoría." },
+  image_missing: { short: "Sin imagen", message: "No tiene imágenes." },
+  description_missing: { short: "Sin descripción", message: "No tiene descripción." },
+  variant_sku_missing: { short: "Variantes sin SKU", message: "Hay variantes activas sin SKU." },
+  variant_barcode_missing: {
+    short: "Variantes sin código de barras",
+    message: "Hay variantes activas sin código de barras.",
+  },
+  variant_weight_missing: {
+    short: "Variantes sin peso",
+    message: "Hay variantes que se envían sin peso: las tarifas por peso no las calculan.",
+  },
+};
+
+export function qualityIssueMessage(code: string): string {
+  return Object.hasOwn(QUALITY_ISSUES, code)
+    ? QUALITY_ISSUES[code]!.message
+    : publishIssueMessage(code);
+}
+
 export const FIELD_MESSAGES: Record<string, string> = {
   title: "Escribe un título de hasta 200 caracteres.",
   publish:

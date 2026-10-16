@@ -115,6 +115,29 @@ describe("place_order concurrente", () => {
     expect(orders!.n).toBe(1);
   });
 
+  it("stock propio + proveedor (ADR-025): 20 compradores con 1 propia y 2 del proveedor → 3 pedidos", async () => {
+    const variantId = await product(`SUP-${run}`, 1);
+    const [loc] = await admin<{ id: string }[]>`
+      insert into public.inventory_locations (store_id, name, kind) values (${storeId}, ${`Proveedor ${run}`}, 'supplier')
+      returning id`;
+    const [level] = await admin<{ id: string }[]>`
+      insert into public.inventory_levels (store_id, variant_id, location_id)
+      values (${storeId}, ${variantId}, ${loc!.id}) returning id`;
+    await admin`select app.apply_inventory_movement(${storeId}, ${level!.id}, 'initial', 2, 0)`;
+    const carts = await Promise.all(Array.from({ length: 20 }, () => cart(variantId)));
+    const results = await Promise.allSettled(carts.map((c) => place(c, 10000)));
+    const ok = results.filter((r) => r.status === "fulfilled");
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    expect(ok).toHaveLength(3);
+    expect(failed.map((f) => (f.reason as Error).message)).toEqual(
+      Array(17).fill("insufficient_stock"),
+    );
+    // Sin sobreventa en ninguna ubicación: todo lo disponible quedó reservado, nada de más.
+    const levels = await admin<{ on_hand: number; reserved: number }[]>`
+      select on_hand, reserved from public.inventory_levels where variant_id = ${variantId} order by on_hand`;
+    expect(levels.map((l) => `${l.reserved}/${l.on_hand}`)).toEqual(["1/1", "2/2"]);
+  });
+
   it("el último cupón: 20 compradores → 1 lo usa; el resto discount_invalid sin pedido", async () => {
     const variantId = await product(`CUP-${run}`, 100);
     await admin`insert into public.discounts (store_id, code, type, value, usage_limit)
