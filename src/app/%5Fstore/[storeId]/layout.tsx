@@ -36,11 +36,16 @@ const BASE_CSS = [
 const HEADING_CSS =
   ".sf-root :is(h1,h2,h3,h4):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
 
-/** Favicon, ícono de Apple y manifiesto de la tienda (§20.2, D-F9-06). */
+/**
+ * Favicon, ícono de Apple y manifiesto de la tienda (§20.2, D-F9-06). La
+ * plantilla del título lleva el nombre de la tienda: las páginas con título fijo
+ * (carrito, checkout, cuenta) nunca muestran el nombre de la plataforma (white-label).
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { store } = await getStorefront((await params).storeId);
   const v = iconVersion(store);
   return {
+    title: { default: store.name, template: `%s · ${store.name}` },
     icons: {
       icon: [{ url: `/icon.svg?v=${v}`, type: "image/svg+xml" }],
       apple: [{ url: `/apple-touch-icon.png?v=${v}`, sizes: "180x180" }],

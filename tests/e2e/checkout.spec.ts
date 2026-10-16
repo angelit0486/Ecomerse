@@ -91,6 +91,8 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
 
   await page.getByRole("link", { name: "Continuar al pago" }).click();
   await expect(page.getByRole("heading", { name: "Finalizar compra", exact: true })).toBeVisible();
+  // White-label: la pestaña lleva el nombre de la tienda, nunca el de la plataforma.
+  await expect(page).toHaveTitle(`Finalizar compra · Tienda ${`k${run}`.toUpperCase()}`);
   // Confirmar con todo vacío: todos los faltantes a la vez y el foco en el primero (Gate F9).
   await page.getByRole("button", { name: /Confirmar pedido/ }).click();
   await expect(page.getByRole("alert").filter({ hasText: /Faltan \d+ datos/ })).toBeVisible();
