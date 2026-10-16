@@ -15,7 +15,7 @@ import manifest from "./media/manifest.json" with { type: "json" };
 import { seedDemo } from "./seed-core.mjs";
 
 const MEDIA_BASE =
-  "https://raw.githubusercontent.com/angelit0486/Ecomerse/33114e1fff011dd272bafe18f308a1b4efd5bc41/supabase/functions/demo-seed/media";
+  "https://raw.githubusercontent.com/angelit0486/Ecomerse/0ceb19fa6be6eda3a1081d5462a3ac21bc7f841e/supabase/functions/demo-seed/media";
 
 type MediaEntry = { sha256: string; bytes: number; width: number; height: number };
 const media = manifest as Record<string, MediaEntry>;
