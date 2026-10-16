@@ -16,6 +16,7 @@ select tests.make_platform_staff('padmin', 'platform_admin');
 update public.stores set status = 'active', launched_at = now() where id in (tests.fx('store_a'), tests.fx('store_b'));
 select tests.set_fx('profile', (select id from public.compliance_profiles
                                  where country = 'MX' and category_key = 'dietary_supplement'));
+select tests.retire_compliance_rules(tests.fx('profile'));
 
 create function pg_temp.gw(p_sql text) returns jsonb language plpgsql as $$
 declare v jsonb;

@@ -24,6 +24,7 @@ update public.stores set status = 'active', launched_at = now()
  where id in (tests.fx('store_a'), tests.fx('store_b'), tests.fx('store_c'));
 select tests.set_fx('profile', (select id from public.compliance_profiles
                                  where country = 'MX' and category_key = 'dietary_supplement'));
+select tests.retire_compliance_rules(tests.fx('profile'));
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text; v_hint text;

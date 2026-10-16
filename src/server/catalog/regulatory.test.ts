@@ -26,6 +26,17 @@ describe("normalizeSupplementSheet (espejo de app.regulatory_normalize)", () => 
     });
   });
 
+  it("contenido neto (Fase A): hasta 100 caracteres, como en la base", () => {
+    expect(normalizeSupplementSheet({ net_content: " 907 g " })).toEqual({
+      ok: true,
+      sheet: { net_content: "907 g" },
+    });
+    expect(normalizeSupplementSheet({ net_content: "x".repeat(101) })).toEqual({
+      ok: false,
+      fields: ["net_content"],
+    });
+  });
+
   it("rechaza campos fuera de la lista blanca, límites y caracteres de control", () => {
     expect(normalizeSupplementSheet({ ingredients: "x", potencia: "ultra" })).toEqual({
       ok: false,

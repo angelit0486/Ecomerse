@@ -22,6 +22,7 @@ export function SupplementInfo({ info }: { info: ProductRegulatory }) {
   const facts = (
     [
       ["form", d.form],
+      ["net_content", d.net_content],
       ["serving_size", d.serving_size],
       ["servings_per_container", d.servings_per_container?.toString()],
     ] as const

@@ -5,6 +5,7 @@
  */
 export const SUPPLEMENT_FIELD_LABELS: Record<string, string> = {
   form: "Presentación",
+  net_content: "Contenido neto",
   serving_size: "Porción",
   servings_per_container: "Porciones por envase",
   ingredients: "Ingredientes",
@@ -26,6 +27,7 @@ export const RULE_KIND_LABELS: Record<string, string> = {
   required_field: "Campo obligatorio",
   required_legend: "Leyenda",
   forbidden_term: "Término prohibido",
+  store_legend: "Leyenda de la tienda",
 };
 
 export const PLACEMENT_LABELS: Record<string, string> = {

@@ -11,6 +11,7 @@ export type RegulatedCategory = (typeof REGULATED_CATEGORIES)[number];
 
 export const SUPPLEMENT_TEXT_LIMITS = {
   form: 100,
+  net_content: 100,
   serving_size: 100,
   ingredients: 5000,
   usage: 2000,
@@ -27,6 +28,7 @@ export type SupplementTextField = keyof typeof SUPPLEMENT_TEXT_LIMITS;
 export type SupplementField = SupplementTextField | "servings_per_container" | "nutrition";
 export const SUPPLEMENT_FIELDS: readonly SupplementField[] = [
   "form",
+  "net_content",
   "serving_size",
   "servings_per_container",
   "ingredients",
@@ -66,6 +68,7 @@ const nutritionRow = z.object({
 
 export const supplementSheetSchema = z.strictObject({
   form: text(SUPPLEMENT_TEXT_LIMITS.form).optional(),
+  net_content: text(SUPPLEMENT_TEXT_LIMITS.net_content).optional(),
   serving_size: text(SUPPLEMENT_TEXT_LIMITS.serving_size).optional(),
   servings_per_container: z.number().int().min(1).max(MAX_SERVINGS).optional(),
   ingredients: text(SUPPLEMENT_TEXT_LIMITS.ingredients).optional(),

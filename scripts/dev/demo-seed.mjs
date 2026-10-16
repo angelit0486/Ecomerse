@@ -103,6 +103,8 @@ seedDemo({
   hostname: `${handle}.localhost`,
   createOwner,
   putImage,
+  // Stack local: activa el perfil con un revisor de demostración (nunca fuera de localhost).
+  demoCompliance: true,
   log: console.log,
 })
   .then(({ created }) => {

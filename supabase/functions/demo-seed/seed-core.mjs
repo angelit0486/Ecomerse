@@ -293,6 +293,15 @@ export function demoSvgs() {
 export const LEGEND_TEXT =
   "Leyenda sanitaria de ejemplo: el texto oficial lo define el asesor regulatorio de la tienda (pendiente de contenido real).";
 
+/** Ficha de ejemplo que cumple los campos que piden las reglas propuestas (Fase A). */
+const EXAMPLE_SHEET = {
+  ingredients: "Ingredientes de ejemplo (pendiente de contenido real).",
+  usage: "Modo de uso de ejemplo (pendiente de contenido real).",
+  warnings: "Advertencias de ejemplo (pendiente de contenido real).",
+  net_content: "Contenido de ejemplo",
+};
+const DEMO_REVIEWER = "Demostración (sin revisión real)";
+
 /**
  * Siembra la tienda `demo` (estilo «Deportivo») o `demo2` (`neutral`, estilo
  * «Neutral») publicada en `hostname`. Idempotente: si la tienda existe, solo
@@ -303,7 +312,15 @@ export const LEGEND_TEXT =
  * - `putImage({ path, svg })`: guarda la ilustración en `store-media/<path>` como
  *   WebP y devuelve `{ bytes, width, height }`.
  */
-export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, log = () => {} }) {
+export async function seedDemo({
+  sql,
+  neutral,
+  hostname,
+  createOwner,
+  putImage,
+  demoCompliance = false,
+  log = () => {},
+}) {
   const handle = neutral ? "demo2" : "demo";
   const ownerEmail = `${handle}@example.test`;
   const style = neutral ? STYLES.neutral : STYLES.deportivo;
@@ -337,21 +354,30 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
     return createOwner(ownerEmail);
   }
 
+  /**
+   * Solo en el stack local (`demoCompliance`): activa el perfil de México con un
+   * revisor de DEMOSTRACIÓN para poder ver la tienda con productos publicados.
+   * Nunca en la vista previa ni en producción: allí las reglas propuestas quedan
+   * PENDIENTES DE REVISIÓN hasta que el asesor regulatorio las apruebe (Fase A).
+   * Ya no crea reglas: usa las propuestas de la migración.
+   */
   async function ensureDemoCompliance() {
-    // Perfil sanitario de MÉXICO con reglas DE PRUEBA (nunca en producción; el
-    // real lo define el asesor regulatorio, bloqueo R0).
-    const [profile] = await sql`
-      update public.compliance_profiles
-         set status = 'active', reviewed_by = 'Demostración (sin revisión real)', reviewed_at = now(),
-             review_notes = 'Reglas de prueba para la demostración; pendientes de contenido real.'
-       where country = 'MX' and category_key = 'dietary_supplement' returning id`;
+    if (!demoCompliance) return;
     await sql`
-      insert into public.compliance_rules (profile_id, kind, key, label, body, field_key, placements, position)
-      values (${profile.id}, 'required_field', 'demo_ingredientes', 'Ingredientes', null, 'ingredients', '{}', 0),
-             (${profile.id}, 'required_legend', 'demo_leyenda', 'Leyenda de ejemplo', ${LEGEND_TEXT},
-              null, '{product_page,cart,checkout}', 1),
-             (${profile.id}, 'forbidden_term', 'demo_cura', 'Término prohibido de ejemplo', 'cura', null, '{}', 2)
-      on conflict (profile_id, key) do nothing`;
+      update public.compliance_profiles
+         set status = 'active', reviewed_by = ${DEMO_REVIEWER}, reviewed_at = now(),
+             review_notes = 'Solo stack local: reglas propuestas activadas para la demostración, sin revisión real.'
+       where country = 'MX' and category_key = 'dietary_supplement' and status <> 'active'`;
+  }
+
+  /** Leyenda de la tienda de ejemplo, aprobada como demostración (solo local). */
+  async function ensureDemoLegend(storeId, ownerId) {
+    if (!demoCompliance) return;
+    await asOwner(
+      ownerId,
+      (tx) =>
+        tx`select public.compliance_save_store_legend(${storeId}, 'dietary_supplement', ${LEGEND_TEXT}, true, ${DEMO_REVIEWER})`,
+    );
   }
 
   /**
@@ -392,8 +418,16 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
 
   const [already] = await sql`select id from public.stores where handle = ${handle}`;
   if (already) {
-    // Los E2E de cumplimiento reinician el perfil de México: se restauran las reglas de prueba.
+    // Local: los E2E de cumplimiento cambian el perfil de México; se reactiva y la
+    // ficha de ejemplo se completa con los campos que piden las reglas propuestas.
     await ensureDemoCompliance();
+    if (demoCompliance) {
+      await sql`
+        update public.product_regulatory_info
+           set data = ${sql.json(EXAMPLE_SHEET)}::jsonb || data
+         where store_id = ${already.id} and category_key = 'dietary_supplement'`;
+      await ensureDemoLegend(already.id, await ownerUser());
+    }
     await refreshBanner(already.id);
     await sql`insert into public.store_domains (store_id, hostname, type, status, is_primary)
               values (${already.id}, ${hostname}, 'platform_subdomain', 'active', false)
@@ -438,8 +472,13 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
   const banner = await uploadImage(storeId, "banner", null, bannerSvg(style.colors), "", 0);
   // (Las siguientes siembras reemplazan el banner con refreshBanner si cambia.)
 
+  await asOwner(
+    ownerId,
+    (tx) => tx`select public.compliance_set_store_category(${storeId}, 'dietary_supplement', true)`,
+  );
+  await ensureDemoLegend(storeId, ownerId);
+
   await asOwner(ownerId, async (tx) => {
-    await tx`select public.compliance_set_store_category(${storeId}, 'dietary_supplement', true)`;
     const goal =
       await tx`select public.catalog_save_attribute(${storeId}, ${tx.json({ name: "Objetivo", values: GOALS.map((label) => ({ label })) })}) as id`;
     const flavor =
@@ -479,8 +518,7 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
           form: shape === "bottle" ? "Cápsulas" : "Polvo",
           serving_size: shape === "bottle" ? "2 cápsulas" : "1 medida",
           servings_per_container: servings,
-          ingredients: "Ingredientes de ejemplo (pendiente de contenido real).",
-          usage: "Modo de uso de ejemplo (pendiente de contenido real).",
+          ...EXAMPLE_SHEET,
         },
       )})`;
       const values = [

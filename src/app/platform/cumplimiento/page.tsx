@@ -95,8 +95,10 @@ export default async function PlatformCompliancePage() {
                       <TD className="whitespace-pre-line">
                         {rule.kind === "required_field"
                           ? supplementFieldLabel(rule.field_key ?? "")
-                          : rule.body}
-                        {rule.kind === "required_legend" ? (
+                          : rule.kind === "store_legend"
+                            ? `La tienda redacta y aprueba su leyenda.${rule.body ? ` Borrador sugerido: ${rule.body}` : ""}`
+                            : rule.body}
+                        {rule.kind === "required_legend" || rule.kind === "store_legend" ? (
                           <span className="block text-[13px] text-fg-muted">
                             En: {rule.placements.map((p) => PLACEMENT_LABELS[p] ?? p).join(", ")}
                           </span>

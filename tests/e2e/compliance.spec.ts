@@ -26,6 +26,14 @@ let tenant: Awaited<ReturnType<typeof createTenant>>;
 let other: Awaited<ReturnType<typeof createTenant>>;
 let productId = "";
 let ownerSecret = "";
+let seededRuleIds: string[] = [];
+let profileBefore: {
+  id: string;
+  status: string;
+  reviewed_by: string | null;
+  reviewed_at: Date | null;
+  review_notes: string | null;
+};
 
 /** Acceso de un staff que ya activó la verificación en dos pasos. */
 async function loginAgain(page: Page, email: string, secret: string) {
@@ -41,18 +49,46 @@ async function loginAgain(page: Page, email: string, secret: string) {
 
 test.describe.configure({ mode: "serial" });
 
+test.afterAll(async () => {
+  // Las reglas de esta corrida se retiran y vuelven las propuestas.
+  await admin`update public.compliance_rules set status = 'retired'
+               where profile_id = ${profileBefore.id} and status = 'active'
+                 and not (id = any (${seededRuleIds}::uuid[]))`;
+  await admin`update public.compliance_rules set status = 'active' where id = any (${seededRuleIds}::uuid[])`;
+  await admin`update public.compliance_profiles
+                 set status = ${profileBefore.status}, reviewed_by = ${profileBefore.reviewed_by},
+                     reviewed_at = ${profileBefore.reviewed_at}, review_notes = ${profileBefore.review_notes}
+               where id = ${profileBefore.id}`;
+});
+
 test.beforeAll(async () => {
   const ownerId = await createAuthUser(ownerEmail);
   tenant = await createTenant(`s${run}`, ownerId);
   const adminId = await createAuthUser(adminEmail);
   await admin`insert into public.platform_staff (user_id, role) values (${adminId}, 'platform_admin')`;
-  // El perfil de México es de la plataforma: cada corrida empieza sin reglas ni revisión.
-  await admin`delete from public.compliance_rules
-               where profile_id = (select id from public.compliance_profiles
-                                    where country = 'MX' and category_key = 'dietary_supplement')`;
+  // El perfil de México es de la plataforma: cada corrida empieza sin reglas
+  // vigentes ni revisión. Las reglas propuestas (Fase A) se retiran, no se
+  // borran, y se restauran al terminar.
+  const before = await admin<
+    {
+      id: string;
+      status: string;
+      reviewed_by: string | null;
+      reviewed_at: Date | null;
+      review_notes: string | null;
+    }[]
+  >`
+    select id, status, reviewed_by, reviewed_at, review_notes from public.compliance_profiles
+     where country = 'MX' and category_key = 'dietary_supplement'`;
+  profileBefore = before[0]!;
+  seededRuleIds = (
+    await admin<{ id: string }[]>`
+      update public.compliance_rules set status = 'retired'
+       where profile_id = ${profileBefore.id} and status = 'active' returning id`
+  ).map((r) => r.id);
   await admin`update public.compliance_profiles
                  set status = 'pending', reviewed_by = null, reviewed_at = null, review_notes = null
-               where country = 'MX' and category_key = 'dietary_supplement'`;
+               where id = ${profileBefore.id}`;
   productId = await admin.begin(async (sql) => {
     await sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: ownerId, role: "authenticated", aal: "aal2" })}, true)`;
     await sql`set local role authenticated`;
@@ -262,4 +298,40 @@ test("editar la ficha de un producto publicado se ve al instante en la tienda", 
   const info = page.getByRole("region", { name: "Información del suplemento alimenticio" });
   await expect(info.getByText("Tomar una cápsula al día.")).toBeVisible();
   await expect(info.getByText("Tomar dos cápsulas al día con alimentos.")).toHaveCount(0);
+});
+
+test("Fase A: leyenda de la tienda — el borrador sugerido no se aprueba; la aprobada se publica y desbloquea", async ({
+  page,
+}) => {
+  // La regla propuesta `leyenda_tienda` vuelve a estar vigente (sin revisión en cola:
+  // el validador de la tienda debe señalar el producto publicado que ya no cumple).
+  await admin`update public.compliance_rules set status = 'active'
+               where profile_id = ${profileBefore.id} and key = 'leyenda_tienda'`;
+  const STORE_LEGEND = `LEYENDA DE LA TIENDA REVISADA ${run}`;
+  await loginAgain(page, ownerEmail, ownerSecret);
+  await page.goto(`/admin/${tenant.handle}/ajustes/cumplimiento`);
+
+  const blocked = page.getByRole("region", { name: "Productos que no se pueden publicar" });
+  await expect(blocked.getByRole("link", { name: "Omega 3" })).toBeVisible();
+  await expect(blocked.getByText("Falta aprobar la leyenda sanitaria de tu tienda")).toBeVisible();
+
+  const legend = page.getByRole("region", { name: "Leyenda sanitaria de tu tienda" });
+  const body = legend.getByLabel("Texto de la leyenda (borrador)");
+  await expect(body).toHaveValue(/^PENDIENTE DE REVISIÓN/);
+  await legend.getByLabel("Revisado por (para aprobar)").fill("Asesoría de prueba E2E");
+  await legend.getByRole("checkbox").check();
+  await legend.getByRole("button", { name: "Aprobar y publicar leyenda" }).click();
+  await expect(legend.getByRole("alert")).toContainText("PENDIENTE DE REVISIÓN");
+
+  await legend.getByLabel("Texto de la leyenda (borrador)").fill(STORE_LEGEND);
+  await legend.getByRole("checkbox").check();
+  await legend.getByRole("button", { name: "Aprobar y publicar leyenda" }).click();
+  await expect(legend.getByRole("status").filter({ hasText: "Leyenda aprobada" })).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Productos que no se pueden publicar" }),
+  ).toContainText("Todos tus productos cumplen");
+
+  await page.goto(`http://${tenant.handle}.localhost:3000/productos/omega-3`);
+  await expect(page.getByRole("note", { name: "Leyendas sanitarias" })).toContainText(STORE_LEGEND);
 });

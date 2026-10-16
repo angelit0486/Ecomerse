@@ -7,7 +7,7 @@ import { rpcDetail } from "@/server/compliance/errors";
 import { callRpc } from "@/server/db/rpc";
 import { invalidateStore } from "@/server/storefront/cache";
 
-import { storeClient, type FormState } from "../../_shared/action-state";
+import { failureFrom, formValues, storeClient, type FormState } from "../../_shared/action-state";
 
 /**
  * Ajustes → Cumplimiento (R-T02, ADR-021). La tienda declara qué categorías
@@ -84,5 +84,55 @@ export async function classifyPublishedAsUnregulated(
       count === 1
         ? "1 producto marcado como no regulado."
         : `${count} productos marcados como no regulados.`,
+  };
+}
+
+const legendFailure = failureFrom("compliance", {
+  body: "Escribe la leyenda (de 1 a 2 000 caracteres, sin caracteres de control).",
+  reviewed_by: "Escribe el nombre de quien revisó la leyenda (2 a 120 caracteres).",
+  pending_marker:
+    "El texto todavía dice «PENDIENTE DE REVISIÓN»: ajústalo con tu asesor y quita esa nota antes de aprobarlo.",
+  category: "Declara primero esta categoría.",
+});
+
+/**
+ * Leyenda sanitaria de la tienda (Fase A): guardar el borrador no cambia lo que ve
+ * el comprador; aprobar publica exactamente el texto enviado, con el nombre de
+ * quien lo revisó. La base exige store.update y rechaza la marca de borrador.
+ */
+export async function saveStoreLegend(
+  storeHandle: string,
+  categoryKey: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const values = formValues(formData, ["body", "reviewed_by"]);
+  const approve = formData.get("intent") === "approve";
+  if (approve && formData.get("confirm") !== "1") {
+    return {
+      error: "Confirma que tu asesor regulatorio revisó este texto.",
+      fields: { confirm: "required" },
+      values,
+    };
+  }
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "compliance_save_store_legend", {
+      p_store_id: storeId,
+      p_category_key: categoryKey,
+      p_body: values.body,
+      p_approve: approve,
+      p_reviewed_by: approve ? values.reviewed_by : null,
+    });
+    invalidateStore(storeId);
+  } catch (error) {
+    return legendFailure(error, values);
+  }
+  revalidatePath(`/admin/${storeHandle}/ajustes/cumplimiento`);
+  return {
+    ok: true,
+    message: approve
+      ? "Leyenda aprobada: ya se muestra en tu tienda."
+      : "Borrador guardado. Lo que ve el comprador no cambia hasta que lo apruebes.",
   };
 }

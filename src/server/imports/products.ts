@@ -53,6 +53,7 @@ export const IMPORT_HEADERS = [
  */
 export const REGULATORY_FIELD_COLUMNS = [
   "regulatory_form",
+  "regulatory_net_content",
   "regulatory_serving_size",
   "regulatory_servings_per_container",
   "regulatory_ingredients",

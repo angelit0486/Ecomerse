@@ -24,6 +24,9 @@ let storeId = "";
 let ownerId = "";
 let adminId = "";
 let profileId = "";
+/** Reglas propuestas de la migración (Fase A): se retiran durante la prueba y se restauran. */
+let seededRuleIds: string[] = [];
+let profileBefore: Record<string, unknown> = {};
 
 /** Como PostgREST: claims del JWT y rol authenticated, en una transacción. */
 async function as<T>(sub: string, fn: (sql: postgres.TransactionSql) => Promise<T>): Promise<T> {
@@ -63,13 +66,25 @@ beforeAll(async () => {
   const [profile] = await admin<{ id: string }[]>`
     select id from public.compliance_profiles where country = 'MX' and category_key = 'dietary_supplement'`;
   profileId = profile!.id;
+  const [before] = await admin<Record<string, unknown>[]>`
+    select status, reviewed_by, reviewed_at, review_notes from public.compliance_profiles where id = ${profileId}`;
+  profileBefore = before!;
+  const seeded = await admin<{ id: string }[]>`
+    update public.compliance_rules set status = 'retired'
+     where profile_id = ${profileId} and status = 'active' returning id`;
+  seededRuleIds = seeded.map((r) => r.id);
 });
 
 afterAll(async () => {
-  // El perfil es de la plataforma: se deja como lo dejó la migración.
-  await admin`delete from public.compliance_rules where profile_id = ${profileId}`;
+  // El perfil es de la plataforma: se deja como lo dejó la migración (solo se
+  // borran las reglas que creó esta prueba).
+  await admin`delete from public.compliance_rules
+               where profile_id = ${profileId} and not (id = any (${seededRuleIds}::uuid[]))`;
+  await admin`update public.compliance_rules set status = 'active' where id = any (${seededRuleIds}::uuid[])`;
   await admin`update public.compliance_profiles
-                 set status = 'pending', reviewed_by = null, reviewed_at = null, review_notes = null
+                 set status = ${profileBefore.status as string}, reviewed_by = ${profileBefore.reviewed_by as string | null},
+                     reviewed_at = ${profileBefore.reviewed_at as Date | null},
+                     review_notes = ${profileBefore.review_notes as string | null}
                where id = ${profileId}`;
   await Promise.all([admin.end(), worker.end()]);
 });

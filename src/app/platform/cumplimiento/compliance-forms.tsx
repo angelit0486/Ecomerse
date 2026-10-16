@@ -88,7 +88,18 @@ export function RuleForm({ profileId, fieldKeys }: { profileId: string; fieldKey
         </Field>
       ) : (
         <Field
-          label={kind === "forbidden_term" ? "Término" : "Texto de la leyenda"}
+          label={
+            kind === "forbidden_term"
+              ? "Término"
+              : kind === "store_legend"
+                ? "Borrador sugerido para la tienda (opcional)"
+                : "Texto de la leyenda"
+          }
+          hint={
+            kind === "store_legend"
+              ? "Nunca se muestra al comprador: cada tienda redacta y aprueba la suya con su asesor."
+              : undefined
+          }
           error={state.fields?.body}
         >
           {(c) => (
@@ -103,7 +114,7 @@ export function RuleForm({ profileId, fieldKeys }: { profileId: string; fieldKey
           )}
         </Field>
       )}
-      {kind === "required_legend" ? (
+      {kind === "required_legend" || kind === "store_legend" ? (
         <fieldset className="space-y-1">
           <legend className="text-[13px] font-medium">Dónde se muestra</legend>
           {Object.entries(PLACEMENT_LABELS).map(([value, label]) => (

@@ -16,6 +16,18 @@ export interface ComplianceLegend {
   placements: Array<"product_page" | "cart" | "checkout">;
 }
 
+export interface StoreLegendStatus {
+  label: string;
+  placements: Array<"product_page" | "cart" | "checkout">;
+  /** Borrador sugerido por la plataforma (PENDIENTE DE REVISIÓN); nunca se publica. */
+  suggested: string | null;
+  draft: string | null;
+  approved: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  updated_at: string | null;
+}
+
 export interface ComplianceCategoryStatus {
   key: string;
   name: string;
@@ -25,9 +37,12 @@ export interface ComplianceCategoryStatus {
     version: number;
     reviewed_by: string | null;
     reviewed_at: string | null;
+    review_notes: string | null;
   };
   required_fields: string[];
   legends: ComplianceLegend[];
+  /** Si las reglas piden la leyenda de la tienda (Fase A): borrador y texto aprobado. */
+  store_legend: StoreLegendStatus | null;
   forbidden_terms: Array<{ key: string; label: string; term: string }>;
   products: number;
 }
@@ -43,6 +58,20 @@ export function getComplianceStatus(
   storeId: string,
 ): Promise<ComplianceStatus> {
   return callRpc<ComplianceStatus>(supabase, "compliance_store_status", { p_store_id: storeId });
+}
+
+export interface ComplianceReport {
+  /** Productos (no archivados) que no se pueden publicar; `products` trae los primeros 500. */
+  total: number;
+  checked: number;
+  products: Array<{ id: string; title: string; status: string; codes: string[] }>;
+}
+
+export function getComplianceReport(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<ComplianceReport> {
+  return callRpc<ComplianceReport>(supabase, "compliance_store_report", { p_store_id: storeId });
 }
 
 export interface RegulatoryInfo {
@@ -65,7 +94,7 @@ export function getRegulatoryInfo(
 
 export interface PlatformComplianceRule {
   id: string;
-  kind: "required_field" | "required_legend" | "forbidden_term";
+  kind: "required_field" | "required_legend" | "forbidden_term" | "store_legend";
   key: string;
   label: string;
   body: string | null;

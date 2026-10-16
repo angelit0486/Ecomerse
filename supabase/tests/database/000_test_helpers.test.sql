@@ -161,6 +161,13 @@ begin
   insert into public.platform_staff (user_id, role) values (tests.fx(p_user_key), p_role);
 end $$;
 
+-- Las reglas propuestas de México (Fase A, migración 0200) vienen en todo entorno:
+-- las pruebas que arman sus propias reglas las retiran antes (sin borrarlas).
+create or replace function tests.retire_compliance_rules(p_profile_id uuid) returns void
+language sql as $$
+  update public.compliance_rules set status = 'retired' where profile_id = p_profile_id and status = 'active';
+$$;
+
 -- Ejecuta SQL y devuelve el número de filas afectadas o leídas; si el rol no tiene
 -- privilegio sobre la tabla, devuelve 0 (sin acceso). Se ejecuta como el rol actual.
 create or replace function tests.row_count(p_sql text) returns bigint

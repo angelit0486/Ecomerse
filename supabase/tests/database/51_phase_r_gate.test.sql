@@ -45,6 +45,7 @@ select tests.create_tenant('b', 'owner_b');
 select tests.make_platform_staff('padmin', 'platform_admin');
 select tests.set_fx('profile', (select id from public.compliance_profiles
                                  where country = 'MX' and category_key = 'dietary_supplement'));
+select tests.retire_compliance_rules(tests.fx('profile'));
 select tests.login('padmin');
 select public.platform_compliance_rule_save(tests.fx('profile'),
   '{"kind":"forbidden_term","key":"no_cura","label":"Afirmación curativa","body":"cura"}');

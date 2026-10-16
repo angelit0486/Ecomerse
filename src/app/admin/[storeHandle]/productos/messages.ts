@@ -16,6 +16,8 @@ export const PUBLISH_ISSUES: Record<string, string> = {
     "Indica en la ficha sanitaria si es un suplemento alimenticio o un producto no regulado.",
   compliance_profile_pending:
     "Las reglas sanitarias de esta categoría aún no están revisadas: no se puede publicar todavía.",
+  compliance_store_legend_pending:
+    "Falta aprobar la leyenda sanitaria de tu tienda (Ajustes → Cumplimiento).",
 };
 
 /** Texto de un aviso de publicación. Los de cumplimiento traen el campo o la regla tras ":". */

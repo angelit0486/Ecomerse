@@ -34,9 +34,10 @@ export interface RegulatoryInitial {
 }
 
 const LONG_FIELDS = ["ingredients", "usage", "warnings", "storage", "allergens"] as const;
-const SHORT_FIELDS = ["form", "serving_size", "sanitary_notice"] as const;
+const SHORT_FIELDS = ["form", "net_content", "serving_size", "sanitary_notice"] as const;
 const LIMITS: Record<string, number> = {
   form: 100,
+  net_content: 100,
   serving_size: 100,
   ingredients: 5000,
   usage: 2000,

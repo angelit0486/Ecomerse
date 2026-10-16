@@ -20,6 +20,7 @@ select tests.make_platform_staff('padmin', 'platform_admin');
 select tests.make_platform_staff('psupport', 'platform_support');
 select tests.set_fx('profile', (select id from public.compliance_profiles
                                  where country = 'MX' and category_key = 'dietary_supplement'));
+select tests.retire_compliance_rules(tests.fx('profile'));
 
 -- Ejecuta SQL y devuelve 'ok' o 'mensaje/detalle/hint' del error.
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
@@ -170,7 +171,7 @@ select lives_ok(format($$select public.platform_compliance_profile_set_status(%L
                        tests.fx('profile')), 'activar con revisor');
 select tests.logout();
 select is((select status || ':' || version || ':' || (reviewed_at is not null) from public.compliance_profiles
-            where id = tests.fx('profile')), 'active:2:true', 'perfil activo, versión 2, con fecha de revisión');
+            where id = tests.fx('profile')), 'active:3:true', 'perfil activo, versión 3 (la 2 son las reglas propuestas de la Fase A), con fecha de revisión');
 
 -- 8. Campos obligatorios y términos prohibidos (palabra completa, sin acentos ni mayúsculas).
 select tests.login('owner');

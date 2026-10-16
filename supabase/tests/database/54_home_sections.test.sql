@@ -120,6 +120,7 @@ select is(pg_temp.gw('get_home') #> '{sections,0,image}', 'null'::jsonb, 'un her
 -- Revisión de cumplimiento de la portada publicada (§13 M1).
 select tests.set_fx('profile', (select id from public.compliance_profiles
                                  where country = 'MX' and category_key = 'dietary_supplement'));
+select tests.retire_compliance_rules(tests.fx('profile'));
 select tests.login('padmin');
 select public.platform_compliance_rule_save(tests.fx('profile'),
   '{"kind":"forbidden_term","key":"no_rapidisimo","label":"Prueba","body":"rapidísimo"}');
