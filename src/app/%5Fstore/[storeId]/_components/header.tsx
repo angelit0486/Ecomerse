@@ -38,11 +38,14 @@ export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme[
 export function StoreHeader({
   store,
   menu,
+  discovery = [],
   cartCount,
   logoPosition = "left",
 }: {
   store: StorePublic;
   menu: MenuEntry[];
+  /** Accesos con contenido real: «Marcas» y «Ofertas». */
+  discovery?: { label: string; href: string }[];
   cartCount: number;
   logoPosition?: "left" | "center";
 }) {
@@ -114,7 +117,7 @@ export function StoreHeader({
             </span>
           </Link>
         </div>
-        <MainNav menu={menu} />
+        <MainNav menu={menu} discovery={discovery} />
       </NavProvider>
     </header>
   );
@@ -165,10 +168,12 @@ export function StoreFooter({
   store,
   menu,
   settings,
+  discovery = [],
 }: {
   store: StorePublic;
   menu: MenuEntry[];
   settings: ThemeSettings;
+  discovery?: { label: string; href: string }[];
 }) {
   const contact = settings.contact ?? {};
   const email = store.contact?.email;
@@ -192,6 +197,13 @@ export function StoreFooter({
                   Ver el catálogo
                 </Link>
               </li>
+              {discovery.map((d) => (
+                <li key={d.href}>
+                  <Link href={d.href} className="hover:underline">
+                    {d.label}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <Link href="/cuenta" className="hover:underline">
                   Tus pedidos

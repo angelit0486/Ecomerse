@@ -66,6 +66,11 @@ export interface ListFilters {
   attributes?: AttributeSelection | undefined;
   /** Filtro de marca por slug (F9-T04): OR entre marcas, AND con lo demás. */
   brands?: string[] | undefined;
+  /** Rango de precio en centavos sobre el precio desde (super prompt §7). */
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  /** Solo productos con descuento real (precio de comparación mayor que el precio). */
+  onSale?: boolean | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
 }
@@ -199,13 +204,18 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
  * la caché con claves de un solo uso (Gate F5).
  */
 function cacheable(
-  filters: Pick<ListFilters, "cursor" | "query" | "attributes" | "brands">,
+  filters: Pick<
+    ListFilters,
+    "cursor" | "query" | "attributes" | "brands" | "minPrice" | "maxPrice"
+  >,
 ): boolean {
   return (
     !filters.cursor &&
     !filters.query &&
     !(filters.attributes && hasSelection(filters.attributes)) &&
-    !filters.brands?.length
+    !filters.brands?.length &&
+    filters.minPrice === undefined &&
+    filters.maxPrice === undefined
   );
 }
 
@@ -232,9 +242,10 @@ const readListProducts = async (storeId: string, filters: ListFilters): Promise<
   const page = await call<ProductPage>(db`
     select storefront.list_products(
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
-      ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null}, null, null,
+      ${filters.query?.slice(0, 200) ?? null}, ${filters.sort ?? null},
+      ${filters.minPrice ?? null}::bigint, ${filters.maxPrice ?? null}::bigint,
       ${filters.available ?? false}, ${cursor ? db.json(cursor) : null}::jsonb, ${filters.limit ?? 24},
-      ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[]
+      ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[], ${filters.onSale ?? false}
     ) as value`);
   return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
 };
@@ -254,12 +265,47 @@ const readListFacets = async (storeId: string, filters: ListFilters): Promise<Fa
       select storefront.list_facets(
         ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
         ${filters.query?.slice(0, 200) ?? null}, ${filters.available ?? false},
-        ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[]
+        ${attributesParam(db, filters)}::jsonb, ${brandsParam(filters)}::text[],
+        ${filters.minPrice ?? null}::bigint, ${filters.maxPrice ?? null}::bigint, ${filters.onSale ?? false}
       ) as value`)) ?? []
   );
 };
 
 const listFacetsCached = cachedRead("list_facets", readListFacets);
+
+/** Marca del directorio (super prompt §8): solo con productos publicados. */
+export interface BrandSummary {
+  slug: string;
+  name: string;
+  count: number;
+  logo: { path: string; width: number | null; height: number | null } | null;
+}
+
+export async function listBrands(storeId: string): Promise<BrandSummary[]> {
+  assertStore(storeId);
+  return (await brandsCached(storeId)) ?? [];
+}
+
+const brandsCached = cachedRead("list_brands", (storeId: string) =>
+  call<BrandSummary[]>(gatewayDb()`select storefront.list_brands(${storeId}::uuid) as value`),
+);
+
+/** Cuántas marcas y ofertas hay: el menú solo muestra lo que tiene contenido. */
+export interface DiscoverySummary {
+  brands: number;
+  offers: number;
+}
+
+export async function getDiscoverySummary(storeId: string): Promise<DiscoverySummary> {
+  assertStore(storeId);
+  return (await discoveryCached(storeId)) ?? { brands: 0, offers: 0 };
+}
+
+const discoveryCached = cachedRead("discovery_summary", (storeId: string) =>
+  call<DiscoverySummary>(
+    gatewayDb()`select storefront.discovery_summary(${storeId}::uuid) as value`,
+  ),
+);
 
 export const getProduct = cache(
   async (storeId: string, slug: string): Promise<ProductDetail | null> => {

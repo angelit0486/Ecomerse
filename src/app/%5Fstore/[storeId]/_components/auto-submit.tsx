@@ -40,6 +40,8 @@ export function AutoSubmitForm({
     for (const el of Array.from(form.current?.elements ?? [])) {
       if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) {
         el.checked = el.defaultChecked;
+      } else if (el instanceof HTMLInputElement && el.type === "number") {
+        el.value = el.defaultValue;
       } else if (el instanceof HTMLSelectElement) {
         for (const option of Array.from(el.options)) option.selected = option.defaultSelected;
       }
@@ -48,7 +50,8 @@ export function AutoSubmitForm({
   function apply(form: HTMLFormElement) {
     const params = new URLSearchParams();
     for (const [name, value] of new FormData(form)) {
-      if (typeof value === "string") params.append(name, value);
+      // Un rango de precio vacío no va en la URL.
+      if (typeof value === "string" && value !== "") params.append(name, value);
     }
     const qs = params.toString();
     router.push(qs ? `${action}?${qs}` : action, { scroll: false });
@@ -59,7 +62,22 @@ export function AutoSubmitForm({
       ref={form}
       method="get"
       action={action}
-      onChange={(e: FormEvent<HTMLFormElement>) => apply(e.currentTarget)}
+      // Casillas y listas se aplican al cambiar; los campos de texto o número (rango
+      // de precio) esperan a «Aplicar» o Enter para no navegar con cada tecla.
+      onChange={(e: FormEvent<HTMLFormElement>) => {
+        const target = e.target as HTMLElement;
+        if (
+          target instanceof HTMLInputElement &&
+          (target.type === "number" || target.type === "text")
+        ) {
+          return;
+        }
+        apply(e.currentTarget);
+      }}
+      onSubmit={(e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        apply(e.currentTarget);
+      }}
     >
       {children}
     </form>

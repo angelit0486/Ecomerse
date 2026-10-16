@@ -204,9 +204,12 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
   await expect(page).toHaveURL(/\/productos\?objetivo=masa-muscular$/);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco", "Proteína Vainilla"]);
 
-  // Otra tienda: sin filtros, y un filtro de la URL no le aplica.
+  // Otra tienda: sin filtros de atributo (solo el de precio, que toda tienda
+  // tiene), y un filtro de la URL no le aplica.
   await page.goto(`http://${other.handle}.localhost:3000/productos?objetivo=masa-muscular`);
-  await expect(page.getByRole("form", { name: "Filtros" })).toHaveCount(0);
+  const otherFilters = page.getByRole("form", { name: "Filtros" });
+  await expect(otherFilters.getByRole("group", { name: "Precio" })).toBeVisible();
+  await expect(otherFilters.getByRole("group", { name: "Objetivo" })).toHaveCount(0);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína ajena"]);
 });
 

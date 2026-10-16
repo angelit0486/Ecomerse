@@ -7,9 +7,16 @@ import {
   parseBrandParams,
   selectionPairs,
 } from "@/lib/catalog/attributes";
+import {
+  parsePriceFilter,
+  priceFilterCents,
+  priceFilterLabel,
+  priceFilterPairs,
+} from "@/lib/catalog/price-filter";
 import type { StorePublic } from "@/server/storefront/store-public";
 import {
   encodeListCursor,
+  getDiscoverySummary,
   LIST_SORTS,
   listFacets,
   listProducts,
@@ -19,6 +26,7 @@ import {
 import { ActiveFilters, FacetFilters } from "./facet-filters";
 import { Pagination } from "./pagination";
 import { ProductGrid } from "./product-card";
+import { money } from "./format";
 import { SortForm } from "./sort-form";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
@@ -38,6 +46,7 @@ export async function ProductListing({
   title,
   emptyTitle,
   emptyText,
+  onlyOffers = false,
 }: {
   store: StorePublic;
   /** h1 del listado; con un solo objetivo elegido pasa a «Para tu …» (revisión M6). */
@@ -49,11 +58,17 @@ export async function ProductListing({
   query?: string;
   emptyTitle: string;
   emptyText: string;
+  /** Página «Ofertas»: siempre filtra por descuento real. */
+  onlyOffers?: boolean;
 }) {
   const sortParam = one(searchParams.orden);
   const sort = LIST_SORTS.find((s) => s === sortParam) as ListSort | undefined;
   const available = one(searchParams.disponible) === "1";
   const cursor = one(searchParams.desde);
+  // Precio y ofertas (super prompt §7): en la URL, compartibles; la base filtra.
+  const parsedPrice = parsePriceFilter(searchParams);
+  const price = { ...parsedPrice, onSale: onlyOffers || parsedPrice.onSale };
+  const cents = priceFilterCents(price);
   // Filtros de atributos de la URL (R-T04); la base ignora los que la tienda no tiene.
   // Solo lo que la tienda tiene filtra (y salta la caché): un parámetro cualquiera
   // con forma de filtro no abre lecturas sin caché (Gate R).
@@ -62,7 +77,14 @@ export async function ProductListing({
   const parsedBrands = brandSlug ? [] : parseBrandParams(searchParams);
   const known =
     hasSelection(parsed) || parsedBrands.length > 0
-      ? await listFacets(store.id, { categoryPath, brandSlug, query, available })
+      ? await listFacets(store.id, {
+          categoryPath,
+          brandSlug,
+          query,
+          available,
+          ...cents,
+          onSale: price.onSale,
+        })
       : [];
   const brandFacet = known.find((f) => f.key === "marca");
   const brands = parsedBrands.filter((b) => brandFacet?.values.some((v) => v.key === b));
@@ -74,7 +96,7 @@ export async function ProductListing({
       })
       .filter(([, values]) => values.length > 0),
   );
-  const [page, facets] = await Promise.all([
+  const [page, facets, summary] = await Promise.all([
     listProducts(store.id, {
       categoryPath,
       brandSlug,
@@ -84,6 +106,8 @@ export async function ProductListing({
       attributes: requested,
       brands,
       cursor,
+      ...cents,
+      onSale: price.onSale,
     }),
     listFacets(store.id, {
       categoryPath,
@@ -92,20 +116,26 @@ export async function ProductListing({
       available,
       attributes: requested,
       brands,
+      ...cents,
+      onSale: price.onSale,
     }),
+    getDiscoverySummary(store.id),
   ]);
 
   // Solo lo que la tienda reconoció queda en los enlaces.
   const selected = facets.flatMap((f) =>
     f.values.filter((v) => v.selected).map((v) => ({ facet: f, value: v })),
   );
-  const selectionParams = selectionPairs(
+  // En «Ofertas» la oferta es la página, no un filtro que se pueda quitar.
+  const pricePairs = priceFilterPairs({ ...price, onSale: price.onSale && !onlyOffers });
+  const attributePairs = selectionPairs(
     Object.fromEntries(
       facets
         .map((f) => [f.key, f.values.filter((v) => v.selected).map((v) => v.key)] as const)
         .filter(([, values]) => values.length > 0),
     ),
   );
+  const selectionParams = [...attributePairs, ...pricePairs];
   const baseParams: [string, string][] = [
     ...(query ? [["q", query] as [string, string]] : []),
     ...(sort ? [["orden", sort] as [string, string]] : []),
@@ -115,13 +145,38 @@ export async function ProductListing({
     const qs = new URLSearchParams(pairs).toString();
     return qs ? `${basePath}?${qs}` : basePath;
   };
-  const filtered = selected.length > 0;
+  const fmt = (pesos: number) => money(pesos * 100, store).replace(/[.,]00$/, "");
+  const priceLabel = priceFilterLabel(price, fmt);
+  const without = (names: string[]) => selectionParams.filter(([k]) => !names.includes(k));
+  const extraChips = [
+    ...(priceLabel
+      ? [
+          {
+            facet: "Precio",
+            label: priceLabel,
+            href: href([...baseParams, ...without(["precio_min", "precio_max"])]),
+          },
+        ]
+      : []),
+    ...(price.onSale && !onlyOffers
+      ? [
+          {
+            facet: "Ofertas",
+            label: "Solo ofertas",
+            href: href([...baseParams, ...without(["oferta"])]),
+          },
+        ]
+      : []),
+  ];
+  const filtered = selected.length > 0 || extraChips.length > 0;
   const filterForm = (
     <FacetFilters
       action={basePath}
       facets={facets}
       hidden={baseParams}
       clearHref={filtered ? href(baseParams) : null}
+      price={price}
+      showOnSale={!onlyOffers && summary.offers > 0}
     />
   );
   const next = encodeListCursor(page.next_cursor);
@@ -158,30 +213,35 @@ export async function ProductListing({
               </p>
             ) : null}
           </div>
-          <div className={facets.length > 0 ? "grid gap-6 md:grid-cols-[15rem_1fr]" : ""}>
-            {facets.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-[15rem_1fr]">
+            {nothing ? null : (
               <div>
                 {/* Móvil: plegados tras «Filtros (n)» (sin JS ni saltos de diseño); escritorio:
                 siempre visibles. Solo uno de los dos está en pantalla. */}
                 <details className="md:hidden">
                   <summary className="mb-3 inline-flex min-h-11 cursor-pointer items-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium">
-                    {selected.length > 0 ? `Filtros (${selected.length})` : "Filtros"}
+                    {selected.length + extraChips.length > 0
+                      ? `Filtros (${selected.length + extraChips.length})`
+                      : "Filtros"}
                   </summary>
                   {filterForm}
                 </details>
                 <div className="hidden md:block">{filterForm}</div>
               </div>
-            ) : null}
+            )}
             <div className="min-w-0 space-y-4">
               <ActiveFilters
-                items={selected.map(({ facet, value }) => ({
-                  facet: facet.name,
-                  label: value.label,
-                  href: href([
-                    ...baseParams,
-                    ...selectionParams.filter(([k, v]) => !(k === facet.key && v === value.key)),
-                  ]),
-                }))}
+                items={[
+                  ...selected.map(({ facet, value }) => ({
+                    facet: facet.name,
+                    label: value.label,
+                    href: href([
+                      ...baseParams,
+                      ...selectionParams.filter(([k, v]) => !(k === facet.key && v === value.key)),
+                    ]),
+                  })),
+                  ...extraChips,
+                ]}
               />
               {page.items.length === 0 ? (
                 <section className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-6">

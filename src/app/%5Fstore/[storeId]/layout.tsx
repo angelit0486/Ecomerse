@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { ThemeSettingsV1 } from "@/lib/theme/schema";
 import { getCart } from "@/server/storefront/cart";
-import { getMenus } from "@/server/storefront/catalog";
+import { getDiscoverySummary, getMenus } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
@@ -58,12 +58,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StoreLayout({ children, params }: Props) {
   const { storeId } = await params;
   const { store, preview } = await getStorefront(storeId);
-  const [menus, nonce, cart] = await Promise.all([
+  const [menus, nonce, cart, discovery] = await Promise.all([
     getMenus(store.id),
     headers().then((h) => h.get("x-nonce") ?? undefined),
     // Sin caché: depende de la cookie del comprador (§44.7).
     getCart(store.id).catch(() => null),
+    getDiscoverySummary(store.id),
   ]);
+  // «Marcas» con al menos dos (una sola no ayuda a explorar) y «Ofertas» con
+  // descuentos reales (super prompt §5 y §8).
+  const discoveryLinks = [
+    ...(discovery.brands >= 2 ? [{ label: "Marcas", href: "/marcas" }] : []),
+    ...(discovery.offers > 0 ? [{ label: "Ofertas", href: "/ofertas" }] : []),
+  ];
   const theme = resolveTheme(store.theme?.settings);
   // Se vuelve a validar al mostrar (F9-DESIGN §13 H2): un valor fuera del esquema
   // no llega a la página.
@@ -103,13 +110,19 @@ export default async function StoreLayout({ children, params }: Props) {
       <StoreHeader
         store={store}
         menu={menus.main}
+        discovery={discoveryLinks}
         cartCount={cart?.item_count ?? 0}
         logoPosition={theme.logoPosition}
       />
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>
-      <StoreFooter store={store} menu={menus.footer} settings={settings} />
+      <StoreFooter
+        store={store}
+        menu={menus.footer}
+        settings={settings}
+        discovery={discoveryLinks}
+      />
       {/* Botón flotante de WhatsApp solo si la tienda lo configuró (las tres tiendas
           de referencia lo tienen; pulido visual). Sube cuando hay barra de compra. */}
       {settings.contact?.whatsapp ? (

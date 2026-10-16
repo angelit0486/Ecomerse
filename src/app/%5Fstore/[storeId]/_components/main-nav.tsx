@@ -91,7 +91,14 @@ export function MenuButton() {
   );
 }
 
-export function MainNav({ menu }: { menu: NavEntry[] }) {
+export function MainNav({
+  menu,
+  discovery = [],
+}: {
+  menu: NavEntry[];
+  /** «Marcas» y «Ofertas», si no están ya en el menú de la tienda. */
+  discovery?: { label: string; href: string }[];
+}) {
   const { id, open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   // Un clic fuera cierra el submenú (Safari no da foco a los botones al hacer
@@ -112,9 +119,11 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
     setOpenIndex(null);
   };
 
+  const inMenu = new Set(menu.flatMap((m) => [m.href, ...m.children.map((c) => c.href)]));
   const entries: NavEntry[] = [
     { label: "Todos los productos", href: "/productos", children: [] },
     ...menu,
+    ...discovery.filter((d) => !inMenu.has(d.href)).map((d) => ({ ...d, children: [] })),
   ];
 
   function closeOnEscape(event: KeyboardEvent<HTMLLIElement>, index: number) {
