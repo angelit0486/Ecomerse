@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { productBadges } from "@/lib/catalog/merchandising";
+import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
 import { mediaUrl, type ProductCard as Card } from "@/server/storefront/catalog";
 
 import { Badges } from "./badges";
@@ -51,6 +51,13 @@ function ProductCard({
     product.min_price !== null &&
     product.max_price !== null &&
     product.max_price > product.min_price;
+  // Descuento y precio por porción solo con un precio único (como la ficha): con
+  // variantes de distinto precio no hay un número honesto que mostrar.
+  const price = !ranged ? product.min_price : null;
+  const sale = price !== null ? savings(price, product.compare_at_price) : null;
+  // Con una sola porción el «precio por porción» es el precio: no aporta nada.
+  const perServing =
+    price !== null && (product.servings ?? 0) > 1 ? pricePerServing(price, product.servings) : null;
   return (
     <article className="group flex h-full flex-col gap-2">
       <Link
@@ -98,9 +105,19 @@ function ProductCard({
                 {money(product.compare_at_price, store)}
               </s>
             ) : null}
+            {sale && sale.percent >= 1 ? (
+              <span className="ml-2 font-semibold">
+                <span className="sr-only">Ahorras </span>−{sale.percent} %
+              </span>
+            ) : null}
           </>
         ) : null}
       </p>
+      {perServing !== null ? (
+        <p className="text-xs text-[var(--sf-muted)]">
+          {product.servings} porciones · {money(perServing, store)} por porción
+        </p>
+      ) : null}
       {product.availability === "backorder" ? (
         <p className="text-xs text-[var(--sf-muted)]">
           {AVAILABILITY_LABELS[product.availability]}

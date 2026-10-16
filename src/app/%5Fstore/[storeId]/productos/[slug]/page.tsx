@@ -192,9 +192,11 @@ export default async function ProductPage({ params }: Props) {
     now: new Date(),
   });
   // Precio por porción solo sin variantes: las presentaciones cambian las porciones.
-  const perServing = single
-    ? pricePerServing(single.price, regulatory?.data.servings_per_container)
-    : null;
+  // Con una sola porción el precio por porción es el precio: no se muestra.
+  const perServing =
+    single && (regulatory?.data.servings_per_container ?? 0) > 1
+      ? pricePerServing(single.price, regulatory?.data.servings_per_container)
+      : null;
   const gallery = product.images.map((image) => ({
     src: mediaUrl(image.path),
     alt: image.alt ?? product.title,
@@ -322,6 +324,11 @@ export default async function ProductPage({ params }: Props) {
   );
 }
 
+/** «2–5 días» o «3 días» (mismo formato que el checkout). */
+function deliveryDays(min: number, max: number): string {
+  return min === max ? `${min} ${min === 1 ? "día" : "días"}` : `${min}–${max} días`;
+}
+
 /** Envío gratis real, formas de pago declaradas y WhatsApp (F9-DESIGN §9): nunca texto fijo. */
 function PurchaseInfo({
   store,
@@ -345,6 +352,11 @@ function PurchaseInfo({
           <span className="font-semibold">Envío gratis</span> en compras desde{" "}
           {money(shipping.free_over, store)}
           {shipping.conditional ? " (según destino)" : ""}.
+          {/* Costo y tiempo de la misma tarifa (revisión de conversión, M3): datos de la tienda. */}
+          {shipping.price > 0 ? ` Si no, ${money(shipping.price, store)}.` : null}
+          {shipping.est_days_min != null && shipping.est_days_max != null
+            ? ` Llega en ${deliveryDays(shipping.est_days_min, shipping.est_days_max)}.`
+            : null}
         </li>
       ) : null}
       {payments.length > 0 ? (

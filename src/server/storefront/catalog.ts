@@ -35,6 +35,8 @@ export interface ProductCard {
   image: ImageRef | null;
   /** Insignia «Nuevo» (F9-T03/T04). */
   published_at?: string | null;
+  /** Porciones por envase de la ficha sanitaria (precio por porción en la tarjeta). */
+  servings?: number | null;
 }
 
 export interface ProductPage {
@@ -285,6 +287,10 @@ export interface ShippingPromo {
   free_over: number;
   /** Solo en algunas regiones o pesos: la tienda dice «según destino». */
   conditional: boolean;
+  /** Costo de esa tarifa cuando no se alcanza el mínimo. */
+  price: number;
+  est_days_min: number | null;
+  est_days_max: number | null;
 }
 
 export const getShippingPromo = cache(async (storeId: string): Promise<ShippingPromo | null> => {

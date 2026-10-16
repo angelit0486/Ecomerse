@@ -90,6 +90,8 @@ test("la ficha muestra datos verificables, galería accesible y relacionados", a
   await expect(badges.getByRole("listitem")).toHaveText(["Oferta", "Nuevo"]);
   await expect(page.getByText("Ahorras $100.00 (33 %)")).toBeVisible();
   await expect(page.getByText("Envío gratis en compras desde $999.00.")).toBeVisible();
+  // Costo y tiempo de la misma tarifa (revisión de conversión, M3).
+  await expect(page.getByText("Si no, $99.00. Llega en 2–5 días.")).toBeVisible();
   await expect(page.getByText("Paga con Visa, OXXO.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Escríbenos por WhatsApp" })).toHaveAttribute(
     "href",

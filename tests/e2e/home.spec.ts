@@ -45,9 +45,14 @@ test.beforeAll(async () => {
     const attribute = await sql<{ id: string }[]>`
       select public.catalog_save_attribute(${tenant.storeId},
         ${sql.json({ name: "Objetivo", values: [{ label: "Energía" }, { label: "Fuerza" }] })}) as id`;
+    // Con existencias: la portada nunca muestra agotados (Gate F9, pgTAP 57).
     const product = async (title: string, price: number) => {
+      const sku = `${title.slice(0, 4).toUpperCase()}-${run}`;
       const [p] = await sql<{ r: { id: string } }[]>`
-        select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({ title, variants: [{ price }] })}) as r`;
+        select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({ title, variants: [{ price, sku }] })}) as r`;
+      const [v] = await sql<{ id: string }[]>`
+        select id from public.product_variants where store_id = ${tenant.storeId} and sku = ${sku.toUpperCase()}`;
+      await sql`select public.inventory_adjust(${tenant.storeId}, ${v!.id}, 'adjustment', 10, 'Inicial')`;
       await sql`select public.catalog_publish_product(${tenant.storeId}, ${p!.r.id})`;
       return p!.r.id;
     };
