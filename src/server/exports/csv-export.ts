@@ -3,6 +3,7 @@ import { toCsv, type CsvValue } from "@/lib/csv";
 import { formatAttributes, formatNutrition, type NutritionCells } from "@/lib/catalog/compact";
 import {
   ATTRIBUTE_HEADERS,
+  COST_HEADERS,
   IMPORT_HEADERS,
   REGULATORY_FIELD_COLUMNS,
   REGULATORY_HEADERS,
@@ -29,6 +30,8 @@ const ORDER_LABELS: Record<string, string> = {
 
 /** Columnas opcionales de productos: solo si la tienda las usa (R-T05). */
 export interface ProductCsvOptions {
+  /** Costo de cada variante: solo con products.cost.read (Fase B). */
+  costs?: boolean;
   regulated?: boolean;
   attributes?: boolean;
 }
@@ -57,6 +60,7 @@ export function exportCsv(
     case "products": {
       const headers = [
         ...IMPORT_HEADERS,
+        ...(options.costs ? COST_HEADERS : []),
         ...(options.regulated ? REGULATORY_HEADERS : []),
         ...(options.attributes ? ATTRIBUTE_HEADERS : []),
       ];
@@ -90,6 +94,7 @@ export function exportCsv(
             str(r.variant_status),
             str(r.seo_title),
             str(r.seo_description),
+            ...(options.costs ? [money(r.cost)] : []),
             ...(options.regulated ? regulatoryCells(r.regulatory) : []),
             ...(options.attributes
               ? [formatAttributes((r.attributes as { key: string; values: string[] }[]) ?? [])]

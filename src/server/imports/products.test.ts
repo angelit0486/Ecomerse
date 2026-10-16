@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { checkHeaders, IMPORT_HEADERS, planProductImport, type ImportColumn } from "./products";
+import {
+  ALL_IMPORT_HEADERS,
+  checkHeaders,
+  IMPORT_HEADERS,
+  planProductImport,
+  type ImportColumn,
+} from "./products";
 
 const H = [...IMPORT_HEADERS];
 const row = (values: Partial<Record<ImportColumn, string>>, headers: readonly string[] = H) =>
@@ -280,5 +286,42 @@ describe("ficha sanitaria y atributos (R-T05)", () => {
     });
     const [first] = planProductImport(["handle", "regulatory_category"], [["x", ""]]);
     expect(first!.normalized!.regulatory).toBeUndefined();
+  });
+});
+
+describe("costo unitario (Fase B)", () => {
+  const C = ["handle", "title", "sku", "price", "cost"];
+  it("lee el costo como el precio; vacío = se borra", () => {
+    const plan = planProductImport(C, [
+      row({ handle: "a", title: "A", sku: "a-1", price: "100", cost: "45,50" }, C),
+      row({ handle: "b", title: "B", sku: "b-1", price: "100", cost: "" }, C),
+    ]);
+    expect(plan[0]!.normalized!.variants[0]!.cost).toBe(4550);
+    expect(plan[1]!.normalized!.variants[0]!.cost).toBeNull();
+  });
+  it("sin la columna, no toca el costo", () => {
+    const plan = planProductImport(H, [row({ handle: "a", title: "A", price: "100" })]);
+    expect(plan[0]!.normalized!.variants[0]).not.toHaveProperty("cost");
+  });
+  it("un costo inválido es un error de la fila", () => {
+    const plan = planProductImport(C, [
+      row({ handle: "a", title: "A", sku: "a-1", price: "100", cost: "-3" }, C),
+    ]);
+    expect(plan[0]!.errors).toContain("cost: escribe un importe como 199.50");
+  });
+  it("la plantilla completa acepta la columna", () => {
+    expect(checkHeaders(["handle", "cost"])).toEqual({
+      ok: true,
+      columns: ["handle", "cost"],
+      ignored: [],
+    });
+  });
+});
+
+describe("plantilla del catálogo de suplementos (docs/catalogo)", () => {
+  it("trae exactamente las columnas que acepta la importación, en el mismo orden", async () => {
+    const { readFileSync } = await import("node:fs");
+    const header = readFileSync("docs/catalogo/plantilla-catalogo-suplementos.csv", "utf8").trim();
+    expect(header.split(",")).toEqual([...ALL_IMPORT_HEADERS]);
   });
 });

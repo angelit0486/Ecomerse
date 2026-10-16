@@ -156,6 +156,11 @@ export default async function ImportPage({ params, searchParams }: Props) {
             vacía, no se tocan.
           </li>
           <li>
+            Costo (opcional): <code>cost</code> es el costo unitario de la variante, con el mismo
+            formato que el precio; vacía, se borra. Solo lo importan los roles que pueden ver
+            costos.
+          </li>
+          <li>
             Categorías por nombre separadas con <code>|</code>; subcategorías con{" "}
             <code>Ropa &gt; Camisas</code>. Deben existir antes de importar.
           </li>
@@ -167,9 +172,10 @@ export default async function ImportPage({ params, searchParams }: Props) {
             Ficha sanitaria (opcional): <code>regulatory_category</code> con{" "}
             <code>dietary_supplement</code> o <code>none</code> (vacía, sin cambios) y las columnas{" "}
             <code>regulatory_ingredients</code>, <code>regulatory_usage</code>,{" "}
-            <code>regulatory_warnings</code>… La tabla nutrimental va en{" "}
-            <code>regulatory_nutrition</code> como <code>Omega 3|1000|mg; EPA|180|mg|10%</code>.
-            Exporta tu catálogo para ver todas las columnas.
+            <code>regulatory_warnings</code>, <code>regulatory_net_content</code>… La tabla
+            nutrimental va en <code>regulatory_nutrition</code> como{" "}
+            <code>Omega 3|1000|mg; EPA|180|mg|10%</code>. Exporta tu catálogo para ver todas las
+            columnas.
           </li>
           <li>
             Atributos (opcional): <code>attributes</code> con las claves de Productos → Atributos,

@@ -33,11 +33,13 @@ export async function POST(request: NextRequest, { params }: Params) {
       rows: Record<string, unknown>[];
       regulated?: boolean;
       has_attributes?: boolean;
+      costs?: boolean;
     }>(supabase, "exports_rows", {
       p_store_id: storeId,
       p_entity: entity,
     });
     const csv = exportCsv(entity as ExportEntity, data.rows, data.pii, {
+      costs: data.costs ?? false,
       regulated: data.regulated ?? false,
       attributes: data.has_attributes ?? false,
     });

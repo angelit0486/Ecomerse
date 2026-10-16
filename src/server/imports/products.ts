@@ -66,8 +66,15 @@ export const REGULATORY_FIELD_COLUMNS = [
 ] as const;
 export const REGULATORY_HEADERS = ["regulatory_category", ...REGULATORY_FIELD_COLUMNS] as const;
 export const ATTRIBUTE_HEADERS = ["attributes"] as const;
+/**
+ * Costo unitario de la variante (Fase B, `variant_costs`): opcional y sensible.
+ * Importarlo exige products.cost.read; la exportación lo incluye solo con ese
+ * permiso. Celda vacía = se borra el costo.
+ */
+export const COST_HEADERS = ["cost"] as const;
 export const ALL_IMPORT_HEADERS = [
   ...IMPORT_HEADERS,
+  ...COST_HEADERS,
   ...REGULATORY_HEADERS,
   ...ATTRIBUTE_HEADERS,
 ] as const;
@@ -85,6 +92,8 @@ export interface PlannedVariant {
   barcode?: string | null;
   price?: number;
   compare_at_price?: number | null;
+  /** Centavos; null = se borra el costo (Fase B). */
+  cost?: number | null;
   weight_g?: number | null;
   length_mm?: number | null;
   width_mm?: number | null;
@@ -325,6 +334,7 @@ export function planProductImport(
           ? money(g("compare_at_price"), "compare_at_price", e)
           : null;
       }
+      if (has("cost")) variant.cost = g("cost") ? money(g("cost"), "cost", e) : null;
       for (const k of DIMENSIONS) {
         if (has(k)) variant[k] = g(k) ? integer(g(k), k, e) : null;
       }
