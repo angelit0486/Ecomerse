@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_tenant('a', 'owner');
@@ -32,6 +32,8 @@ select is((pg_temp.gw('get_store_public') ->> 'launched_at')::timestamptz, '2026
           'la tienda pública expone su fecha de apertura');
 select is((pg_temp.gw('get_store_preview') ->> 'launched_at')::timestamptz, '2026-10-01T12:00:00Z'::timestamptz,
           'la vista previa también');
+select is(pg_temp.gw('get_store_public') ->> 'timezone', (select timezone from public.stores where id = tests.fx('store_a')),
+          'y su zona horaria (B4, 20261017001000)');
 
 -- Cinco productos publicados, con existencias.
 select tests.login('owner');

@@ -167,6 +167,10 @@ test("compra completa en 3 clics desde la ficha", async ({ page }) => {
   await buyer.click("Aprobar pago");
   await expect(page.getByRole("heading", { name: "Gracias por tu compra" })).toBeVisible();
   await expect(page.getByRole("status")).toContainText("Pagado — por preparar");
+  // Fecha estimada de entrega desde los días de la tarifa (revisión de conversión, B4).
+  await expect(page.getByRole("region", { name: "Envío" })).toContainText(
+    /Llega (entre el|el) \d+/,
+  );
   expect(buyer.count).toBeLessThanOrEqual(3);
 
   const [order] = await admin<{ total: string; payment_status: string }[]>`

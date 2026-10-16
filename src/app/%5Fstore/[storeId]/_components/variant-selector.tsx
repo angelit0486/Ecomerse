@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AddToCart } from "./add-to-cart";
+import { VARIANT_IMAGE_EVENT } from "./product-gallery";
 
 /**
  * Selector de variantes (isla cliente, §21.4): un grupo de botones de opción por
@@ -41,6 +42,12 @@ export function VariantSelector({
     [variants, options, selection],
   );
 
+  // La imagen de la variante elegida pasa a la galería principal (M5).
+  const imageUrl = selected?.imageUrl ?? null;
+  useEffect(() => {
+    if (imageUrl) window.dispatchEvent(new CustomEvent(VARIANT_IMAGE_EVENT, { detail: imageUrl }));
+  }, [imageUrl]);
+
   /** ¿Existe alguna variante con este valor y el resto de la selección actual? */
   function exists(option: string, value: string) {
     return variants.some(
@@ -52,6 +59,28 @@ export function VariantSelector({
 
   return (
     <div className="space-y-5">
+      {/* Precio arriba de las opciones (revisión de conversión, M5). */}
+      <div aria-live="polite" className="space-y-1">
+        {selected ? (
+          <>
+            <p className="text-2xl font-bold">
+              {selected.price}
+              {selected.compareAt ? (
+                <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
+                  <span className="sr-only">Antes </span>
+                  {selected.compareAt}
+                </s>
+              ) : null}
+            </p>
+            {selected.saving ? (
+              <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
+            ) : null}
+            <p className="text-sm">{selected.availability}</p>
+          </>
+        ) : (
+          <p className="text-sm text-[var(--sf-muted)]">Esta combinación no está disponible.</p>
+        )}
+      </div>
       {options.map((option) => (
         <fieldset key={option.name} className="space-y-2">
           <legend className="text-sm font-medium">
@@ -86,31 +115,6 @@ export function VariantSelector({
           </div>
         </fieldset>
       ))}
-      <div aria-live="polite" className="space-y-1">
-        {selected ? (
-          <>
-            <p className="text-2xl font-bold">
-              {selected.price}
-              {selected.compareAt ? (
-                <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
-                  <span className="sr-only">Antes </span>
-                  {selected.compareAt}
-                </s>
-              ) : null}
-            </p>
-            {selected.saving ? (
-              <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
-            ) : null}
-            <p className="text-sm">{selected.availability}</p>
-            {selected.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- imagen de la variante, re-codificada
-              <img src={selected.imageUrl} alt="" className="mt-2 h-24 w-24 rounded object-cover" />
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm text-[var(--sf-muted)]">Esta combinación no está disponible.</p>
-        )}
-      </div>
       <AddToCart
         storeId={storeId}
         variantId={selected?.id ?? null}

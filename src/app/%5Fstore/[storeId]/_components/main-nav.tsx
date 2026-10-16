@@ -135,10 +135,13 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
               onBlur={(e) => closeOnLeave(e, index)}
             >
               <div className="flex items-center gap-1">
+                {/* Escritorio (revisión de conversión, B2): una entrada con hijos abre su
+                    submenú con su propio nombre, no solo con una flecha pequeña; el
+                    destino de la entrada queda como «Ver todo» dentro del submenú. */}
                 <Link
                   href={item.href}
                   onClick={closeAll}
-                  className="flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1"
+                  className={`flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1 ${hasChildren ? "sm:hidden" : ""}`}
                 >
                   {item.label}
                 </Link>
@@ -148,10 +151,10 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
                     type="button"
                     aria-expanded={open}
                     aria-controls={`${id}-sub-${index}`}
-                    aria-label={`Más de ${item.label}`}
                     onClick={() => setOpenIndex(open ? null : index)}
-                    className="hidden h-8 w-8 items-center justify-center rounded-[var(--sf-radius-control)] hover:bg-[var(--sf-surface)] sm:inline-flex"
+                    className="hidden items-center gap-1 py-1 font-medium hover:underline sm:inline-flex"
                   >
+                    {item.label}
                     <span aria-hidden="true" className={open ? "rotate-180" : ""}>
                       ▾
                     </span>
@@ -165,6 +168,15 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
                     open ? "sm:flex" : "sm:hidden"
                   }`}
                 >
+                  <li className="hidden sm:block">
+                    <Link
+                      href={item.href}
+                      onClick={closeAll}
+                      className="flex items-center rounded-[var(--sf-radius-control)] font-semibold hover:underline sm:px-2 sm:py-1.5 sm:hover:bg-[var(--sf-surface)]"
+                    >
+                      Ver todo en {item.label}
+                    </Link>
+                  </li>
                   {item.children.map((child) => (
                     <li key={child.href + child.label}>
                       <Link

@@ -99,6 +99,9 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
   await expect(page.locator("script", { hasText: "alert(1)" })).toHaveCount(0);
   await expect(page.getByText("$199.00")).toBeVisible();
   await expect(page.getByText("Disponible", { exact: true })).toBeVisible();
+  // El precio va arriba de las opciones (revisión de conversión, M5).
+  const priceTop = (await page.getByText("$199.00").first().boundingBox())!.y;
+  expect(priceTop).toBeLessThan((await page.getByText(/^Talla:/).boundingBox())!.y);
   await page.getByText("M", { exact: true }).click();
   await expect(page.getByText("$219.00")).toBeVisible();
   await expect(page.getByRole("paragraph").filter({ hasText: /^Agotado$/ })).toBeVisible();

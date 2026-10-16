@@ -22,6 +22,8 @@ const storePublicSchema = z.object({
   country: z.string(),
   // Apertura de la tienda: lo publicado después cuenta como «Nuevo» (revisión M8).
   launched_at: z.string().nullable().optional(),
+  // Zona horaria de la tienda: fechas estimadas de entrega (revisión B4).
+  timezone: z.string().optional(),
   // Dominio primario activo: canonical, Open Graph, JSON-LD y sitemap (§22).
   primary_hostname: z.string().nullable().optional(),
   // Tema publicado (nunca el borrador); validado en la base (theme_settings_valid).

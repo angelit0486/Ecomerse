@@ -30,11 +30,12 @@ const BASE_CSS = [
   "font-family:var(--sf-font-body),system-ui,sans-serif",
 ].join(";");
 
-// Títulos con la fuente de títulos del tema (lista curada, D-F9-01).
-// `.sf-text-font`: títulos que van con la tipografía de texto (nombres en
-// tarjetas, donde una condensada a 14 px se lee peor).
+// Títulos con la fuente de títulos del tema (lista curada, D-F9-01), solo de
+// 20 px para arriba (h1 y títulos text-xl o mayores): una condensada a 14–16 px
+// se lee peor, así que «Resumen», «Ingredientes» o «Contacto» van con la de
+// texto (revisión de conversión, B1). `.sf-text-font` la excluye siempre.
 const HEADING_CSS =
-  ".sf-root :is(h1,h2,h3,h4):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
+  ".sf-root :is(h1,:is(h2,h3,h4):is([class*=text-xl],[class*=text-2xl],[class*=text-3xl],[class*=text-4xl],[class*=text-5xl])):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
 
 /**
  * Favicon, ícono de Apple y manifiesto de la tienda (§20.2, D-F9-06). La

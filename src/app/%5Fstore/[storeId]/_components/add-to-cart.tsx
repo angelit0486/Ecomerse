@@ -152,30 +152,31 @@ export function AddToCart({
           </p>
         ) : null}
       </div>
-      {/* Fuera de la vista no estorba: `hidden` la saca también del árbol de accesibilidad. */}
-      <section
-        aria-label="Compra rápida"
-        hidden={!showBar}
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--sf-border)] bg-[var(--sf-bg)] px-4 py-3 shadow-[0_-4px_12px_rgb(0_0_0/0.08)] md:hidden"
-      >
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
-          <div className="min-w-0 flex-1">
-            {title ? <p className="truncate text-sm">{title}</p> : null}
-            {price ? <p className="font-bold">{price}</p> : null}
+      {/* Solo existe mientras se muestra: sin duplicar precio ni botón en la página. */}
+      {showBar ? (
+        <section
+          aria-label="Compra rápida"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--sf-border)] bg-[var(--sf-bg)] px-4 py-3 shadow-[0_-4px_12px_rgb(0_0_0/0.08)] md:hidden"
+        >
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              {title ? <p className="truncate text-sm">{title}</p> : null}
+              {price ? <p className="font-bold">{price}</p> : null}
+            </div>
+            <button
+              type="submit"
+              form={formId}
+              name="intent"
+              value="buy"
+              disabled={!variantId || pending}
+              aria-busy={pending || undefined}
+              className="h-12 shrink-0 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-semibold text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Comprar ahora
+            </button>
           </div>
-          <button
-            type="submit"
-            form={formId}
-            name="intent"
-            value="buy"
-            disabled={!variantId || pending}
-            aria-busy={pending || undefined}
-            className="h-12 shrink-0 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-semibold text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Comprar ahora
-          </button>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </form>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/** Evento con el que el selector de variantes muestra su imagen (revisión M5). */
+export const VARIANT_IMAGE_EVENT = "sf:variant-image";
 
 /**
  * Galería de la ficha (F9-DESIGN §9): imagen principal, miniaturas como botones
@@ -20,7 +23,26 @@ const ARROW =
 
 export function ProductGallery({ images, title }: { images: GalleryImage[]; title: string }) {
   const [index, setIndex] = useState(0);
-  const current = images[index];
+  // Imagen de la variante elegida que no está en la galería (revisión de conversión, M5).
+  const [extra, setExtra] = useState<string | null>(null);
+  useEffect(() => {
+    const onVariant = (event: Event) => {
+      const src = (event as CustomEvent<string | null>).detail;
+      if (!src) return;
+      const i = images.findIndex((image) => image.src === src);
+      if (i >= 0) {
+        setIndex(i);
+        setExtra(null);
+      } else {
+        setExtra(src);
+      }
+    };
+    window.addEventListener(VARIANT_IMAGE_EVENT, onVariant);
+    return () => window.removeEventListener(VARIANT_IMAGE_EVENT, onVariant);
+  }, [images]);
+  const current = extra
+    ? { src: extra, alt: title, width: images[0]?.width ?? 1024, height: images[0]?.height ?? 1024 }
+    : images[index];
   if (!current) {
     return (
       <div className="flex aspect-square items-center justify-center rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] text-[var(--sf-muted)]">
@@ -29,7 +51,10 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
     );
   }
   const many = images.length > 1;
-  const go = (next: number) => setIndex((next + images.length) % images.length);
+  const go = (next: number) => {
+    setExtra(null);
+    setIndex((next + images.length) % images.length);
+  };
 
   return (
     <div className="space-y-3">
@@ -74,11 +99,14 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
             <li key={image.src}>
               <button
                 type="button"
-                onClick={() => setIndex(i)}
+                onClick={() => {
+                  setExtra(null);
+                  setIndex(i);
+                }}
                 aria-label={`Ver imagen ${i + 1} de ${images.length}`}
-                aria-pressed={i === index}
+                aria-pressed={!extra && i === index}
                 className={`block w-full overflow-hidden rounded-[var(--sf-radius-control)] border-2 ${
-                  i === index ? "border-[var(--sf-fg)]" : "border-transparent"
+                  !extra && i === index ? "border-[var(--sf-fg)]" : "border-transparent"
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura re-codificada */}

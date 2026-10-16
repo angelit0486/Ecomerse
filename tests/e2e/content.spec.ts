@@ -82,12 +82,16 @@ test("contenido: página publicada y menú principal visibles en la tienda", asy
 
   await page.goto(`http://${tenant.handle}.localhost:3000/`);
   const nav = page.getByRole("navigation", { name: "Principal" });
-  await expect(nav.getByRole("link", { name: "Nosotros" })).toHaveAttribute(
+  // Con subenlaces, el nombre abre el submenú y el destino queda como «Ver todo»
+  // (revisión de conversión, B2).
+  await nav.getByRole("button", { name: "Nosotros", exact: true }).click();
+  await expect(nav.getByRole("link", { name: "Ver todo en Nosotros" })).toHaveAttribute(
     "href",
     "/paginas/quienes-somos",
   );
+  await expect(nav.getByRole("link", { name: "Blog" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Buscar" })).toBeVisible();
-  await nav.getByRole("link", { name: "Nosotros" }).click();
+  await nav.getByRole("link", { name: "Ver todo en Nosotros" }).click();
   await expect(page.getByRole("heading", { name: "Nuestra historia" })).toBeVisible();
   expect(await page.content()).not.toContain("alert(1)");
   await expectNoSeriousA11yViolations(page);

@@ -1,4 +1,4 @@
-import { DEFAULT_COLORS, type Palette } from "./palette";
+import type { Palette } from "./palette";
 import type { FontKey } from "./schema";
 
 /**
@@ -39,8 +39,16 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
   {
     key: "neutral",
     name: "Neutral",
-    description: "Blanco, azul y tipografía Inter: el estilo base de la plataforma.",
-    colors: DEFAULT_COLORS,
+    description: "Blanco, azul marino y rojo para ofertas; tipografía Inter. Sobrio y claro.",
+    // Paleta propia (revisión de conversión, B6): el azul por defecto de Tailwind
+    // (#1d4ed8) hacía que la tienda se viera a plantilla.
+    colors: {
+      primary: "#1e3a5f",
+      accent: "#b42318",
+      background: "#ffffff",
+      foreground: "#101828",
+      muted: "#475467",
+    },
     heading: "inter",
     body: "inter",
     radius: "md",

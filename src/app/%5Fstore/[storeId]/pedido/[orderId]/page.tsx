@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { deliveryEstimate } from "@/lib/orders/delivery-estimate";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestOrder } from "@/server/storefront/checkout";
@@ -40,6 +41,19 @@ export default async function OrderPage({ params, searchParams }: Props) {
     order.status === "pending_payment" &&
     payment &&
     ["failed", "expired", "cancelled"].includes(payment.status);
+
+  // Fecha estimada solo con el pedido confirmado (revisión de conversión, B4):
+  // mientras espera el pago, la fecha depende de cuándo se pague.
+  const arrival =
+    order.shipping && order.status !== "pending_payment" && order.status !== "cancelled"
+      ? deliveryEstimate({
+          placedAt: order.placed_at,
+          minDays: order.shipping.est_days_min,
+          maxDays: order.shipping.est_days_max,
+          timeZone: store.timezone,
+          locale: store.locale,
+        })
+      : null;
 
   return (
     <section className="mx-auto max-w-3xl space-y-8">
@@ -114,8 +128,19 @@ export default async function OrderPage({ params, searchParams }: Props) {
       {order.shipping_address ? (
         <section aria-labelledby="envio" className="space-y-1 text-sm">
           <h2 id="envio" className="font-semibold">
-            Envío{order.shipping ? `: ${order.shipping.name}` : ""}
+            Envío
           </h2>
+          {order.shipping ? (
+            <p>
+              {order.shipping.name}
+              {arrival ? (
+                <>
+                  {" · "}
+                  <strong>{arrival} (estimado)</strong>
+                </>
+              ) : null}
+            </p>
+          ) : null}
           <p>{order.shipping_address.recipient_name}</p>
           <p>
             {order.shipping_address.line1}

@@ -28,11 +28,11 @@ export const STYLES = {
   },
   neutral: {
     colors: {
-      primary: "#1d4ed8",
-      accent: "#b45309",
+      primary: "#1e3a5f",
+      accent: "#b42318",
       background: "#ffffff",
-      foreground: "#111827",
-      muted: "#4b5563",
+      foreground: "#101828",
+      muted: "#475467",
     },
     typography: { heading: "inter", body: "inter" },
     shape: { radius: "md", button_style: "solid" },

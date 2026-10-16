@@ -217,12 +217,14 @@ test("menú «Objetivos» de 2 niveles armado desde el panel", async ({ page, br
   const shopper = await (await browser.newContext()).newPage();
   await shopper.goto(origin());
   const nav = shopper.getByRole("navigation", { name: "Principal" });
-  const toggle = nav.getByRole("button", { name: "Más de Objetivos" });
+  // El nombre de la entrada abre el submenú (revisión de conversión, B2).
+  const toggle = nav.getByRole("button", { name: "Objetivos", exact: true });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(nav.getByRole("link", { name: "Energía" })).toBeHidden();
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(nav.getByRole("link", { name: "Energía" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Ver todo en Objetivos" })).toBeVisible();
   await expectNoSeriousA11yViolations(shopper);
   await shopper.keyboard.press("Escape");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
