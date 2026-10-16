@@ -98,7 +98,9 @@ export function VariantSelector({
                 </s>
               ) : null}
             </p>
-            {selected.saving ? <p className="text-sm font-semibold">{selected.saving}</p> : null}
+            {selected.saving ? (
+              <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
+            ) : null}
             <p className="text-sm">{selected.availability}</p>
             {selected.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- imagen de la variante, re-codificada

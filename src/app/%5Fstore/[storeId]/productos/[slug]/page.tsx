@@ -189,6 +189,7 @@ export default async function ProductPage({ params }: Props) {
     compareAt: cheapest?.compare_at_price,
     availability: product.availability,
     publishedAt: product.published_at,
+    launchedAt: store.launched_at,
     now: new Date(),
   });
   // Precio por porción solo sin variantes: las presentaciones cambian las porciones.
@@ -248,7 +249,7 @@ export default async function ProductPage({ params }: Props) {
                   ) : null}
                 </p>
                 {savingText(single.price, single.compare_at_price, store) ? (
-                  <p className="text-sm font-semibold">
+                  <p className="text-sm font-semibold text-[var(--sf-sale-text)]">
                     {savingText(single.price, single.compare_at_price, store)}
                   </p>
                 ) : null}

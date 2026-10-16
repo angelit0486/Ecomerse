@@ -25,6 +25,12 @@ const VALUE_KEY_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CONTROL_RE = /[\u0000-\u001f\u007f]/;
 
+/**
+ * Clave convencional del atributo «Objetivo» (menú «Objetivos», portada,
+ * ficha y búsqueda sin resultados enlazan a `?objetivo=…`).
+ */
+export const GOAL_KEY = "objetivo";
+
 export const MAX_SELECTED_ATTRIBUTES = 10;
 export const MAX_SELECTED_VALUES = 20;
 export const MAX_ATTRIBUTE_VALUES = 50;

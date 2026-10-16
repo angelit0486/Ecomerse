@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_COLORS } from "./palette";
-import { resolveTheme, themeCss } from "./resolve-theme";
+import { contrastRatio } from "@/lib/color/contrast";
+
+import { resolveTheme, saleColors, themeCss } from "./resolve-theme";
 
 describe("resolveTheme", () => {
   it("sin tema: defaults", () => {
@@ -75,5 +77,31 @@ describe("resolveTheme", () => {
     });
     expect(bad.announcement).toBeNull();
     expect(themeCss(bad)).not.toContain("announce");
+  });
+});
+
+describe("saleColors (revisión de conversión, M8)", () => {
+  it("el acento con 4.5:1 para su texto pinta la oferta y el ahorro", () => {
+    const sale = saleColors(resolveTheme({ colors: { accent: "#9a3412" } }));
+    expect(sale).toEqual({ bg: "#9a3412", fg: "#ffffff", text: "#9a3412" });
+  });
+
+  it("un acento claro no se usa donde no llega a 4.5:1", () => {
+    const theme = resolveTheme({ colors: { primary: "#0b5d4b", accent: "#f59e0b" } });
+    const sale = saleColors(theme);
+    // Sobre ámbar el texto negro sí llega: la insignia lo usa; el texto «Ahorras» no.
+    expect(sale.bg).toBe("#f59e0b");
+    expect(contrastRatio(sale.fg, sale.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(sale.text).toBe(theme.palette.foreground);
+  });
+
+  it("siempre con contraste ≥ 4.5:1, y en la lista blanca del CSS", () => {
+    for (const accent of ["#777777", "#808080", "#b45309", "#ffffff", "#000000"]) {
+      const theme = resolveTheme({ colors: { accent } });
+      const sale = saleColors(theme);
+      expect(contrastRatio(sale.fg, sale.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(sale.text, theme.palette.background)).toBeGreaterThanOrEqual(4.5);
+      expect(themeCss(theme)).toContain(`--sf-sale-bg:${sale.bg}`);
+    }
   });
 });

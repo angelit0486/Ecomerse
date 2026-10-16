@@ -78,6 +78,9 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
 
   await page.getByRole("link", { name: "Ver carrito (2)" }).click();
   await expect(page.getByRole("heading", { name: "Tu carrito" })).toBeVisible();
+  // El código va plegado tras «¿Tienes un código?» (revisión de conversión, M10).
+  await expect(page.getByLabel("Código de descuento")).toBeHidden();
+  await page.getByText("¿Tienes un código de descuento?").click();
   await page.getByLabel("Código de descuento").fill("noexiste");
   await page.getByRole("button", { name: "Aplicar" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Ese código no existe." })).toBeVisible();

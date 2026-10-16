@@ -24,7 +24,8 @@ test.describe.configure({ mode: "serial" });
 test.beforeAll(async () => {
   const ownerId = await createAuthUser(ownerEmail);
   tenant = await createTenant(`nv${run}`, ownerId);
-  await admin`update public.stores set status = 'active', launched_at = now() where id = ${tenant.storeId}`;
+  // Abierta hace 60 días: lo que se publica ahora es una novedad (revisión M8).
+  await admin`update public.stores set status = 'active', launched_at = now() - interval '60 days' where id = ${tenant.storeId}`;
   await admin`insert into public.brands (store_id, name, slug) values
                 (${tenant.storeId}, 'Atlas Nutrición', 'atlas'), (${tenant.storeId}, 'Bruma Labs', 'bruma')`;
   await admin.begin(async (sql) => {
@@ -90,8 +91,10 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
   await page.goto(`${origin()}/productos`);
   const card = (title: string) =>
     page.getByRole("article").filter({ has: page.getByRole("heading", { name: title }) });
-  await expect(card("Cafeína anhidra").getByRole("listitem")).toHaveText(["Oferta", "Nuevo"]);
-  await expect(card("Creatina pura").getByRole("listitem")).toHaveText(["Nuevo", "Últimas piezas"]);
+  // Una sola insignia: Agotado > Oferta > Últimas piezas > Nuevo (revisión M8).
+  await expect(card("Cafeína anhidra").getByRole("listitem")).toHaveText(["Oferta"]);
+  await expect(card("Creatina pura").getByRole("listitem")).toHaveText(["Últimas piezas"]);
+  await expect(card("Electrolitos").getByRole("listitem")).toHaveText(["Nuevo"]);
   // Nunca la cantidad exacta.
   await expect(card("Creatina pura")).not.toContainText(/\b2 piezas\b/);
 
@@ -99,7 +102,6 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
   const brand = filters.getByRole("group", { name: "Marca" });
   await expect(brand.getByLabel(/Bruma Labs/)).toBeVisible();
   await brand.getByLabel(/Bruma Labs/).check();
-  await filters.getByRole("button", { name: "Filtrar" }).click();
   await expect(page).toHaveURL(`${origin()}/productos?marca=bruma`);
   await expect(page.getByRole("heading", { name: "Creatina pura" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Electrolitos" })).toBeVisible();
@@ -110,7 +112,7 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
     .getByRole("group", { name: "Objetivo" })
     .getByLabel(/Energía/)
     .check();
-  await filters.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page).toHaveURL(/objetivo=energia/);
   await expect(page.getByRole("heading", { name: "Electrolitos" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Creatina pura" })).toHaveCount(0);
   await page.getByRole("link", { name: "Quitar el filtro Marca: Bruma Labs" }).click();
@@ -122,11 +124,40 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
   await page.goto(`${origin()}/productos?objetivo=energia`);
   const summary = page.getByText("Filtros (1)", { exact: true });
   await expect(summary).toBeVisible();
-  await expect(filters.getByRole("button", { name: "Filtrar" })).toBeHidden();
+  const energy = filters.getByRole("group", { name: "Objetivo" }).getByLabel(/Energía/);
+  await expect(energy).toBeHidden();
   await summary.click();
-  await expect(filters.getByRole("button", { name: "Filtrar" })).toBeVisible();
+  await expect(energy).toBeVisible();
+  // Filas de filtro de al menos 44 px (revisión de conversión, M6).
+  expect(
+    (await filters.getByRole("group", { name: "Objetivo" }).locator("label").first().boundingBox())!
+      .height,
+  ).toBeGreaterThanOrEqual(44);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   await expectNoSeriousA11yViolations(page);
+});
+
+test("listado: conteo, agotados al final, título por objetivo y búsqueda sin resultados (revisión M6 y M7)", async ({
+  page,
+}) => {
+  await page.goto(`${origin()}/productos`);
+  await expect(page.getByText("3 productos", { exact: true })).toBeVisible();
+  await page.goto(`${origin()}/productos?objetivo=energia`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Para tu energía");
+  await expect(page.getByText("2 productos", { exact: true })).toBeVisible();
+
+  // Sin resultados: sin «Ordenar por», con salidas reales.
+  await page.goto(`${origin()}/buscar?q=zzzz`);
+  await expect(page.getByRole("heading", { name: "Sin resultados" })).toBeVisible();
+  await expect(page.getByLabel("Ordenar por")).toHaveCount(0);
+  const goals = page.getByRole("list", { name: "Comprar por objetivo" });
+  await expect(goals.getByRole("link", { name: "Energía" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Lo más vendido" }).getByRole("heading", { level: 3 }),
+  ).not.toHaveCount(0);
+  await expectNoSeriousA11yViolations(page);
+  await goals.getByRole("link", { name: "Energía" }).click();
+  await expect(page).toHaveURL(`${origin()}/productos?objetivo=energia`);
 });
 
 test("buscador con sugerencias: escribir, moverse con flechas y elegir", async ({ page }) => {
@@ -233,13 +264,29 @@ test("carrito: barra «te faltan $X para el envío gratis» con la regla real", 
   await expect(page.getByRole("progressbar")).toHaveAttribute("value", "33");
   await expectNoSeriousA11yViolations(page);
 
-  await page
-    .getByLabel(/Cantidad/)
-    .first()
-    .fill("3");
-  await page
-    .getByRole("button", { name: /Actualizar/ })
-    .first()
-    .click();
+  // Sugerencias para completar el envío gratis: cubren lo que falta y no están
+  // en el carrito (revisión de conversión, M10).
+  const suggestions = page.getByRole("region", { name: "Completa tu envío gratis" });
+  await expect(suggestions.getByRole("heading", { name: "Creatina pura" })).toBeVisible();
+  await expect(suggestions.getByRole("heading", { name: "Electrolitos" })).toHaveCount(0);
+
+  // −/+ se envían solos (sin «Actualizar» con JavaScript).
+  await expect(page.getByRole("button", { name: "Actualizar" })).toBeHidden();
+  await page.getByRole("button", { name: "Sumar 1 a Cafeína anhidra" }).click();
+  await expect(page.getByText("Te faltan $200.00 para el envío gratis.")).toBeVisible();
+  await expect(page.getByLabel("Cantidad de Cafeína anhidra")).toHaveValue("2");
+  await page.getByLabel("Cantidad de Cafeína anhidra").fill("3");
+  await page.getByLabel("Cantidad de Cafeína anhidra").blur();
   await expect(page.getByText("Tu pedido tiene envío gratis.")).toBeVisible();
+  await expect(suggestions).toHaveCount(0);
+
+  // Vacío: botón principal y objetivos.
+  await page.getByRole("button", { name: "Quitar Cafeína anhidra" }).click();
+  await expect(page.getByRole("heading", { name: "Tu carrito está vacío" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Comprar por objetivo" })
+      .getByRole("link", { name: "Energía" }),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
 });

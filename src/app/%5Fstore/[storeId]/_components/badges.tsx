@@ -2,8 +2,9 @@ import { BADGE_LABELS, type Badge } from "@/lib/catalog/merchandising";
 
 /** Insignias estructurales de un producto (F9-DESIGN §9). */
 const BADGE_STYLE: Record<Badge, string> = {
-  // Colores con contraste garantizado (≥ 4.5:1): el del botón, y texto sobre fondo.
-  sale: "bg-[var(--sf-btn-bg)] text-[var(--sf-btn-fg)]",
+  // Colores con contraste garantizado (≥ 4.5:1). «Oferta» con el acento cuando su
+  // texto llega a 4.5:1; si no, el del botón (saleColors, revisión M8).
+  sale: "border border-[var(--sf-sale-bg)] bg-[var(--sf-sale-bg)] text-[var(--sf-sale-fg)]",
   new: "bg-[var(--sf-fg)] text-[var(--sf-bg)]",
   low_stock: "border border-[var(--sf-fg)] bg-[var(--sf-bg)] text-[var(--sf-fg)]",
   sold_out: "border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] text-[var(--sf-fg)]",

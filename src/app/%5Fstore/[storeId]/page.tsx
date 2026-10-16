@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { getHome, mediaUrl } from "@/server/storefront/catalog";
+import { GOAL_KEY } from "@/lib/catalog/attributes";
+import { getHome, listFacets, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { getHomePreview } from "@/server/storefront/preview-reads";
 import { canonicalUrl, pageMetadata } from "@/server/storefront/seo";
 
+import { GoalChips } from "./_components/goal-chips";
 import { HomeSections } from "./_components/home-sections";
 import { JsonLd } from "./_components/json-ld";
 import { ProductGrid } from "./_components/product-card";
@@ -28,7 +30,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function StoreHomePage({ params }: Props) {
   const { store, preview } = await getStorefront((await params).storeId);
-  const home = preview ? await getHomePreview(store.id) : await getHome(store.id);
+  const [home, facets] = await Promise.all([
+    preview ? getHomePreview(store.id) : getHome(store.id),
+    listFacets(store.id, {}),
+  ]);
+  // Objetivos con productos publicados (revisión de conversión, M9).
+  const goals = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
+    .filter((v) => v.count > 0)
+    .map(({ key, label }) => ({ key, label }));
   const sections = home.sections ?? [];
   const categories = home.categories ?? [];
   const featured = home.featured ?? [];
@@ -58,9 +67,9 @@ export default async function StoreHomePage({ params }: Props) {
         }}
       />
       {home.sections ? (
-        <HomeSections sections={sections} store={store} storeName={store.name} />
+        <HomeSections sections={sections} store={store} storeName={store.name} goals={goals} />
       ) : (
-        <TemplateHome store={store} categories={categories} featured={featured} />
+        <TemplateHome store={store} categories={categories} featured={featured} goals={goals} />
       )}
     </div>
   );
@@ -71,14 +80,19 @@ function TemplateHome({
   store,
   categories,
   featured,
+  goals,
 }: {
+  goals: { key: string; label: string }[];
   store: { name: string; currency: string; locale: string };
   categories: NonNullable<Awaited<ReturnType<typeof getHome>>["categories"]>;
   featured: NonNullable<Awaited<ReturnType<typeof getHome>>["featured"]>;
 }) {
   return (
     <div className="space-y-12">
-      <h1 className="text-2xl font-semibold sm:text-3xl">{store.name}</h1>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{store.name}</h1>
+        <GoalChips goals={goals} />
+      </div>
       {categories.length > 0 ? (
         <section aria-labelledby="sf-categorias" className="space-y-4">
           <h2 id="sf-categorias" className="text-lg font-semibold">

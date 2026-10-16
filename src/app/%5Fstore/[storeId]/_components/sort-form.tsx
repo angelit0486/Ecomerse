@@ -1,3 +1,5 @@
+import { AutoSubmitForm, NoJsSubmit } from "./auto-submit";
+
 const SORT_LABELS: Record<string, string> = {
   relevance: "Relevancia",
   newest: "Novedades",
@@ -6,7 +8,7 @@ const SORT_LABELS: Record<string, string> = {
   best_selling: "Más vendidos",
 };
 
-/** Orden y filtro de disponibilidad por GET (funciona sin JavaScript). */
+/** Orden y filtro de disponibilidad por GET: se aplican al cambiar; sin JavaScript, con «Aplicar». */
 export function SortForm({
   action,
   sort,
@@ -25,7 +27,7 @@ export function SortForm({
     ? Object.keys(SORT_LABELS)
     : Object.keys(SORT_LABELS).filter((s) => s !== "relevance");
   return (
-    <form method="get" action={action} className="flex flex-wrap items-end gap-3 text-sm">
+    <AutoSubmitForm action={action} className="flex flex-wrap items-end gap-x-4 gap-y-2 text-sm">
       {query ? <input type="hidden" name="q" value={query} /> : null}
       {hidden.map(([name, value]) => (
         <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
@@ -35,7 +37,7 @@ export function SortForm({
         <select
           name="orden"
           defaultValue={sort}
-          className="h-10 rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] bg-[var(--sf-bg)] px-2"
+          className="h-11 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-2"
         >
           {sorts.map((s) => (
             <option key={s} value={s}>
@@ -44,16 +46,19 @@ export function SortForm({
           ))}
         </select>
       </label>
-      <label className="flex h-10 items-center gap-2">
-        <input type="checkbox" name="disponible" value="1" defaultChecked={available} />
+      <label className="flex min-h-11 items-center gap-2">
+        <input
+          type="checkbox"
+          name="disponible"
+          value="1"
+          defaultChecked={available}
+          className="h-5 w-5 accent-[var(--sf-primary)]"
+        />
         Solo disponibles
       </label>
-      <button
-        type="submit"
-        className="h-10 rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] px-4 font-medium"
-      >
+      <NoJsSubmit className="h-10 rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] px-4 font-medium">
         Aplicar
-      </button>
-    </form>
+      </NoJsSubmit>
+    </AutoSubmitForm>
   );
 }

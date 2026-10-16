@@ -143,10 +143,12 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
     .poll(() => cardTitles(page))
     .toEqual(["Cafeína", "Proteína Choco", "Proteína Vainilla"]);
 
-  // OR dentro de un atributo.
+  // OR dentro de un atributo. Con JavaScript cada casilla se aplica sola (revisión
+  // de conversión, M6): el botón «Filtrar» queda solo para quien navega sin JS.
+  await expect(filters.getByRole("button", { name: "Filtrar" })).toBeHidden();
   await objetivo.getByRole("checkbox", { name: /Masa muscular/ }).check();
+  await expect(page).toHaveURL(/objetivo=masa-muscular/);
   await objetivo.getByRole("checkbox", { name: /Energía/ }).check();
-  await filters.getByRole("button", { name: "Filtrar" }).click();
   await expect(page).toHaveURL(/objetivo=energia/);
   await expect
     .poll(() => cardTitles(page))
@@ -158,17 +160,12 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
   const sabor = page.getByRole("form", { name: "Filtros" }).getByRole("group", { name: "Sabor" });
   await expect(sabor.getByRole("checkbox", { name: "Chocolate (1)" })).toBeVisible();
   await sabor.getByRole("checkbox", { name: /Chocolate/ }).check();
-  await page
-    .getByRole("form", { name: "Filtros" })
-    .getByRole("button", { name: "Filtrar" })
-    .click();
   await expect(page).toHaveURL(/sabor=chocolate/);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco"]);
   await expectNoSeriousA11yViolations(page);
 
   // Ordenar no pierde los filtros.
   await page.getByLabel("Ordenar por").selectOption("price_asc");
-  await page.getByRole("button", { name: "Aplicar" }).click();
   await expect(page).toHaveURL(/orden=price_asc/);
   await expect(page).toHaveURL(/objetivo=masa-muscular/);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco"]);
@@ -191,10 +188,13 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
     page.getByRole("heading", { name: "Ningún producto coincide con estos filtros" }),
   ).toBeVisible();
 
-  // La ficha muestra los atributos y lleva al catálogo filtrado.
+  // La ficha muestra los atributos como datos (no parecen selectores, revisión
+  // de conversión M4) y solo el objetivo lleva al catálogo filtrado.
   await page.goto(`${store()}/productos`);
   await page.getByRole("heading", { name: "Proteína Choco", level: 3 }).click();
-  await page.getByRole("link", { name: "Ver productos con objetivo: Masa muscular" }).click();
+  await expect(page.getByRole("definition").filter({ hasText: "Chocolate" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Chocolate/ })).toHaveCount(0);
+  await page.getByRole("link", { name: "Ver más para Masa muscular" }).click();
   await expect(page).toHaveURL(/\/productos\?objetivo=masa-muscular$/);
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco", "Proteína Vainilla"]);
 

@@ -4,6 +4,7 @@ import {
   freeShippingProgress,
   NEW_DAYS,
   pricePerServing,
+  NEW_AFTER_LAUNCH_DAYS,
   productBadges,
   savings,
 } from "./merchandising";
@@ -53,14 +54,16 @@ describe("pricePerServing", () => {
 
 describe("productBadges", () => {
   const now = new Date("2026-10-15T12:00:00Z");
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
   const base = {
     price: 1000,
     compareAt: null,
     availability: "in_stock" as const,
     publishedAt: null,
+    // Tienda abierta hace 90 días: lo publicado después de la apertura es nuevo.
+    launchedAt: daysAgo(90),
     now,
   };
-  const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
 
   it("Oferta solo con precio de comparación mayor", () => {
     expect(productBadges({ ...base, compareAt: 1500 })).toEqual(["sale"]);
@@ -77,6 +80,25 @@ describe("productBadges", () => {
     expect(productBadges({ ...base, publishedAt: "no es fecha" })).toEqual([]);
   });
 
+  it(`el catálogo de la apertura no es «Nuevo»: solo lo que llega ${NEW_AFTER_LAUNCH_DAYS} días después o más`, () => {
+    const launchedAt = daysAgo(10);
+    expect(productBadges({ ...base, launchedAt, publishedAt: daysAgo(12) })).toEqual([]);
+    expect(productBadges({ ...base, launchedAt, publishedAt: daysAgo(10) })).toEqual([]);
+    expect(
+      productBadges({
+        ...base,
+        launchedAt,
+        publishedAt: daysAgo(10 - NEW_AFTER_LAUNCH_DAYS + 0.01),
+      }),
+    ).toEqual([]);
+    expect(
+      productBadges({ ...base, launchedAt, publishedAt: daysAgo(10 - NEW_AFTER_LAUNCH_DAYS) }),
+    ).toEqual(["new"]);
+    // Sin apertura (borrador o vista previa) o con una fecha inválida, nada es nuevo.
+    expect(productBadges({ ...base, launchedAt: null, publishedAt: daysAgo(1) })).toEqual([]);
+    expect(productBadges({ ...base, launchedAt: "x", publishedAt: daysAgo(1) })).toEqual([]);
+  });
+
   it("Últimas piezas con stock bajo; Agotado reemplaza a las demás", () => {
     expect(productBadges({ ...base, availability: "low_stock" })).toEqual(["low_stock"]);
     expect(
@@ -90,15 +112,16 @@ describe("productBadges", () => {
     expect(productBadges({ ...base, availability: "backorder" })).toEqual([]);
   });
 
-  it("varias a la vez en orden estable", () => {
-    expect(
-      productBadges({
-        ...base,
-        availability: "low_stock",
-        compareAt: 2000,
-        publishedAt: daysAgo(3),
-      }),
-    ).toEqual(["sale", "new", "low_stock"]);
+  it("una sola insignia: Agotado > Oferta > Últimas piezas > Nuevo", () => {
+    const all = {
+      ...base,
+      availability: "low_stock" as const,
+      compareAt: 2000,
+      publishedAt: daysAgo(3),
+    };
+    expect(productBadges(all)).toEqual(["sale"]);
+    expect(productBadges({ ...all, compareAt: null })).toEqual(["low_stock"]);
+    expect(productBadges({ ...all, compareAt: null, availability: "in_stock" })).toEqual(["new"]);
   });
 });
 

@@ -1,38 +1,42 @@
 import Link from "next/link";
 
+import { GOAL_KEY } from "@/lib/catalog/attributes";
 import type { ProductAttribute } from "@/server/storefront/catalog";
 
 /**
- * Atributos del producto en su ficha (R-T04). Un valor filtrable lleva al
- * catálogo filtrado por él (por ejemplo, más productos para el mismo objetivo),
- * como "chip" tocable de al menos 44 px (F9-DESIGN §15).
+ * Atributos del producto en su ficha (R-T04). Se muestran como datos, sin
+ * aspecto de botón: en una ficha, un chip «Vainilla» parece un selector de
+ * sabor y sacaba al listado (revisión de conversión, M4). Solo los objetivos
+ * llevan un enlace explícito al catálogo filtrado, de al menos 44 px de alto.
  */
 export function ProductAttributes({ attributes }: { attributes: ProductAttribute[] }) {
   if (attributes.length === 0) return null;
+  const goals = attributes.find((a) => a.key === GOAL_KEY && a.filterable);
   return (
-    <dl className="space-y-2 text-sm">
-      {attributes.map((attribute) => (
-        <div key={attribute.key} className="flex flex-wrap items-center gap-2">
-          <dt className="font-medium">{attribute.name}:</dt>
-          {attribute.values.map((value) => (
-            <dd key={value.key}>
-              {attribute.filterable ? (
-                <Link
-                  href={`/productos?${new URLSearchParams([[attribute.key, value.key]])}`}
-                  className="inline-flex min-h-11 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 font-medium hover:bg-[var(--sf-surface)]"
-                >
-                  <span className="sr-only">
-                    Ver productos con {attribute.name.toLowerCase()}:{" "}
-                  </span>
-                  {value.label}
-                </Link>
-              ) : (
-                <span>{value.label}</span>
-              )}
-            </dd>
+    <div className="space-y-2 text-sm">
+      <dl className="space-y-1">
+        {attributes.map((attribute) => (
+          <div key={attribute.key} className="flex flex-wrap gap-x-1">
+            <dt className="font-medium">{attribute.name}:</dt>
+            <dd>{attribute.values.map((value) => value.label).join(", ")}</dd>
+          </div>
+        ))}
+      </dl>
+      {goals ? (
+        <ul className="flex flex-wrap gap-x-4">
+          {goals.values.map((value) => (
+            <li key={value.key}>
+              <Link
+                href={`/productos?${new URLSearchParams([[GOAL_KEY, value.key]])}`}
+                className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+              >
+                Ver más para {value.label}
+                <span aria-hidden="true">&nbsp;→</span>
+              </Link>
+            </li>
           ))}
-        </div>
-      ))}
-    </dl>
+        </ul>
+      ) : null}
+    </div>
   );
 }

@@ -20,9 +20,9 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   const { store } = await getStorefront((await params).storeId);
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Productos</h1>
       <ProductListing
         store={store}
+        title="Productos"
         basePath="/productos"
         searchParams={await searchParams}
         emptyTitle="No hay productos"

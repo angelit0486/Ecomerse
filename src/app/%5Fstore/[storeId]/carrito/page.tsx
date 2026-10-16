@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { freeShippingProgress } from "@/lib/catalog/merchandising";
 import { getCart, getCartLegends } from "@/server/storefront/cart";
-import { getShippingPromo, mediaUrl, type ShippingPromo } from "@/server/storefront/catalog";
+import {
+  getShippingPromo,
+  listFacets,
+  listProducts,
+  mediaUrl,
+  type ProductCard,
+  type ShippingPromo,
+} from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
+import { GoalChips } from "../_components/goal-chips";
+import { ProductGrid } from "../_components/product-card";
 import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
 import { DiscountForm, LineForm } from "./cart-forms";
@@ -30,16 +40,42 @@ export default async function CartPage({ params }: Props) {
   ]);
 
   if (!cart || cart.lines.length === 0) {
+    // Carrito vacío con salida clara (revisión de conversión, M10).
+    const facets = await listFacets(store.id, {});
+    const goals = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
+      .filter((v) => v.count > 0)
+      .map(({ key, label }) => ({ key, label }));
     return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Tu carrito</h1>
-        <p>Tu carrito está vacío.</p>
-        <Link href="/productos" className="underline">
+      <section className="mx-auto max-w-xl space-y-5 py-6 text-center">
+        <h1 className="text-2xl font-semibold">Tu carrito está vacío</h1>
+        <p className="text-[var(--sf-muted)]">Encuentra lo que necesitas para tu objetivo.</p>
+        <Link
+          href="/productos"
+          className="inline-flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-8 font-semibold text-[var(--sf-btn-fg)]"
+        >
           Ver productos
         </Link>
+        <div className="pt-2">
+          <GoalChips goals={goals} centered />
+        </div>
       </section>
     );
   }
+
+  // Sugerencias para alcanzar el envío gratis (revisión de conversión, M10): los
+  // productos disponibles más baratos que cubren lo que falta y no están en el carrito.
+  const progress =
+    promo && cart.requires_shipping
+      ? freeShippingProgress(cart.subtotal, cart.discount_total, promo.free_over)
+      : null;
+  const suggestions =
+    progress && !progress.reached
+      ? await shippingSuggestions(
+          store.id,
+          progress.remaining,
+          new Set(cart.lines.map((l) => l.product_slug)),
+        )
+      : [];
 
   return (
     <section className="grid grid-cols-1 gap-8 md:grid-cols-[2fr_1fr]">
@@ -102,6 +138,14 @@ export default async function CartPage({ params }: Props) {
             </li>
           ))}
         </ul>
+        {suggestions.length > 0 ? (
+          <section aria-labelledby="sf-completa" className="space-y-3">
+            <h2 id="sf-completa" className="font-semibold">
+              Completa tu envío gratis
+            </h2>
+            <ProductGrid products={suggestions} store={store} carousel />
+          </section>
+        ) : null}
       </div>
       <aside
         aria-label="Resumen"
@@ -129,6 +173,17 @@ export default async function CartPage({ params }: Props) {
       </aside>
     </section>
   );
+}
+
+async function shippingSuggestions(
+  storeId: string,
+  remaining: number,
+  inCart: Set<string>,
+): Promise<ProductCard[]> {
+  const page = await listProducts(storeId, { sort: "price_asc", available: true, limit: 48 });
+  return page.items
+    .filter((p) => !inCart.has(p.slug) && p.min_price !== null && p.min_price >= remaining)
+    .slice(0, 3);
 }
 
 /**

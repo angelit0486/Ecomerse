@@ -47,28 +47,51 @@ export const BADGE_LABELS: Record<Badge, string> = {
 export const NEW_DAYS = 30;
 
 /**
- * Insignias estructurales (F9-DESIGN §9): «Oferta» con precio de comparación
- * mayor; «Nuevo» con publicación de hace ≤ 30 días; «Últimas piezas» con el
- * estado de stock bajo (nunca la cantidad); «Agotado». Agotado reemplaza a
- * «Últimas piezas» y a «Oferta» (no se anuncia lo que no se puede comprar).
+ * Días después de la apertura de la tienda a partir de los cuales una
+ * publicación cuenta como novedad: el catálogo con el que abre no es «Nuevo»
+ * (revisión de conversión, M8: cuando todo es nuevo, nada lo es).
+ */
+export const NEW_AFTER_LAUNCH_DAYS = 7;
+
+const DAY_MS = 86_400_000;
+
+/** Prioridad de la única insignia que se muestra (revisión de conversión, M8). */
+const PRIORITY: Badge[] = ["sold_out", "sale", "low_stock", "new"];
+
+/**
+ * Insignia estructural de un producto (F9-DESIGN §9), como máximo una:
+ * «Agotado» > «Oferta» (precio de comparación mayor) > «Últimas piezas» (estado
+ * de stock bajo, nunca la cantidad) > «Nuevo» (publicado hace ≤ 30 días y al
+ * menos 7 días después de la apertura de la tienda).
  */
 export function productBadges(input: {
   price: number | null;
   compareAt: number | null | undefined;
   availability: "in_stock" | "low_stock" | "backorder" | "out_of_stock";
   publishedAt: string | null | undefined;
+  launchedAt: string | null | undefined;
   now: Date;
 }): Badge[] {
-  if (input.availability === "out_of_stock") return ["sold_out"];
-  const badges: Badge[] = [];
-  if (input.price !== null && savings(input.price, input.compareAt)) badges.push("sale");
-  if (input.publishedAt) {
+  const found = new Set<Badge>();
+  if (input.availability === "out_of_stock") found.add("sold_out");
+  if (input.price !== null && savings(input.price, input.compareAt)) found.add("sale");
+  if (input.availability === "low_stock") found.add("low_stock");
+  if (input.publishedAt && input.launchedAt) {
     const published = Date.parse(input.publishedAt);
+    const launched = Date.parse(input.launchedAt);
     const age = input.now.getTime() - published;
-    if (Number.isFinite(published) && age >= 0 && age <= NEW_DAYS * 86_400_000) badges.push("new");
+    if (
+      Number.isFinite(published) &&
+      Number.isFinite(launched) &&
+      age >= 0 &&
+      age <= NEW_DAYS * DAY_MS &&
+      published - launched >= NEW_AFTER_LAUNCH_DAYS * DAY_MS
+    ) {
+      found.add("new");
+    }
   }
-  if (input.availability === "low_stock") badges.push("low_stock");
-  return badges;
+  const first = PRIORITY.find((b) => found.has(b));
+  return first ? [first] : [];
 }
 
 export interface FreeShippingProgress {

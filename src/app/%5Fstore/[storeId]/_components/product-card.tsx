@@ -6,21 +6,44 @@ import { mediaUrl, type ProductCard as Card } from "@/server/storefront/catalog"
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
 
+/** Columnas de escritorio según cuántos productos hay: sin huecos con 3 o menos. */
+const DESKTOP_COLS: Record<number, string> = {
+  1: "sm:grid-cols-2 lg:grid-cols-4",
+  2: "sm:grid-cols-2 lg:grid-cols-4",
+  3: "sm:grid-cols-3 lg:grid-cols-3",
+};
+
 export function ProductGrid({
   products,
   store,
   eager = 0,
+  carousel = false,
 }: {
   products: Card[];
-  store: { currency: string; locale: string };
+  store: { currency: string; locale: string; launched_at?: string | null };
   /** Cuántas imágenes cargar sin lazy (las de arriba, para el LCP). */
   eager?: number;
+  /**
+   * En móvil, una fila que se desplaza en horizontal (portada, revisión M9): sin
+   * tarjetas huérfanas cuando el número de productos es impar.
+   */
+  carousel?: boolean;
 }) {
   const now = new Date();
+  const desktop = DESKTOP_COLS[products.length] ?? "sm:grid-cols-3 lg:grid-cols-4";
   return (
-    <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+    <ul
+      className={
+        carousel
+          ? `-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-x-4 sm:gap-y-8 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
+          : `grid grid-cols-2 gap-x-4 gap-y-8 ${desktop}`
+      }
+    >
       {products.map((product, index) => (
-        <li key={product.id}>
+        <li
+          key={product.id}
+          className={carousel ? "w-[44%] shrink-0 snap-start sm:w-auto" : undefined}
+        >
           <ProductCard product={product} store={store} eager={index < eager} now={now} />
         </li>
       ))}
@@ -35,7 +58,7 @@ function ProductCard({
   now,
 }: {
   product: Card;
-  store: { currency: string; locale: string };
+  store: { currency: string; locale: string; launched_at?: string | null };
   eager: boolean;
   now: Date;
 }) {
@@ -45,6 +68,7 @@ function ProductCard({
     compareAt: product.compare_at_price,
     availability: product.availability,
     publishedAt: product.published_at,
+    launchedAt: store.launched_at,
     now,
   });
   const ranged =
@@ -106,8 +130,8 @@ function ProductCard({
               </s>
             ) : null}
             {sale && sale.percent >= 1 ? (
-              <span className="ml-2 font-semibold">
-                <span className="sr-only">Ahorras </span>−{sale.percent} %
+              <span className="ml-2 whitespace-nowrap font-semibold text-[var(--sf-sale-text)]">
+                <span className="sr-only">Ahorras </span>−{sale.percent}&nbsp;%
               </span>
             ) : null}
           </>

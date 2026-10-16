@@ -43,6 +43,8 @@ export interface ProductPage {
   items: ProductCard[];
   sort: ListSort;
   next_cursor: { k: string | number; id: string } | null;
+  /** Total de resultados (solo en la primera página; revisión de conversión, M6). */
+  total?: number | null;
 }
 
 export const LIST_SORTS = [

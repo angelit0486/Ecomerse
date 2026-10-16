@@ -30,7 +30,7 @@ function card(overrides: Record<string, unknown>): string {
 describe("tarjeta de producto (revisión de conversión, A6)", () => {
   it("descuento redondeado hacia abajo y precio por porción", () => {
     const markup = card({ compare_at_price: 104900, servings: 30 });
-    expect(markup).toContain("−14 %");
+    expect(markup).toContain("−14\u00a0%");
     expect(markup).toContain("30 porciones · $29.97 por porción");
   });
 

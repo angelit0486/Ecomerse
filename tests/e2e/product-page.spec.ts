@@ -23,7 +23,8 @@ test.describe.configure({ mode: "serial" });
 test.beforeAll(async () => {
   const ownerId = await createAuthUser(`ficha-${run}@example.test`);
   tenant = await createTenant(`fi${run}`, ownerId);
-  await admin`update public.stores set status = 'active', launched_at = now() where id = ${tenant.storeId}`;
+  // Abierta hace 60 días: lo que se publica ahora es una novedad (revisión M8).
+  await admin`update public.stores set status = 'active', launched_at = now() - interval '60 days' where id = ${tenant.storeId}`;
   await admin.begin(async (sql) => {
     await sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: ownerId, role: "authenticated", aal: "aal2" })}, true)`;
     await sql`set local role authenticated`;
@@ -87,7 +88,7 @@ test.beforeAll(async () => {
 test("la ficha muestra datos verificables, galería accesible y relacionados", async ({ page }) => {
   await page.goto(`${origin()}/productos/cafeina-anhidra`);
   const badges = page.getByRole("list", { name: "Destacados", exact: true });
-  await expect(badges.getByRole("listitem")).toHaveText(["Oferta", "Nuevo"]);
+  await expect(badges.getByRole("listitem")).toHaveText(["Oferta"]);
   await expect(page.getByText("Ahorras $100.00 (33 %)")).toBeVisible();
   await expect(page.getByText("Envío gratis en compras desde $999.00.")).toBeVisible();
   // Costo y tiempo de la misma tarifa (revisión de conversión, M3).

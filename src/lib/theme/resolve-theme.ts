@@ -1,3 +1,5 @@
+import { contrastRatio } from "@/lib/color/contrast";
+
 import { buttonTextColor, COLOR_KEYS, resolvePalette, type Palette } from "./palette";
 import { FONT_KEYS, type FontKey } from "./schema";
 
@@ -77,10 +79,30 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
   };
 }
 
+/**
+ * Colores de oferta (revisión de conversión, M8; §15 reserva el acento para
+ * ofertas y ahorro): el acento solo garantiza 3:1 contra el fondo, así que se
+ * usa únicamente donde su texto llega a 4.5:1; si no, el estilo del botón y el
+ * color del texto.
+ */
+export function saleColors(theme: ResolvedTheme): { bg: string; fg: string; text: string } {
+  const p = theme.palette;
+  const onAccent = buttonTextColor(p.accent);
+  const badge =
+    contrastRatio(onAccent, p.accent) >= 4.5
+      ? { bg: p.accent, fg: onAccent }
+      : theme.buttonStyle === "outline"
+        ? { bg: p.background, fg: p.primary }
+        : { bg: p.primary, fg: theme.buttonText };
+  const text = contrastRatio(p.accent, p.background) >= 4.5 ? p.accent : p.foreground;
+  return { ...badge, text };
+}
+
 /** Declaraciones CSS de las variables del storefront (solo valores de la lista blanca). */
 export function themeCss(theme: ResolvedTheme): string {
   const p = theme.palette;
   const outline = theme.buttonStyle === "outline";
+  const sale = saleColors(theme);
   const declarations = [
     `--sf-primary:${p.primary}`,
     `--sf-accent:${p.accent}`,
@@ -93,6 +115,9 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-btn-bg:${outline ? p.background : p.primary}`,
     `--sf-btn-fg:${outline ? p.primary : theme.buttonText}`,
     `--sf-btn-border:${p.primary}`,
+    `--sf-sale-bg:${sale.bg}`,
+    `--sf-sale-fg:${sale.fg}`,
+    `--sf-sale-text:${sale.text}`,
     `--sf-font-heading:var(--font-${theme.fonts.heading})`,
     `--sf-font-body:var(--font-${theme.fonts.body})`,
   ];

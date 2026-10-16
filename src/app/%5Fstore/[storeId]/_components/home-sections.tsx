@@ -3,6 +3,7 @@ import Link from "next/link";
 import { mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
 import { SafeHtml } from "@/ui/safe-html";
 
+import { GoalChips } from "./goal-chips";
 import { ProductGrid } from "./product-card";
 import { ThemeLink } from "./theme-link";
 
@@ -12,7 +13,7 @@ import { ThemeLink } from "./theme-link";
  * enlaces se revalidan al mostrar (ThemeLink). Testimonios sin estrellas ni
  * JSON-LD de reseñas (D-F9-04).
  */
-type Store = { currency: string; locale: string };
+type Store = { currency: string; locale: string; launched_at?: string | null };
 
 const BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-6 font-medium text-[var(--sf-btn-fg)]";
@@ -104,10 +105,13 @@ export function HomeSections({
   sections,
   store,
   storeName,
+  goals = [],
 }: {
   sections: HomeSectionData[];
   store: Store;
   storeName: string;
+  /** Objetivos con productos: chips bajo el hero (o bajo el título, sin hero). */
+  goals?: { key: string; label: string }[];
 }) {
   const heroFirst = sections[0]?.type === "hero";
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
@@ -115,12 +119,24 @@ export function HomeSections({
   return (
     <div className="space-y-14">
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
-      {heroFirst ? null : <h1 className="text-2xl font-semibold sm:text-3xl">{storeName}</h1>}
+      {heroFirst ? null : (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-semibold sm:text-3xl">{storeName}</h1>
+          <GoalChips goals={goals} />
+        </div>
+      )}
       {sections.map((section, index) => {
         const headingId = `sf-seccion-${index}`;
         switch (section.type) {
           case "hero":
-            return <Hero key={section.id} section={section} headingLevel={index === 0 ? 1 : 2} />;
+            return index === 0 ? (
+              <div key={section.id} className="space-y-4">
+                <Hero section={section} headingLevel={1} />
+                <GoalChips goals={goals} />
+              </div>
+            ) : (
+              <Hero key={section.id} section={section} headingLevel={2} />
+            );
           case "featured_products": {
             const eager = index === eagerIndex ? 4 : 0;
             return (
@@ -138,7 +154,7 @@ export function HomeSections({
                     </Link>
                   ) : null}
                 </div>
-                <ProductGrid products={section.items} store={store} eager={eager} />
+                <ProductGrid products={section.items} store={store} eager={eager} carousel />
               </section>
             );
           }
