@@ -76,3 +76,27 @@
     padding: 0.25rem 0.5rem;
   }
 }
+
+/* Revisión de conversión (A3, B3): la barra fija de compra no tapa el pie; el
+   control −/+ reemplaza las flechas nativas del campo de cantidad. */
+@layer components {
+  @media (max-width: 767px) {
+    html.sf-buybar body {
+      padding-bottom: 5rem;
+    }
+  }
+  .sf-qty {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  .sf-qty::-webkit-outer-spin-button,
+  .sf-qty::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* Encabezado fijo (A4): los saltos a un ancla no quedan debajo de él. */
+html:has(.sf-root) {
+  scroll-padding-top: 8rem;
+}

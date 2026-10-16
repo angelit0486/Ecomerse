@@ -78,8 +78,11 @@ function Hero({
       </section>
     );
   }
+  // Móvil (revisión de conversión, A5): la imagen va arriba como banda y el texto
+  // debajo sobre el fondo del tema; recortada detrás del texto a 375 px parecía
+  // una losa rota. Desde `sm`, la imagen de fondo con velo.
   return (
-    <section className="relative isolate overflow-hidden rounded-[var(--sf-radius-card)]">
+    <section className="overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] sm:relative sm:isolate sm:bg-transparent">
       {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la portada */}
       <img
         src={mediaUrl(section.image.path)}
@@ -88,11 +91,11 @@ function Hero({
         height={section.image.height ?? 600}
         fetchPriority="high"
         decoding="async"
-        className="absolute inset-0 -z-10 h-full w-full object-cover"
+        className="block aspect-[16/9] w-full object-cover sm:absolute sm:inset-0 sm:-z-10 sm:aspect-auto sm:h-full"
       />
       {/* Velo fijo del tema: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
-      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
-      <div className="px-6 py-16 text-white sm:px-12 sm:py-24">{content}</div>
+      <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-black/60 sm:block" />
+      <div className="px-5 py-6 sm:px-12 sm:py-24 sm:text-white">{content}</div>
     </section>
   );
 }

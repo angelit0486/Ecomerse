@@ -200,14 +200,25 @@ test("menú «Objetivos» de 2 niveles armado desde el panel", async ({ page, br
   await nav.getByRole("link", { name: "Energía" }).click();
   await expect(shopper).toHaveURL(`${origin()}/productos?objetivo=energia`);
 
-  // Móvil: un botón «Menú» muestra la lista con los subniveles abiertos.
+  // Móvil (revisión de conversión, A4): el botón «Menú» va en la primera fila del
+  // encabezado, que es compacto y fijo; la lista muestra los subniveles abiertos.
   await shopper.setViewportSize({ width: 375, height: 800 });
   await shopper.goto(origin());
-  const menuButton = nav.getByRole("button", { name: "Menú" });
+  const banner = shopper.getByRole("banner");
+  const menuButton = banner.getByRole("button", { name: "Menú" });
+  expect((await banner.boundingBox())!.height).toBeLessThanOrEqual(120);
+  await expect(banner.getByRole("link", { name: /Carrito/ })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Objetivos" })).toBeHidden();
   await menuButton.click();
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
   await expect(nav.getByRole("link", { name: "Energía" })).toBeVisible();
   await expectNoSeriousA11yViolations(shopper);
+  await shopper.keyboard.press("Escape");
+  await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+  await expect(menuButton).toBeFocused();
+  // Al bajar, el carrito sigue a la vista.
+  await shopper.mouse.wheel(0, 2000);
+  await expect(banner.getByRole("link", { name: /Carrito/ })).toBeInViewport();
 });
 
 test("carrito: barra «te faltan $X para el envío gratis» con la regla real", async ({ page }) => {

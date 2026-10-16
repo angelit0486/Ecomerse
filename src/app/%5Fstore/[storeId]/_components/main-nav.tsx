@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type FocusEvent, type KeyboardEvent } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 /**
  * Menú principal de 2 niveles (F9-T04, F9-DESIGN §10): patrón de navegación de
  * divulgación (enlaces y botones con `aria-expanded`), no menú de aplicación.
- * En móvil, un botón «Menú» muestra la lista con los subniveles abiertos; en
+ * En móvil, un botón «Menú» (en la primera fila del encabezado, revisión de
+ * conversión A4) muestra la lista con los subniveles abiertos; en
  * escritorio, cada entrada con hijos tiene su botón que abre el submenú (Escape
  * lo cierra y devuelve el foco). «Objetivos» es una entrada más del menú que
  * enlaza a `?objetivo=…`.
@@ -17,9 +27,72 @@ export interface NavEntry {
   children: { label: string; href: string }[];
 }
 
-export function MainNav({ menu }: { menu: NavEntry[] }) {
+interface MobileMenu {
+  id: string;
+  open: boolean;
+  setOpen: (open: boolean | ((v: boolean) => boolean)) => void;
+}
+
+const MobileMenuContext = createContext<MobileMenu | null>(null);
+
+/** Comparte el estado del menú de móvil entre su botón y la lista. */
+export function NavProvider({ children }: { children: ReactNode }) {
   const id = useId();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  // Escape cierra la lista de móvil desde cualquier parte y devuelve el foco al botón.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      document.getElementById(`${id}-menu`)?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, id]);
+  return (
+    <MobileMenuContext.Provider value={{ id, open, setOpen }}>
+      {children}
+    </MobileMenuContext.Provider>
+  );
+}
+
+function useMobileMenu(): MobileMenu {
+  const menu = useContext(MobileMenuContext);
+  if (!menu) throw new Error("MainNav y MenuButton van dentro de NavProvider");
+  return menu;
+}
+
+/** Botón «☰ Menú» de móvil. */
+export function MenuButton() {
+  const { id, open, setOpen } = useMobileMenu();
+  return (
+    <button
+      id={`${id}-menu`}
+      type="button"
+      aria-expanded={open}
+      aria-controls={`${id}-lista`}
+      onClick={() => setOpen((v) => !v)}
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--sf-radius-control)] sm:hidden"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      >
+        {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+      </svg>
+      <span className="sr-only">Menú</span>
+    </button>
+  );
+}
+
+export function MainNav({ menu }: { menu: NavEntry[] }) {
+  const { id, open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   // Al elegir un enlace se cierra todo.
@@ -46,19 +119,10 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
   }
 
   return (
-    <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 pb-3 text-sm">
-      <button
-        type="button"
-        aria-expanded={mobileOpen}
-        aria-controls={`${id}-lista`}
-        onClick={() => setMobileOpen((v) => !v)}
-        className="inline-flex h-10 items-center gap-2 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-3 font-medium sm:hidden"
-      >
-        <span aria-hidden="true">☰</span> Menú
-      </button>
+    <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 text-sm">
       <ul
         id={`${id}-lista`}
-        className={`${mobileOpen ? "flex" : "hidden"} mt-3 flex-col gap-3 sm:mt-0 sm:flex sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2`}
+        className={`${mobileOpen ? "flex" : "hidden"} max-h-[60vh] flex-col gap-1 overflow-y-auto pb-3 sm:flex sm:max-h-none sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2 sm:overflow-visible`}
       >
         {entries.map((item, index) => {
           const hasChildren = item.children.length > 0;
@@ -74,7 +138,7 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
                 <Link
                   href={item.href}
                   onClick={closeAll}
-                  className="py-1 font-medium hover:underline"
+                  className="flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1"
                 >
                   {item.label}
                 </Link>
@@ -106,7 +170,7 @@ export function MainNav({ menu }: { menu: NavEntry[] }) {
                       <Link
                         href={child.href}
                         onClick={closeAll}
-                        className="block rounded-[var(--sf-radius-control)] py-1 hover:underline sm:px-2 sm:py-1.5 sm:hover:bg-[var(--sf-surface)]"
+                        className="flex min-h-11 items-center rounded-[var(--sf-radius-control)] hover:underline sm:min-h-0 sm:px-2 sm:py-1.5 sm:hover:bg-[var(--sf-surface)]"
                       >
                         {child.label}
                       </Link>

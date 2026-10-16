@@ -105,7 +105,7 @@ export default async function StoreLayout({ children, params }: Props) {
         cartCount={cart?.item_count ?? 0}
         logoPosition={theme.logoPosition}
       />
-      <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>
       <StoreFooter store={store} menu={menus.footer} settings={settings} />

@@ -205,7 +205,7 @@ export default async function ProductPage({ params }: Props) {
   }));
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6 md:space-y-12">
       <JsonLd data={productJsonLd(store, product)} />
       <Breadcrumb
         items={[
@@ -264,11 +264,14 @@ export default async function ProductPage({ params }: Props) {
                 storeId={store.id}
                 variantId={single.id}
                 available={single.availability !== "out_of_stock"}
+                title={product.title}
+                price={money(single.price, store)}
               />
             </div>
           ) : product.variants.length > 0 ? (
             <VariantSelector
               storeId={store.id}
+              title={product.title}
               options={product.options}
               variants={product.variants.map((v) => ({
                 id: v.id,

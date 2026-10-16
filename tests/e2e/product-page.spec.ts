@@ -172,3 +172,41 @@ test("compra completa en 3 clics desde la ficha", async ({ page }) => {
     select total, payment_status from public.orders where store_id = ${tenant.storeId}`;
   expect(order).toEqual({ total: "29900", payment_status: "paid" });
 });
+
+test("móvil: barra fija «Comprar ahora» y cantidad con −/+ (revisión de conversión, A3 y B3)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`${origin()}/productos/cafeina-anhidra`);
+  const bar = page.getByRole("region", { name: "Compra rápida" });
+
+  // Con los botones principales a la vista, la barra no se muestra.
+  const plus = page.getByRole("button", { name: "Sumar 1" });
+  await page.getByRole("button", { name: "Agregar al carrito" }).scrollIntoViewIfNeeded();
+  await expect(bar).toBeHidden();
+  const quantity = page.getByLabel("Cantidad", { exact: true });
+  await expect(page.getByRole("button", { name: "Restar 1" })).toBeDisabled();
+  await plus.click();
+  await plus.click();
+  await page.getByRole("button", { name: "Restar 1" }).click();
+  await expect(quantity).toHaveValue("2");
+
+  // Al bajar aparece con el precio, y no tapa el pie de la tienda.
+  await page.mouse.wheel(0, 5000);
+  await expect(bar).toBeVisible();
+  await expect(bar).toContainText("$200.00");
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const barTop = (await bar.boundingBox())!.y;
+  const copyright = page.getByRole("contentinfo").getByText(/^©/);
+  expect(
+    (await copyright.boundingBox())!.y + (await copyright.boundingBox())!.height,
+  ).toBeLessThanOrEqual(barTop);
+  await expectNoSeriousA11yViolations(page);
+
+  // Compra directa con la cantidad elegida.
+  await bar.getByRole("button", { name: "Comprar ahora" }).click();
+  await expect(page).toHaveURL(`${origin()}/checkout`);
+  await expect(page.getByRole("complementary", { name: "Resumen del pedido" })).toContainText(
+    "$400.00",
+  );
+});

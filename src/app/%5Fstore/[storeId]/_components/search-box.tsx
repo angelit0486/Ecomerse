@@ -112,7 +112,7 @@ export function SearchBox() {
       method="get"
       action="/buscar"
       role="search"
-      className="relative order-last flex w-full gap-2 sm:order-none sm:ml-auto sm:w-auto"
+      className="relative order-last flex w-full gap-2 px-2 sm:order-none sm:ml-auto sm:w-auto sm:px-0"
     >
       <label htmlFor={`${id}-q`} className="sr-only">
         Buscar productos

@@ -6,7 +6,7 @@ import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
 import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
-import { MainNav } from "./main-nav";
+import { MainNav, MenuButton, NavProvider } from "./main-nav";
 import { SearchBox } from "./search-box";
 import { ThemeLink } from "./theme-link";
 
@@ -30,6 +30,11 @@ export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme[
   );
 }
 
+/**
+ * Encabezado (revisión de conversión, A4): en móvil, fila 1 con menú, nombre,
+ * cuenta y carrito; fila 2 con el buscador (≈ 110 px en lugar de 233 px). Fijo
+ * arriba para que el carrito siempre esté a la vista.
+ */
 export function StoreHeader({
   store,
   menu,
@@ -43,44 +48,74 @@ export function StoreHeader({
 }) {
   const centered = logoPosition === "center";
   return (
-    <header className="border-b border-[var(--sf-border)]">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:gap-x-6">
-        <Link
-          href="/"
-          className={
-            centered
-              ? "flex w-full items-center justify-center gap-2 text-lg font-semibold"
-              : "flex min-w-0 flex-1 items-center gap-2 text-lg font-semibold sm:flex-none"
-          }
-        >
-          {store.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
-            <img
-              src={mediaUrl(store.logo.path)}
-              alt={store.name}
-              width={store.logo.width ?? 160}
-              height={store.logo.height ?? 48}
-              className="h-10 w-auto max-w-40 object-contain"
-            />
-          ) : null}
-          {/* En móvil, un nombre largo se recorta: cuenta y carrito caben en el renglón. */}
-          {store.logo ? null : <span className="truncate">{store.name}</span>}
-        </Link>
-        <SearchBox />
-        <Link href="/cuenta" className="shrink-0 text-sm font-medium underline">
-          Mi cuenta
-        </Link>
-        <Link
-          href="/carrito"
-          className="inline-flex h-10 shrink-0 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium"
-        >
-          Carrito<span className="sr-only">, productos:</span>
-          <span className="ml-2 rounded-full bg-[var(--sf-fg)] px-2 text-xs text-[var(--sf-bg)]">
-            {cartCount}
-          </span>
-        </Link>
-      </div>
-      <MainNav menu={menu} />
+    <header className="sticky top-0 z-30 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]">
+      <NavProvider>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-2 py-2 sm:gap-x-6 sm:px-4 sm:py-4">
+          <MenuButton />
+          <Link
+            href="/"
+            className={`flex min-w-0 flex-1 items-center gap-2 font-semibold ${
+              centered ? "justify-center sm:w-full sm:flex-none" : "sm:flex-none"
+            }`}
+          >
+            {store.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
+              <img
+                src={mediaUrl(store.logo.path)}
+                alt={store.name}
+                width={store.logo.width ?? 160}
+                height={store.logo.height ?? 48}
+                className="h-9 w-auto max-w-36 object-contain sm:h-10 sm:max-w-40"
+              />
+            ) : (
+              // Un nombre largo pasa a 2 líneas en lugar de cortarse.
+              <span className="line-clamp-2 text-base leading-tight sm:text-lg">{store.name}</span>
+            )}
+          </Link>
+          <SearchBox />
+          <Link
+            href="/cuenta"
+            className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-[var(--sf-radius-control)] text-sm font-medium sm:h-auto sm:min-w-0 sm:underline"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-6 w-6 sm:hidden"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+            </svg>
+            <span className="sr-only sm:not-sr-only">Mi cuenta</span>
+          </Link>
+          <Link
+            href="/carrito"
+            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[var(--sf-radius-btn)] px-2 text-sm font-medium sm:h-10 sm:border sm:border-[var(--sf-border-strong)] sm:px-4"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-6 w-6 sm:hidden"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            >
+              <path d="M5 8h14l-1.2 12H6.2L5 8Z" />
+              <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+            </svg>
+            <span className="sr-only sm:not-sr-only">Carrito</span>
+            <span className="sr-only">, productos:</span>
+            <span className="rounded-full bg-[var(--sf-fg)] px-2 text-xs text-[var(--sf-bg)] sm:ml-1">
+              {cartCount}
+            </span>
+          </Link>
+        </div>
+        <MainNav menu={menu} />
+      </NavProvider>
     </header>
   );
 }

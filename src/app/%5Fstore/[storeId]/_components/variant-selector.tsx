@@ -24,10 +24,12 @@ export interface SelectorVariant {
 
 export function VariantSelector({
   storeId,
+  title,
   options,
   variants,
 }: {
   storeId: string;
+  title?: string;
   options: { name: string; values: string[] }[];
   variants: SelectorVariant[];
 }) {
@@ -111,6 +113,8 @@ export function VariantSelector({
         storeId={storeId}
         variantId={selected?.id ?? null}
         available={Boolean(selected?.available)}
+        title={title}
+        price={selected?.price ?? null}
       />
     </div>
   );
