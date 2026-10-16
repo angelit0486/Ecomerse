@@ -94,6 +94,17 @@ export function MenuButton() {
 export function MainNav({ menu }: { menu: NavEntry[] }) {
   const { id, open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // Un clic fuera cierra el submenú (Safari no da foco a los botones al hacer
+  // clic, así que onBlur no basta).
+  useEffect(() => {
+    if (openIndex === null) return;
+    const onPointer = (event: PointerEvent) => {
+      const item = document.getElementById(`${id}-btn-${openIndex}`)?.closest("li");
+      if (item && !item.contains(event.target as Node)) setOpenIndex(null);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [openIndex, id]);
 
   // Al elegir un enlace se cierra todo.
   const closeAll = () => {

@@ -1,7 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useSyncExternalStore, type ComponentProps, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  type ComponentProps,
+  type FormEvent,
+} from "react";
 
 const noSubscribe = () => () => {};
 
@@ -25,6 +31,20 @@ export function AutoSubmitForm({
   ...props
 }: Omit<ComponentProps<"form">, "action" | "method" | "onChange"> & { action: string }) {
   const router = useRouter();
+  const form = useRef<HTMLFormElement>(null);
+  const query = useSearchParams().toString();
+  // Los campos no son controlados: si la URL cambia por otro camino (quitar un
+  // filtro activo, «Quitar filtros», Atrás), se vuelven a alinear con lo que
+  // pintó el servidor; si no, un filtro quitado reaparecería al marcar otro.
+  useEffect(() => {
+    for (const el of Array.from(form.current?.elements ?? [])) {
+      if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) {
+        el.checked = el.defaultChecked;
+      } else if (el instanceof HTMLSelectElement) {
+        for (const option of Array.from(el.options)) option.selected = option.defaultSelected;
+      }
+    }
+  }, [query]);
   function apply(form: HTMLFormElement) {
     const params = new URLSearchParams();
     for (const [name, value] of new FormData(form)) {
@@ -36,6 +56,7 @@ export function AutoSubmitForm({
   return (
     <form
       {...props}
+      ref={form}
       method="get"
       action={action}
       onChange={(e: FormEvent<HTMLFormElement>) => apply(e.currentTarget)}

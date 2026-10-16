@@ -45,4 +45,12 @@ describe("deliveryEstimate (revisión de conversión, B4)", () => {
       "Llega el 17 de octubre",
     );
   });
+
+  it("una fecha que ya pasó no se muestra", () => {
+    const placed = { ...base, minDays: 2, maxDays: 5 };
+    expect(deliveryEstimate({ ...placed, now: new Date("2026-10-21T20:00:00Z") })).toBe(
+      "Llega entre el 18 y el 21 de octubre",
+    );
+    expect(deliveryEstimate({ ...placed, now: new Date("2026-10-22T18:00:00Z") })).toBeNull();
+  });
 });

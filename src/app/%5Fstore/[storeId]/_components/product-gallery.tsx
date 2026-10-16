@@ -28,7 +28,10 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
   useEffect(() => {
     const onVariant = (event: Event) => {
       const src = (event as CustomEvent<string | null>).detail;
-      if (!src) return;
+      if (!src) {
+        setExtra(null);
+        return;
+      }
       const i = images.findIndex((image) => image.src === src);
       if (i >= 0) {
         setIndex(i);

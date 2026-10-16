@@ -45,7 +45,8 @@ export function VariantSelector({
   // La imagen de la variante elegida pasa a la galería principal (M5).
   const imageUrl = selected?.imageUrl ?? null;
   useEffect(() => {
-    if (imageUrl) window.dispatchEvent(new CustomEvent(VARIANT_IMAGE_EVENT, { detail: imageUrl }));
+    // También sin imagen: la galería deja de mostrar la de la variante anterior.
+    window.dispatchEvent(new CustomEvent(VARIANT_IMAGE_EVENT, { detail: imageUrl }));
   }, [imageUrl]);
 
   /** ¿Existe alguna variante con este valor y el resto de la selección actual? */

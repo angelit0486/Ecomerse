@@ -46,6 +46,11 @@ Además, a 375 px ninguna de las 5 páginas tiene scroll horizontal (`scrollWidt
 ## Capturas
 
 `demo/` y `demo2/`: portada, listado, ficha, carrito y checkout a 375 px (móvil) y 1280 px
-(escritorio), página completa. Las capturas lado a lado con GNC, Birdman y B Life siguen
-**pendientes**: el entorno no permite acceder a sus dominios (requiere que el propietario los
-habilite en la configuración de red).
+(escritorio), página completa, después de la revisión de conversión y el pulido visual (2026-10-16).
+
+`competencia/`: portada de GNC (`gnc.com.mx`), de la tienda oficial de Birdman en Mercado Libre
+(`birdman.mx` no tiene una tienda funcional: certificado inválido y página vacía) y de B Life
+(`blife.mx`), a 375×812 y 1280×800, tomadas el 2026-10-16 con Chromium 141 desde un entorno en la nube
+con salida a internet (el contenedor de trabajo no alcanza esos dominios), tras cerrar las ventanas
+emergentes que se dejan cerrar. La comparación está en `docs/phases/PHASE-09-REPORT.md` §5.3. La
+medición final (Lighthouse y axe) también está en ese informe.

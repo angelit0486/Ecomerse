@@ -42,18 +42,24 @@ export default async function OrderPage({ params, searchParams }: Props) {
     payment &&
     ["failed", "expired", "cancelled"].includes(payment.status);
 
-  // Fecha estimada solo con el pedido confirmado (revisión de conversión, B4):
-  // mientras espera el pago, la fecha depende de cuándo se pague.
-  const arrival =
-    order.shipping && order.status !== "pending_payment" && order.status !== "cancelled"
-      ? deliveryEstimate({
-          placedAt: order.placed_at,
-          minDays: order.shipping.est_days_min,
-          maxDays: order.shipping.est_days_max,
-          timeZone: store.timezone,
-          locale: store.locale,
-        })
-      : null;
+  // Fecha estimada solo mientras el pedido está pagado y en camino (revisión de
+  // conversión, B4): no en pendientes de pago, cancelados, completados,
+  // reembolsados o devueltos, ni cuando la fecha ya pasó.
+  const inTransit =
+    order.shipping &&
+    ["paid", "processing", "open"].includes(order.status) &&
+    order.payment_status === "paid" &&
+    ["unfulfilled", "partially_fulfilled", "fulfilled"].includes(order.fulfillment_status);
+  const arrival = inTransit
+    ? deliveryEstimate({
+        placedAt: order.placed_at,
+        minDays: order.shipping!.est_days_min,
+        maxDays: order.shipping!.est_days_max,
+        timeZone: store.timezone,
+        locale: store.locale,
+        now: new Date(),
+      })
+    : null;
 
   return (
     <section className="mx-auto max-w-3xl space-y-8">

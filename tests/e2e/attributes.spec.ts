@@ -176,6 +176,12 @@ test("la tienda filtra con conteo por valor y conserva el orden", async ({ page 
     .getByRole("link", { name: "Quitar el filtro Sabor: Chocolate" })
     .click();
   await expect.poll(() => cardTitles(page)).toEqual(["Proteína Choco", "Proteína Vainilla"]);
+  // La casilla se desmarca sola: marcar otra no devuelve el filtro quitado (revisión adversarial).
+  await expect(sabor.getByRole("checkbox", { name: /Chocolate/ })).not.toBeChecked();
+  await sabor.getByRole("checkbox", { name: /Vainilla/ }).check();
+  await expect(page).toHaveURL(/sabor=vainilla/);
+  await expect(page).not.toHaveURL(/sabor=chocolate/);
+  await page.goBack();
   await page.getByRole("link", { name: "Quitar filtros" }).click();
   await expect
     .poll(() => cardTitles(page))

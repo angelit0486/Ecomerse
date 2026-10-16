@@ -33,11 +33,37 @@ sha256 de cada archivo contra el commit publicado. Ninguna cambia permisos ni fi
 
 ## 3. Pruebas y resultados (locales, 2026-10-16)
 
-<!-- RESULTADOS -->
+| Prueba                                                                           | Resultado                                                                                                                                                            |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify` (lint, formato, tipos, unitarias, build)                           | Verde. Unitarias: 541 en 62 archivos.                                                                                                                                |
+| `pnpm db:test`                                                                   | pgTAP: 1 613 pruebas en 60 archivos, `PASS` (incluye `58_conversion_review` y los metatests de seguridad). Integración: 233/233.                                     |
+| E2E (Playwright, app compilada + stack local)                                    | **49/49** en la corrida completa final.                                                                                                                              |
+| axe-core (WCAG 2.0/2.1/2.2 A y AA + buenas prácticas)                            | **0 violaciones de cualquier nivel** en 24 combinaciones: portada, listado, ficha, carrito, checkout y búsqueda sin resultados, en las dos tiendas, a 375 y 1280 px. |
+| Lighthouse 12.8.2 móvil (3 corridas por página; se reporta la mediana y la peor) | Tabla siguiente.                                                                                                                                                     |
+
+| Tienda             | Página  | Rendimiento (mediana / peor) | Accesibilidad | Buenas prácticas | SEO | LCP    | CLS   |
+| ------------------ | ------- | ---------------------------- | ------------- | ---------------- | --- | ------ | ----- |
+| demo («Deportivo») | Portada | 96 / 93                      | 100           | 100              | 100 | 2.45 s | 0.017 |
+| demo               | Listado | 97 / 95                      | 100           | 100              | 100 | 2.28 s | 0.033 |
+| demo               | Ficha   | 97 / 94                      | 100           | 100              | 100 | 2.28 s | 0.001 |
+| demo2 («Neutral»)  | Portada | 96 / 95                      | 100           | 100              | 100 | 2.71 s | 0.004 |
+| demo2              | Listado | 97 / 96 (2 corridas válidas) | 100           | 100              | 100 | 2.28 s | 0.033 |
+| demo2              | Ficha   | 98 / 96                      | 100           | 100              | 100 | 2.05 s | 0.001 |
+
+Evidencia: `docs/phases/f9-evidencia/` (README con la medición preliminar, capturas `demo/`, `demo2/` y
+`competencia/`).
 
 ## 4. Criterios de cierre (F9-DESIGN §16)
 
-<!-- CRITERIOS -->
+| #   | Criterio                                                                                                           | Implementado | Verificado                                                                                                                                                              | Pendiente                                                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Lighthouse móvil ≥ 95 (4 categorías) en portada, listado y ficha                                                   | Sí           | **Medianas ≥ 96** en las 6 páginas y 100 en accesibilidad, buenas prácticas y SEO. Corridas sueltas de 93 y 94 por ruido de CPU compartida.                             | Repetir en producción (red y CDN reales).                                                                                                                                |
+| 2   | 0 violaciones serias o críticas de axe                                                                             | Sí           | 0 de **cualquier** nivel en 24 combinaciones (§3); además axe en cada E2E de tienda.                                                                                    | —                                                                                                                                                                        |
+| 3   | Compra en ≤ 3 clics desde la ficha                                                                                 | Sí           | E2E «compra completa en 3 clics desde la ficha» y, en móvil, desde la barra fija.                                                                                       | —                                                                                                                                                                        |
+| 4   | Capturas 375/1280 de 5 páginas, lado a lado con GNC, Birdman y B Life                                              | Sí           | Nuestras 20 capturas (2 tiendas × 5 páginas × 2 tamaños) y las portadas de las 3 referencias en móvil y escritorio (§5.3).                                              | Las referencias son solo portada (sus fichas cambian a diario); Birdman se tomó de su tienda oficial en Mercado Libre porque `birdman.mx` no tiene una tienda funcional. |
+| 5   | Filtros (objetivo, sabor, marca), buscador con sugerencias, relacionados, envío gratis, ficha sanitaria y leyendas | Sí           | E2E `attributes`, `navigation`, `product-page`, `compliance`.                                                                                                           | Textos sanitarios reales (R0).                                                                                                                                           |
+| 6   | Nada inventado                                                                                                     | Sí           | Sin reseñas, testimonios, sellos ni cifras; la franja de confianza solo muestra datos configurados; «pendiente de contenido real» solo en la vista previa (E2E `home`). | —                                                                                                                                                                        |
+| 7   | Revisión adversarial de diseño y conversión                                                                        | Sí           | 22 hallazgos, todos atendidos (§5.2).                                                                                                                                   | Tolerancia a errores de escritura (M7) y precio por porción por variante (M5).                                                                                           |
 
 ## 5. Revisión del gate
 
@@ -46,7 +72,16 @@ sha256 de cada archivo contra el commit publicado. Ninguna cambia permisos ni fi
 Hallazgos de la primera ronda (G9-1…G9-5 y los de app) corregidos en `1659607`. Pruebas de mutación de
 F9-T03/T04: 22/22 mutantes detectados (`fb94a2a`).
 
-<!-- REVISION-NUEVA -->
+Segunda revisión adversarial (código del 2026-10-16: migraciones 0700–1000, siembra y componentes
+nuevos). Sin hallazgos altos ni de aislamiento o permisos:
+
+| Sev.       | Hallazgo                                                                                                       | Resolución                                                                                                                                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Media      | Al quitar un filtro activo, su casilla seguía marcada (campo no controlado) y volvía a enviarse al marcar otro | `AutoSubmitForm` realinea las casillas con la URL; E2E en `attributes.spec`.                                                                                                                                      |
+| Baja/Media | La fecha estimada aparecía en pedidos completados, reembolsados o con fechas pasadas                           | Solo con el pedido abierto, pagado y sin devolución, y nunca si la fecha ya pasó; prueba unitaria.                                                                                                                |
+| Baja       | Una variante sin imagen dejaba la imagen de la anterior en la galería                                          | El evento también se emite sin imagen y la galería vuelve a la suya.                                                                                                                                              |
+| Baja       | En Safari un clic fuera no cerraba el submenú de escritorio                                                    | Cierre con `pointerdown` fuera del menú.                                                                                                                                                                          |
+| Baja       | La portada calcula `total` en cada sección (`home_resolve` → `list_products` con cursor nulo)                  | Aceptado y anotado en riesgos: con el tope de 4 secciones y catálogos chicos el costo es menor; cambiar la firma exige quitar la función anterior (operación destructiva) y queda para cuando el volumen lo pida. |
 
 ### 5.2 Revisión de diseño y conversión
 
@@ -79,7 +114,22 @@ Una revisión con capturas a 375 y 1280 px encontró 22 puntos (6 altos, 10 medi
 
 ### 5.3 Comparación con GNC, Birdman y B Life
 
-<!-- COMPARACION -->
+Capturas del 2026-10-16 con el mismo navegador (Chromium 141), a 375×812 y 1280×800, tras cerrar
+las ventanas emergentes que se dejan cerrar: `docs/phases/f9-evidencia/competencia/`. Nuestras
+tiendas: `demo/` y `demo2/`.
+
+| Aspecto                 | GNC                                                                                     | Birdman (tienda oficial en Mercado Libre)        | B Life                                                     | Nuestras tiendas                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Primera pantalla móvil  | Banner de app, aviso de fraude y una promoción a pantalla completa que vuelve a abrirse | Encabezado de Mercado Libre y banner de producto | Barra de promoción, banner 4×3 y avisos de envío y cookies | Encabezado de 110 px, hero, objetivos y franja de confianza sin ventanas emergentes                    |
+| Confianza               | «Garantía GNC», recoger en tienda, entrega en 60 min, WhatsApp                          | Reputación y envío de Mercado Libre              | Envío gratis, pagos seguros, WhatsApp                      | Envío gratis y costo, tiempo de entrega, formas de pago y WhatsApp **solo si la tienda los configura** |
+| Fotografía              | Real, de producto y personas                                                            | Real, de producto                                | Real, de personas                                          | **Ilustraciones de ejemplo**: es la mayor brecha y la cierra el contenido del propietario              |
+| Navegación por objetivo | Por categoría y marca                                                                   | Por categoría                                    | Por categoría                                              | Chips de objetivo, menú «Objetivos» y filtros por objetivo, sabor y marca                              |
+| Compra                  | Varios pasos                                                                            | Flujo de Mercado Libre                           | Varios pasos                                               | ≤ 3 clics desde la ficha; barra fija «Comprar ahora» en móvil                                          |
+
+Conclusión honesta: en estructura, accesibilidad, velocidad y claridad de compra las tiendas de la
+plataforma están al nivel de las tres referencias o por encima. En **confianza percibida** siguen por
+debajo mientras usen ilustraciones de ejemplo y no tengan logo, políticas ni contacto: eso no se
+resuelve con código y está en §7.
 
 ## 6. Riesgos
 
@@ -109,4 +159,14 @@ Vercel Pro (N-4), limpieza de la vista previa (`pruva_apply`, `pruva_fetch`, `pg
 
 ## 8. Definition of Done
 
-<!-- DOD -->
+- [x] Criterios de §16 implementados y verificados con evidencia (§4), salvo lo marcado como pendiente.
+- [x] `pnpm verify`, `pnpm db:test` y E2E completos en verde (§3).
+- [x] Revisiones adversariales de base, aplicación, y diseño y conversión, con sus hallazgos resueltos o
+      aceptados con motivo (§5).
+- [x] Migraciones forward-only, probadas desde cero y aplicadas en la vista previa con sha256 verificado.
+- [x] Decisiones registradas (D-F9-01 … D-F9-18) y PROGRESS al día.
+- [ ] Contenido real del propietario (fotos, logo, políticas, contacto, textos sanitarios): no bloquea el
+      gate técnico, sí el lanzamiento de la tienda insignia.
+
+**Gate F9: cerrado en lo técnico.** La siguiente fase según el orden acordado (D-S-05) es la Fase P (pagos
+en México).

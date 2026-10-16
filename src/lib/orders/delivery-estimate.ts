@@ -11,6 +11,8 @@ export function deliveryEstimate(input: {
   maxDays: number | null | undefined;
   timeZone: string | undefined;
   locale?: string;
+  /** Con `now`, si el último día del rango ya pasó no se muestra nada. */
+  now?: Date;
 }): string | null {
   const { minDays, maxDays } = input;
   if (minDays == null || maxDays == null) return null;
@@ -37,6 +39,16 @@ export function deliveryEstimate(input: {
   const day = (offset: number) => new Date(Date.UTC(y, m - 1, d + offset, 12));
   const from = day(minDays);
   const to = day(maxDays);
+  if (input.now) {
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(input.now);
+    const [ty, tm, td] = today.split("-").map(Number) as [number, number, number];
+    if (to.getTime() < Date.UTC(ty, tm - 1, td, 12)) return null;
+  }
   const dayNum = (date: Date) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", timeZone: "UTC" }).format(date);
   const dayMonth = (date: Date) =>
