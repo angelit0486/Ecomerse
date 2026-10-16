@@ -180,10 +180,30 @@ export function StoreFooter({
   const payments = settings.footer?.payment_methods ?? [];
   const legal = settings.footer?.legal_text;
   return (
-    <footer className="mt-16 border-t border-[var(--sf-border)]">
+    <footer className="mt-16 border-t border-[var(--sf-border)] bg-[var(--sf-surface)]">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-2">
-          <p className="font-medium">{store.name}</p>
+        <div className="space-y-3">
+          <p className="text-base font-semibold">{store.name}</p>
+          {/* Accesos que toda tienda tiene (pulido visual): el pie nunca queda vacío. */}
+          <nav aria-label="Tienda">
+            <ul className="flex flex-col gap-2 text-[var(--sf-muted)]">
+              <li>
+                <Link href="/productos" className="hover:underline">
+                  Ver el catálogo
+                </Link>
+              </li>
+              <li>
+                <Link href="/cuenta" className="hover:underline">
+                  Tus pedidos
+                </Link>
+              </li>
+              <li>
+                <Link href="/carrito" className="hover:underline">
+                  Tu carrito
+                </Link>
+              </li>
+            </ul>
+          </nav>
           {menu.length > 0 ? (
             <nav aria-label="Pie de página">
               <ul className="flex flex-col gap-2 text-[var(--sf-muted)]">
@@ -264,11 +284,11 @@ export function StoreFooter({
             <h2 id="sf-pagos" className="font-semibold">
               Formas de pago
             </h2>
-            <ul className="flex flex-wrap gap-2 text-[var(--sf-muted)]">
+            <ul className="flex flex-wrap gap-2">
               {payments.map((m) => (
                 <li
                   key={m}
-                  className="rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] px-2 py-1"
+                  className="rounded-[var(--sf-radius-control)] border border-[var(--sf-border)] bg-[var(--sf-bg)] px-2.5 py-1 text-xs font-semibold"
                 >
                   {PAYMENT_LABELS[m]}
                 </li>

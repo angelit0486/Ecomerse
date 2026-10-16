@@ -100,3 +100,10 @@
 html:has(.sf-root) {
   scroll-padding-top: 8rem;
 }
+
+/* El botón de WhatsApp sube por encima de la barra fija de compra (móvil). */
+@media (max-width: 767px) {
+  html.sf-buybar .sf-whatsapp {
+    bottom: 5.5rem;
+  }
+}

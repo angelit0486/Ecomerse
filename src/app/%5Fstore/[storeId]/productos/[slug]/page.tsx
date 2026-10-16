@@ -216,7 +216,8 @@ export default async function ProductPage({ params }: Props) {
         ]}
       />
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-        <section aria-label="Imágenes">
+        {/* En escritorio la galería acompaña al bajar por la información (pulido visual). */}
+        <section aria-label="Imágenes" className="md:sticky md:top-36 md:self-start">
           <ProductGallery images={gallery} title={product.title} />
         </section>
         <section aria-labelledby="sf-producto" className="space-y-5">

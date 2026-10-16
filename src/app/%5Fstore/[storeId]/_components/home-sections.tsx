@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
 import { SafeHtml } from "@/ui/safe-html";
@@ -106,7 +107,10 @@ export function HomeSections({
   store,
   storeName,
   goals = [],
+  trust = null,
 }: {
+  /** Franja de confianza con datos reales de la tienda, bajo los objetivos. */
+  trust?: ReactNode;
   sections: HomeSectionData[];
   store: Store;
   storeName: string;
@@ -123,6 +127,7 @@ export function HomeSections({
         <div className="space-y-4">
           <h1 className="text-2xl font-semibold sm:text-3xl">{storeName}</h1>
           <GoalChips goals={goals} />
+          {trust}
         </div>
       )}
       {sections.map((section, index) => {
@@ -133,6 +138,7 @@ export function HomeSections({
               <div key={section.id} className="space-y-4">
                 <Hero section={section} headingLevel={1} />
                 <GoalChips goals={goals} />
+                {trust}
               </div>
             ) : (
               <Hero key={section.id} section={section} headingLevel={2} />
@@ -164,12 +170,12 @@ export function HomeSections({
                 <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
                   {section.title}
                 </h2>
-                <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] sm:gap-4">
                   {section.categories.map((category) => (
                     <li key={category.path}>
                       <Link
                         href={`/categoria/${category.path}`}
-                        className="flex h-full flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:bg-[var(--sf-surface)]"
+                        className="group flex h-full flex-col gap-3 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-surface)] p-4 transition-colors hover:border-[var(--sf-fg)]"
                       >
                         {category.image ? (
                           // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
@@ -183,7 +189,15 @@ export function HomeSections({
                             className="aspect-square w-full rounded object-cover"
                           />
                         ) : null}
-                        <span className="font-medium">{category.name}</span>
+                        <span className="flex items-center justify-between gap-2 font-semibold">
+                          {category.name}
+                          <span
+                            aria-hidden="true"
+                            className="text-[var(--sf-muted)] transition-transform group-hover:translate-x-0.5"
+                          >
+                            →
+                          </span>
+                        </span>
                       </Link>
                     </li>
                   ))}

@@ -6,13 +6,6 @@ import { mediaUrl, type ProductCard as Card } from "@/server/storefront/catalog"
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
 
-/** Columnas de escritorio según cuántos productos hay: sin huecos con 3 o menos. */
-const DESKTOP_COLS: Record<number, string> = {
-  1: "sm:grid-cols-2 lg:grid-cols-4",
-  2: "sm:grid-cols-2 lg:grid-cols-4",
-  3: "sm:grid-cols-3 lg:grid-cols-3",
-};
-
 export function ProductGrid({
   products,
   store,
@@ -30,12 +23,13 @@ export function ProductGrid({
   carousel?: boolean;
 }) {
   const now = new Date();
-  const desktop = DESKTOP_COLS[products.length] ?? "sm:grid-cols-3 lg:grid-cols-4";
+  // Siempre 4 columnas en escritorio: con 3 productos, tarjetas gigantes se ven peor que un hueco.
+  const desktop = "sm:grid-cols-3 lg:grid-cols-4";
   return (
     <ul
       className={
         carousel
-          ? `-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-x-4 sm:gap-y-8 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
+          ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-x-4 sm:gap-y-8 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
           : `grid grid-cols-2 gap-x-4 gap-y-8 ${desktop}`
       }
     >

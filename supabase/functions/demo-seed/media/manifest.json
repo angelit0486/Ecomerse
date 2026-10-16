@@ -1,7 +1,13 @@
 {
-  "20040628eb70c71bc534b8680211c45e2795086e6aa96acf5026fdff893ba3c7": {
-    "sha256": "d950522a6491c99a8cff6908d661f3b61aea0307a5cfff94841f9452efa68f6a",
-    "bytes": 5964,
+  "2db4193e936939e5b0ab4eb87a7fe68c8b88773b721cf2c149ed3b8a69838199": {
+    "sha256": "797ff8cbdc94d89ef95518a91320c281088444e9a42490ebd655601f0e67b32d",
+    "bytes": 14332,
+    "width": 1600,
+    "height": 640
+  },
+  "c990c811e53ea8cc7bae13e68aba770b9bee261fee55413d46f44dec0be0df06": {
+    "sha256": "777b4c4e3c7c3c2f12295542d26a0416ec876a7d41fa9d662254cc190812eee4",
+    "bytes": 13916,
     "width": 1600,
     "height": 640
   },

@@ -84,15 +84,48 @@ export function packSvg({ label, color, shape }) {
   </svg>`;
 }
 
-export function bannerSvg() {
+/**
+ * Banner del hero: envases ilustrados (los mismos del catálogo de ejemplo)
+ * sobre el verde de la marca, centrados para que el recorte 16:9 de móvil los
+ * conserve. Sin personas, sellos ni claims; la etiqueta dice EJEMPLO.
+ */
+/** Oscurece un color hex (factor 0–1) para el degradado del banner. */
+function darken(hex, factor) {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v * (1 - factor)));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function bannerSvg(colors = STYLES.deportivo.colors) {
+  const { primary, accent } = colors;
+  const pack = (x, w, h, color, cap, capW) => `
+    <ellipse cx="${x + w / 2}" cy="560" rx="${w * 0.62}" ry="16" fill="#000" opacity="0.28"/>
+    <rect x="${x}" y="${560 - h}" width="${w}" height="${h}" rx="${Math.min(36, w / 5)}" fill="${color}"/>
+    <rect x="${x + (w - capW) / 2}" y="${560 - h - 46}" width="${capW}" height="56" rx="12" fill="${cap}"/>
+    <rect x="${x + w * 0.12}" y="${560 - h * 0.62}" width="${w * 0.76}" height="${Math.min(110, h * 0.34)}" rx="8" fill="#fbfaf7"/>
+    <rect x="${x + w * 0.22}" y="${560 - h * 0.62 + 26}" width="${w * 0.56}" height="12" rx="6" fill="#14181f" opacity="0.85"/>
+    <text x="${x + w / 2}" y="${560 - h * 0.62 + 74}" font-family="DejaVu Sans, sans-serif" font-size="18"
+          letter-spacing="4" text-anchor="middle" fill="#4a5260">EJEMPLO</text>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640">
-    <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#0b5d4b"/><stop offset="1" stop-color="#083d32"/></linearGradient></defs>
+    <defs>
+      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0" stop-color="${primary}"/><stop offset="1" stop-color="${darken(primary, 0.55)}"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="0.68" cy="0.42" r="0.5">
+        <stop offset="0" stop-color="#e9c46a" stop-opacity="0.35"/><stop offset="1" stop-color="#e9c46a" stop-opacity="0"/>
+      </radialGradient>
+      <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+        <circle cx="2" cy="2" r="1.6" fill="#fbfaf7" opacity="0.07"/>
+      </pattern>
+    </defs>
     <rect width="1600" height="640" fill="url(#g)"/>
-    <circle cx="1280" cy="200" r="260" fill="#b4500c" opacity="0.35"/>
-    <circle cx="1450" cy="520" r="180" fill="#fbfaf7" opacity="0.08"/>
-    <rect x="1040" y="250" width="200" height="300" rx="36" fill="#fbfaf7" opacity="0.9"/>
-    <rect x="1270" y="300" width="160" height="250" rx="60" fill="#fbfaf7" opacity="0.75"/>
+    <rect width="1600" height="640" fill="url(#dots)"/>
+    <rect width="1600" height="640" fill="url(#glow)"/>
+    <path d="M1600 470 C 1320 400, 1080 520, 760 640 L1600 640 Z" fill="${accent}" opacity="0.9"/>
+    <path d="M1600 540 C 1340 490, 1120 580, 940 640 L1600 640 Z" fill="${darken(accent, 0.25)}"/>
+    ${pack(740, 200, 300, "#b4500c", "#14181f", 220)}
+    ${pack(980, 150, 360, "#14181f", "#2b313b", 90)}
+    ${pack(1170, 190, 260, "#0e7490", "#14181f", 210)}
   </svg>`;
 }
 
@@ -250,7 +283,11 @@ const productSvg = ([title, , , , , , , , , shape, color]) =>
 
 /** Todas las ilustraciones de la siembra (para pre-renderizarlas fuera de Node). */
 export function demoSvgs() {
-  return [bannerSvg(), ...PRODUCTS.map(productSvg)];
+  return [
+    bannerSvg(STYLES.deportivo.colors),
+    bannerSvg(STYLES.neutral.colors),
+    ...PRODUCTS.map(productSvg),
+  ];
 }
 
 export const LEGEND_TEXT =
@@ -317,10 +354,47 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
       on conflict (profile_id, key) do nothing`;
   }
 
+  /**
+   * Si la ilustración del hero cambió, la sube y la pone en la portada publicada
+   * (y en el borrador, si hay). Idempotente: el sha256 del SVG va en la ruta.
+   */
+  async function refreshBanner(storeId) {
+    const svg = bannerSvg(style.colors);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(svg));
+    const key = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 16);
+    const [current] = await sql`
+      select m.storage_path from public.store_themes t
+        join lateral jsonb_array_elements(t.home_sections) e on e ->> 'type' = 'hero'
+        join public.media m on m.store_id = t.store_id and m.id::text = e #>> '{props,image_media_id}'
+       where t.store_id = ${storeId} limit 1`;
+    if (!current || current.storage_path.includes(`/${key}-`)) return;
+    const id = crypto.randomUUID();
+    const path = `${storeId}/banner/${storeId}/${key}-${id}/original.webp`;
+    const { bytes, width, height } = await putImage({ path, svg });
+    await sql`
+      insert into public.media (id, store_id, owner_type, status, storage_path, mime_type, bytes, width, height, alt_text, position)
+      values (${id}, ${storeId}, 'banner', 'ready', ${path}, 'image/webp', ${bytes}, ${width}, ${height}, '', 0)`;
+    const swap = (column) => sql`
+      update public.store_themes t
+         set ${sql(column)} = (
+           select jsonb_agg(case when e ->> 'type' = 'hero'
+                                 then jsonb_set(e, '{props,image_media_id}', to_jsonb(${id}::text))
+                                 else e end order by n)
+             from jsonb_array_elements(t.${sql(column)}) with ordinality x(e, n))
+       where t.store_id = ${storeId} and jsonb_typeof(t.${sql(column)}) = 'array'
+         and jsonb_array_length(t.${sql(column)}) > 0`;
+    await swap("home_sections");
+    await swap("draft_home_sections");
+    log("✓ Banner del hero actualizado");
+  }
+
   const [already] = await sql`select id from public.stores where handle = ${handle}`;
   if (already) {
     // Los E2E de cumplimiento reinician el perfil de México: se restauran las reglas de prueba.
     await ensureDemoCompliance();
+    await refreshBanner(already.id);
     await sql`insert into public.store_domains (store_id, hostname, type, status, is_primary)
               values (${already.id}, ${hostname}, 'platform_subdomain', 'active', false)
               on conflict do nothing`;
@@ -361,7 +435,8 @@ export async function seedDemo({ sql, neutral, hostname, createOwner, putImage, 
     brandIds.push(b.id);
   }
 
-  const banner = await uploadImage(storeId, "banner", null, bannerSvg(), "", 0);
+  const banner = await uploadImage(storeId, "banner", null, bannerSvg(style.colors), "", 0);
+  // (Las siguientes siembras reemplazan el banner con refreshBanner si cambia.)
 
   await asOwner(ownerId, async (tx) => {
     await tx`select public.compliance_set_store_category(${storeId}, 'dietary_supplement', true)`;
