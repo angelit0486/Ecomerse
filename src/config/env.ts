@@ -85,7 +85,9 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
     ctx.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "requerida" });
   }
-  if (deployed && !env.SUPABASE_SERVICE_ROLE_KEY) {
+  // En la vista previa es opcional (D-F9-17): sin ella solo fallan, con un error
+  // claro, el reset de MFA y el worker de medios; producción la exige.
+  if (env.APP_ENV === "production" && !env.SUPABASE_SERVICE_ROLE_KEY) {
     ctx.addIssue({ code: "custom", path: ["SUPABASE_SERVICE_ROLE_KEY"], message: "requerida" });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {

@@ -82,6 +82,12 @@ describe("parseServerEnv", () => {
       APP_URL: "https://app.x.test",
     };
     expect(parseServerEnv(preview).EMAIL_PROVIDER).toBe("fake");
+    // Sin clave de servicio la vista previa arranca; producción no.
+    const { SUPABASE_SERVICE_ROLE_KEY: _omit, ...previewSinClave } = preview;
+    expect(parseServerEnv(previewSinClave).APP_ENV).toBe("preview");
+    expect(() =>
+      parseServerEnv({ ...previewSinClave, APP_ENV: "production", EMAIL_PROVIDER: "resend" }),
+    ).toThrow(/SUPABASE_SERVICE_ROLE_KEY: requerida/);
     expect(() => parseServerEnv({ ...preview, EMAIL_PROVIDER: "mailpit" })).toThrow(
       /EMAIL_PROVIDER: resend obligatorio/,
     );

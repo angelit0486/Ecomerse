@@ -75,8 +75,15 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
 
 ## 7. Vista previa de demostración (D-F9-17)
 
-- Proyecto Supabase `pruva-staging` y proyecto Vercel con `APP_ENV=preview`, `EMAIL_PROVIDER=fake`.
-- `pnpm build` ejecuta `node scripts/deploy/migrate.mjs --seed-demo` antes de `next build`. Sin `MIGRATION_DATABASE_URL`
-  no migra (builds locales y de CI). La conexión usa el pooler en modo sesión (puerto 5432).
-- La siembra solo corre con `APP_ENV=preview` y publica cada tienda en el host de `DEMO_HOSTS`.
+- Supabase `pruva-staging` (ref `epgiglysldwoiulnwamf`) y Vercel `ecomerse` con `APP_ENV=preview`, `EMAIL_PROVIDER=fake`.
+- Pooler compartido: `aws-0-us-east-1.pooler.supabase.com:6543` (modo transacción, `?sslmode=require`). El host no se
+  deduce de la región: se copia del diálogo Connect o se comprueba. Usuarios `storefront_gateway.<ref>` y `system_worker.<ref>`.
+- **Spike S-1 (verificado 2026-10-16):** ambos roles entran por Supavisor; `select count(*) from public.stores` (gateway) y
+  `select count(*) from system.jobs` (worker) fallan con `permission denied`; `system.health_check()` responde `{"db": true}`.
+- Migraciones: sin contraseña de la base, la base las bajó del repositorio en un commit fijo (pg_net) y se aplicaron en orden
+  verificando el sha256 de cada archivo; quedan registradas en `supabase_migrations.schema_migrations` con su checksum.
+  Con `MIGRATION_DATABASE_URL` configurada, `pnpm build` las aplica con `scripts/deploy/migrate.mjs`.
+- Siembra: Edge Function `demo-seed` (código en `supabase/functions/demo-seed/`). Solo corre con un boleto de un solo uso:
+  el operador inserta `sha256(boleto)` en `supabase_migrations.pruva_seed_ticket` (con caducidad) y llama a la función con
+  la cabecera `x-demo-seed-ticket`. La clave de servicio nunca sale de Supabase.
 - El cron de Vercel Hobby es diario (`vercel.json`); volver a `* * * * *` al pasar a Pro (N-4).
