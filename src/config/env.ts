@@ -63,6 +63,11 @@ export const serverEnvSchema = z.object({
   RESEND_API_KEY: z.string().min(10).optional(),
   MAILPIT_URL: z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8025"),
   /**
+   * Solo vista previa (D-F9-17): enlaces a las tiendas de demostración que muestra la
+   * portada del panel, "Etiqueta|https://host,…". En producción se ignora.
+   */
+  PREVIEW_STORE_LINKS: z.string().max(2000).optional(),
+  /**
    * service_role: SOLO para src/server/privileged (lista blanca §11.5: Auth Admin
    * para el reset de MFA, Storage Admin en fases posteriores). Nunca toca tablas.
    */
