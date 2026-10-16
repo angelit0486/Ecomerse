@@ -86,7 +86,8 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
 - Siembra: Edge Function `demo-seed` (código en `supabase/functions/demo-seed/`). Solo corre con un boleto de un solo uso:
   el operador inserta `sha256(boleto)` en `supabase_migrations.pruva_seed_ticket` (con caducidad) y llama a la función con
   la cabecera `x-demo-seed-ticket`. La clave de servicio nunca sale de Supabase.
-  La versión 2 desplegada (2026-10-16) es una copia reducida del núcleo que **solo actualiza tiendas
-  existentes** (reglas de prueba, banner del hero si cambió y host); para crear una tienda nueva hay que
-  desplegar `seed-core.mjs` completo del repositorio. Las ilustraciones se bajan del commit `0ceb19f`.
+  La versión 3 desplegada (2026-10-16, Fase A, D-A-04) es una copia reducida del núcleo que **solo
+  actualiza tiendas existentes** (banner del hero si cambió y host) y **nunca toca el perfil sanitario ni
+  las reglas**. Para crear una tienda nueva hay que desplegar `seed-core.mjs` completo del repositorio, y
+  con el perfil pendiente sus suplementos no se publican. Las ilustraciones se bajan del commit `0ceb19f`.
 - El cron de Vercel Hobby es diario (`vercel.json`); volver a `* * * * *` al pasar a Pro (N-4).
