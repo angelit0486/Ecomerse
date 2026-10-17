@@ -383,3 +383,23 @@ Este registro agrega lo que ocurrió **después** del Gate 0: la aprobación del
 **Alternativas descartadas.** (a) Separar cada tamaño en un producto distinto: duplica fichas, reseñas y SEO. (b) Escribir «1 kg o 2 kg» en el contenido neto del producto: no permite precio por porción ni es claro para el comprador.
 
 **Consecuencias.** 1 migración (expand), cambios en upsert, validador, CSV, ficha y editor; pgTAP de compatibilidad (productos existentes sin cambios) y de publicación. Esfuerzo estimado: M.
+
+### ADR-027 — Lotes y caducidad (Fase C del lanzamiento) · **propuesta: requiere aprobación del propietario**
+
+**Contexto.** Los suplementos llevan lote y fecha de caducidad en la etiqueta. Hoy el inventario cuenta piezas por variante y ubicación, pero no sabe de qué lote son ni cuándo caducan. Hay tres riesgos: vender piezas caducadas, no saber qué pedidos recibieron un lote si hay que retirarlo del mercado, y enterarse tarde de lo que está por caducar. Toca el inventario, que es un contrato crítico (GATE0 §43): por eso es un ADR.
+
+**Decisión propuesta.**
+
+1. **Opcional por variante** (`track_lots`). Las variantes sin lotes funcionan igual que hoy.
+2. **`inventory_lots`** (tabla de tienda con `store_id`, RLS forzado, FK compuestas y auditoría). Cada lote pertenece a un nivel de inventario (variante × ubicación) y guarda su código, caducidad y piezas restantes. Las piezas entran solo por un movimiento de recepción que registra el lote, de modo que la suma de los lotes siempre coincide con `on_hand`. Una restricción y pgTAP lo garantizan.
+3. **Reservas sin cambios.** Se reserva por nivel, como hoy. Al surtir, las piezas salen del lote que caduca primero (FEFO) y quedan en `shipment_item_lots`, que da la trazabilidad pedido → lote.
+4. **Caducados fuera de la venta.** Un job diario (`inventory.expire_lots`) da de baja por movimiento (`expired`) las piezas de lotes vencidos, conservando lo ya reservado y avisando en Inventario si hubo que respetar reservas. Nada se borra.
+5. **Panel:**
+   - «Recibir mercancía» con lote y caducidad.
+   - Reporte de próximas caducidades a 30, 60 y 90 días.
+   - Búsqueda «¿qué pedidos recibieron el lote X?» para retiros.
+6. **Tienda:** nunca muestra lotes. Comprar y reservar funciona igual.
+
+**Alternativas descartadas.** (a) Reservar por lote: complica el checkout y la concurrencia sin beneficio para el comprador. (b) Capturar la caducidad solo como nota: no evita vender caducados ni permite rastrear.
+
+**Consecuencias.** Unas 2 tablas, 1 job y 5 RPC nuevas. Requiere pgTAP de cuadratura lotes = existencias, FEFO, caducidad con reservas y aislamiento, más integración del job y E2E de recepción y surtido. Esfuerzo estimado: L. **Decisión pendiente del propietario:** si todas las variantes de suplementos llevarán lotes desde el lanzamiento.
