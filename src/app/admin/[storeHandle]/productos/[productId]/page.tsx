@@ -12,6 +12,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { ProductAttributesForm } from "../attribute-forms";
 import { toEditorProduct } from "../editor-model";
 import { publishIssueMessage, STATUS_LABELS } from "../messages";
+import { StockAdjust } from "../stock-adjust";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
 import { ProductStatusPanel } from "../product-status";
@@ -50,19 +51,31 @@ export default async function ProductPage({ params, searchParams }: Props) {
   // La ficha sanitaria aparece cuando la tienda declaró una categoría regulada (ADR-021).
   // Existencias por presentación (solo con inventory.read): suma de las ubicaciones.
   const stock: Record<string, number> = {};
+  // En mano en la ubicación principal: lo que fija el ajuste rápido.
+  const onHandDefault: Record<string, number> = {};
   if (hasPermission(ctx, "inventory.read") && product.variants.length > 0) {
     const { data: levels, error: levelsError } = await supabase
       .from("inventory_levels")
-      .select("variant_id, available")
+      .select("variant_id, available, on_hand, inventory_locations(is_default)")
       .in(
         "variant_id",
         product.variants.map((v) => v.id),
       );
     if (levelsError) throw levelsError;
-    for (const l of (levels ?? []) as { variant_id: string; available: number }[]) {
+    for (const l of (levels ?? []) as unknown as {
+      variant_id: string;
+      available: number;
+      on_hand: number;
+      inventory_locations: { is_default: boolean } | null;
+    }[]) {
       stock[l.variant_id] = (stock[l.variant_id] ?? 0) + Math.max(0, l.available);
+      if (l.inventory_locations?.is_default) onHandDefault[l.variant_id] = l.on_hand;
     }
   }
+  const canAdjustStock =
+    hasPermission(ctx, "inventory.adjust") &&
+    hasPermission(ctx, "inventory.read") &&
+    !product.deleted_at;
   const declared = compliance?.categories.filter((c) => c.declared) ?? [];
   const regulatoryInitial: RegulatoryInitial = {
     classification: regulatory ? (regulatory.category_key ?? "none") : undefined,
@@ -177,7 +190,23 @@ export default async function ProductPage({ params, searchParams }: Props) {
             hasPermission(ctx, "inventory.adjust") ? `/admin/${ctx.store.handle}/inventario` : null
           }
         />
-      ) : (
+      ) : null}
+
+      {canAdjustStock && product.variants.some((v) => v.track_inventory) ? (
+        <StockAdjust
+          storeHandle={ctx.store.handle}
+          rows={product.variants
+            .filter((v) => v.track_inventory)
+            .map((v) => ({
+              id: v.id,
+              label: Object.values(v.options).join(" / ") || v.sku || "Única",
+              onHand: onHandDefault[v.id] ?? 0,
+              available: stock[v.id] ?? 0,
+            }))}
+        />
+      ) : null}
+
+      {canEdit ? null : (
         <p className="text-sm text-fg-muted">
           {product.deleted_at
             ? "Restaura el producto para editarlo."

@@ -42,6 +42,7 @@ test.beforeAll(async () => {
       title: "Creatina Gestión",
       variants: [{ price: 49900, sku: `GK-${run}` }],
     })})`;
+    await sql`select public.catalog_upsert_category(${tenant.storeId}, ${sql.json({ name: "Creatinas" })})`;
     await sql`select public.inventory_adjust(${tenant.storeId}, v.id, 'adjustment', 12, 'Inicial')
                 from public.product_variants v where v.sku = ${`GV-${run}`.toUpperCase()}`;
   });
@@ -112,6 +113,45 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(whey).toContainText("$649.00");
   await expectNoSeriousA11yViolations(page);
 
+  // Ediciones en bloque: marca, categoría y precios por porcentaje con vista previa.
+  const creatina = page.getByRole("row").filter({ hasText: "Creatina Gestión" });
+  await page.getByLabel("Seleccionar Creatina Gestión").check();
+  await page.getByLabel("Acción masiva").selectOption("brand");
+  await page.getByLabel("Marca para los seleccionados").selectOption({ label: "Atlas Nutrición" });
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await expect(page.getByText("1 producto con la marca nueva.")).toBeVisible();
+  await expect(creatina.getByText("Atlas Nutrición")).toBeVisible();
+
+  await page.getByLabel("Seleccionar Creatina Gestión").check();
+  await page.getByLabel("Acción masiva").selectOption("category_add");
+  await page.getByLabel("Categoría para los seleccionados").selectOption({ label: "Creatinas" });
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await expect(page.getByText("1 producto agregado a la categoría.")).toBeVisible();
+
+  await page.getByLabel("Seleccionar Creatina Gestión").check();
+  await page.getByLabel("Acción masiva").selectOption("prices");
+  await page.getByLabel("Porcentaje de cambio").fill("10");
+  await page.getByLabel("Redondeo").selectOption("peso");
+  await page.getByRole("button", { name: "Ver vista previa" }).click();
+  const preview = page.getByRole("region", { name: "Vista previa de precios" });
+  await expect(preview.getByRole("row").filter({ hasText: "Creatina Gestión" })).toContainText(
+    "$549.00",
+  );
+  const [before] = await admin<{ price: string }[]>`
+    select price from public.product_variants where sku = ${`GK-${run}`.toUpperCase()}`;
+  expect(Number(before!.price)).toBe(49900);
+  await preview.getByRole("button", { name: "Aplicar cambios" }).click();
+  await expect(page.getByText("Precios actualizados en 1 producto.")).toBeVisible();
+  const [after] = await admin<{ price: string }[]>`
+    select price from public.product_variants where sku = ${`GK-${run}`.toUpperCase()}`;
+  expect(Number(after!.price)).toBe(54900);
+  const [cat] = await admin<{ n: string }[]>`
+    select count(*) as n from public.product_categories pc join public.categories c on c.id = pc.category_id
+     join public.product_variants v on v.product_id = pc.product_id
+     where c.name = 'Creatinas' and v.sku = ${`GK-${run}`.toUpperCase()}`;
+  expect(Number(cat!.n)).toBe(1);
+  await expectNoSeriousA11yViolations(page);
+
   // Fotos (misma sesión: la segunda entrada pediría el segundo factor).
   await page.goto(`/admin/${tenant.handle}/productos/${wheyId}`);
   // Existencias por presentación con acceso directo al ajuste.
@@ -121,6 +161,12 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(
     page.getByRole("link", { name: "Ajustar existencias de Chocolate" }),
   ).toHaveAttribute("href", new RegExp(`/inventario\\?q=GC-${run}`, "i"));
+  // Ajuste rápido de existencias desde la ficha.
+  const vanillaStock = page.getByRole("form", { name: "Existencias de Vainilla" });
+  await vanillaStock.getByLabel("En mano de Vainilla").fill("20");
+  await vanillaStock.getByRole("button", { name: "Fijar existencias de Vainilla" }).click();
+  await expect(vanillaStock.getByText("Listo: 20 en mano, 20 disponibles.")).toBeVisible();
+  await expect(vanillaStock.getByText("20 disponibles", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Mover la foto 2 antes" }).click();
   await expect(page.getByText("Foto movida.")).toBeVisible();
   const order = await admin<{ alt_text: string }[]>`

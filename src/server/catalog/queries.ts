@@ -200,6 +200,7 @@ export interface ProductDetail {
     servings_per_container: number | null;
     /** Foto propia de la presentación (null = la del producto). */
     image_id: string | null;
+    track_inventory: boolean;
   }[];
   categories: { id: string; is_primary: boolean }[];
   media: MediaRow[];
@@ -242,7 +243,7 @@ export async function getProduct(
     supabase
       .from("product_variants")
       .select(
-        "id, sku, barcode, price, compare_at_price, status, position, option_signature, net_content, servings_per_container, image_id",
+        "id, sku, barcode, price, compare_at_price, status, position, option_signature, net_content, servings_per_container, image_id, track_inventory",
       )
       .eq("product_id", productId)
       .is("deleted_at", null)
@@ -273,6 +274,7 @@ export async function getProduct(
     net_content: string | null;
     servings_per_container: number | null;
     image_id: string | null;
+    track_inventory: boolean;
   }>;
   const costs = new Map<string, number>();
   if (canReadCost && variantRows.length > 0) {
@@ -314,6 +316,7 @@ export async function getProduct(
       net_content: v.net_content,
       servings_per_container: v.servings_per_container,
       image_id: v.image_id,
+      track_inventory: v.track_inventory,
     })),
     categories: ((categories.data ?? []) as { category_id: string; is_primary: boolean }[]).map(
       (c) => ({

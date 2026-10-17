@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
+import { formatMoney } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
@@ -30,24 +31,48 @@ interface Row {
 
 const BULK_FORM = "bulk-products";
 
+interface Choice {
+  id: string;
+  label: string;
+}
+
 export function BulkProductsTable({
   storeHandle,
+  currency,
   rows,
   deletedView,
   canBulkStatus,
   canBulkDelete,
+  canBulkEdit,
+  brands,
+  categories,
 }: {
   storeHandle: string;
+  currency: string;
   rows: Row[];
   deletedView: boolean;
   canBulkStatus: boolean;
   canBulkDelete: boolean;
+  /** products.update: marca, categoría y precios en bloque. */
+  canBulkEdit: boolean;
+  brands: Choice[];
+  categories: Choice[];
 }) {
   const [chosen, setChosen] = useState<Set<string>>(new Set());
+  // Controlados: React reinicia los campos no controlados tras cada envío y la
+  // vista previa de precios necesita conservarlos para «Aplicar cambios».
+  const [bulkAction, setBulkAction] = useState("");
+  const [percent, setPercent] = useState("");
+  const [rounding, setRounding] = useState<"centavo" | "peso">("centavo");
+  const [brandId, setBrandId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
     async (previous: CatalogActionState, formData: FormData) => {
       const result = await bulkProductsAction(storeHandle, previous, formData);
-      if (result.ok) setChosen(new Set());
+      if (result.ok) {
+        setChosen(new Set());
+        setPercent("");
+      }
       return result;
     },
     {},
@@ -55,7 +80,20 @@ export function BulkProductsTable({
   // Solo cuenta lo que sigue en esta página (tras borrar, paginar o refrescar).
   const selected = new Set(rows.map((r) => r.id).filter((id) => chosen.has(id)));
   const setSelected = setChosen;
-  const bulkEnabled = !deletedView && (canBulkStatus || canBulkDelete);
+  const bulkEnabled = !deletedView && (canBulkStatus || canBulkDelete || canBulkEdit);
+  // La vista previa vale solo para lo que muestra: mismo porcentaje, redondeo y
+  // selección; si cambia algo, hay que volver a verla antes de aplicar.
+  const sameSelection = (ids: string[]) =>
+    ids.length === selected.size && ids.every((id) => selected.has(id));
+  const preview =
+    state.preview &&
+    bulkAction === "prices" &&
+    state.preview.percent === percent.trim().replace(",", ".") &&
+    state.preview.rounding === rounding &&
+    sameSelection(state.preview.ids)
+      ? state.preview
+      : null;
+  const money = (cents: number | null) => (cents === null ? "—" : formatMoney(cents, currency));
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
   function toggle(id: string, on: boolean) {
@@ -74,7 +112,14 @@ export function BulkProductsTable({
       {bulkEnabled ? (
         <form
           id={BULK_FORM}
-          action={action}
+          // onSubmit y no `action`: React reinicia el formulario tras cada acción
+          // y el selector volvería a «Acción…» entre la vista previa y «Aplicar».
+          onSubmit={(event) => {
+            event.preventDefault();
+            const submitter = (event.nativeEvent as SubmitEvent).submitter;
+            const data = new FormData(event.currentTarget, submitter);
+            startTransition(() => action(data));
+          }}
           className="flex flex-wrap items-center gap-2"
           aria-live="polite"
         >
@@ -86,25 +131,176 @@ export function BulkProductsTable({
           <label htmlFor="bulk-action" className="sr-only">
             Acción masiva
           </label>
-          <select id="bulk-action" name="action" defaultValue="" className={nativeControl}>
+          <select
+            id="bulk-action"
+            name="action"
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value)}
+            className={nativeControl}
+          >
             <option value="" disabled>
               Acción…
             </option>
             {canBulkStatus ? <option value="publish">Publicar</option> : null}
             {canBulkStatus ? <option value="draft">Pausar (ocultar de la tienda)</option> : null}
             {canBulkStatus ? <option value="archive">Archivar</option> : null}
+            {canBulkEdit ? <option value="brand">Asignar marca…</option> : null}
+            {canBulkEdit && categories.length ? (
+              <option value="category_add">Agregar a una categoría…</option>
+            ) : null}
+            {canBulkEdit && categories.length ? (
+              <option value="category_remove">Quitar de una categoría…</option>
+            ) : null}
+            {canBulkEdit ? <option value="prices">Cambiar precios (%)…</option> : null}
             {canBulkDelete ? <option value="delete">Eliminar</option> : null}
           </select>
+          {bulkAction === "brand" ? (
+            <>
+              <label htmlFor="bulk-brand" className="sr-only">
+                Marca para los seleccionados
+              </label>
+              <select
+                id="bulk-brand"
+                name="brand_id"
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                className={nativeControl}
+              >
+                <option value="">Sin marca</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+          {bulkAction === "category_add" || bulkAction === "category_remove" ? (
+            <>
+              <label htmlFor="bulk-category" className="sr-only">
+                Categoría para los seleccionados
+              </label>
+              <select
+                id="bulk-category"
+                name="category_id"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className={nativeControl}
+              >
+                <option value="" disabled>
+                  Categoría…
+                </option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+          {bulkAction === "prices" ? (
+            <>
+              <label className="flex items-center gap-1 text-sm">
+                <span className="sr-only">Porcentaje</span>
+                <input
+                  name="percent"
+                  value={percent}
+                  onChange={(e) => setPercent(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="10 o -15"
+                  aria-label="Porcentaje de cambio"
+                  aria-describedby="bulk-percent-help"
+                  className={`${nativeControl} w-24`}
+                />
+                %
+              </label>
+              <label htmlFor="bulk-rounding" className="sr-only">
+                Redondeo
+              </label>
+              <select
+                id="bulk-rounding"
+                name="rounding"
+                value={rounding}
+                onChange={(e) => setRounding(e.target.value === "peso" ? "peso" : "centavo")}
+                className={nativeControl}
+              >
+                <option value="centavo">Al centavo</option>
+                <option value="peso">Al peso</option>
+              </select>
+              <span id="bulk-percent-help" className="sr-only">
+                Positivo sube los precios y negativo los baja. Primero verás una vista previa.
+              </span>
+            </>
+          ) : null}
           <Button
             type="submit"
             variant="secondary"
             size="sm"
             loading={pending}
-            disabled={selected.size === 0}
+            disabled={selected.size === 0 || !bulkAction}
           >
-            Aplicar
+            {bulkAction === "prices" ? "Ver vista previa" : "Aplicar"}
           </Button>
         </form>
+      ) : null}
+      {preview ? (
+        <section
+          aria-label="Vista previa de precios"
+          className="space-y-2 rounded border border-control p-3"
+        >
+          <p className="text-sm font-medium">
+            Vista previa: {Number(preview.percent) > 0 ? "+" : ""}
+            {preview.percent} % ({preview.rounding === "peso" ? "al peso" : "al centavo"}). Nada
+            cambia hasta que apliques.
+          </p>
+          <Table caption="Precios actuales y nuevos" captionHidden>
+            <THead>
+              <TR>
+                <TH>Producto</TH>
+                <TH>Precio actual</TH>
+                <TH>Precio nuevo</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {preview.rows.map((r) => (
+                <TR key={r.id}>
+                  <TD>
+                    {r.title}
+                    {r.options ? (
+                      <span className="block text-[13px] text-fg-muted">
+                        {r.options
+                          .split("|")
+                          .map((kv) => kv.slice(kv.indexOf("=") + 1))
+                          .join(" / ")}
+                      </span>
+                    ) : null}
+                  </TD>
+                  <TD className="tabular-nums">{money(r.price)}</TD>
+                  <TD className="tabular-nums">
+                    {money(r.new_price)}
+                    {r.compare_at_price !== null && r.new_compare_at_price === null ? (
+                      <span className="block text-[13px] text-warning">
+                        Se quita el «precio antes» ({money(r.compare_at_price)}): ya no sería
+                        oferta.
+                      </span>
+                    ) : null}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          <Button
+            type="submit"
+            form={BULK_FORM}
+            name="confirm"
+            value="1"
+            size="sm"
+            loading={pending}
+            disabled={selected.size === 0}
+          >
+            Aplicar cambios
+          </Button>
+        </section>
       ) : null}
       {state.error ? (
         <div role="alert" className="text-sm text-danger">

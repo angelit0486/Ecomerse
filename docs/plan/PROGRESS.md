@@ -125,6 +125,8 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 - Orden del listado: editados recientemente, nombre y precio (menor o mayor), con paginación por cursor de cada orden.
 - Cambio rápido de precios desde el listado («Cambiar precios»): precio y «precio antes» por presentación, validado y auditado (`catalog_set_variant_prices`, «Cambió precios de un producto» en Actividad).
 - CSV: `variant_net_content` y `variant_servings` (ADR-026 punto 2).
+- Tanda 4 (en bloque, todo o nada, auditado por producto): asignar marca, agregar o quitar una categoría y cambiar precios por porcentaje (al centavo o al peso) con vista previa antes de aplicar; si el «precio antes» deja de ser mayor, se quita y se avisa. Un producto publicado no puede quedar sin poderse publicar (pgTAP `73_bulk_catalog_edits`).
+- Ficha del producto: sección «Existencias» para fijar lo que hay en mano por presentación, con motivo (pasa por `inventory_adjust`).
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 

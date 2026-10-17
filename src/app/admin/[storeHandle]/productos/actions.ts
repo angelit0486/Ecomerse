@@ -32,6 +32,26 @@ export interface CatalogActionState {
   error?: string;
   fields?: Record<string, string>;
   issues?: string[];
+  /** Vista previa de precios en bloque (aún sin aplicar). */
+  preview?: BulkPricePreview;
+}
+
+export interface BulkPricePreview {
+  /** Productos de la vista previa: «Aplicar» solo vale para esta misma selección. */
+  ids: string[];
+  percent: string;
+  rounding: "centavo" | "peso";
+  rows: {
+    id: string;
+    product_id: string;
+    title: string;
+    options: string;
+    sku: string | null;
+    price: number;
+    new_price: number;
+    compare_at_price: number | null;
+    new_compare_at_price: number | null;
+  }[];
 }
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -200,6 +220,113 @@ class PublishBlocked extends Error {
 }
 
 const BULK_ACTIONS = ["publish", "draft", "archive", "delete"] as const;
+const BULK_EDITS = ["brand", "category_add", "category_remove", "prices"] as const;
+type BulkEdit = (typeof BULK_EDITS)[number];
+
+interface BulkResult {
+  changed?: number;
+  applied?: boolean;
+  rows?: BulkPricePreview["rows"];
+}
+
+const BULK_PUBLISH_BLOCKED =
+  "No se aplicó: algún producto publicado dejaría de cumplir lo necesario para estar a la venta (por ejemplo, precio 0 o una categoría que exige la ficha sanitaria). Despublícalo o corrígelo primero.";
+
+/**
+ * Ediciones en bloque (tanda 4): marca, categoría y precios por porcentaje.
+ * Todo o nada: la base valida la selección completa y audita cada producto.
+ */
+async function bulkEdit(
+  storeHandle: string,
+  action: BulkEdit,
+  ids: string[],
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const brandId = String(formData.get("brand_id") ?? "");
+  const categoryId = String(formData.get("category_id") ?? "");
+  const percentText = String(formData.get("percent") ?? "")
+    .trim()
+    .replace(",", ".");
+  const rounding = formData.get("rounding") === "peso" ? "peso" : "centavo";
+  const apply = formData.get("confirm") === "1";
+  if (action === "brand" && brandId && !uuid.safeParse(brandId).success) {
+    return { error: "Elige una marca." };
+  }
+  if (action.startsWith("category") && !uuid.safeParse(categoryId).success) {
+    return { error: "Elige una categoría." };
+  }
+  const percent = Number(percentText);
+  if (
+    action === "prices" &&
+    (!/^-?\d{1,3}(\.\d{1,2})?$/.test(percentText) ||
+      percent === 0 ||
+      percent < -90 ||
+      percent > 500)
+  ) {
+    return {
+      error: "Escribe un porcentaje entre -90 y 500 (por ejemplo 10 para subir o -15 para bajar).",
+      fields: { percent: "Porcentaje no válido." },
+    };
+  }
+  try {
+    const result = await withStore(storeHandle, ({ supabase, storeId }) => {
+      switch (action) {
+        case "brand":
+          return callRpc<BulkResult>(supabase, "catalog_bulk_set_brand", {
+            p_store_id: storeId,
+            p_product_ids: ids,
+            p_brand_id: brandId || null,
+          });
+        case "category_add":
+        case "category_remove":
+          return callRpc<BulkResult>(supabase, "catalog_bulk_category", {
+            p_store_id: storeId,
+            p_product_ids: ids,
+            p_category_id: categoryId,
+            p_mode: action === "category_add" ? "add" : "remove",
+          });
+        case "prices":
+          return callRpc<BulkResult>(supabase, "catalog_bulk_adjust_prices", {
+            p_store_id: storeId,
+            p_product_ids: ids,
+            p_percent: percent,
+            p_rounding: rounding,
+            p_apply: apply,
+          });
+      }
+    });
+    if (action === "prices" && !apply) {
+      return { preview: { ids, percent: percentText, rounding, rows: result.rows ?? [] } };
+    }
+    revalidatePath(productsPath(storeHandle));
+    if (action === "prices") {
+      // Solo cuentan los productos con algún precio realmente distinto.
+      const products = new Set(
+        (result.rows ?? [])
+          .filter((r) => r.price !== r.new_price || r.compare_at_price !== r.new_compare_at_price)
+          .map((r) => r.product_id),
+      );
+      if (products.size === 0)
+        return { ok: true, message: "Sin cambios: los precios ya eran esos." };
+      return {
+        ok: true,
+        message: `Precios actualizados en ${products.size} producto${products.size === 1 ? "" : "s"}.`,
+      };
+    }
+    const changed = result.changed ?? 0;
+    if (changed === 0) return { ok: true, message: "Sin cambios: ya estaban así." };
+    const n = changed === 1 ? "" : "s";
+    const what = {
+      brand: brandId ? `con la marca nueva` : `sin marca`,
+      category_add: `agregado${n} a la categoría`,
+      category_remove: `quitado${n} de la categoría`,
+    }[action];
+    return { ok: true, message: `${changed} producto${n} ${what}.` };
+  } catch (error) {
+    const state = failure(`catalog.bulk_${action}`, error);
+    return state.fields?.publish ? { error: BULK_PUBLISH_BLOCKED } : state;
+  }
+}
 
 /** Acciones masivas del listado: cada producto pasa por la misma RPC y permisos. */
 export async function bulkProductsAction(
@@ -209,11 +336,15 @@ export async function bulkProductsAction(
 ): Promise<CatalogActionState> {
   const action = String(formData.get("action") ?? "");
   const ids = formData.getAll("ids").map(String);
-  if (!(BULK_ACTIONS as readonly string[]).includes(action)) return { error: "Elige una acción." };
+  const isEdit = (BULK_EDITS as readonly string[]).includes(action);
+  if (!isEdit && !(BULK_ACTIONS as readonly string[]).includes(action)) {
+    return { error: "Elige una acción." };
+  }
   if (ids.length === 0) return { error: "Selecciona al menos un producto." };
   if (ids.length > 100 || !ids.every((id) => uuid.safeParse(id).success)) {
     return { error: "Selección no válida." };
   }
+  if (isEdit) return bulkEdit(storeHandle, action as BulkEdit, ids, formData);
   let done = 0;
   // Publicar valida cada producto (precio, fotos, ficha sanitaria): los que no
   // pasan no detienen a los demás; se informa cuántos y por qué.

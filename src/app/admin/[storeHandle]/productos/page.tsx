@@ -339,6 +339,13 @@ export default async function ProductsPage({ params, searchParams }: Props) {
           deletedView={deleted}
           canBulkStatus={bulk.status}
           canBulkDelete={bulk.delete}
+          canBulkEdit={canEditPrices}
+          currency={ctx.store.currency}
+          brands={brands.map((b) => ({ id: b.id, label: b.name }))}
+          categories={categories.map((c) => ({
+            id: c.id,
+            label: `${"— ".repeat(c.depth)}${c.name}`,
+          }))}
           rows={page.rows.map((row) => ({
             id: row.id,
             title: row.title,

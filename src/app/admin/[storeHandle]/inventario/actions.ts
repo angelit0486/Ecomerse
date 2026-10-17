@@ -35,7 +35,11 @@ const adjustSchema = z.object({
   variant_id: z.uuid(),
   type: z.enum(["adjustment", "damage", "loss"]),
   mode: z.enum(["delta", "set"]),
-  quantity: z.coerce.number().int().min(-1_000_000).max(1_000_000),
+  // Vacío no es 0: con «fijar» dejaría las existencias en cero sin querer.
+  quantity: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.coerce.number().int().min(-1_000_000).max(1_000_000),
+  ),
   reason: z.string().trim().min(3).max(500),
   idempotency_key: z.string().regex(/^[0-9a-f-]{36}$/),
 });
