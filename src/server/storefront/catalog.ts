@@ -352,6 +352,34 @@ const shippingPromoCached = cachedRead("shipping_promo", (storeId: string) =>
   call<ShippingPromo>(gatewayDb()`select storefront.shipping_promo(${storeId}::uuid) as value`),
 );
 
+/** Opiniones publicadas (ADR-029): solo de compradores verificados y moderadas por la tienda. */
+export interface ProductReviews {
+  count: number;
+  average: number | null;
+  distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
+  items: {
+    rating: number;
+    title: string | null;
+    body: string;
+    author_name: string;
+    created_at: string;
+  }[];
+}
+
+export const getProductReviews = cache(
+  async (storeId: string, productId: string): Promise<ProductReviews | null> => {
+    assertStore(storeId);
+    if (!UUID_RE.test(productId)) return null;
+    return reviewsCached(storeId, productId);
+  },
+);
+
+const reviewsCached = cachedRead("product_reviews", (storeId: string, productId: string) =>
+  call<ProductReviews>(
+    gatewayDb()`select storefront.product_reviews(${storeId}::uuid, ${productId}::uuid, 10) as value`,
+  ),
+);
+
 /** Ficha sanitaria pública de un producto regulado (ADR-021, R-T03). */
 export interface ProductRegulatory {
   category: string;

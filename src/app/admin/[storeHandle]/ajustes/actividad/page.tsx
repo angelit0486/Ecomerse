@@ -50,6 +50,8 @@ const ACTIONS: Record<string, string> = {
   "payments.stripe_status_changed": "Cambió el estado de Stripe",
   "payments.mercadopago_connected": "Conectó Mercado Pago",
   "payments.mercadopago_status_changed": "Cambió el estado de Mercado Pago",
+  "review.published": "Publicó una opinión",
+  "review.rejected": "Rechazó una opinión",
   "customer.updated": "Editó un cliente",
   "customer.anonymized": "Eliminó los datos personales de un cliente",
   "customer.account_linked": "Un cliente creó su cuenta",

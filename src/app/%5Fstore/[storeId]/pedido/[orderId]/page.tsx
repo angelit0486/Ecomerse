@@ -8,10 +8,12 @@ import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestOrder } from "@/server/storefront/checkout";
 import { mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { orderReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../_components/format";
 import { Totals } from "../../_components/totals";
 import { RetryPayment } from "./retry-form";
+import { ReviewForm } from "./review-form";
 
 export const metadata: Metadata = {
   title: "Tu pedido",
@@ -35,6 +37,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const order = await guestOrder(store.id, orderId, t);
   if (!order) notFound();
 
+  // Solo pedidos pagados y entregados ofrecen opinar (lo decide la base, ADR-029).
+  const reviewables = await orderReviewables(store.id, order.id, t);
   const label = visibleStatus(order);
   const minutesLeft = order.minutes_left;
   const payment = order.payment;
@@ -157,6 +161,38 @@ export default async function OrderPage({ params, searchParams }: Props) {
             {order.shipping_address.postal_code} {order.shipping_address.city},{" "}
             {order.shipping_address.region}, {order.shipping_address.country}
           </p>
+        </section>
+      ) : null}
+      {reviewables.length > 0 ? (
+        <section
+          aria-labelledby="opinar"
+          className="space-y-4 border-t border-[var(--sf-border)] pt-5"
+        >
+          <h2 id="opinar" className="font-semibold">
+            ¿Qué te pareció tu compra?
+          </h2>
+          <p className="text-sm text-[var(--sf-muted)]">
+            Tu opinión ayuda a otros clientes. Se publica con tu nombre y la inicial de tu apellido,
+            después de que la tienda la revise.
+          </p>
+          <ul className="space-y-6">
+            {reviewables.map((r) => (
+              <li key={r.product_id} className="space-y-2">
+                <h3 className="text-sm font-semibold">{r.title}</h3>
+                {r.reviewed ? (
+                  <p className="text-sm">Ya enviaste tu opinión de este producto. ¡Gracias!</p>
+                ) : (
+                  <ReviewForm
+                    storeId={store.id}
+                    orderId={order.id}
+                    token={t}
+                    productId={r.product_id}
+                    title={r.title}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
       <p className="border-t border-[var(--sf-border)] pt-5">

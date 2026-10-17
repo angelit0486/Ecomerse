@@ -460,3 +460,40 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
 - (c) Confirmar el pago al volver a la tienda: prohibido (regla 11).
 
 **Estado.** IMPLEMENTADA, PERO NO VERIFICADA CON MERCADO PAGO REAL: falta que el propietario configure credenciales de prueba. Pruebas: unitarias del adaptador, pgTAP `68_mercadopago` e integración `mercadopago-webhook` con la API simulada. Pasos de configuración: `docs/runbooks/mercadopago.md`.
+
+### ADR-029 — Opiniones verificadas y moderadas · **aprobado por delegación del propietario el 2026-10-17**
+
+**Contexto.** Las tiendas de referencia (GNC y Birdman) muestran opiniones, y en suplementos son decisivas para comprar. GATE0 §25 prohíbe declarar `AggregateRating` sin reseñas reales. Este es el primer contenido escrito por compradores, así que agrega una tabla de tienda y funciones `storefront.*`: por eso es un ADR.
+
+**Decisión.**
+
+1. **`product_reviews`** (tabla de tienda): `store_id NOT NULL`, RLS forzado con `products.read`, `prevent_tenant_change`, FK compuestas a producto y pedido, y `UNIQUE (store_id, order_id, product_id)`.
+   - Calificación de 1 a 5, título opcional y texto de 10 a 2000 caracteres.
+   - El texto es inmutable y nada se borra.
+2. **Solo opina quien compró.**
+   - Desde la página de su pedido, con el token del enlace (solo su hash llega a la base).
+   - El pedido debe estar pagado y entregado (envío `delivered` o pedido `completed`), y el producto debe estar en ese pedido.
+   - Hay un límite de frecuencia por pedido.
+   - El nombre visible lo calcula la base («Ana G.»). El email y el número de pedido nunca salen a la tienda.
+3. **Moderación obligatoria.**
+   - Toda opinión nace `pending`.
+   - La tienda la publica o la rechaza (`products.update`, auditado): en suplementos una opinión puede afirmar curas que la ley no permite publicar.
+   - El formulario y el panel lo dicen al comprador y a la dueña.
+4. **Tienda.**
+   - La ficha muestra el promedio, el conteo, la distribución y las últimas 10 opiniones publicadas, con «Compra verificada».
+   - El JSON-LD agrega `AggregateRating` y `Review` solo si hay opiniones publicadas.
+   - Sin opiniones no se muestra nada (la vista previa conserva el aviso para la dueña).
+5. **Panel:** Productos → Opiniones, con pestañas Por revisar, Publicadas y Rechazadas. Cada opinión enlaza a su producto y a su pedido.
+
+**Fuera de alcance (v1).**
+
+- Opinar desde «Mi cuenta», sin el enlace del pedido.
+- Fotos en las opiniones.
+- Respuestas de la tienda.
+- Recordatorio por email para opinar: depende de que el correo funcione en producción.
+
+**Alternativas descartadas.**
+
+- (a) Publicar sin moderar: riesgo regulatorio.
+- (b) Opiniones de cualquiera: no son verificables.
+- (c) Un servicio externo de reseñas: otra dependencia, y los datos salen de la plataforma.

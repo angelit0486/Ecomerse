@@ -10,9 +10,11 @@ import {
   getProduct,
   getProductAttributes,
   getProductRegulatory,
+  getProductReviews,
   getRelatedProducts,
   getShippingPromo,
   mediaUrl,
+  type ProductReviews as ProductReviewsData,
   type ShippingPromo,
   type Availability,
   type ProductDetail,
@@ -31,6 +33,7 @@ import { JsonLd } from "../../_components/json-ld";
 import { ProductGallery } from "../../_components/product-gallery";
 import { ProductGrid } from "../../_components/product-card";
 import { ProductAttributes } from "../../_components/product-attributes";
+import { ProductReviews } from "../../_components/product-reviews";
 import { SupplementInfo } from "../../_components/supplement-info";
 import { AddToCart } from "../../_components/add-to-cart";
 import { VariantSelector } from "../../_components/variant-selector";
@@ -80,7 +83,11 @@ function gtin(barcode: string | null): string | undefined {
   return barcode && /^(\d{8}|\d{12,14})$/.test(barcode) ? barcode : undefined;
 }
 
-function productJsonLd(store: StorePublic, product: ProductDetail) {
+function productJsonLd(
+  store: StorePublic,
+  product: ProductDetail,
+  reviews: ProductReviewsData | null,
+) {
   const url = canonicalUrl(store, `/productos/${product.slug}`);
   const prices = product.variants.map((v) => v.price);
   const single = product.variants.length === 1 ? product.variants[0] : undefined;
@@ -122,6 +129,26 @@ function productJsonLd(store: StorePublic, product: ProductDetail) {
         ...(gtin(single?.barcode ?? null) ? { gtin: gtin(single?.barcode ?? null) } : {}),
         ...(product.brand ? { brand: { "@type": "Brand", name: product.brand.name } } : {}),
         ...(offers ? { offers } : {}),
+        // Solo con opiniones reales y publicadas (GATE0 §25; ADR-029).
+        ...(reviews && reviews.count > 0 && reviews.average != null
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: reviews.average,
+                reviewCount: reviews.count,
+                bestRating: 5,
+                worstRating: 1,
+              },
+              review: reviews.items.map((r) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: r.author_name },
+                datePublished: r.created_at.slice(0, 10),
+                reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+                ...(r.title ? { name: r.title } : {}),
+                reviewBody: r.body,
+              })),
+            }
+          : {}),
       },
       ...(product.breadcrumb.length > 0
         ? [
@@ -170,11 +197,12 @@ function PendingContent({ title, text }: { title: string; text: string }) {
 
 export default async function ProductPage({ params }: Props) {
   const { store, preview, product } = await load(params);
-  const [regulatory, attributes, related, shipping] = await Promise.all([
+  const [regulatory, attributes, related, shipping, reviews] = await Promise.all([
     getProductRegulatory(store.id, product.slug),
     getProductAttributes(store.id, product.slug),
     getRelatedProducts(store.id, product.slug),
     getShippingPromo(store.id),
+    getProductReviews(store.id, product.id),
   ]);
   const parsed = ThemeSettingsV1.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
@@ -208,7 +236,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="space-y-6 md:space-y-12">
-      <JsonLd data={productJsonLd(store, product)} />
+      <JsonLd data={productJsonLd(store, product, reviews)} />
       <Breadcrumb
         items={[
           { label: "Inicio", href: "/" },
@@ -317,7 +345,9 @@ export default async function ProductPage({ params }: Props) {
           {regulatory ? <SupplementInfo info={regulatory} /> : null}
         </section>
       </div>
-      {preview ? (
+      {reviews && reviews.count > 0 ? (
+        <ProductReviews reviews={reviews} store={store} />
+      ) : preview ? (
         <PendingContent
           title="Opiniones"
           text="Aquí irán las opiniones verificadas de compradores reales. Solo tú ves este espacio en la vista previa; tus clientes no lo ven."
