@@ -98,7 +98,7 @@ export default async function CheckoutPage({ params }: Props) {
       </div>
       <aside
         aria-label="Resumen del pedido"
-        className="h-fit space-y-4 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5"
+        className="h-fit space-y-4 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5 md:sticky md:top-36 md:self-start"
       >
         <h2 className="font-semibold">Resumen</h2>
         {summaryLines}

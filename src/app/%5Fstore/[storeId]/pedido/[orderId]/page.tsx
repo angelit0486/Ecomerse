@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -158,6 +159,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
           </p>
         </section>
       ) : null}
+      <p className="border-t border-[var(--sf-border)] pt-5">
+        <Link
+          href="/productos"
+          className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+        >
+          Seguir comprando
+        </Link>
+      </p>
     </section>
   );
 }
