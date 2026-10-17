@@ -6,7 +6,7 @@ import { reportActionError } from "@/server/actions/report";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { dbDetail } from "@/server/storefront/cart";
 import { getStorefront } from "@/server/storefront/context";
-import { submitReview } from "@/server/storefront/reviews";
+import { submitAccountReview, submitReview } from "@/server/storefront/reviews";
 
 /**
  * Opinión del comprador (ADR-029). La tienda sale de la firma del proxy; el
@@ -31,6 +31,63 @@ const FIELD_ERRORS: Record<string, string> = {
   body: "Cuéntanos tu experiencia en al menos 10 caracteres (máximo 2000).",
 };
 
+type Review = z.infer<typeof input>;
+
+function parse(formData: FormData): Review | ReviewActionState {
+  const parsed = input.safeParse({
+    rating: formData.get("rating") ?? "",
+    title: formData.get("title") ?? "",
+    body: formData.get("body") ?? "",
+  });
+  if (parsed.success) return parsed.data;
+  const field = String(parsed.error.issues[0]?.path[0] ?? "body");
+  const message = FIELD_ERRORS[field] ?? FIELD_ERRORS.body!;
+  return { error: message, fields: { [field]: message } };
+}
+
+function failure(error: unknown): ReviewActionState {
+  const e = reportActionError("storefront.review", error);
+  const detail = dbDetail(e);
+  if (e.code === "conflict" && detail === "already_reviewed") {
+    return { error: "Ya enviaste tu opinión de este producto." };
+  }
+  if (e.code === "conflict") return { error: "Podrás opinar cuando recibas tu pedido." };
+  if (e.code === "validation_failed" && detail && FIELD_ERRORS[detail]) {
+    return { error: FIELD_ERRORS[detail], fields: { [detail]: FIELD_ERRORS[detail]! } };
+  }
+  return { error: e.message };
+}
+
+// Sin refrescar: el formulario se cambia por el agradecimiento (al volver a la
+// página, el producto ya aparece como opinado).
+const THANKS: ReviewActionState = {
+  ok: true,
+  message: "¡Gracias! Tu opinión se publicará cuando la tienda la revise.",
+};
+
+/** Desde «Mi cuenta»: la base exige la cuenta de la tienda y que el pedido sea suyo. */
+export async function sendAccountReview(
+  storeId: string,
+  orderId: string,
+  productId: string,
+  _: ReviewActionState,
+  formData: FormData,
+): Promise<ReviewActionState> {
+  const { store } = await getStorefront(storeId);
+  const uuid = z.uuid();
+  if (!uuid.safeParse(orderId).success || !uuid.safeParse(productId).success) {
+    return { error: "Pedido no válido." };
+  }
+  const review = parse(formData);
+  if ("error" in review) return review;
+  try {
+    await submitAccountReview(store.id, orderId, productId, review as Review);
+  } catch (error) {
+    return failure(error);
+  }
+  return THANKS;
+}
+
 export async function sendReview(
   storeId: string,
   orderId: string,
@@ -48,36 +105,12 @@ export async function sendReview(
   ) {
     return { error: "Pedido no válido." };
   }
-  const parsed = input.safeParse({
-    rating: formData.get("rating") ?? "",
-    title: formData.get("title") ?? "",
-    body: formData.get("body") ?? "",
-  });
-  if (!parsed.success) {
-    const field = String(parsed.error.issues[0]?.path[0] ?? "body");
-    const message = FIELD_ERRORS[field] ?? FIELD_ERRORS.body!;
-    return { error: message, fields: { [field]: message } };
-  }
+  const review = parse(formData);
+  if ("error" in review) return review;
   try {
-    await submitReview(store.id, orderId, token, productId, parsed.data);
+    await submitReview(store.id, orderId, token, productId, review as Review);
   } catch (error) {
-    const e = reportActionError("storefront.review", error);
-    const detail = dbDetail(e);
-    if (e.code === "conflict" && detail === "already_reviewed") {
-      return { error: "Ya enviaste tu opinión de este producto." };
-    }
-    if (e.code === "conflict") {
-      return { error: "Podrás opinar cuando recibas tu pedido." };
-    }
-    if (e.code === "validation_failed" && detail && FIELD_ERRORS[detail]) {
-      return { error: FIELD_ERRORS[detail], fields: { [detail]: FIELD_ERRORS[detail]! } };
-    }
-    return { error: e.message };
+    return failure(error);
   }
-  // Sin refrescar: el formulario se cambia por el agradecimiento (al volver a la
-  // página, el producto ya aparece como opinado).
-  return {
-    ok: true,
-    message: "¡Gracias! Tu opinión se publicará cuando la tienda la revise.",
-  };
+  return THANKS;
 }

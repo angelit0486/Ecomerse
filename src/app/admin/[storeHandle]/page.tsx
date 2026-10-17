@@ -100,6 +100,17 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             p_to: today.to,
           });
   }
+  // Opiniones esperando revisión (ADR-029): ninguna se publica sola.
+  let pendingReviews: number | null = null;
+  if (kpis && hasPermission(ctx, "products.read")) {
+    const supabase = await createSupabaseServerClient();
+    const { count } = await supabase
+      .from("product_reviews")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", ctx.store.id)
+      .eq("status", "pending");
+    pendingReviews = count ?? 0;
+  }
   const max = kpis ? Math.max(1, ...kpis.series.map((s) => s.sales)) : 1;
 
   return (
@@ -153,6 +164,15 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 {kpis.needs_attention > 0 ? "⚠ " : ""}
                 {kpis.needs_attention} necesitan atención
               </li>
+              {pendingReviews ? (
+                <li className="rounded-md border border-border px-3 py-2">
+                  <Link href={`${base}/productos/opiniones`} className="underline">
+                    {pendingReviews === 1
+                      ? "1 opinión por revisar"
+                      : `${pendingReviews} opiniones por revisar`}
+                  </Link>
+                </li>
+              ) : null}
             </ul>
           </section>
 

@@ -5,9 +5,12 @@ import { notFound } from "next/navigation";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { accountOrder } from "@/server/storefront/account";
 import { getStorefront } from "@/server/storefront/context";
+import { accountReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../../_components/format";
 import { Totals } from "../../../_components/totals";
+import { OrderReviews } from "../../../pedido/[orderId]/order-reviews";
+import { sendAccountReview } from "../../../pedido/[orderId]/review-actions";
 
 export const metadata: Metadata = { title: "Tu pedido", robots: { index: false, follow: false } };
 
@@ -22,6 +25,7 @@ export default async function AccountOrderPage({ params }: Props) {
   if (!UUID_RE.test(orderId)) notFound();
   const order = await accountOrder(store.id, orderId);
   if (!order) notFound();
+  const reviewables = await accountReviewables(store.id, order.id);
 
   return (
     <section className="mx-auto max-w-3xl space-y-8">
@@ -82,6 +86,10 @@ export default async function AccountOrderPage({ params }: Props) {
         </ul>
         <Totals cart={{ ...order, shippingKnown: true }} store={store} />
       </section>
+      <OrderReviews
+        reviewables={reviewables}
+        actionFor={(productId) => sendAccountReview.bind(null, store.id, order.id, productId)}
+      />
     </section>
   );
 }

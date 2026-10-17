@@ -101,6 +101,20 @@ test("comprador: entra con código, ve su pedido de invitado y guarda una direcc
   await links.first().click();
   await expect(page.getByRole("heading", { name: /^Pedido / })).toBeVisible();
   await expect(page.getByText("1 × Cuaderno")).toBeVisible();
+  // Sin entregar no se ofrece opinar; ya pagado y entregado, sí (ADR-029).
+  await expect(page.getByRole("region", { name: "¿Qué te pareció tu compra?" })).toHaveCount(0);
+  await admin`update public.orders set status = 'open', payment_status = 'paid', paid_total = total, paid_at = now()
+               where id = ${orderA}`;
+  await admin`insert into public.shipments (store_id, order_id, status, shipped_at, delivered_at, idempotency_key)
+              values (${a.storeId}, ${orderA}, 'delivered', now(), now(), ${`e2e-acct-${run}-0000000`})`;
+  await page.reload();
+  const opinar = page.getByRole("region", { name: "¿Qué te pareció tu compra?" });
+  await opinar.getByLabel("5 estrellas").check({ force: true });
+  await opinar.getByLabel("Tu opinión", { exact: true }).fill("Buen papel y llegó a tiempo.");
+  await opinar.getByRole("button", { name: "Enviar opinión" }).click();
+  await expect(
+    page.getByText("¡Gracias! Tu opinión se publicará cuando la tienda la revise."),
+  ).toBeVisible();
 
   // El pedido de la otra tienda no se abre aquí, aunque sea del mismo email.
   const other = await page.goto(`${origin(a)}/cuenta/pedidos/${orderB}`);

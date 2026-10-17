@@ -1,8 +1,10 @@
 import "server-only";
 
+import { callRpc } from "@/server/db/rpc";
 import { gatewayDb } from "@/server/db/role-clients";
 import { toAppError } from "@/server/db/errors";
 import { tokenHash } from "@/server/payments/order-links";
+import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /**
  * Opiniones del comprador desde la página de su pedido (ADR-029). La base
@@ -39,4 +41,34 @@ export async function submitReview(
   } catch (error) {
     throw toAppError(error);
   }
+}
+
+/** Desde «Mi cuenta» (sesión del comprador): sin el enlace del pedido. */
+export async function accountReviewables(storeId: string, orderId: string): Promise<Reviewable[]> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    return (
+      (await callRpc<Reviewable[]>(supabase, "account_order_reviewables", {
+        p_store_id: storeId,
+        p_order_id: orderId,
+      })) ?? []
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function submitAccountReview(
+  storeId: string,
+  orderId: string,
+  productId: string,
+  review: { rating: number; title: string; body: string },
+): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  await callRpc(supabase, "account_submit_review", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_product_id: productId,
+    p_review: review,
+  });
 }

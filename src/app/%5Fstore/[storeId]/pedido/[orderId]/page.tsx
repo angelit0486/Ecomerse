@@ -13,7 +13,8 @@ import { orderReviewables } from "@/server/storefront/reviews";
 import { money } from "../../_components/format";
 import { Totals } from "../../_components/totals";
 import { RetryPayment } from "./retry-form";
-import { ReviewForm } from "./review-form";
+import { sendReview } from "./review-actions";
+import { OrderReviews } from "./order-reviews";
 
 export const metadata: Metadata = {
   title: "Tu pedido",
@@ -163,38 +164,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
           </p>
         </section>
       ) : null}
-      {reviewables.length > 0 ? (
-        <section
-          aria-labelledby="opinar"
-          className="space-y-4 border-t border-[var(--sf-border)] pt-5"
-        >
-          <h2 id="opinar" className="font-semibold">
-            ¿Qué te pareció tu compra?
-          </h2>
-          <p className="text-sm text-[var(--sf-muted)]">
-            Tu opinión ayuda a otros clientes. Se publica con tu nombre y la inicial de tu apellido,
-            después de que la tienda la revise.
-          </p>
-          <ul className="space-y-6">
-            {reviewables.map((r) => (
-              <li key={r.product_id} className="space-y-2">
-                <h3 className="text-sm font-semibold">{r.title}</h3>
-                {r.reviewed ? (
-                  <p className="text-sm">Ya enviaste tu opinión de este producto. ¡Gracias!</p>
-                ) : (
-                  <ReviewForm
-                    storeId={store.id}
-                    orderId={order.id}
-                    token={t}
-                    productId={r.product_id}
-                    title={r.title}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <OrderReviews
+        reviewables={reviewables}
+        actionFor={(productId) => sendReview.bind(null, store.id, order.id, t, productId)}
+      />
       <p className="border-t border-[var(--sf-border)] pt-5">
         <Link
           href="/productos"

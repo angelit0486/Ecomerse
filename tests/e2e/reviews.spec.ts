@@ -89,7 +89,10 @@ test("el comprador opina desde su pedido entregado", async ({ page }) => {
 
 test("la dueña la publica y la ficha muestra el promedio real", async ({ page }) => {
   await loginNewStaff(page, ownerEmail);
-  await page.goto(`/admin/${tenant.handle}/productos/opiniones`);
+  // El inicio del panel avisa y lleva a la cola.
+  await page.goto(`/admin/${tenant.handle}`);
+  await page.getByRole("link", { name: "1 opinión por revisar" }).click();
+  await expect(page).toHaveURL(/\/productos\/opiniones$/);
   await expect(page.getByRole("link", { name: "Por revisar (1)" })).toBeVisible();
   const item = page.getByRole("list", { name: "Opiniones: Por revisar" }).getByRole("listitem");
   await expect(item.getByText("Sin grumos y sin sabor.", { exact: false })).toBeVisible();

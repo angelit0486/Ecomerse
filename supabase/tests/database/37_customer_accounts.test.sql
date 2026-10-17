@@ -4,7 +4,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(30);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_tenant('a', 'owner');
@@ -134,6 +134,25 @@ select is(system.login_intent_store(' ana@compra.io ', (select min(nonce) from n
   'el hook obtiene la tienda del intento con su nonce');
 select ok(not exists (select 1 from system.auth_login_intents where email_hash = convert_to('ana@compra.io', 'UTF8')),
   'nunca se guarda el email en claro');
+
+-- ============================================================================ Opiniones desde la cuenta (ADR-029)
+update public.orders set status = 'open', payment_status = 'paid', paid_total = total, paid_at = now()
+ where id = tests.fx('ana_a');
+insert into public.shipments (store_id, order_id, status, shipped_at, delivered_at, idempotency_key)
+values (tests.fx('store_a'), tests.fx('ana_a'), 'delivered', now(), now(), 'ship-account-review-0001');
+select tests.set_fx('taza', (select product_id from public.order_items where order_id = tests.fx('ana_a')));
+select tests.login_otp('ana');
+select is(public.account_order_reviewables(tests.fx('store_a'), tests.fx('ana_a')) -> 0 ->> 'title', 'Taza',
+  'desde su cuenta, el pedido entregado ofrece opinar');
+select is(public.account_submit_review(tests.fx('store_a'), tests.fx('ana_a'),
+            tests.fx('taza'), '{"rating":5,"body":"Muy buena calidad, llegó rápido."}') ->> 'status', 'pending',
+  'y opina sin el enlace del pedido (nace pendiente)');
+select is(public.account_order_reviewables(tests.fx('store_a'), tests.fx('beto_a')), '[]'::jsonb,
+  'el pedido de otro cliente no ofrece nada');
+select throws_ok(format($$ select public.account_submit_review(%L, %L, %L, '{"rating":1,"body":"Opinión ajena a mi compra."}') $$,
+                        tests.fx('store_a'), tests.fx('beto_a'), tests.fx('taza')),
+  'P0001', 'not_found', 'ni opina en el pedido de otro');
+select tests.logout();
 
 select * from finish();
 rollback;

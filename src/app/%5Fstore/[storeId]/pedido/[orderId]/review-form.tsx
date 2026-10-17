@@ -2,29 +2,23 @@
 
 import { useActionState, useId } from "react";
 
-import { sendReview, type ReviewActionState } from "./review-actions";
+import type { ReviewActionState } from "./review-actions";
 
 const field =
   "w-full rounded-[var(--sf-radius-input,0.375rem)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 py-2 text-sm";
 
-/** Formulario de opinión de un producto del pedido (ADR-029). */
+/**
+ * Formulario de opinión de un producto del pedido (ADR-029). La acción llega ya
+ * ligada al pedido y producto: desde el enlace del pedido o desde «Mi cuenta».
+ */
 export function ReviewForm({
-  storeId,
-  orderId,
-  token,
-  productId,
+  action: send,
   title,
 }: {
-  storeId: string;
-  orderId: string;
-  token: string;
-  productId: string;
+  action: (state: ReviewActionState, formData: FormData) => Promise<ReviewActionState>;
   title: string;
 }) {
-  const [state, action, pending] = useActionState<ReviewActionState, FormData>(
-    sendReview.bind(null, storeId, orderId, token, productId),
-    {},
-  );
+  const [state, action, pending] = useActionState<ReviewActionState, FormData>(send, {});
   const id = useId();
   if (state.ok) {
     return (

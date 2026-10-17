@@ -489,11 +489,11 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
    - La ficha muestra el promedio, el conteo, la distribución y las últimas 10 opiniones publicadas, con «Compra verificada».
    - El JSON-LD agrega `AggregateRating` y `Review` solo si hay opiniones publicadas.
    - Sin opiniones no se muestra nada (la vista previa conserva el aviso para la dueña).
-5. **Panel:** Productos → Opiniones, con pestañas Por revisar, Publicadas y Rechazadas. Cada opinión enlaza a su producto y a su pedido.
+5. **«Mi cuenta» (`20261018001600`):** el comprador con cuenta también opina desde el detalle de su pedido. `account_order_reviewables` y `account_submit_review` exigen la cuenta de la tienda y que el pedido sea suyo, y reutilizan las mismas reglas. El inicio del panel avisa «N opiniones por revisar».
+6. **Panel:** Productos → Opiniones, con pestañas Por revisar, Publicadas y Rechazadas. Cada opinión enlaza a su producto y a su pedido.
 
 **Fuera de alcance (v1).**
 
-- Opinar desde «Mi cuenta», sin el enlace del pedido.
 - Fotos en las opiniones.
 - Respuestas de la tienda.
 - Recordatorio por email para opinar: depende de que el correo funcione en producción.
