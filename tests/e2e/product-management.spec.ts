@@ -45,6 +45,9 @@ test.beforeAll(async () => {
     await sql`select public.catalog_upsert_category(${tenant.storeId}, ${sql.json({ name: "Creatinas" })})`;
     await sql`select public.inventory_adjust(${tenant.storeId}, v.id, 'adjustment', 12, 'Inicial')
                 from public.product_variants v where v.sku = ${`GV-${run}`.toUpperCase()}`;
+    // Mínimo de 15: con 12 queda en «pocas existencias».
+    await sql`select public.inventory_set_threshold(${tenant.storeId}, v.id, 15)
+                from public.product_variants v where v.sku = ${`GV-${run}`.toUpperCase()}`;
   });
   await admin`insert into public.media (store_id, owner_type, product_id, status, storage_path, position, alt_text) values
     (${tenant.storeId}, 'product', ${wheyId}, 'ready', ${`e2e/${run}/frente.webp`}, 0, 'Frente'),
@@ -58,6 +61,7 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(whey.getByText("Atlas Nutrición")).toBeVisible();
   await expect(whey.getByText("12 disponibles")).toBeVisible();
   await expect(whey.getByText("Alguna presentación agotada")).toBeVisible();
+  await expect(whey.getByText("Pocas existencias")).toBeVisible();
   await expect(whey.getByText("Pausado (borrador)")).toBeVisible();
   await expectNoSeriousA11yViolations(page);
 
@@ -66,6 +70,10 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await page.getByRole("button", { name: "Filtrar" }).click();
   await expect(page.getByRole("link", { name: "Creatina Gestión" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Whey Gestión" })).toHaveCount(0);
+  await page.getByLabel("Pendientes").selectOption("pocas_existencias");
+  await page.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page.getByRole("link", { name: "Whey Gestión" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Creatina Gestión" })).toHaveCount(0);
   await page.getByRole("link", { name: "Quitar filtros" }).click();
   await expect(page.getByRole("link", { name: "Whey Gestión" })).toBeVisible();
   // El selector vuelve a «Ninguno»: no reaplica el filtro que se acaba de quitar.
@@ -184,4 +192,25 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
      where v.sku = ${`GC-${run}`.toUpperCase()}`;
   expect(v!.alt_text).toBe("Chocolate");
   await expectNoSeriousA11yViolations(page);
+
+  // Duplicar copia todo: presentaciones, fotos (con su job de copia) y la foto de cada una.
+  await page.getByRole("button", { name: "Duplicar" }).click();
+  await expect(page.getByText(/Copia creada como borrador, con sus presentaciones/)).toBeVisible();
+  const copyId = page.url().match(/productos\/([0-9a-f-]{36})/)![1]!;
+  expect(copyId).not.toBe(wheyId);
+  const photos = await admin<{ alt_text: string; status: string }[]>`
+    select alt_text, status from public.media where product_id = ${copyId} order by position`;
+  expect(photos).toEqual([
+    { alt_text: "Chocolate", status: "pending" },
+    { alt_text: "Frente", status: "pending" },
+  ]);
+  const [jobs] = await admin<{ n: string }[]>`
+    select count(*) as n from system.jobs j
+     where j.type = 'media.copy' and (j.payload ->> 'media_id')::uuid in
+           (select id from public.media where product_id = ${copyId})`;
+  expect(Number(jobs!.n)).toBe(2);
+  const [chocolate] = await admin<{ alt_text: string }[]>`
+    select m.alt_text from public.product_variants v join public.media m on m.id = v.image_id
+     where v.product_id = ${copyId} and v.option_signature = 'Sabor=Chocolate'`;
+  expect(chocolate!.alt_text).toBe("Chocolate");
 });

@@ -39,8 +39,8 @@ export interface ProductListFilters {
   status?: "draft" | "active" | "archived" | undefined;
   categoryId?: string | undefined;
   brandId?: string | undefined;
-  /** Pendientes: alguna presentación agotada o ninguna foto lista. */
-  issue?: "agotados" | "sin_foto" | undefined;
+  /** Pendientes: alguna presentación agotada, ninguna foto lista o pocas existencias. */
+  issue?: "agotados" | "sin_foto" | "pocas_existencias" | undefined;
   deleted?: boolean | undefined;
   sort?: ProductSort | undefined;
   cursor?: ProductCursor | undefined;

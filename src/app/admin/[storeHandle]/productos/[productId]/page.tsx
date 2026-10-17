@@ -109,7 +109,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
         ) : null}
         {sp.copiado === "1" ? (
           <p role="status" className="mt-2 text-sm text-success">
-            Copia creada como borrador (sin imágenes, SKU ni código de barras).
+            Copia creada como borrador, con sus presentaciones, ficha y atributos. Las fotos se
+            copian en segundo plano y aparecen al terminar; el SKU y el código de barras se dejan
+            vacíos (son únicos).
           </p>
         ) : null}
       </header>

@@ -146,7 +146,8 @@ const STATUS_MESSAGES: Record<StatusAction, string> = {
   archive: "Producto archivado.",
   delete: "Producto eliminado. Puedes restaurarlo desde «Eliminados».",
   restore: "Producto restaurado como borrador.",
-  duplicate: "Copia creada como borrador.",
+  duplicate:
+    "Copia creada como borrador, con sus presentaciones, ficha y atributos. Las fotos se copian en segundo plano y aparecen al terminar.",
 };
 
 async function applyStatus(

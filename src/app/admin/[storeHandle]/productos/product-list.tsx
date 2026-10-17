@@ -25,6 +25,8 @@ interface Row {
   stock: string | null;
   /** Alguna presentación activa sin existencias (y sin venta bajo pedido). */
   soldOut: boolean;
+  /** Alguna presentación en o bajo su mínimo de existencias. */
+  lowStock: boolean;
   /** null sin permiso de edición. */
   quickPrices: QuickPriceVariant[] | null;
 }
@@ -410,6 +412,9 @@ export function BulkProductsTable({
                     <span className="block text-[13px] text-warning">
                       Alguna presentación agotada
                     </span>
+                  ) : null}
+                  {row.lowStock ? (
+                    <span className="block text-[13px] text-warning">Pocas existencias</span>
                   ) : null}
                 </TD>
               ) : null}

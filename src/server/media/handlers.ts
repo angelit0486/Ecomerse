@@ -115,8 +115,46 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     log.info("Purga de medios", { objects: candidates.length, rows, ...counts });
   };
 
+  // Copia de una foto al duplicar un producto (tanda 5): el archivo listo se
+  // copia a la ruta del medio nuevo y se procesa como una subida más.
+  const copyMedia: JobHandler = async (job, ctx) => {
+    const id = mediaId(job);
+    const sourceId = job.payload.source_media_id;
+    if (typeof sourceId !== "string" || !UUID_RE.test(sourceId))
+      throw new PermanentJobError("payload.source_media_id inválido");
+    const [target] = await deps.db<{ store_id: string; storage_path: string; mime_type: string }[]>`
+      select store_id, storage_path, mime_type from system.media_for_processing(${id}::uuid)`;
+    if (!target) return; // ya procesado, rechazado o borrado
+    if (job.storeId && job.storeId !== target.store_id) {
+      throw new PermanentJobError("La tienda del job no coincide con la del medio");
+    }
+    const [source] = await deps.db<{ store_id: string; source_path: string; max_bytes: string }[]>`
+      select * from system.media_copy_source(${id}::uuid, ${sourceId}::uuid)`;
+    let data: Buffer | null = null;
+    if (source) {
+      try {
+        data = await deps.storage.download(
+          "store-media",
+          source.source_path,
+          Number(source.max_bytes),
+        );
+      } catch (error) {
+        if (!(error instanceof ObjectTooLargeError)) throw error;
+      }
+    }
+    // La foto original se borró o cambió entre el duplicado y la copia.
+    if (!data) {
+      await reject(deps, id, target.storage_path, "missing_file");
+      ctx.log.info("Copia de medio rechazada", { media_id: id, reason: "missing_file" });
+      return;
+    }
+    await deps.storage.upload("store-uploads", target.storage_path, data, target.mime_type);
+    await processMedia(job, ctx);
+  };
+
   return [
     ["media.process", processMedia],
+    ["media.copy", copyMedia],
     ["media.purge_orphans", purgeOrphans],
   ];
 }

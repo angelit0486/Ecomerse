@@ -73,7 +73,7 @@ select is((select image_id from public.product_variants where id = tests.fx('v2'
 
 -- ============================================================================ Datos del listado
 select is((public.catalog_list_extras(tests.fx('store_a'), array[tests.fx('prod')]) -> tests.fx('prod')::text) - 'variants',
-          '{"image": "a/p/vainilla.webp", "brand": "Atlas", "available": 7, "sold_out_variants": 1}'::jsonb,
+          '{"image": "a/p/vainilla.webp", "brand": "Atlas", "available": 7, "sold_out_variants": 1, "low_stock_variants": 0}'::jsonb,
           'miniatura (la primera lista), marca, existencias y presentaciones agotadas');
 
 -- ============================================================================ Filtros del listado

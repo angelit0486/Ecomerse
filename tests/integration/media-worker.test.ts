@@ -237,6 +237,71 @@ describe("media.process", () => {
   });
 });
 
+describe("media.copy (duplicar un producto)", () => {
+  async function readyMedia(sid = storeId) {
+    const png = await sharp({
+      create: { width: 120, height: 80, channels: 3, background: "#3a6" },
+    })
+      .png()
+      .toBuffer();
+    const row = await pendingMedia("image/png", png, { store: sid });
+    expect(await run()).toMatchObject({ succeeded: 1 });
+    return row;
+  }
+  /** Lo que deja catalog_duplicate_product: un medio pendiente sin archivo y su job. */
+  async function copyTarget(sourceId: string, sid = storeId) {
+    const [row] = await admin<{ id: string; storage_path: string }[]>`
+      with id as (select gen_random_uuid() as id)
+      insert into public.media (id, store_id, owner_type, status, storage_path, mime_type, bytes)
+      select id.id, ${sid}, 'banner', 'pending',
+             ${sid} || '/banner/' || ${sid} || '/' || id.id || '/original.png', 'image/png', 100000
+        from id
+      returning id, storage_path`;
+    await admin`select app.enqueue_job('media.copy',
+                  ${admin.json({ media_id: row!.id, source_media_id: sourceId })}, ${sid},
+                  ${`media.copy:${row!.id}`})`;
+    return row!;
+  }
+
+  it("copia el archivo listo a la ruta nueva, lo procesa y conserva el original", async () => {
+    const source = await readyMedia();
+    const target = await copyTarget(source.id);
+    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect(await media(target.id)).toMatchObject({ status: "ready", width: 120, height: 80 });
+    expect(storage.objects.has(storage.key("store-media", target.storage_path))).toBe(true);
+    expect(storage.objects.has(storage.key("store-media", source.storage_path))).toBe(true);
+    expect(storage.objects.has(storage.key("store-uploads", target.storage_path))).toBe(false);
+  });
+
+  it("una foto de otra tienda nunca se copia: missing_file", async () => {
+    const foreign = await readyMedia(otherStoreId);
+    const target = await copyTarget(foreign.id);
+    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect(await media(target.id)).toMatchObject({
+      status: "rejected",
+      rejection_reason: "missing_file",
+    });
+    expect(storage.objects.has(storage.key("store-media", target.storage_path))).toBe(false);
+  });
+
+  it("si el archivo de origen ya no existe: missing_file", async () => {
+    const source = await readyMedia();
+    storage.objects.delete(storage.key("store-media", source.storage_path));
+    const target = await copyTarget(source.id);
+    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect(await media(target.id)).toMatchObject({ rejection_reason: "missing_file" });
+  });
+
+  it("payload sin origen válido → dead", async () => {
+    const source = await readyMedia();
+    const target = await copyTarget(source.id);
+    await admin`delete from system.jobs`;
+    await admin`select app.enqueue_job('media.copy',
+                  ${admin.json({ media_id: target.id, source_media_id: "x" })}, ${storeId})`;
+    expect(await run()).toMatchObject({ dead: 1 });
+  });
+});
+
 describe("media.purge_orphans", () => {
   it("borra objetos y filas vencidas; conserva lo vigente", async () => {
     const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#fff" } })

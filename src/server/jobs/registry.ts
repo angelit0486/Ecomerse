@@ -68,6 +68,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
   ["access.support_access_notice", lazy("access.support_access_notice", notifications)],
   ["media.process", lazy("media.process", media)],
+  ["media.copy", lazy("media.copy", media)],
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],

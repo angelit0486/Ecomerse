@@ -42,6 +42,7 @@ const SORT_LABELS: Record<ProductSort, string> = {
 const ISSUES = [
   { key: "agotados", label: "Con presentaciones agotadas" },
   { key: "sin_foto", label: "Sin foto" },
+  { key: "pocas_existencias", label: "Con pocas existencias" },
 ] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
@@ -53,6 +54,8 @@ interface ListExtras {
   brand: string | null;
   available: number | null;
   sold_out_variants: number | null;
+  /** En o bajo el mínimo de existencias (sin estar agotadas). */
+  low_stock_variants: number | null;
   variants: {
     id: string;
     options: string;
@@ -84,7 +87,11 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   const brandParam = one(sp.marca);
   const brandId = brandParam && /^[0-9a-f-]{36}$/.test(brandParam) ? brandParam : undefined;
   const issueParam = one(sp.pendiente);
-  const issue = ISSUES.find((i) => i.key === issueParam)?.key;
+  // Los filtros de existencias exigen inventory.read (la base también lo exige).
+  const canSeeStock = hasPermission(ctx, "inventory.read");
+  const issue = ISSUES.find(
+    (i) => i.key === issueParam && (canSeeStock || i.key === "sin_foto"),
+  )?.key;
   const sortParam = one(sp.orden);
   const sort = PRODUCT_SORTS.find((o) => o === sortParam) ?? "recientes";
   // El cursor por nombre lleva el título: pasa del límite de 200 de `one()`.
@@ -278,7 +285,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             className={nativeControl}
           >
             <option value="">Ninguno</option>
-            {ISSUES.map((i) => (
+            {ISSUES.filter((i) => canSeeStock || i.key === "sin_foto").map((i) => (
               <option key={i.key} value={i.key}>
                 {i.label}
               </option>
@@ -362,6 +369,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             brand: extras[row.id]?.brand ?? null,
             stock: stockLabel(extras[row.id]),
             soldOut: (extras[row.id]?.sold_out_variants ?? 0) > 0,
+            lowStock: (extras[row.id]?.low_stock_variants ?? 0) > 0,
             quickPrices: canEditPrices
               ? (extras[row.id]?.variants ?? []).map((v) => ({
                   id: v.id,

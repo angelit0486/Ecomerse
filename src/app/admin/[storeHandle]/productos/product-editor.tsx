@@ -413,7 +413,10 @@ export function ProductEditor({
                 />
               )}
             </Field>
-            <Field label={`Valores de la opción ${index + 1}`} hint="Separados por comas.">
+            <Field
+              label={`Valores de la opción ${index + 1}`}
+              hint="Separados por comas, en el orden en que se mostrarán en la tienda (también ordena las presentaciones)."
+            >
               {(c) => (
                 <Input
                   {...c}
