@@ -35,6 +35,17 @@ function Feedback({ state, rendered = [] }: { state: StepState; rendered?: reado
   return null;
 }
 
+/** Nombres que la dueña reconoce (México primero); el valor sigue siendo la zona IANA. */
+const TIMEZONE_LABELS: Record<string, string> = {
+  "America/Mexico_City": "Centro de México (Ciudad de México, Guadalajara)",
+  "America/Monterrey": "Monterrey",
+  "America/Cancun": "Quintana Roo (Cancún)",
+  "America/Mazatlan": "Pacífico (Baja California Sur, Sinaloa, Nayarit)",
+  "America/Hermosillo": "Sonora (Hermosillo)",
+  "America/Chihuahua": "Chihuahua",
+  "America/Tijuana": "Baja California (Tijuana)",
+};
+
 export function ProfileForm({
   storeHandle,
   initial,
@@ -81,7 +92,10 @@ export function ProfileForm({
             {...c}
             name="timezone"
             defaultValue={state.values?.timezone ?? initial.timezone}
-            options={timezones.map((tz) => ({ value: tz, label: tz.replace(/_/g, " ") }))}
+            options={timezones.map((tz) => ({
+              value: tz,
+              label: TIMEZONE_LABELS[tz] ?? tz.replace(/_/g, " "),
+            }))}
           />
         )}
       </Field>

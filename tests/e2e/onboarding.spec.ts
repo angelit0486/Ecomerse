@@ -34,9 +34,15 @@ test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", 
   await page.getByLabel("Email de contacto").fill("Hola@ModaAna.mx");
   await page.getByLabel("Teléfono").fill("+52 55 1234 5678");
   await page.getByRole("combobox", { name: "Zona horaria" }).click();
-  await page.getByRole("option", { name: "America/Monterrey" }).click();
+  // La Paz, BCS (la tienda del propietario) está en la zona del Pacífico.
+  await page
+    .getByRole("option", { name: "Pacífico (Baja California Sur, Sinaloa, Nayarit)" })
+    .click();
   await page.getByRole("button", { name: "Guardar datos" }).click();
   await expect(page.getByText("Datos de la tienda guardados.")).toBeVisible();
+  const [tz] = await admin<{ timezone: string }[]>`
+    select timezone from public.stores where handle = ${tenant.handle}`;
+  expect(tz!.timezone).toBe("America/Mazatlan");
 
   // Paso 2b: el contraste insuficiente bloquea guardar.
   const save = page.getByRole("button", { name: "Guardar marca en borrador" });

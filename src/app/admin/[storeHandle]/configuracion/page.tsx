@@ -21,6 +21,8 @@ const TIMEZONES = [
   "America/Mexico_City",
   "America/Monterrey",
   "America/Cancun",
+  "America/Mazatlan",
+  "America/Hermosillo",
   "America/Chihuahua",
   "America/Tijuana",
   "America/Bogota",
