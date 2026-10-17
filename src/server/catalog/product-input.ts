@@ -25,6 +25,9 @@ export const variantInputSchema = z.object({
   compare_at_price: cents.optional().nullable(),
   cost: cents.optional().nullable(),
   weight_g: z.number().int().min(0).optional().nullable(),
+  /** ADR-026: contenido neto y porciones de esta presentación (vacío = los del producto). */
+  net_content: z.string().trim().max(100).optional().nullable(),
+  servings_per_container: z.number().int().min(1).max(10000).optional().nullable(),
   status: z.enum(["active", "inactive"]).default("active"),
   track_inventory: z.boolean().default(true),
   inventory_policy: z.enum(["deny", "continue"]).default("deny"),

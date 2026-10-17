@@ -38,6 +38,8 @@ const emptyVariant = (options: Record<string, string> = {}): VariantDraft => ({
   compare_at_price: "",
   cost: "",
   active: true,
+  net_content: "",
+  servings: "",
 });
 
 function splitValues(text: string): string[] {
@@ -190,6 +192,13 @@ export function ProductEditor({
         return { ok: false, error: `Precio de comparación no válido en ${label}.` };
       if (row.draft.cost.trim() && cost === null)
         return { ok: false, error: `Costo no válido en ${label}.` };
+      const servingsText = row.draft.servings.trim();
+      const servings = servingsText ? Number(servingsText) : null;
+      if (servings !== null && (!Number.isInteger(servings) || servings < 1 || servings > 10000))
+        return {
+          ok: false,
+          error: `Porciones no válidas en ${label} (un número entero de 1 a 10000).`,
+        };
       payloadVariants.push({
         ...(row.draft.id ? { id: row.draft.id } : {}),
         options: row.combo,
@@ -200,6 +209,9 @@ export function ProductEditor({
         ...(canReadCost ? { cost } : {}),
         status: row.draft.active ? "active" : "inactive",
         position: index,
+        // ADR-026: vacío = vale el dato del producto (ficha sanitaria).
+        net_content: row.draft.net_content.trim() || null,
+        servings_per_container: servings,
       });
     }
     const json = JSON.stringify({
@@ -462,6 +474,12 @@ export function ProductEditor({
                   SKU
                 </th>
                 <th scope="col" className="px-3 py-2">
+                  Contenido
+                </th>
+                <th scope="col" className="px-3 py-2">
+                  Porciones
+                </th>
+                <th scope="col" className="px-3 py-2">
                   Activa
                 </th>
               </tr>
@@ -521,6 +539,25 @@ export function ProductEditor({
                         maxLength={64}
                         onChange={(e) => updateVariant(row, { sku: e.target.value })}
                         className="w-32"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        aria-label={`Contenido neto de ${label}`}
+                        placeholder="p. ej. 2 kg"
+                        value={draft.net_content}
+                        maxLength={100}
+                        onChange={(e) => updateVariant(row, { net_content: e.target.value })}
+                        className="w-28"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        aria-label={`Porciones de ${label}`}
+                        inputMode="numeric"
+                        value={draft.servings}
+                        onChange={(e) => updateVariant(row, { servings: e.target.value })}
+                        className="w-20"
                       />
                     </td>
                     <td className="px-3 py-2">

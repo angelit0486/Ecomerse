@@ -115,6 +115,9 @@ export interface ProductDetail {
     availability: Availability;
     /** Plazo del proveedor cuando solo él tiene existencias (ADR-025); nunca el proveedor. */
     ships_in_days?: { min: number; max: number } | null;
+    /** ADR-026: contenido y porciones de esta presentación (null = los del producto). */
+    net_content?: string | null;
+    servings_per_container?: number | null;
     image: ImageRef | null;
   }[];
   images: ImageRef[];

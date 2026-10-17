@@ -20,6 +20,8 @@ export interface EditorProduct {
     compare_at_price: string;
     cost: string;
     active: boolean;
+    net_content: string;
+    servings: string;
   }[];
   categories: { id: string; is_primary: boolean }[];
 }
@@ -44,6 +46,8 @@ export function toEditorProduct(
       compare_at_price: number | null;
       cost: number | null;
       status: string;
+      net_content?: string | null;
+      servings_per_container?: number | null;
     }[];
     categories: { id: string; is_primary: boolean }[];
   } | null,
@@ -82,6 +86,8 @@ export function toEditorProduct(
       compare_at_price: centsToInput(v.compare_at_price),
       cost: centsToInput(v.cost),
       active: v.status === "active",
+      net_content: v.net_content ?? "",
+      servings: v.servings_per_container == null ? "" : String(v.servings_per_container),
     })),
     categories: product.categories,
   };

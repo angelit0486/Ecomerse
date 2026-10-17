@@ -164,6 +164,9 @@ export interface ProductDetail {
     cost: number | null;
     status: "active" | "inactive";
     position: number;
+    /** ADR-026: contenido y porciones de esta presentación (null = las del producto). */
+    net_content: string | null;
+    servings_per_container: number | null;
   }[];
   categories: { id: string; is_primary: boolean }[];
   media: MediaRow[];
@@ -205,7 +208,9 @@ export async function getProduct(
       .order("position"),
     supabase
       .from("product_variants")
-      .select("id, sku, barcode, price, compare_at_price, status, position, option_signature")
+      .select(
+        "id, sku, barcode, price, compare_at_price, status, position, option_signature, net_content, servings_per_container",
+      )
       .eq("product_id", productId)
       .is("deleted_at", null)
       .order("position")
@@ -232,6 +237,8 @@ export async function getProduct(
     status: "active" | "inactive";
     position: number;
     option_signature: string;
+    net_content: string | null;
+    servings_per_container: number | null;
   }>;
   const costs = new Map<string, number>();
   if (canReadCost && variantRows.length > 0) {
@@ -270,6 +277,8 @@ export async function getProduct(
       cost: costs.has(v.id) ? Number(costs.get(v.id)) : null,
       status: v.status,
       position: v.position,
+      net_content: v.net_content,
+      servings_per_container: v.servings_per_container,
     })),
     categories: ((categories.data ?? []) as { category_id: string; is_primary: boolean }[]).map(
       (c) => ({

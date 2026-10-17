@@ -21,6 +21,8 @@ export interface SelectorVariant {
   availability: string;
   available: boolean;
   imageUrl: string | null;
+  /** Contenido y precio por porción de esta presentación (ADR-026); null sin datos. */
+  serving?: string | null;
 }
 
 export function VariantSelector({
@@ -75,6 +77,9 @@ export function VariantSelector({
             </p>
             {selected.saving ? (
               <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
+            ) : null}
+            {selected.serving ? (
+              <p className="text-sm text-[var(--sf-muted)]">{selected.serving}</p>
             ) : null}
             <p className="text-sm">{selected.availability}</p>
           </>

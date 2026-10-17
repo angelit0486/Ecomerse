@@ -221,12 +221,27 @@ export default async function ProductPage({ params }: Props) {
     launchedAt: store.launched_at,
     now: new Date(),
   });
-  // Precio por porción solo sin variantes: las presentaciones cambian las porciones.
-  // Con una sola porción el precio por porción es el precio: no se muestra.
+  // Precio por porción: las porciones de la presentación (ADR-026) o, sin
+  // variantes, las de la ficha sanitaria. Con una sola porción el precio por
+  // porción es el precio: no se muestra.
+  const singleServings =
+    single?.servings_per_container ?? regulatory?.data.servings_per_container ?? null;
   const perServing =
-    single && (regulatory?.data.servings_per_container ?? 0) > 1
-      ? pricePerServing(single.price, regulatory?.data.servings_per_container)
-      : null;
+    single && (singleServings ?? 0) > 1 ? pricePerServing(single.price, singleServings) : null;
+  /** «2 kg · $15.15 por porción (66 porciones)» de una presentación; null sin datos. */
+  const servingLine = (v: (typeof product.variants)[number]): string | null => {
+    const per =
+      (v.servings_per_container ?? 0) > 1
+        ? pricePerServing(v.price, v.servings_per_container)
+        : null;
+    const parts = [
+      v.net_content ?? null,
+      per !== null
+        ? `${money(per, store)} por porción (${v.servings_per_container} porciones)`
+        : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  };
   const gallery = product.images.map((image) => ({
     src: mediaUrl(image.path),
     alt: image.alt ?? product.title,
@@ -308,8 +323,8 @@ export default async function ProductPage({ params }: Props) {
                 ) : null}
                 {perServing !== null ? (
                   <p className="text-sm text-[var(--sf-muted)]">
-                    {money(perServing, store)} por porción (
-                    {regulatory?.data.servings_per_container} porciones)
+                    {single.net_content ? `${single.net_content} · ` : ""}
+                    {money(perServing, store)} por porción ({singleServings} porciones)
                   </p>
                 ) : null}
                 <p className="text-sm">
@@ -341,6 +356,7 @@ export default async function ProductPage({ params }: Props) {
                 availability: availabilityText(v.availability, v.ships_in_days),
                 available: v.availability !== "out_of_stock",
                 imageUrl: v.image ? mediaUrl(v.image.path) : null,
+                serving: servingLine(v),
               }))}
             />
           ) : (
