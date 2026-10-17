@@ -184,6 +184,8 @@ export interface ProductDetail {
   seo_title: string | null;
   seo_description: string | null;
   deleted_at: string | null;
+  /** Publicación programada (tanda 7); null sin programar. */
+  publish_at: string | null;
   options: { name: string; values: string[] }[];
   variants: {
     id: string;
@@ -226,7 +228,7 @@ export async function getProduct(
   const { data: product, error } = await supabase
     .from("products")
     .select(
-      "id, title, slug, status, description_html, brand_id, tags, seo_title, seo_description, deleted_at",
+      "id, title, slug, status, description_html, brand_id, tags, seo_title, seo_description, deleted_at, publish_at",
     )
     .eq("store_id", storeId)
     .eq("id", productId)

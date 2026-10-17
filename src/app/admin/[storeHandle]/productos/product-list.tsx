@@ -354,7 +354,8 @@ export function BulkProductsTable({
             <TH>Estado</TH>
             <TH>Precio</TH>
             {rows.some((r) => r.stock !== null) ? <TH>Existencias</TH> : null}
-            <TH>Variantes</TH>
+            {/* En el celular el número de presentaciones va bajo el nombre. */}
+            <TH className="hidden md:table-cell">Variantes</TH>
           </TR>
         </THead>
         <TBody>
@@ -404,6 +405,9 @@ export function BulkProductsTable({
                     {row.brand ? (
                       <span className="block text-[13px] text-fg-muted">{row.brand}</span>
                     ) : null}
+                    <span className="block text-[13px] text-fg-muted md:hidden">
+                      {row.variants} presentaci{row.variants === 1 ? "ón" : "ones"}
+                    </span>
                   </span>
                 </div>
               </TD>
@@ -432,7 +436,7 @@ export function BulkProductsTable({
                   ) : null}
                 </TD>
               ) : null}
-              <TD>{row.variants}</TD>
+              <TD className="hidden md:table-cell">{row.variants}</TD>
             </TR>
           ))}
         </TBody>

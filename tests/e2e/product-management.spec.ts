@@ -64,6 +64,14 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(whey.getByText("12 disponibles")).toBeVisible();
   await expect(whey.getByText("Alguna presentación agotada")).toBeVisible();
   await expect(whey.getByText("Pocas existencias")).toBeVisible();
+
+  // En el celular: sin desplazamiento lateral de la página y las presentaciones bajo el nombre.
+  const desktop = page.viewportSize()!;
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(whey.getByText("2 presentaciones")).toBeVisible();
+  await page.screenshot({ path: "test-results/productos-375.png", fullPage: true });
+  await page.setViewportSize(desktop);
+  await expect(whey.getByText("2 presentaciones")).toBeHidden();
   await expect(whey.getByText("Pausado (borrador)")).toBeVisible();
   await expectNoSeriousA11yViolations(page);
 
@@ -194,6 +202,34 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(history.getByText(ownerEmail).first()).toBeVisible();
   // Pausado: no hay «Ver en la tienda».
   await expect(page.getByRole("link", { name: /Ver en la tienda/ })).toHaveCount(0);
+
+  // Publicación programada: hora de la tienda; se puede quitar.
+  const inTwoDays = new Date(Date.now() + 2 * 86_400_000);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(inTwoDays)
+      .map((p) => [p.type, p.value]),
+  );
+  const schedule = page.getByRole("region", { name: "Programar publicación" });
+  await schedule
+    .getByLabel("Fecha y hora")
+    .fill(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`);
+  await schedule.getByRole("button", { name: "Programar" }).click();
+  await expect(schedule.getByText(/Publicación programada/)).toBeVisible();
+  await expect(schedule.getByText(/Se publicará el/)).toBeVisible();
+  const [scheduled] = await admin<{ publish_at: Date | null }[]>`
+    select publish_at from public.products where id = ${wheyId}`;
+  expect(Math.abs(scheduled!.publish_at!.getTime() - inTwoDays.getTime())).toBeLessThan(120_000);
+  await schedule.getByRole("button", { name: "Quitar programación" }).click();
+  await expect(schedule.getByText("Programación quitada.")).toBeVisible();
   await page.getByRole("button", { name: "Mover la foto 2 antes" }).click();
   await expect(page.getByText("Foto movida.")).toBeVisible();
   const order = await admin<{ alt_text: string }[]>`

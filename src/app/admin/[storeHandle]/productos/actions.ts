@@ -597,6 +597,45 @@ export async function quickPricesAction(
   };
 }
 
+/**
+ * Publicación programada (tanda 7): fecha y hora locales de la tienda, o vacío
+ * para quitarla. La base interpreta la hora en la zona de la tienda y valida.
+ */
+export async function schedulePublishAction(
+  storeHandle: string,
+  productId: string,
+  _: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const clear = formData.get("clear") === "1";
+  const local = String(formData.get("publish_at") ?? "").trim();
+  if (!uuid.safeParse(productId).success) return { error: "Producto no válido." };
+  if (!clear && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) {
+    return {
+      error: "Elige la fecha y la hora.",
+      fields: { publish_at: "Fecha y hora no válidas." },
+    };
+  }
+  try {
+    await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc(supabase, "catalog_schedule_publish", {
+        p_store_id: storeId,
+        p_product_id: productId,
+        p_local: clear ? null : local,
+      }),
+    );
+  } catch (error) {
+    return failure("catalog.schedule_publish", error);
+  }
+  revalidatePath(`${productsPath(storeHandle)}/${productId}`);
+  return {
+    ok: true,
+    message: clear
+      ? "Programación quitada."
+      : "Publicación programada. Se publicará sola si cumple lo necesario para estar a la venta.",
+  };
+}
+
 /** Foto propia de una presentación (sabor, tamaño); vacío = usa la del producto. */
 export async function setVariantImageAction(
   storeHandle: string,

@@ -1,6 +1,7 @@
 import { formatMoney } from "@/lib/money/format";
 
 import { AUDIT_ACTIONS } from "../ajustes/actividad/labels";
+import { publishIssueMessage } from "./messages";
 
 export interface HistoryEvent {
   occurred_at: string;
@@ -58,6 +59,12 @@ export function ProductHistory({
         return `${label}: ${money(prev?.price)} → ${money(v.price)}${compare}`;
       });
     }
+    if (e.action === "product.publish_failed") {
+      return ((after.codes as string[] | undefined) ?? []).map(publishIssueMessage);
+    }
+    if (e.action === "product.publish_scheduled" && typeof after.publish_at === "string") {
+      return [`Para el ${when.format(new Date(after.publish_at))}`];
+    }
     const lines: string[] = [];
     if ("title" in after && before.title && before.title !== after.title) {
       lines.push(`Título: «${String(before.title)}» → «${String(after.title)}»`);
@@ -71,6 +78,7 @@ export function ProductHistory({
       lines.push(tags.length ? `Etiquetas: ${tags.join(", ")}` : "Sin etiquetas");
     }
     if (e.metadata?.bulk) lines.push("Desde una acción en bloque");
+    if (e.metadata?.scheduled) lines.push("A la hora programada");
     return lines;
   }
 

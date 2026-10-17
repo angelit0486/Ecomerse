@@ -8,6 +8,8 @@ export const PUBLISH_ISSUES: Record<string, string> = {
   title_missing: "Falta el título.",
   no_active_variant: "Necesita al menos una variante activa.",
   price_zero: "Hay variantes activas con precio 0.",
+  schedule_expired:
+    "La tienda no podía publicar a la hora programada; se canceló la programación. Vuelve a programarlo.",
   compare_at_price_invalid: "El precio de comparación debe ser mayor que el precio.",
   product_type_not_supported: "Este tipo de producto aún no se puede vender.",
   image_alt_missing: "Hay imágenes sin texto alternativo (recomendado para accesibilidad y SEO).",
@@ -70,6 +72,8 @@ export const FIELD_MESSAGES: Record<string, string> = {
   categories: "Elige categorías válidas y solo una principal.",
   brand_id: "Esa marca ya no existe.",
   compare_at_price: "El «precio antes» debe ser mayor que el precio.",
+  publish_at: "Elige una fecha y hora en el futuro y dentro de un año.",
+  status: "Solo se programa un borrador: este producto ya está publicado o archivado.",
   prices: "Revisa los precios: números enteros de centavos o con dos decimales.",
   description_html: "La descripción es demasiado larga.",
   seo_title: "Máximo 70 caracteres.",

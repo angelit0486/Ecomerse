@@ -20,12 +20,14 @@ export function Table({
 }) {
   return (
     // Región enfocable: si la tabla se desplaza en horizontal, se recorre con el
-    // teclado (axe: scrollable-region-focusable).
+    // teclado (axe: scrollable-region-focusable). `relative`: los textos sr-only
+    // (position absolute) de las celdas quedan dentro del desplazamiento; sin
+    // él, ensanchaban la página en el celular.
     <div
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className="overflow-x-auto rounded-[var(--radius-container)] border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="relative overflow-x-auto rounded-[var(--radius-container)] border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <table className={cn("w-full border-collapse text-left text-sm", className)}>
         <caption className={captionHidden ? "sr-only" : "px-4 py-2 text-left text-fg-muted"}>

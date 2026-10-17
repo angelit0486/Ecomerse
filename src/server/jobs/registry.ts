@@ -1,3 +1,4 @@
+import { createCatalogHandlers } from "@/server/catalog/handlers";
 import { createComplianceHandlers } from "@/server/compliance/handlers";
 import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
@@ -61,6 +62,7 @@ const refunds = () =>
     mercadopago: mercadoPagoProvider,
   });
 const imports = () => createImportHandlers({ db: workerDb(), onCommitted: invalidateStore });
+const catalog = () => createCatalogHandlers({ db: workerDb(), onPublished: invalidateStore });
 const compliance = () =>
   createComplianceHandlers({ db: workerDb(), onUnpublished: invalidateStore });
 
@@ -87,6 +89,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["order.paid", lazy("order.paid", orderNotifications)],
   ["import.commit", lazy("import.commit", imports)],
   ["compliance.recheck", lazy("compliance.recheck", compliance)],
+  ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

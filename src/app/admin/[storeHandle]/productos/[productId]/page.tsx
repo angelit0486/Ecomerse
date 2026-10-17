@@ -15,6 +15,7 @@ import { ProductAttributesForm } from "../attribute-forms";
 import { toEditorProduct } from "../editor-model";
 import { publishIssueMessage, STATUS_LABELS } from "../messages";
 import { ProductHistory, type HistoryEvent } from "../product-history";
+import { SchedulePublish } from "../schedule-publish";
 import { StockAdjust } from "../stock-adjust";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
@@ -166,6 +167,25 @@ export default async function ProductPage({ params, searchParams }: Props) {
           .filter((i) => i.level === "warning")
           .map((i) => publishIssueMessage(i.code))}
       />
+
+      {product.status === "draft" &&
+      !product.deleted_at &&
+      hasPermission(ctx, "products.publish") ? (
+        <SchedulePublish
+          storeHandle={ctx.store.handle}
+          productId={product.id}
+          scheduledLabel={
+            product.publish_at
+              ? new Intl.DateTimeFormat("es-MX", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone: ctx.store.timezone,
+                }).format(new Date(product.publish_at))
+              : null
+          }
+          timeZoneLabel={ctx.store.timezone.replace(/^America\//, "").replace(/_/g, " ")}
+        />
+      ) : null}
 
       <ProductImages
         storeHandle={ctx.store.handle}
