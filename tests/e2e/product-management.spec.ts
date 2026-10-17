@@ -60,6 +60,16 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(whey.getByText("Pausado (borrador)")).toBeVisible();
   await expectNoSeriousA11yViolations(page);
 
+  // Pendientes: «Sin foto» deja solo lo que falta fotografiar.
+  await page.getByLabel("Pendientes").selectOption("sin_foto");
+  await page.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page.getByRole("link", { name: "Creatina Gestión" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Whey Gestión" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Quitar filtros" }).click();
+  await expect(page.getByRole("link", { name: "Whey Gestión" })).toBeVisible();
+  // El selector vuelve a «Ninguno»: no reaplica el filtro que se acaba de quitar.
+  await expect(page.getByLabel("Pendientes")).toHaveValue("");
+
   await page.getByLabel("Seleccionar todos").check();
   await page.locator("#bulk-action").selectOption("publish");
   await page.getByRole("button", { name: "Aplicar" }).click();
@@ -77,6 +87,13 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
 
   // Fotos (misma sesión: la segunda entrada pediría el segundo factor).
   await page.goto(`/admin/${tenant.handle}/productos/${wheyId}`);
+  // Existencias por presentación con acceso directo al ajuste.
+  await expect(
+    page.getByRole("row").filter({ hasText: "Vainilla" }).getByText("12", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Ajustar existencias de Chocolate" }),
+  ).toHaveAttribute("href", new RegExp(`/inventario\\?q=GC-${run}`, "i"));
   await page.getByRole("button", { name: "Mover la foto 2 antes" }).click();
   await expect(page.getByText("Foto movida.")).toBeVisible();
   const order = await admin<{ alt_text: string }[]>`

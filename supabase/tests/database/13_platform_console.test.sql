@@ -3,7 +3,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(17);
 
 select tests.create_user('padmin', 'admin@platform.io');
 select tests.create_user('psupport', 'support@platform.io');
@@ -31,6 +31,12 @@ select is((select count(*)::int from public.platform_list_organizations('100%'))
   'los comodines de la búsqueda se escapan');
 select is((select primary_hostname from public.platform_list_stores(tests.fx('org_a'))), 'tienda-a.tiendas.test',
   'tiendas de una organización con su dominio primario');
+select is((select array_agg(handle) from public.platform_list_stores(null, 'tienda a')), array['tienda-a'],
+  'búsqueda de tiendas por nombre');
+select is((select count(*)::int from public.platform_list_stores(null, 'org-b')), 1,
+  'búsqueda de tiendas por slug de la organización');
+select is((select count(*)::int from public.platform_list_stores(null, '%')), 0,
+  'los comodines de la búsqueda de tiendas se escapan');
 select is((select count(*)::int from public.platform_list_support_grants()), 2, 'admin ve todas las concesiones');
 select is((select count(*)::int from public.platform_list_support_staff()), 3, 'staff elegible para concesiones');
 

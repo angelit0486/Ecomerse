@@ -1,6 +1,7 @@
 import { canManageTenants, requirePlatformRole } from "@/server/auth/platform";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { Input } from "@/ui/primitives/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { GrantSupportForm, RevokeButton } from "../console-forms";
@@ -19,8 +20,13 @@ interface GrantRow {
 
 const time = new Intl.DateTimeFormat("es-MX", { timeStyle: "short", dateStyle: "short" });
 
-export default async function SupportPage() {
+export default async function SupportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tienda?: string }>;
+}) {
   const role = await requirePlatformRole();
+  const { tienda } = await searchParams;
   const manage = canManageTenants(role);
   const supabase = await createSupabaseServerClient();
   const grants = await callRpc<GrantRow[]>(supabase, "platform_list_support_grants", {
@@ -31,6 +37,7 @@ export default async function SupportPage() {
         callRpc<{ id: string; organization: string; name: string; status: string }[]>(
           supabase,
           "platform_list_stores",
+          { p_search: tienda ?? null },
         ),
         callRpc<{ user_id: string; email: string }[]>(supabase, "platform_list_support_staff"),
       ])
@@ -77,6 +84,14 @@ export default async function SupportPage() {
       {manage ? (
         <section className="space-y-3">
           <h2 className="text-base font-semibold">Conceder acceso</h2>
+          {/* La lista trae como máximo 500 tiendas (las más recientes): con más,
+              se busca por nombre de la tienda u organización. */}
+          <form role="search" className="max-w-sm">
+            <label htmlFor="tienda" className="text-[13px] font-medium">
+              Buscar tienda u organización
+            </label>
+            <Input id="tienda" name="tienda" defaultValue={tienda ?? ""} />
+          </form>
           <GrantSupportForm
             stores={stores
               .filter((s) => s.status !== "closed")

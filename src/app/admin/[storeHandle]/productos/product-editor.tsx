@@ -70,6 +70,8 @@ export function ProductEditor({
   categories,
   canReadCost,
   currency,
+  stock = null,
+  inventoryHref = null,
 }: {
   storeHandle: string;
   initial: EditorProduct;
@@ -77,6 +79,10 @@ export function ProductEditor({
   categories: { id: string; name: string; depth: number }[];
   canReadCost: boolean;
   currency: string;
+  /** Existencias disponibles por variante guardada; null sin permiso de inventario. */
+  stock?: Record<string, number> | null;
+  /** Base de la página de ajuste de inventario; null sin permiso para ajustar. */
+  inventoryHref?: string | null;
 }) {
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
     saveProduct.bind(null, storeHandle, initial.id),
@@ -479,6 +485,11 @@ export function ProductEditor({
                 <th scope="col" className="px-3 py-2">
                   Porciones
                 </th>
+                {stock ? (
+                  <th scope="col" className="px-3 py-2">
+                    Existencias
+                  </th>
+                ) : null}
                 <th scope="col" className="px-3 py-2">
                   Activa
                 </th>
@@ -560,6 +571,26 @@ export function ProductEditor({
                         className="w-20"
                       />
                     </td>
+                    {stock ? (
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums">
+                        {draft.id ? (
+                          <>
+                            <span>{stock[draft.id] ?? 0}</span>
+                            {inventoryHref ? (
+                              <a
+                                href={`${inventoryHref}?q=${encodeURIComponent(draft.sku.trim() || title)}`}
+                                className="ml-2 text-[13px] underline"
+                                aria-label={`Ajustar existencias de ${label}`}
+                              >
+                                Ajustar
+                              </a>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-[13px] text-fg-muted">Al guardar</span>
+                        )}
+                      </td>
+                    ) : null}
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"

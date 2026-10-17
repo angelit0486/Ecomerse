@@ -114,6 +114,16 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 | P     | P-T04 Paquetes                                                 | pendiente (espera aprobar ADR-023) | —                                                                                                                                                                                                                                                                                                                                                                                             |
 | 10–11 | Ver el plan §4                                                 | pendiente                          |                                                                                                                                                                                                                                                                                                                                                                                               |
 
+## Gestión de productos en el panel (pedido del propietario, 2026-10-17)
+
+- Publicar y pausar en bloque; si un producto no se puede publicar, se dice cuál y qué le falta.
+- Listado con miniatura, marca, existencias y aviso «Alguna presentación agotada».
+- Filtros por marca y por pendientes: «Con presentaciones agotadas» y «Sin foto».
+- Orden de fotos con «← Antes / Después →» y foto propia por presentación (`catalog_set_variant_image`).
+- Existencias por presentación en el editor, con enlace directo a «Ajustar».
+- Pruebas: pgTAP `71_product_management` (16) y E2E `product-management`.
+- Pendiente: columnas `variant_net_content` y `variant_servings` en el CSV (resto de ADR-026).
+
 ## Verificaciones pendientes con servicios reales (para el informe final)
 
 - ~~S-1: roles personalizados a través de Supavisor.~~ Verificado el 2026-10-16 en `pruva-staging` (runbook §7).
@@ -125,7 +135,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 ## Pendientes menores registrados
 
 - Fase 7 (notificaciones completas): aviso al dueño de suspensión/reactivación de tenant (D-F2-20) y de transferencia de propiedad (D-F2-16), con el mismo canal y `notification_deliveries`.
-- Consola de plataforma: el selector de tienda para conceder soporte lista todas las tiendas; con cientos de tenants necesita búsqueda (el `Select` ya limita su altura y desplaza).
+- ~~Consola de plataforma: el selector de tienda para conceder soporte necesita búsqueda con cientos de tenants.~~ Hecho el 2026-10-17: buscador «Buscar tienda u organización» y `platform_list_stores(p_organization_id, p_search)`, que sin búsqueda muestra primero las más recientes (con más de 500 tiendas, una nueva no aparecía).
 - Gate F2: endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (hoy son seguras porque antes se exige `has_org_permission`; D-F2-18).
 
 ## Ideas para después (no se implementan sin aprobación)

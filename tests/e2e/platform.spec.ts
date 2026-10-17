@@ -91,7 +91,10 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
 
   // Concesión de soporte con motivo → aviso al dueño.
   await page.goto("/platform/soporte");
-  await page.getByRole("combobox", { name: "Tienda" }).click();
+  await page.getByLabel("Buscar tienda u organización").fill(tenant.name);
+  await page.getByLabel("Buscar tienda u organización").press("Enter");
+  await expect(page).toHaveURL(/tienda=/);
+  await page.getByRole("combobox", { name: "Tienda", exact: true }).click();
   await page.getByRole("option", { name: new RegExp(tenant.name) }).click();
   await page.getByRole("combobox", { name: "Persona de soporte" }).click();
   await page.getByRole("option", { name: supportEmail }).click();

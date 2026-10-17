@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(16);
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text;
@@ -67,6 +67,16 @@ select is((select image_id from public.product_variants where id = tests.fx('v2'
 select is(public.catalog_list_extras(tests.fx('store_a'), array[tests.fx('prod')]) -> tests.fx('prod')::text,
           '{"image": "a/p/vainilla.webp", "brand": "Atlas", "available": 7, "sold_out_variants": 1}'::jsonb,
           'miniatura (la primera lista), marca, existencias y presentaciones agotadas');
+
+-- ============================================================================ Filtros del listado
+select is((select string_agg(title, ',' order by title) from public.catalog_search_products(tests.fx('store_a'),
+            p_brand_id => tests.fx('brand'))), 'Proteína', 'por marca');
+select is((select string_agg(title, ',' order by title) from public.catalog_search_products(tests.fx('store_a'),
+            p_issue => 'agotados')), 'Creatina,Proteína', 'con alguna presentación agotada');
+select is((select count(*)::int from public.catalog_search_products(tests.fx('store_a'), p_issue => 'sin_foto')), 0,
+          'sin foto: ninguno (ambos tienen una lista)');
+select throws_ok(format($$select * from public.catalog_search_products(%L, p_issue => 'raro')$$, tests.fx('store_a')),
+  'P0001', 'validation_failed', 'filtro desconocido: rechazado');
 select tests.logout();
 
 select tests.login('viewer');

@@ -26,6 +26,9 @@ export interface ProductListFilters {
   query?: string | undefined;
   status?: "draft" | "active" | "archived" | undefined;
   categoryId?: string | undefined;
+  brandId?: string | undefined;
+  /** Pendientes: alguna presentación agotada o ninguna foto lista. */
+  issue?: "agotados" | "sin_foto" | undefined;
   deleted?: boolean | undefined;
   cursor?: { updated_at: string; id: string } | undefined;
 }
@@ -45,6 +48,8 @@ export async function searchProducts(
     p_deleted: filters.deleted ?? false,
     p_cursor: filters.cursor ?? null,
     p_limit: PAGE_SIZE + 1,
+    p_brand_id: filters.brandId ?? null,
+    p_issue: filters.issue ?? null,
   });
   const page = rows.slice(0, PAGE_SIZE);
   const last = page.at(-1);

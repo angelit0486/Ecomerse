@@ -48,6 +48,21 @@ export default async function ProductPage({ params, searchParams }: Props) {
       canEdit ? getProductAttributeValues(supabase, ctx.store.id, product.id) : Promise.resolve([]),
     ]);
   // La ficha sanitaria aparece cuando la tienda declaró una categoría regulada (ADR-021).
+  // Existencias por presentación (solo con inventory.read): suma de las ubicaciones.
+  const stock: Record<string, number> = {};
+  if (hasPermission(ctx, "inventory.read") && product.variants.length > 0) {
+    const { data: levels, error: levelsError } = await supabase
+      .from("inventory_levels")
+      .select("variant_id, available")
+      .in(
+        "variant_id",
+        product.variants.map((v) => v.id),
+      );
+    if (levelsError) throw levelsError;
+    for (const l of (levels ?? []) as { variant_id: string; available: number }[]) {
+      stock[l.variant_id] = (stock[l.variant_id] ?? 0) + Math.max(0, l.available);
+    }
+  }
   const declared = compliance?.categories.filter((c) => c.declared) ?? [];
   const regulatoryInitial: RegulatoryInitial = {
     classification: regulatory ? (regulatory.category_key ?? "none") : undefined,
@@ -157,6 +172,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
           categories={categories}
           canReadCost={canReadCost}
           currency={ctx.store.currency}
+          stock={hasPermission(ctx, "inventory.read") ? stock : null}
+          inventoryHref={
+            hasPermission(ctx, "inventory.adjust") ? `/admin/${ctx.store.handle}/inventario` : null
+          }
         />
       ) : (
         <p className="text-sm text-fg-muted">

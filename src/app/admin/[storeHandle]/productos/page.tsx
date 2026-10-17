@@ -7,6 +7,7 @@ import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import {
   decodeCursor,
+  listBrands,
   listCategories,
   publicMediaUrl,
   searchProducts,
@@ -27,6 +28,11 @@ type Props = {
 };
 
 const STATUSES = ["draft", "active", "archived"] as const;
+
+const ISSUES = [
+  { key: "agotados", label: "Con presentaciones agotadas" },
+  { key: "sin_foto", label: "Sin foto" },
+] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" && value.length <= 200 ? value : undefined;
@@ -58,31 +64,40 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   const status = STATUSES.find((s) => s === statusParam);
   const categoryParam = one(sp.categoria);
   const deleted = one(sp.eliminados) === "1";
+  const brandParam = one(sp.marca);
+  const brandId = brandParam && /^[0-9a-f-]{36}$/.test(brandParam) ? brandParam : undefined;
+  const issueParam = one(sp.pendiente);
+  const issue = ISSUES.find((i) => i.key === issueParam)?.key;
   const cursor = decodeCursor(one(sp.desde));
 
   const supabase = await createSupabaseServerClient();
-  const [categories, page] = await Promise.all([
+  const [categories, brands, page] = await Promise.all([
     listCategories(supabase, ctx.store.id),
+    listBrands(supabase, ctx.store.id),
     searchProducts(supabase, ctx.store.id, {
       query,
       status,
       categoryId:
         categoryParam && /^[0-9a-f-]{36}$/.test(categoryParam) ? categoryParam : undefined,
+      brandId,
+      issue,
       deleted,
       cursor,
     }),
   ]);
 
   const base = `/admin/${ctx.store.handle}/productos`;
-  const filtersActive = Boolean(query || status || categoryParam || deleted);
+  const filterQuery: Record<string, string> = {
+    ...(query ? { q: query } : {}),
+    ...(status ? { estado: status } : {}),
+    ...(categoryParam ? { categoria: categoryParam } : {}),
+    ...(brandId ? { marca: brandId } : {}),
+    ...(issue ? { pendiente: issue } : {}),
+    ...(deleted ? { eliminados: "1" } : {}),
+  };
+  const filtersActive = Object.keys(filterQuery).length > 0;
   const nextHref = page.nextCursor
-    ? `${base}?${new URLSearchParams({
-        ...(query ? { q: query } : {}),
-        ...(status ? { estado: status } : {}),
-        ...(categoryParam ? { categoria: categoryParam } : {}),
-        ...(deleted ? { eliminados: "1" } : {}),
-        desde: page.nextCursor,
-      })}`
+    ? `${base}?${new URLSearchParams({ ...filterQuery, desde: page.nextCursor })}`
     : null;
 
   const canCreate = hasPermission(ctx, "products.create");
@@ -155,7 +170,10 @@ export default async function ProductsPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
+      {/* La clave remonta el formulario al cambiar los filtros: los selects no
+          controlados conservaban el valor anterior tras «Quitar filtros». */}
       <form
+        key={new URLSearchParams(filterQuery).toString()}
         method="get"
         action={base}
         role="search"
@@ -209,6 +227,39 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             </select>
           </div>
         ) : null}
+        {brands.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="marca" className="text-[13px] font-medium">
+              Marca
+            </label>
+            <select id="marca" name="marca" defaultValue={brandId ?? ""} className={nativeControl}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="pendiente" className="text-[13px] font-medium">
+            Pendientes
+          </label>
+          <select
+            id="pendiente"
+            name="pendiente"
+            defaultValue={issue ?? ""}
+            className={nativeControl}
+          >
+            <option value="">Ninguno</option>
+            {ISSUES.map((i) => (
+              <option key={i.key} value={i.key}>
+                {i.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <label className="flex h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="eliminados" value="1" defaultChecked={deleted} />
           Ver eliminados
@@ -270,10 +321,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
 
       <nav aria-label="Paginación" className="flex gap-3 text-sm">
         {cursor ? (
-          <Link
-            href={`${base}?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(status ? { estado: status } : {}), ...(categoryParam ? { categoria: categoryParam } : {}), ...(deleted ? { eliminados: "1" } : {}) })}`}
-            className="underline"
-          >
+          <Link href={`${base}?${new URLSearchParams(filterQuery)}`} className="underline">
             Primera página
           </Link>
         ) : null}
