@@ -32,7 +32,7 @@ export function AdminNav({ items, base }: { items: AdminNavItem[]; base: string 
     <nav aria-label="Secciones de la tienda">
       <ul
         ref={listRef}
-        className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-col md:gap-0.5 md:overflow-visible md:px-0 md:pb-0"
+        className="relative -mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-col md:gap-0.5 md:overflow-visible md:px-0 md:pb-0"
       >
         {items.map((item) => {
           const active = item.href === current;

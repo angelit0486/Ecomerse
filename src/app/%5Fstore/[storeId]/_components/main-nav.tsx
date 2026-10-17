@@ -142,7 +142,7 @@ export function MainNav({
     <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 text-sm">
       <ul
         id={`${id}-lista`}
-        className={`${mobileOpen ? "flex" : "hidden"} max-h-[60vh] flex-col gap-1 overflow-y-auto pb-3 sm:flex sm:max-h-none sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2 sm:overflow-visible`}
+        className={`${mobileOpen ? "flex" : "hidden"} max-h-[calc(100dvh-9rem)] flex-col gap-0.5 overflow-y-auto overscroll-contain pb-4 sm:flex sm:max-h-none sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2 sm:overflow-visible`}
       >
         {entries.map((item, index) => {
           const hasChildren = item.children.length > 0;
@@ -161,7 +161,12 @@ export function MainNav({
                 <Link
                   href={item.href}
                   onClick={closeAll}
-                  className={`flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1 ${hasChildren ? "sm:hidden" : ""}`}
+                  className={`flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1 sm:text-sm ${
+                    hasChildren
+                      ? // En móvil, el grupo es un antetítulo y sus opciones van debajo.
+                        "mt-2 text-xs uppercase tracking-[0.12em] text-[var(--sf-muted)] sm:hidden"
+                      : "text-lg"
+                  }`}
                 >
                   {item.label}
                 </Link>
@@ -202,7 +207,7 @@ export function MainNav({
                       <Link
                         href={child.href}
                         onClick={closeAll}
-                        className="flex min-h-11 items-center rounded-[var(--sf-radius-control)] hover:underline sm:min-h-0 sm:px-2 sm:py-1.5 sm:hover:bg-[var(--sf-surface)]"
+                        className="flex min-h-11 items-center rounded-[var(--sf-radius-control)] text-lg hover:underline sm:min-h-0 sm:px-2 sm:py-1.5 sm:text-sm sm:hover:bg-[var(--sf-surface)]"
                       >
                         {child.label}
                       </Link>

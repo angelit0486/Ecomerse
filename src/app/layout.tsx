@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Plataforma", template: "%s · Plataforma" },
+  // Neutro (white-label): la tienda define su propio título; esto solo se ve en el panel.
+  title: { default: "Panel", template: "%s · Panel" },
   // Sin sitio público todavía: no se indexa ningún entorno.
   robots: { index: false, follow: false },
 };

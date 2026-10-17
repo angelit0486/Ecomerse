@@ -153,7 +153,7 @@ export default async function CartPage({ params }: Props) {
       </div>
       <aside
         aria-label="Resumen"
-        className="h-fit space-y-5 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5 md:sticky md:top-36 md:self-start"
+        className="h-fit space-y-5 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5 md:sticky md:top-36 md:max-h-[calc(100dvh-10rem)] md:self-start md:overflow-y-auto"
       >
         <DiscountForm storeId={store.id} code={cart.discount_code} />
         <Totals

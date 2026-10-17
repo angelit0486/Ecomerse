@@ -184,7 +184,9 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                     Sin seguimiento de inventario: siempre disponible.
                   </p>
                 )}
-                {row.track_inventory && supplierTotals.get(row.variant_id) ? (
+                {row.track_inventory &&
+                ((supplierTotals.get(row.variant_id)?.available ?? 0) > 0 ||
+                  (supplierTotals.get(row.variant_id)?.reserved ?? 0) > 0) ? (
                   <p className="text-sm text-fg-muted">
                     Con proveedores: {supplierTotals.get(row.variant_id)!.available} disponibles
                     {supplierTotals.get(row.variant_id)!.reserved > 0
