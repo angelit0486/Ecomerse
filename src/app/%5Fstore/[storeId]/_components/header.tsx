@@ -72,7 +72,10 @@ export function StoreHeader({
               />
             ) : (
               // Un nombre largo pasa a 2 líneas en lugar de cortarse.
-              <span className="line-clamp-2 text-base leading-tight sm:text-lg">{store.name}</span>
+              // Sin logo, el nombre funciona como logotipo: fuente de títulos del tema.
+              <span className="line-clamp-2 text-lg font-bold leading-[1.05] tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-2xl">
+                {store.name}
+              </span>
             )}
           </Link>
           <SearchBox />

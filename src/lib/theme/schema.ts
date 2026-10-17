@@ -3,6 +3,11 @@ import { z } from "zod";
 import { COLOR_KEYS } from "./palette";
 import { isValidLink, isValidSocialUrl, SOCIAL_NETWORKS } from "./links";
 
+// Este esquema también corre en el navegador (Apariencia). Sin `jitless`, Zod
+// prueba `new Function("")` para compilar validadores y la CSP (sin unsafe-eval)
+// lo bloquea: funcionaba, pero dejaba una violación de CSP en cada carga.
+z.config({ jitless: true });
+
 /**
  * Theme schema v1 (GATE0 §20.2 y §43; F9-DESIGN §2 y §3). Validación
  * estructural sin estado: la base repite cada regla (`app.theme_settings_valid`,
