@@ -41,7 +41,7 @@ export default async function AdminHomePage() {
     <section className="space-y-4">
       {consoleLink}
       <h1 className="text-xl font-semibold">Tus tiendas</h1>
-      <ul className="divide-y rounded-md border">
+      <ul className="divide-y divide-border rounded-md border border-border">
         {stores.map((s) => (
           <li key={s.store_id} className="flex items-center justify-between px-4 py-3">
             <Link href={`/admin/${s.handle}`}>

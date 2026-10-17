@@ -17,7 +17,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   const role = await requirePlatformRole();
   return (
     <div className="min-h-dvh">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
         <nav aria-label="Consola de plataforma" className="flex items-center gap-4 text-sm">
           <span className="font-semibold">Consola</span>
           <Link href="/platform">Organizaciones</Link>

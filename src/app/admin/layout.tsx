@@ -7,7 +7,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   await requireStaffSession();
   return (
     <div className="min-h-dvh">
-      <header className="flex items-center justify-between border-b px-4 py-3">
+      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
         <span className="font-semibold">Panel</span>
         <form action="/salir" method="post">
           <Button type="submit" variant="ghost" size="sm">

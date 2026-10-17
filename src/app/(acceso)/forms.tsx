@@ -107,7 +107,7 @@ export function TotpEnrollment({
         alt="Código QR para tu app de autenticación"
         width={180}
         height={180}
-        className="self-center rounded-md border bg-white p-2"
+        className="self-center rounded-md border border-border bg-white p-2"
       />
       <p className="text-sm">
         Clave:{" "}
