@@ -13,6 +13,10 @@ import { AppError } from "@/server/errors";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import {
+  SUPPLEMENT_CATEGORIES,
+  missingSupplementCategories,
+} from "@/lib/catalog/supplement-taxonomy";
 
 import { FIELD_MESSAGES, publishIssueMessage } from "./messages";
 
@@ -363,6 +367,54 @@ export async function saveCategory(
   return {
     ok: true,
     message: id ? `Categoría «${name}» actualizada.` : `Categoría «${name}» creada.`,
+  };
+}
+
+/**
+ * Crea las categorías sugeridas de suplementos que falten (primer nivel,
+ * visibles, en el orden sugerido). Idempotente: lo que ya existe por dirección o
+ * nombre no se toca. Cada alta pasa por catalog_upsert_category (permisos y
+ * validaciones en la base).
+ */
+export async function createSupplementCategories(
+  storeHandle: string,
+  _: CatalogActionState,
+): Promise<CatalogActionState> {
+  let created = 0;
+  try {
+    await withStore(storeHandle, async ({ supabase, storeId }) => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("name, slug, depth")
+        .eq("store_id", storeId)
+        .is("deleted_at", null);
+      if (error) throw error;
+      for (const category of missingSupplementCategories(data ?? [])) {
+        await callRpc(supabase, "catalog_upsert_category", {
+          p_store_id: storeId,
+          p_category: {
+            name: category.name,
+            slug: category.slug,
+            parent_id: null,
+            is_visible: true,
+            position: SUPPLEMENT_CATEGORIES.indexOf(category) + 1,
+          },
+        });
+        created += 1;
+      }
+    });
+  } catch (error) {
+    return failure("catalog.category", error);
+  }
+  revalidatePath(`${productsPath(storeHandle)}/categorias`);
+  return {
+    ok: true,
+    message:
+      created === 0
+        ? "Ya tienes todas las categorías sugeridas."
+        : created === 1
+          ? "Se creó 1 categoría."
+          : `Se crearon ${created} categorías.`,
   };
 }
 

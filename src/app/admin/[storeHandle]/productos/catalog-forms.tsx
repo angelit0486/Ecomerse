@@ -8,6 +8,7 @@ import { Input } from "@/ui/primitives/input";
 
 import {
   deleteBrand,
+  createSupplementCategories,
   deleteCategory,
   saveBrand,
   saveCategory,
@@ -127,6 +128,27 @@ export function CategoryForm({
           </p>
         ) : null}
       </div>
+    </form>
+  );
+}
+
+export function SupplementCategoriesButton({
+  storeHandle,
+  count,
+}: {
+  storeHandle: string;
+  count: number;
+}) {
+  const [state, action, pending] = useActionState<CatalogActionState>(
+    createSupplementCategories.bind(null, storeHandle),
+    {},
+  );
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-3">
+      <Button type="submit" loading={pending}>
+        {count === 1 ? "Crear la categoría que falta" : `Crear las ${count} categorías`}
+      </Button>
+      <Feedback state={state} />
     </form>
   );
 }
