@@ -5,6 +5,16 @@
 
 ## Ahora
 
+- **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:
+  - **Fase 1 (`2940220`):** E2E 56/56 en dos corridas, verify y db:test en verde. Directorio de marcas.
+  - **Fase 5, Mercado Pago (ADR-028; `964c1ba` y `fda2ecd`):** Checkout Pro, webhook firmado, reconciliación y reembolsos. La revisión adversarial encontró dos fallos y están corregidos: el `x-request-id` que sobrescribía el proxy y el bloqueo ante cobros simultáneos. **No verificado con Mercado Pago real:** faltan credenciales de prueba (runbook `docs/runbooks/mercadopago.md`).
+  - **Fase 3 (`beb3b48`):** estructura sugerida de 8 categorías de suplementos.
+  - **Fase 2 (`93068b4`):** zona horaria del Pacífico (La Paz, BCS).
+  - **Fase 7, opiniones verificadas y moderadas (ADR-029; `e3a55fd` y `a2f44f7`):** reseñas en la ficha, JSON-LD solo con reseñas reales y calificación en las tarjetas.
+  - **Línea base final:** verify (589 unitarias), pgTAP 1823 en 71 archivos, integración 249, E2E 59/59.
+  - **Corrección a la auditoría:** los reportes de ventas ya existían (F8-T03).
+  - **Pendiente del propietario:** credenciales de prueba de Mercado Pago, proveedor de correo para entrar al panel de la vista previa (Resend), reglas sanitarias revisadas por su asesor, catálogo y fotos reales, zonas de envío e IVA, y ADR-023, 026 y 027.
+- **Historial anterior:**
 - **Orden acordado (D-S-05):** Gate R → Fase 9 (tienda insignia de suplementos) → Fase P → F10 → F11.
 - **Fase actual:** 9 — Tienda insignia de suplementos (Fase R cerrada en local: `docs/phases/PHASE-R-REPORT.md`; CI pendiente por P0). Decisión del propietario del 2026-10-13: la primera tienda, de suplementos, al nivel de GNC, Birdman y B Life (D-S-05; sin copiar a ninguna).
 - **Hecho en F9:** F9-T01 (`3fec2f0` y anteriores), F9-T02 (`66c6f9f`), F9-T03 ficha insignia (`51a9a4a`), F9-T04 navegación y listados (`70690d2`), F9-T05 estilo sugerido y datos de demostración (este commit).
