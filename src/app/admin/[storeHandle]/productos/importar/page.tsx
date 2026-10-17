@@ -178,6 +178,11 @@ export default async function ImportPage({ params, searchParams }: Props) {
             columnas.
           </li>
           <li>
+            Por presentación (opcional): <code>variant_net_content</code> (por ejemplo{" "}
+            <code>2 kg</code>) y <code>variant_servings</code> (porciones, número entero). Vacías,
+            se usa el dato de la ficha del producto.
+          </li>
+          <li>
             Atributos (opcional): <code>attributes</code> con las claves de Productos → Atributos,
             por ejemplo <code>objetivo:energia|fuerza; sabor:chocolate</code>. Vacía, el producto
             queda sin atributos.

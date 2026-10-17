@@ -318,6 +318,69 @@ describe("costo unitario (Fase B)", () => {
   });
 });
 
+describe("contenido y porciones por presentación (ADR-026)", () => {
+  const V = ["handle", "title", "sku", "price", "variant_net_content", "variant_servings"];
+  it("lee el contenido y las porciones; vacías = vale el dato del producto", () => {
+    const plan = planProductImport(V, [
+      row(
+        {
+          handle: "a",
+          title: "A",
+          sku: "a-1",
+          price: "100",
+          variant_net_content: " 2 kg ",
+          variant_servings: "66",
+        },
+        V,
+      ),
+      row(
+        {
+          handle: "b",
+          title: "B",
+          sku: "b-1",
+          price: "100",
+          variant_net_content: "",
+          variant_servings: "",
+        },
+        V,
+      ),
+    ]);
+    expect(plan[0]!.errors).toEqual([]);
+    expect(plan[0]!.normalized!.variants[0]).toMatchObject({
+      net_content: "2 kg",
+      servings_per_container: 66,
+    });
+    expect(plan[1]!.normalized!.variants[0]).toMatchObject({
+      net_content: null,
+      servings_per_container: null,
+    });
+  });
+  it("sin las columnas, no las toca", () => {
+    const plan = planProductImport(H, [row({ handle: "a", title: "A", price: "100" })]);
+    expect(plan[0]!.normalized!.variants[0]).not.toHaveProperty("net_content");
+    expect(plan[0]!.normalized!.variants[0]).not.toHaveProperty("servings_per_container");
+  });
+  it("porciones fuera de rango o no enteras son un error de la fila", () => {
+    for (const bad of ["0", "10001", "2.5", "-1", "muchas"]) {
+      const plan = planProductImport(V, [
+        row({ handle: "a", title: "A", sku: "a-1", price: "100", variant_servings: bad }, V),
+      ]);
+      expect(plan[0]!.errors).toContain(
+        "variant_servings: escribe un número entero entre 1 y 10000",
+      );
+    }
+  });
+  it("un contenido de más de 100 caracteres es un error de la fila", () => {
+    const plan = planProductImport(V, [
+      row(
+        { handle: "a", title: "A", sku: "a-1", price: "100", variant_net_content: "x".repeat(101) },
+        V,
+      ),
+    ]);
+    expect(plan[0]!.errors).toContain("variant_net_content: máximo 100 caracteres");
+  });
+});
+
 describe("plantilla del catálogo de suplementos (docs/catalogo)", () => {
   it("trae exactamente las columnas que acepta la importación, en el mismo orden", async () => {
     const { readFileSync } = await import("node:fs");

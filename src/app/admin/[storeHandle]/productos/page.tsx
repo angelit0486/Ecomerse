@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { formatMoney } from "@/lib/money/format";
+import { centsToInput, formatMoney } from "@/lib/money/format";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import {
   decodeCursor,
   listBrands,
   listCategories,
+  parseSignature,
+  PRODUCT_SORTS,
   publicMediaUrl,
   searchProducts,
+  type ProductSort,
 } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -29,6 +32,13 @@ type Props = {
 
 const STATUSES = ["draft", "active", "archived"] as const;
 
+const SORT_LABELS: Record<ProductSort, string> = {
+  recientes: "Editados recientemente",
+  nombre: "Nombre (A–Z)",
+  precio_asc: "Precio: menor a mayor",
+  precio_desc: "Precio: mayor a menor",
+};
+
 const ISSUES = [
   { key: "agotados", label: "Con presentaciones agotadas" },
   { key: "sin_foto", label: "Sin foto" },
@@ -43,6 +53,13 @@ interface ListExtras {
   brand: string | null;
   available: number | null;
   sold_out_variants: number | null;
+  variants: {
+    id: string;
+    options: string;
+    sku: string | null;
+    price: number;
+    compare_at_price: number | null;
+  }[];
 }
 
 /** «12 disponibles» · «Agotado» · «Sin control de existencias»; null sin permiso de inventario. */
@@ -68,7 +85,10 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   const brandId = brandParam && /^[0-9a-f-]{36}$/.test(brandParam) ? brandParam : undefined;
   const issueParam = one(sp.pendiente);
   const issue = ISSUES.find((i) => i.key === issueParam)?.key;
-  const cursor = decodeCursor(one(sp.desde));
+  const sortParam = one(sp.orden);
+  const sort = PRODUCT_SORTS.find((o) => o === sortParam) ?? "recientes";
+  // El cursor por nombre lleva el título: pasa del límite de 200 de `one()`.
+  const cursor = decodeCursor(typeof sp.desde === "string" ? sp.desde : undefined, sort);
 
   const supabase = await createSupabaseServerClient();
   const [categories, brands, page] = await Promise.all([
@@ -82,6 +102,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
       brandId,
       issue,
       deleted,
+      sort,
       cursor,
     }),
   ]);
@@ -96,11 +117,15 @@ export default async function ProductsPage({ params, searchParams }: Props) {
     ...(deleted ? { eliminados: "1" } : {}),
   };
   const filtersActive = Object.keys(filterQuery).length > 0;
+  // El orden no es un filtro: se conserva al paginar y al quitar los filtros.
+  const sortQuery: Record<string, string> = sort === "recientes" ? {} : { orden: sort };
+  const listQuery = { ...filterQuery, ...sortQuery };
   const nextHref = page.nextCursor
-    ? `${base}?${new URLSearchParams({ ...filterQuery, desde: page.nextCursor })}`
+    ? `${base}?${new URLSearchParams({ ...listQuery, desde: page.nextCursor })}`
     : null;
 
   const canCreate = hasPermission(ctx, "products.create");
+  const canEditPrices = hasPermission(ctx, "products.update") && !deleted;
   const bulk = {
     status: hasPermission(ctx, "products.publish"),
     delete: hasPermission(ctx, "products.delete"),
@@ -173,7 +198,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
       {/* La clave remonta el formulario al cambiar los filtros: los selects no
           controlados conservaban el valor anterior tras «Quitar filtros». */}
       <form
-        key={new URLSearchParams(filterQuery).toString()}
+        key={new URLSearchParams(listQuery).toString()}
         method="get"
         action={base}
         role="search"
@@ -260,6 +285,18 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="orden" className="text-[13px] font-medium">
+            Ordenar por
+          </label>
+          <select id="orden" name="orden" defaultValue={sort} className={nativeControl}>
+            {PRODUCT_SORTS.map((o) => (
+              <option key={o} value={o}>
+                {SORT_LABELS[o]}
+              </option>
+            ))}
+          </select>
+        </div>
         <label className="flex h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="eliminados" value="1" defaultChecked={deleted} />
           Ver eliminados
@@ -268,7 +305,10 @@ export default async function ProductsPage({ params, searchParams }: Props) {
           Filtrar
         </button>
         {filtersActive ? (
-          <Link href={base} className="text-sm underline">
+          <Link
+            href={sort === "recientes" ? base : `${base}?${new URLSearchParams(sortQuery)}`}
+            className="text-sm underline"
+          >
             Quitar filtros
           </Link>
         ) : null}
@@ -315,13 +355,21 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             brand: extras[row.id]?.brand ?? null,
             stock: stockLabel(extras[row.id]),
             soldOut: (extras[row.id]?.sold_out_variants ?? 0) > 0,
+            quickPrices: canEditPrices
+              ? (extras[row.id]?.variants ?? []).map((v) => ({
+                  id: v.id,
+                  label: Object.values(parseSignature(v.options)).join(" / ") || v.sku || "Precio",
+                  price: centsToInput(v.price),
+                  compare: centsToInput(v.compare_at_price),
+                }))
+              : null,
           }))}
         />
       )}
 
       <nav aria-label="Paginación" className="flex gap-3 text-sm">
         {cursor ? (
-          <Link href={`${base}?${new URLSearchParams(filterQuery)}`} className="underline">
+          <Link href={`${base}?${new URLSearchParams(listQuery)}`} className="underline">
             Primera página
           </Link>
         ) : null}

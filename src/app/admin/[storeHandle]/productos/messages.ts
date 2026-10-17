@@ -69,6 +69,8 @@ export const FIELD_MESSAGES: Record<string, string> = {
   options: "Revisa las opciones: máximo 3, con nombre y al menos un valor, sin repetir.",
   categories: "Elige categorías válidas y solo una principal.",
   brand_id: "Esa marca ya no existe.",
+  compare_at_price: "El «precio antes» debe ser mayor que el precio.",
+  prices: "Revisa los precios: números enteros de centavos o con dos decimales.",
   description_html: "La descripción es demasiado larga.",
   seo_title: "Máximo 70 caracteres.",
   seo_description: "Máximo 320 caracteres.",

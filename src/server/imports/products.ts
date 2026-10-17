@@ -72,10 +72,17 @@ export const ATTRIBUTE_HEADERS = ["attributes"] as const;
  * permiso. Celda vacía = se borra el costo.
  */
 export const COST_HEADERS = ["cost"] as const;
+/**
+ * Contenido neto y porciones de cada presentación (ADR-026): vacías, vale el dato
+ * de la ficha del producto. La exportación las incluye con la ficha sanitaria.
+ */
+export const VARIANT_SUPPLEMENT_HEADERS = ["variant_net_content", "variant_servings"] as const;
+export const MAX_VARIANT_SERVINGS = 10_000;
 export const ALL_IMPORT_HEADERS = [
   ...IMPORT_HEADERS,
   ...COST_HEADERS,
   ...REGULATORY_HEADERS,
+  ...VARIANT_SUPPLEMENT_HEADERS,
   ...ATTRIBUTE_HEADERS,
 ] as const;
 export type ImportColumn = (typeof ALL_IMPORT_HEADERS)[number];
@@ -94,6 +101,9 @@ export interface PlannedVariant {
   compare_at_price?: number | null;
   /** Centavos; null = se borra el costo (Fase B). */
   cost?: number | null;
+  /** ADR-026; null = vale el dato del producto. */
+  net_content?: string | null;
+  servings_per_container?: number | null;
   weight_g?: number | null;
   length_mm?: number | null;
   width_mm?: number | null;
@@ -335,6 +345,22 @@ export function planProductImport(
           : null;
       }
       if (has("cost")) variant.cost = g("cost") ? money(g("cost"), "cost", e) : null;
+      if (has("variant_net_content")) {
+        const value = g("variant_net_content");
+        if (value.length > 100) e.push("variant_net_content: máximo 100 caracteres");
+        else variant.net_content = value || null;
+      }
+      if (has("variant_servings")) {
+        const value = g("variant_servings");
+        if (!value) variant.servings_per_container = null;
+        else if (
+          !/^\d{1,5}$/.test(value) ||
+          Number(value) < 1 ||
+          Number(value) > MAX_VARIANT_SERVINGS
+        ) {
+          e.push(`variant_servings: escribe un número entero entre 1 y ${MAX_VARIANT_SERVINGS}`);
+        } else variant.servings_per_container = Number(value);
+      }
       for (const k of DIMENSIONS) {
         if (has(k)) variant[k] = g(k) ? integer(g(k), k, e) : null;
       }

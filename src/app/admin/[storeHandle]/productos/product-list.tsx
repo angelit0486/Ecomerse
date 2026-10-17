@@ -7,6 +7,7 @@ import { Button } from "@/ui/primitives/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { bulkProductsAction, type CatalogActionState } from "./actions";
+import { QuickPrices, type QuickPriceVariant } from "./quick-prices";
 import { nativeControl } from "./styles";
 
 interface Row {
@@ -23,7 +24,11 @@ interface Row {
   stock: string | null;
   /** Alguna presentación activa sin existencias (y sin venta bajo pedido). */
   soldOut: boolean;
+  /** null sin permiso de edición. */
+  quickPrices: QuickPriceVariant[] | null;
 }
+
+const BULK_FORM = "bulk-products";
 
 export function BulkProductsTable({
   storeHandle,
@@ -62,10 +67,17 @@ export function BulkProductsTable({
     });
   }
 
+  // El formulario masivo solo envuelve sus controles: cada fila tiene su propio
+  // formulario de precios (no se pueden anidar) y las casillas se asocian con `form`.
   return (
-    <form action={action} className="space-y-3">
+    <div className="space-y-3">
       {bulkEnabled ? (
-        <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+        <form
+          id={BULK_FORM}
+          action={action}
+          className="flex flex-wrap items-center gap-2"
+          aria-live="polite"
+        >
           <span className="text-sm text-fg-muted">
             {selected.size === 0
               ? "Selecciona productos para acciones masivas."
@@ -92,7 +104,7 @@ export function BulkProductsTable({
           >
             Aplicar
           </Button>
-        </div>
+        </form>
       ) : null}
       {state.error ? (
         <div role="alert" className="text-sm text-danger">
@@ -140,6 +152,7 @@ export function BulkProductsTable({
                 <TD>
                   <input
                     type="checkbox"
+                    form={BULK_FORM}
                     name="ids"
                     value={row.id}
                     aria-label={`Seleccionar ${row.title}`}
@@ -183,7 +196,17 @@ export function BulkProductsTable({
                 </div>
               </TD>
               <TD className="whitespace-nowrap">{row.status}</TD>
-              <TD className="whitespace-nowrap tabular-nums">{row.price}</TD>
+              <TD className="whitespace-nowrap tabular-nums">
+                {row.price}
+                {row.quickPrices?.length ? (
+                  <QuickPrices
+                    storeHandle={storeHandle}
+                    productId={row.id}
+                    productTitle={row.title}
+                    variants={row.quickPrices}
+                  />
+                ) : null}
+              </TD>
               {rows.some((r) => r.stock !== null) ? (
                 <TD className="whitespace-nowrap tabular-nums">
                   {row.stock ?? "—"}
@@ -199,6 +222,6 @@ export function BulkProductsTable({
           ))}
         </TBody>
       </Table>
-    </form>
+    </div>
   );
 }

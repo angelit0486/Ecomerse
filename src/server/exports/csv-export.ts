@@ -7,6 +7,7 @@ import {
   IMPORT_HEADERS,
   REGULATORY_FIELD_COLUMNS,
   REGULATORY_HEADERS,
+  VARIANT_SUPPLEMENT_HEADERS,
 } from "@/server/imports/products";
 
 /**
@@ -61,7 +62,7 @@ export function exportCsv(
       const headers = [
         ...IMPORT_HEADERS,
         ...(options.costs ? COST_HEADERS : []),
-        ...(options.regulated ? REGULATORY_HEADERS : []),
+        ...(options.regulated ? [...REGULATORY_HEADERS, ...VARIANT_SUPPLEMENT_HEADERS] : []),
         ...(options.attributes ? ATTRIBUTE_HEADERS : []),
       ];
       return toCsv(
@@ -95,7 +96,13 @@ export function exportCsv(
             str(r.seo_title),
             str(r.seo_description),
             ...(options.costs ? [money(r.cost)] : []),
-            ...(options.regulated ? regulatoryCells(r.regulatory) : []),
+            ...(options.regulated
+              ? [
+                  ...regulatoryCells(r.regulatory),
+                  str(r.net_content),
+                  str(r.servings_per_container),
+                ]
+              : []),
             ...(options.attributes
               ? [formatAttributes((r.attributes as { key: string; values: string[] }[]) ?? [])]
               : []),

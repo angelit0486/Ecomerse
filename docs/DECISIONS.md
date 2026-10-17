@@ -375,7 +375,7 @@ Este registro agrega lo que ocurrió **después** del Gate 0: la aprobación del
 > - Implementados los puntos 1 y 4: las columnas opcionales, `catalog_upsert_product` (ausente = sin cambios) y la ficha con «2 kg · $X por porción (66 porciones)» de la presentación elegida.
 > - Del punto 5, las columnas «Contenido» y «Porciones» en el editor.
 > - **Pendiente:**
->   - el punto 2: el CSV `variant_net_content` y `variant_servings`;
+>   - ~~el punto 2: el CSV `variant_net_content` y `variant_servings`~~ hecho el 2026-10-17 (migración `20261018002200`, pgTAP `72_catalog_csv_variant_servings`): ausente = sin cambios, vacía = vale el dato del producto; se exportan junto con la ficha sanitaria;
 >   - el punto 3: el cumplimiento no cambia; el contenido neto del producto sigue siendo obligatorio, lo cual es más estricto y no relaja nada.
 > - Pruebas: pgTAP `70_variant_servings` y E2E `variant-servings`.
 

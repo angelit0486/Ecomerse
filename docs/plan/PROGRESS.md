@@ -122,7 +122,9 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 - Orden de fotos con «← Antes / Después →» y foto propia por presentación (`catalog_set_variant_image`).
 - Existencias por presentación en el editor, con enlace directo a «Ajustar».
 - Pruebas: pgTAP `71_product_management` (16) y E2E `product-management`.
-- Pendiente: columnas `variant_net_content` y `variant_servings` en el CSV (resto de ADR-026).
+- Orden del listado: editados recientemente, nombre y precio (menor o mayor), con paginación por cursor de cada orden.
+- Cambio rápido de precios desde el listado («Cambiar precios»): precio y «precio antes» por presentación, validado y auditado (`catalog_set_variant_prices`, «Cambió precios de un producto» en Actividad).
+- CSV: `variant_net_content` y `variant_servings` (ADR-026 punto 2).
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 

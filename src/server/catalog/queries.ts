@@ -20,6 +20,18 @@ export interface ProductListRow {
   variant_count: number;
   updated_at: string;
   deleted_at: string | null;
+  /** Clave del cursor según el orden (la calcula la base). */
+  sort_key: string;
+}
+
+export const PRODUCT_SORTS = ["recientes", "nombre", "precio_asc", "precio_desc"] as const;
+export type ProductSort = (typeof PRODUCT_SORTS)[number];
+
+/** Cursor de una página: solo vale para el orden con que se generó. */
+export interface ProductCursor {
+  s: ProductSort;
+  k: string;
+  id: string;
 }
 
 export interface ProductListFilters {
@@ -30,7 +42,8 @@ export interface ProductListFilters {
   /** Pendientes: alguna presentación agotada o ninguna foto lista. */
   issue?: "agotados" | "sin_foto" | undefined;
   deleted?: boolean | undefined;
-  cursor?: { updated_at: string; id: string } | undefined;
+  sort?: ProductSort | undefined;
+  cursor?: ProductCursor | undefined;
 }
 
 export const PAGE_SIZE = 25;
@@ -46,10 +59,11 @@ export async function searchProducts(
     p_status: filters.status ?? null,
     p_category_id: filters.categoryId ?? null,
     p_deleted: filters.deleted ?? false,
-    p_cursor: filters.cursor ?? null,
+    p_cursor: filters.cursor ? { k: filters.cursor.k, id: filters.cursor.id } : null,
     p_limit: PAGE_SIZE + 1,
     p_brand_id: filters.brandId ?? null,
     p_issue: filters.issue ?? null,
+    p_sort: filters.sort ?? "recientes",
   });
   const page = rows.slice(0, PAGE_SIZE);
   const last = page.at(-1);
@@ -57,32 +71,44 @@ export async function searchProducts(
     rows: page,
     nextCursor:
       rows.length > PAGE_SIZE && last
-        ? encodeCursor({ updated_at: last.updated_at, id: last.id })
+        ? encodeCursor({ s: filters.sort ?? "recientes", k: last.sort_key, id: last.id })
         : null,
   };
 }
 
 /** Cursor opaco para la URL (base64url de JSON); se valida al leerlo. */
-export function encodeCursor(cursor: { updated_at: string; id: string }): string {
+export function encodeCursor(cursor: ProductCursor): string {
   return Buffer.from(JSON.stringify(cursor)).toString("base64url");
 }
 
+/** Fecha como la escribe Postgres (`2026-10-17 20:00:00.123456+00`) o en ISO. */
+const TIMESTAMP = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/;
+
+/**
+ * Un cursor de otro orden (o manipulado) se ignora: se vuelve a la primera
+ * página en lugar de mezclar resultados. La base vuelve a validar la clave.
+ */
 export function decodeCursor(
   value: string | undefined,
-): { updated_at: string; id: string } | undefined {
-  if (!value || value.length > 200) return undefined;
+  sort: ProductSort = "recientes",
+): ProductCursor | undefined {
+  // Un título de 200 caracteres con acentos ocupa ~650 en base64.
+  if (!value || value.length > 1200) return undefined;
   try {
     const parsed = JSON.parse(Buffer.from(value, "base64url").toString()) as Record<
       string,
       unknown
     >;
     if (
-      typeof parsed.updated_at === "string" &&
-      !Number.isNaN(Date.parse(parsed.updated_at)) &&
+      parsed.s === sort &&
+      typeof parsed.k === "string" &&
+      parsed.k.length <= 300 &&
+      (sort === "nombre" ||
+        (sort === "recientes" ? TIMESTAMP.test(parsed.k) : /^\d{1,15}$/.test(parsed.k))) &&
       typeof parsed.id === "string" &&
       /^[0-9a-f-]{36}$/.test(parsed.id)
     ) {
-      return { updated_at: parsed.updated_at, id: parsed.id };
+      return { s: sort, k: parsed.k, id: parsed.id };
     }
   } catch {
     // cursor manipulado: se ignora

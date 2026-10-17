@@ -11,6 +11,7 @@ import { validateProduct } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { AppError } from "@/server/errors";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { parseMoneyToCents } from "@/lib/money/format";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import {
@@ -376,6 +377,68 @@ export async function mediaAction(
     right: "Foto movida.",
   };
   return { ok: true, message: messages[action] ?? "Listo." };
+}
+
+/**
+ * Cambio rápido de precios desde el listado: precio y «precio antes» de cada
+ * presentación de un producto. La base valida, recalcula y audita.
+ */
+export async function quickPricesAction(
+  storeHandle: string,
+  productId: string,
+  _: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const ids = formData.getAll("variant_id").map(String);
+  if (
+    !uuid.safeParse(productId).success ||
+    ids.length === 0 ||
+    ids.length > 100 ||
+    ids.some((id) => !uuid.safeParse(id).success)
+  ) {
+    return { error: "Selección no válida." };
+  }
+  const fields: Record<string, string> = {};
+  const prices = ids.map((id) => {
+    const normalize = (v: FormDataEntryValue | null) => {
+      const t = String(v ?? "").trim();
+      // Excel y teclados en español escriben "199,50".
+      return /^\d+,\d{1,2}$/.test(t) ? t.replace(",", ".") : t;
+    };
+    const priceText = normalize(formData.get(`price_${id}`));
+    const compareText = normalize(formData.get(`compare_${id}`));
+    const price = parseMoneyToCents(priceText);
+    const compare = compareText ? parseMoneyToCents(compareText) : null;
+    // La base acepta hasta 15 dígitos de centavos.
+    if (price === null || price > 999_999_999_999_999) {
+      fields[`price_${id}`] = "Escribe un precio como 199.50.";
+    } else if (compareText && compare === null)
+      fields[`compare_${id}`] = "Escribe un importe como 249.00.";
+    else if (compare !== null && compare <= price) {
+      fields[`compare_${id}`] = "Debe ser mayor que el precio.";
+    }
+    return { id, price: price ?? 0, compare_at_price: compare };
+  });
+  if (Object.keys(fields).length > 0) return { error: "Revisa los precios marcados.", fields };
+  let changed = 0;
+  try {
+    const result = await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc<{ changed: number }>(supabase, "catalog_set_variant_prices", {
+        p_store_id: storeId,
+        p_product_id: productId,
+        p_prices: prices,
+      }),
+    );
+    changed = result.changed;
+  } catch (error) {
+    return failure("catalog.quick_prices", error);
+  }
+  revalidatePath(productsPath(storeHandle));
+  return {
+    ok: true,
+    message:
+      changed === 0 ? "Sin cambios." : changed === 1 ? "Precio guardado." : "Precios guardados.",
+  };
 }
 
 /** Foto propia de una presentación (sabor, tamaño); vacío = usa la del producto. */

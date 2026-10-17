@@ -49,6 +49,8 @@ Cada **variante** (sabor × tamaño) es una fila. Las filas del mismo producto c
 | `regulatory_storage`, `regulatory_allergens`                                      | Conservación y alérgenos                               | No                |
 | `regulatory_sanitary_notice`                                                      | Aviso o registro sanitario, si aplica                  | No (configurable) |
 
+Por presentación (opcional): `variant_net_content` (contenido de ese tamaño, p. ej. `<2 kg>`) y `variant_servings` (porciones de ese tamaño, número entero). Sirven cuando un mismo producto se vende en varios tamaños; la tienda calcula el precio por porción de cada uno. Vacías, se usa el dato de la ficha del producto.
+
 `attributes`: claves de atributo y de valor, p. ej. `objetivo:<clave>|<clave>; sabor:<clave>`. Las claves están en Productos → Atributos.
 
 ## 4. Lo que bloquea la publicación

@@ -56,6 +56,7 @@ const ACTIONS: Record<string, string> = {
   "customer.anonymized": "Eliminó los datos personales de un cliente",
   "customer.account_linked": "Un cliente creó su cuenta",
   "product.published": "Publicó un producto",
+  "product.prices_updated": "Cambió precios de un producto",
   "product.deleted": "Archivó un producto",
   "product.restored": "Restauró un producto",
   "product.duplicated": "Duplicó un producto",

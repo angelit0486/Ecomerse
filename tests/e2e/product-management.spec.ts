@@ -11,8 +11,8 @@ import {
 
 /**
  * Gestión de productos (pedido del propietario, 2026-10-17): publicar y pausar
- * en bloque, miniatura, marca y existencias en el listado, reordenar fotos y
- * elegir la foto de cada presentación.
+ * en bloque, miniatura, marca y existencias en el listado, filtros, orden,
+ * cambio rápido de precios, reordenar fotos y elegir la foto de cada presentación.
  */
 const run = uniq();
 const ownerEmail = `gestion-${run}@example.test`;
@@ -84,6 +84,33 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
     { status: string }[]
   >`select status from public.products where id = ${wheyId}`;
   expect(row!.status).toBe("draft");
+
+  // Orden del listado: el más barato primero y luego al revés.
+  await page.getByLabel("Ordenar por").selectOption("precio_asc");
+  await page.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page).toHaveURL(/orden=precio_asc/);
+  await expect(page.getByRole("row").nth(1)).toContainText("Creatina Gestión");
+  await page.getByLabel("Ordenar por").selectOption("precio_desc");
+  await page.getByRole("button", { name: "Filtrar" }).click();
+  await expect(page).toHaveURL(/orden=precio_desc/);
+  await expect(page.getByRole("row").nth(1)).toContainText("Whey Gestión");
+
+  // Cambio rápido de precios sin abrir el producto.
+  await whey.getByText("Cambiar precios").click();
+  const prices = page.getByRole("form", { name: "Precios de Whey Gestión" });
+  await prices.getByLabel("Precio antes de Chocolate").fill("1");
+  await prices.getByRole("button", { name: "Guardar precios" }).click();
+  await expect(prices.getByText("Debe ser mayor que el precio.")).toBeVisible();
+  await prices.getByLabel("Precio antes de Chocolate").fill("");
+  await prices.getByLabel("Precio de Vainilla", { exact: true }).fill("649,00");
+  await prices.getByLabel("Precio antes de Vainilla").fill("699.00");
+  await prices.getByRole("button", { name: "Guardar precios" }).click();
+  await expect(prices.getByText("Precio guardado.")).toBeVisible();
+  const [vanilla] = await admin<{ price: string; compare_at_price: string }[]>`
+    select price, compare_at_price from public.product_variants where sku = ${`GV-${run}`.toUpperCase()}`;
+  expect([Number(vanilla!.price), Number(vanilla!.compare_at_price)]).toEqual([64900, 69900]);
+  await expect(whey).toContainText("$649.00");
+  await expectNoSeriousA11yViolations(page);
 
   // Fotos (misma sesión: la segunda entrada pediría el segundo factor).
   await page.goto(`/admin/${tenant.handle}/productos/${wheyId}`);

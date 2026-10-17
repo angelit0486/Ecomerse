@@ -25,3 +25,20 @@ describe("exportCsv · costo (Fase B)", () => {
     expect(header!.split(",")).not.toContain("cost");
   });
 });
+
+describe("exportCsv · contenido y porciones por presentación (ADR-026)", () => {
+  const variant = { ...row, net_content: "2 kg", servings_per_container: 66 };
+  it("con la ficha sanitaria, agrega variant_net_content y variant_servings", () => {
+    const [header, line] = exportCsv("products", [variant], false, { regulated: true })
+      .trim()
+      .split(/\r?\n/);
+    const cols = header!.split(",");
+    const cells = line!.split(",");
+    expect(cells[cols.indexOf("variant_net_content")]).toBe("2 kg");
+    expect(cells[cols.indexOf("variant_servings")]).toBe("66");
+  });
+  it("sin productos regulados, las columnas no existen", () => {
+    const [header] = exportCsv("products", [variant], false).split(/\r?\n/);
+    expect(header!.split(",")).not.toContain("variant_servings");
+  });
+});
