@@ -96,6 +96,27 @@ describe("parseServerEnv", () => {
     );
   });
 
+  it("Mercado Pago: token y secreto del webhook van juntos y con formato (ADR-028)", () => {
+    const token = "TEST-1234567890123456-101716-abcdef0123456789abcdef0123456789-123456789";
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        MERCADOPAGO_ACCESS_TOKEN: token,
+        MERCADOPAGO_WEBHOOK_SECRET: "a1".repeat(16),
+      }),
+    ).not.toThrow();
+    expect(() => parseServerEnv({ ...valid, MERCADOPAGO_ACCESS_TOKEN: token })).toThrow(
+      /MERCADOPAGO_WEBHOOK_SECRET: van juntas/,
+    );
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        MERCADOPAGO_ACCESS_TOKEN: "sk_live_x",
+        MERCADOPAGO_WEBHOOK_SECRET: "a1".repeat(16),
+      }),
+    ).toThrow(/MERCADOPAGO_ACCESS_TOKEN/);
+  });
+
   it("el remitente debe tener formato 'Nombre <email>'", () => {
     expect(() => parseServerEnv({ ...valid, EMAIL_FROM: "no-reply@example.test" })).toThrow(
       /EMAIL_FROM/,

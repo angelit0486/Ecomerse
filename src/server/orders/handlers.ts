@@ -1,5 +1,7 @@
 import type { Sql } from "@/server/db/role-clients";
 import type { JobHandler } from "@/server/jobs/types";
+import type { MercadoPagoProvider } from "@/server/payments/mercadopago";
+import { reconcileMercadoPagoPayments } from "@/server/payments/mercadopago-webhook";
 import type { StripeProvider } from "@/server/payments/stripe";
 import { reconcilePayments } from "@/server/payments/webhook";
 
@@ -17,6 +19,8 @@ export function createOrderHandlers(deps: {
   onExpired?: (count: number) => void;
   /** Stripe configurado; sin él la reconciliación no tiene nada que consultar. */
   stripe?: () => StripeProvider | null;
+  /** Mercado Pago configurado (ADR-028). */
+  mercadopago?: () => MercadoPagoProvider | null;
 }): Array<[string, JobHandler]> {
   const expire: JobHandler = async (_job, { log }) => {
     const [row] = await deps.db<{ n: number }[]>`select system.expire_orders(200) as n`;
@@ -34,10 +38,19 @@ export function createOrderHandlers(deps: {
   };
   const reconcile: JobHandler = async (_job, { log }) => {
     const stripe = deps.stripe?.();
-    if (!stripe) return;
-    const count = await reconcilePayments({ db: deps.db, provider: stripe, log });
+    const mercadopago = deps.mercadopago?.();
+    let count = 0;
+    if (stripe) count += await reconcilePayments({ db: deps.db, provider: stripe, log });
+    if (mercadopago) {
+      count += await reconcileMercadoPagoPayments({ db: deps.db, provider: mercadopago, log });
+    }
     if (count > 0) log.info("Pagos reconciliados", { count });
-    const refunds = await reconcileRefunds({ db: deps.db, stripe: deps.stripe, log });
+    const refunds = await reconcileRefunds({
+      db: deps.db,
+      ...(deps.stripe ? { stripe: deps.stripe } : {}),
+      ...(deps.mercadopago ? { mercadopago: deps.mercadopago } : {}),
+      log,
+    });
     if (refunds > 0) log.info("Reembolsos reconciliados", { count: refunds });
   };
   return [

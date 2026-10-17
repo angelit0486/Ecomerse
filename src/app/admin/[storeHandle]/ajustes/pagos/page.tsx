@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
-import { stripeProvider } from "@/server/payments/registry";
+import { mercadoPagoProvider, stripeProvider } from "@/server/payments/registry";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { ManualPaymentForm } from "../../configuracion/launch-forms";
 import type { StripeSettings } from "./actions";
+import { ConnectMercadoPagoButton, MercadoPagoToggle } from "./mercadopago-forms";
+import type { MercadoPagoSettings } from "./mercadopago-actions";
 import { ConnectStripeButton, StripeToggle } from "./stripe-forms";
 
 export const metadata: Metadata = { title: "Pagos" };
@@ -41,8 +43,11 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
   if (!hasPermission(ctx, "payments.manage")) notFound();
   const notice = RETURN_NOTICES[(await searchParams).stripe ?? ""];
   const supabase = await createSupabaseServerClient();
-  const [settings, { data: manual, error }] = await Promise.all([
+  const [settings, mp, { data: manual, error }] = await Promise.all([
     callRpc<StripeSettings>(supabase, "payments_get_stripe", { p_store_id: ctx.store.id }),
+    callRpc<MercadoPagoSettings>(supabase, "payments_get_mercadopago", {
+      p_store_id: ctx.store.id,
+    }),
     supabase
       .from("payment_accounts")
       .select("display_name, status, public_config")
@@ -54,6 +59,8 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
   ]);
   if (error) throw error;
   const stripeAvailable = stripeProvider() !== null;
+  const mpAvailable = mercadoPagoProvider() !== null;
+  const mpAccount = mp.account;
   const account = settings.account;
 
   return (
@@ -73,6 +80,40 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
           {notice.text}
         </p>
       ) : null}
+
+      <section
+        aria-labelledby="pago-mercadopago"
+        className="space-y-3 rounded-md border border-border p-4"
+      >
+        <h2 id="pago-mercadopago" className="text-base font-semibold">
+          Mercado Pago
+        </h2>
+        <p className="text-sm text-fg-muted">
+          Tus compradores pagan en Mercado Pago con los medios que tengas activos en tu cuenta. Un
+          pedido solo se marca pagado cuando Mercado Pago lo confirma, nunca por regresar a la
+          tienda.
+        </p>
+        {!mpAvailable ? (
+          <p className="text-sm">
+            Aún no está disponible: faltan las credenciales de Mercado Pago de la plataforma.
+          </p>
+        ) : mpAccount && mpAccount.status !== "disabled" ? (
+          <>
+            <p className="text-sm">
+              Activa: tus compradores pueden pagar con Mercado Pago.
+              {mpAccount.mode === "test" ? " (modo de prueba: no se cobra dinero real)" : ""}
+            </p>
+            <MercadoPagoToggle storeHandle={ctx.store.handle} enabled />
+          </>
+        ) : mpAccount ? (
+          <>
+            <p className="text-sm">Desactivada por la tienda.</p>
+            <MercadoPagoToggle storeHandle={ctx.store.handle} enabled={false} />
+          </>
+        ) : (
+          <ConnectMercadoPagoButton storeHandle={ctx.store.handle} />
+        )}
+      </section>
 
       <section
         aria-labelledby="pago-tarjeta"

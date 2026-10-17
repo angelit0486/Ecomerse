@@ -8,7 +8,7 @@ import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
 import { createOrderHandlers } from "@/server/orders/handlers";
 import { createRefundHandlers } from "@/server/orders/refunds";
-import { stripeProvider } from "@/server/payments/registry";
+import { mercadoPagoProvider, stripeProvider } from "@/server/payments/registry";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
 import { storeOrigin } from "@/server/storefront/seo";
@@ -52,8 +52,14 @@ const orderNotifications = () => {
   });
 };
 
-const orders = () => createOrderHandlers({ db: workerDb(), stripe: stripeProvider });
-const refunds = () => createRefundHandlers({ db: workerDb(), stripe: stripeProvider });
+const orders = () =>
+  createOrderHandlers({ db: workerDb(), stripe: stripeProvider, mercadopago: mercadoPagoProvider });
+const refunds = () =>
+  createRefundHandlers({
+    db: workerDb(),
+    stripe: stripeProvider,
+    mercadopago: mercadoPagoProvider,
+  });
 const imports = () => createImportHandlers({ db: workerDb(), onCommitted: invalidateStore });
 const compliance = () =>
   createComplianceHandlers({ db: workerDb(), onUnpublished: invalidateStore });

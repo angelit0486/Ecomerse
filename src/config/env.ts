@@ -49,6 +49,21 @@ export const serverEnvSchema = z.object({
     .optional(),
   /** Solo pruebas: API de Stripe simulada. */
   STRIPE_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
+  /**
+   * Mercado Pago de la PLATAFORMA (ADR-028): access token y clave secreta de la
+   * firma de webhooks («Tus integraciones» → Webhooks). Opcionales hasta que el
+   * propietario los configure; sin ellos el método Mercado Pago no se ofrece.
+   */
+  MERCADOPAGO_ACCESS_TOKEN: z
+    .string()
+    .regex(/^(APP_USR|TEST)-[A-Za-z0-9-]{20,300}$/)
+    .optional(),
+  MERCADOPAGO_WEBHOOK_SECRET: z
+    .string()
+    .regex(/^[A-Za-z0-9]{16,128}$/)
+    .optional(),
+  /** Solo pruebas: API de Mercado Pago simulada. */
+  MERCADOPAGO_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   // Send Email Hook de Supabase Auth (Standard Webhooks): v1,whsec_<base64>.
   SEND_EMAIL_HOOK_SECRET: z
     .string()
@@ -94,6 +109,10 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   // claro, el reset de MFA y el worker de medios; producción la exige.
   if (env.APP_ENV === "production" && !env.SUPABASE_SERVICE_ROLE_KEY) {
     ctx.addIssue({ code: "custom", path: ["SUPABASE_SERVICE_ROLE_KEY"], message: "requerida" });
+  }
+  // Mercado Pago va completo o no va: un token sin secreto aceptaría cobros sin poder confirmarlos.
+  if (!env.MERCADOPAGO_ACCESS_TOKEN !== !env.MERCADOPAGO_WEBHOOK_SECRET) {
+    ctx.addIssue({ code: "custom", path: ["MERCADOPAGO_WEBHOOK_SECRET"], message: "van juntas" });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {
     ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "https obligatorio" });

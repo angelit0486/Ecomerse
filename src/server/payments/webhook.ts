@@ -184,6 +184,7 @@ export async function reconcilePayments(deps: {
     select * from system.payments_to_reconcile(100)`;
   let applied = 0;
   for (const row of rows) {
+    if (row.account.provider !== "stripe") continue; // Mercado Pago: reconcileMercadoPagoPayments.
     try {
       const n = await deps.provider.fetchSession(
         credentials(row.account),

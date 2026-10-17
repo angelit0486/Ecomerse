@@ -48,6 +48,8 @@ const ACTIONS: Record<string, string> = {
   "payments.account_saved": "Configuró el pago por transferencia",
   "payments.stripe_connected": "Conectó Stripe",
   "payments.stripe_status_changed": "Cambió el estado de Stripe",
+  "payments.mercadopago_connected": "Conectó Mercado Pago",
+  "payments.mercadopago_status_changed": "Cambió el estado de Mercado Pago",
   "customer.updated": "Editó un cliente",
   "customer.anonymized": "Eliminó los datos personales de un cliente",
   "customer.account_linked": "Un cliente creó su cuenta",

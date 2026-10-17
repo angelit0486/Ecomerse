@@ -403,3 +403,60 @@ Este registro agrega lo que ocurrió **después** del Gate 0: la aprobación del
 **Alternativas descartadas.** (a) Reservar por lote: complica el checkout y la concurrencia sin beneficio para el comprador. (b) Capturar la caducidad solo como nota: no evita vender caducados ni permite rastrear.
 
 **Consecuencias.** Unas 2 tablas, 1 job y 5 RPC nuevas. Requiere pgTAP de cuadratura lotes = existencias, FEFO, caducidad con reservas y aislamiento, más integración del job y E2E de recepción y surtido. Esfuerzo estimado: L. **Decisión pendiente del propietario:** si todas las variantes de suplementos llevarán lotes desde el lanzamiento.
+
+## 17. Misión de recuperación — meta y decisiones delegadas (2026-10-17)
+
+**Meta (fijada el 2026-10-17 a pedido del propietario).** Que la tienda de suplementos del propietario sea la tienda digital de suplementos más moderna, organizada y completa de México, sin aspecto genérico. Se mide por:
+
+- Encontrar el producto correcto por objetivo o categoría en menos de 3 clics.
+- Comprar desde el móvil y pagar con Mercado Pago, con el pago confirmado solo por webhook firmado o reconciliación.
+- Un panel que permita operar el día a día: catálogo, inventario, pedidos, despachos y ventas.
+- Información sanitaria completa, sin datos, reseñas ni plazos inventados.
+- Diseño propio con Lighthouse móvil ≥ 95 y axe sin violaciones.
+- Todas las suites en verde antes de cada commit.
+
+El propietario delegó las decisiones que lleven a esa meta («toma solo decisiones que lleven a esa meta»). Las decisiones tomadas por delegación quedan marcadas así y se pueden revertir.
+
+### ADR-028 — Mercado Pago Checkout Pro · **aprobado por delegación del propietario el 2026-10-17**
+
+**Contexto.** El propietario vende en México. Mercado Pago es la pasarela que su público espera: tarjeta, OXXO, transferencia y saldo. Hasta ahora solo existía Stripe Connect. Agregar un proveedor toca el contrato de pagos (GATE0 §18.2, contrato crítico §43): por eso es un ADR.
+
+**Decisión.**
+
+1. **Una credencial de plataforma.** `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` son variables de entorno opcionales y van juntas. La cuenta de pago de la tienda guarda solo su `mp_user_id` (collector), igual que Stripe guarda solo `acct_…` (A-01). Ningún secreto vive por tienda. Un collector pertenece a una sola tienda (índice único).
+   - **Para más tiendas:** OAuth de Mercado Pago (marketplace) con el mismo modelo de cuenta. Queda fuera del alcance de hoy.
+2. **Conectar lo hace el servidor.**
+   - El panel pide `payments.manage`.
+   - El servidor valida la credencial con `/users/me` (cuenta de México, `MLM`).
+   - El worker registra el collector con `system.mercadopago_attach_account`. El navegador nunca envía el id.
+   - Producción solo crea cuentas `live`; fuera de producción solo `test`.
+3. **Checkout Pro.**
+   - Una preferencia con un solo concepto por el total calculado en la base.
+   - `external_reference` = `payments.id`.
+   - `expiration_date_to` = vencimiento del intento.
+   - `X-Idempotency-Key` = id del intento.
+   - Solo se redirige a dominios `mercadopago.com(.mx)`. Solo cobra en MXN.
+4. **Webhook** (`/api/webhooks/payments/mercadopago`, §18.4).
+   - **Firma:** `x-signature` (HMAC-SHA256 de `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, ±5 min). El `data.id` de la URL debe coincidir con el firmado.
+   - **Cuenta:** el collector del evento debe corresponder a una cuenta de pago de la tienda.
+   - **Deduplicación** en `payment_events`.
+   - **Re-consulta** del cobro, que debe ser del mismo collector.
+   - **Aplicación** con `system.apply_mercadopago_payment`, que valida referencia, monto y moneda.
+   - En producción solo se aplican eventos `live_mode`.
+   - **El retorno del comprador a la tienda nunca confirma un pago.**
+5. **Varios cobros por preferencia.** Mercado Pago permite reintentar tras un rechazo y, en teoría, pagar dos veces.
+   - Solo un cobro aprobado fija `provider_payment_id`, que es el que se reembolsa.
+   - Un segundo cobro aprobado distinto deja el pedido en atención con el evento `payment.duplicate`, para reembolsarlo. Nunca se ignora.
+6. **Reconciliación y reembolsos.**
+   - Los intentos abiertos se buscan por `external_reference` (`/v1/payments/search`); manda el cobro aprobado.
+   - Los reembolsos usan `/v1/payments/{id}/refunds` con idempotencia y se consultan por su id si quedan pendientes.
+   - Un error 4xx es un rechazo definitivo (`ProviderHttpError`, compartido con Stripe).
+7. **Sin expirar la preferencia al cancelar un pedido.** Vence sola en `expiration_date_to`. Un pago que llegue después de cancelar sigue el camino CF-04 existente: el pedido queda pagado, en atención y con reembolso solicitado.
+
+**Alternativas descartadas.**
+
+- (a) Checkout API, con la tarjeta dentro de la tienda: más superficie PCI y más trabajo, sin beneficio para el lanzamiento.
+- (b) OAuth por tienda desde hoy: requiere registrar la aplicación de marketplace y no hace falta para la primera tienda.
+- (c) Confirmar el pago al volver a la tienda: prohibido (regla 11).
+
+**Estado.** IMPLEMENTADA, PERO NO VERIFICADA CON MERCADO PAGO REAL: falta que el propietario configure credenciales de prueba. Pruebas: unitarias del adaptador, pgTAP `68_mercadopago` e integración `mercadopago-webhook` con la API simulada. Pasos de configuración: `docs/runbooks/mercadopago.md`.

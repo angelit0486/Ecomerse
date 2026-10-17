@@ -2,7 +2,8 @@ import type { Sql } from "@/server/db/role-clients";
 import type { JobHandler } from "@/server/jobs/types";
 import { PermanentJobError } from "@/server/jobs/types";
 import type { Logger } from "@/server/observability/logger";
-import type { PaymentAccountCredentials } from "@/server/payments/provider";
+import type { MercadoPagoProvider } from "@/server/payments/mercadopago";
+import { ProviderHttpError, type PaymentAccountCredentials } from "@/server/payments/provider";
 import { StripeHttpError, stripeAccountId, type StripeProvider } from "@/server/payments/stripe";
 
 /**
@@ -10,7 +11,7 @@ import { StripeHttpError, stripeAccountId, type StripeProvider } from "@/server/
  * el resultado. `manual` (transferencia, efectivo) y `fake` no tienen pasarela: el
  * reembolso se registra como hecho por la tienda.
  *
- * Stripe (Gate F7, APP-H1): se crea con la clave de idempotencia = id del
+ * Stripe (Gate F7, APP-H1) y Mercado Pago (ADR-028): se crea con la clave de idempotencia = id del
  * reembolso; si queda pendiente se guarda el `re_…` y los reintentos lo CONSULTAN
  * (repetir el POST solo devolvería la primera respuesta). Un rechazo 4xx es
  * definitivo: reembolso fallido y pedido en atención. La reconciliación
@@ -20,19 +21,19 @@ interface RefundData {
   id: string;
   status: string;
   amount: number;
-  provider: "manual" | "fake" | "stripe";
+  provider: "manual" | "fake" | "stripe" | "mercadopago";
   provider_payment_id: string | null;
   provider_refund_id: string | null;
   account: {
     id: string;
-    provider: "manual" | "fake" | "stripe";
+    provider: "manual" | "fake" | "stripe" | "mercadopago";
     mode: "test" | "live";
     public_config: Record<string, unknown>;
   };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-/** La clave de idempotencia de Stripe vale 24 h: después, crear de nuevo podría duplicar. */
+/** La clave de idempotencia vale 24 h: después, crear de nuevo podría duplicar. */
 const RECREATE_LIMIT_HOURS = 23;
 
 type Outcome = "succeeded" | "failed" | "pending";
@@ -54,7 +55,7 @@ async function loadRefund(db: Sql, refundId: string): Promise<RefundData | null>
 
 /** Una pasada con el proveedor; devuelve el resultado ya aplicado (o `pending`). */
 async function settle(
-  deps: { db: Sql; stripe?: () => StripeProvider | null },
+  deps: Providers & { db: Sql },
   refund: RefundData,
   options: { allowCreate: boolean },
 ): Promise<Outcome> {
@@ -65,8 +66,8 @@ async function settle(
     status = "succeeded";
     reference = `${refund.provider}_${refund.id}`;
   } else {
-    const stripe = deps.stripe?.();
-    if (!stripe) throw new Error("stripe_not_configured"); // reintento con backoff
+    const gateway = refund.provider === "mercadopago" ? deps.mercadopago?.() : deps.stripe?.();
+    if (!gateway) throw new Error(`${refund.provider}_not_configured`); // reintento con backoff
     if (!refund.provider_payment_id) {
       status = "failed";
       failure = "missing_payment_reference";
@@ -74,7 +75,7 @@ async function settle(
       return "pending";
     } else {
       try {
-        const r = await stripe.refund({
+        const r = await gateway.refund({
           account: credentials(refund.account),
           providerPaymentId: refund.provider_payment_id,
           amount: Number(refund.amount),
@@ -88,7 +89,7 @@ async function settle(
           await deps.db`select system.record_refund_provider_ref(${refund.id}, ${r.providerRefundId})`;
         }
       } catch (error) {
-        if (!(error instanceof StripeHttpError) || !error.rejected) throw error; // red o 5xx: reintento
+        if (!(error instanceof ProviderHttpError) || !error.rejected) throw error; // red o 5xx: reintento
         status = "failed";
         failure = `provider_rejected_${error.httpStatus}`;
       }
@@ -100,13 +101,16 @@ async function settle(
   return status;
 }
 
-/** Reembolsos de Stripe pendientes sin job activo (cada 10 minutos). */
-export async function reconcileRefunds(deps: {
-  db: Sql;
+interface Providers {
   stripe?: () => StripeProvider | null;
-  log: Logger;
-}): Promise<number> {
-  if (!deps.stripe?.()) return 0;
+  mercadopago?: () => MercadoPagoProvider | null;
+}
+
+/** Reembolsos con pasarela pendientes sin job activo (cada 10 minutos). */
+export async function reconcileRefunds(
+  deps: Providers & { db: Sql; log: Logger },
+): Promise<number> {
+  if (!deps.stripe?.() && !deps.mercadopago?.()) return 0;
   const rows = await deps.db<
     { refund_id: string; provider_refund_id: string | null; age_hours: string }[]
   >`select * from system.refunds_to_reconcile(100)`;
@@ -128,10 +132,7 @@ export async function reconcileRefunds(deps: {
   return settled;
 }
 
-export function createRefundHandlers(deps: {
-  db: Sql;
-  stripe?: () => StripeProvider | null;
-}): Array<[string, JobHandler]> {
+export function createRefundHandlers(deps: Providers & { db: Sql }): Array<[string, JobHandler]> {
   const execute: JobHandler = async (job, { log }) => {
     const refundId = job.payload.refund_id;
     if (typeof refundId !== "string" || !UUID_RE.test(refundId))

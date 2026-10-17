@@ -11,6 +11,7 @@ import type {
   PaymentProvider,
   WebhookVerification,
 } from "./provider";
+import { ProviderHttpError } from "./provider";
 
 /**
  * Stripe Connect con cuentas Standard y cargos directos (A-01): la tienda es el
@@ -31,25 +32,10 @@ export interface StripeConfig {
 
 const API_VERSION = "2024-06-20";
 
-/** Respuesta HTTP no exitosa de Stripe; `status` distingue rechazos (4xx) de fallas (5xx). */
-export class StripeHttpError extends AppError {
-  constructor(
-    readonly httpStatus: number,
-    path: string,
-    method: string,
-  ) {
-    super("provider_error", undefined, {
-      cause: new Error(`stripe ${method} ${path} → ${httpStatus}`),
-    });
-  }
-  /** 4xx (salvo 409 y 429): la solicitud nunca va a prosperar con los mismos datos. */
-  get rejected(): boolean {
-    return (
-      this.httpStatus >= 400 &&
-      this.httpStatus < 500 &&
-      this.httpStatus !== 409 &&
-      this.httpStatus !== 429
-    );
+/** Respuesta HTTP no exitosa de Stripe. */
+export class StripeHttpError extends ProviderHttpError {
+  constructor(httpStatus: number, path: string, method: string) {
+    super(httpStatus, "stripe", path, method);
   }
 }
 

@@ -1,9 +1,35 @@
 /**
  * Contrato de proveedor de pagos de la TIENDA (GATE0 §18.2, contrato crítico §43).
- * `manual`, `fake` (F6) y `stripe` (Connect, F7) con el mismo contrato.
+ * `manual`, `fake` (F6), `stripe` (Connect, F7) y `mercadopago` (Checkout Pro,
+ * ADR-028) con el mismo contrato.
  * Ninguna llamada de un adaptador ocurre dentro de una transacción de base de datos.
  */
-export type PaymentProviderKey = "manual" | "fake" | "stripe";
+import { AppError } from "@/server/errors";
+
+export type PaymentProviderKey = "manual" | "fake" | "stripe" | "mercadopago";
+
+/** Respuesta HTTP no exitosa de un proveedor; `rejected` distingue rechazos (4xx) de fallas (5xx). */
+export class ProviderHttpError extends AppError {
+  constructor(
+    readonly httpStatus: number,
+    provider: string,
+    path: string,
+    method: string,
+  ) {
+    super("provider_error", undefined, {
+      cause: new Error(`${provider} ${method} ${path} → ${httpStatus}`),
+    });
+  }
+  /** 4xx (salvo 409 y 429): la solicitud nunca va a prosperar con los mismos datos. */
+  get rejected(): boolean {
+    return (
+      this.httpStatus >= 400 &&
+      this.httpStatus < 500 &&
+      this.httpStatus !== 409 &&
+      this.httpStatus !== 429
+    );
+  }
+}
 
 export interface Money {
   /** Centavos (bigint en la base; aquí siempre entero seguro). */

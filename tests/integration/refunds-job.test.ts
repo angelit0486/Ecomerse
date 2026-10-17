@@ -6,9 +6,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { JobRecord } from "@/server/jobs/types";
 import { createLogger } from "@/server/observability/logger";
 import { createRefundHandlers, reconcileRefunds } from "@/server/orders/refunds";
+import { createMercadoPagoProvider } from "@/server/payments/mercadopago";
 import { createStripeProvider } from "@/server/payments/stripe";
 
-/** Job refund.execute (GATE0 §18.6) como system_worker: manual y Stripe (API simulada). */
+/** Job refund.execute (GATE0 §18.6) como system_worker: manual, Stripe y Mercado Pago (APIs simuladas). */
 const admin = postgres(process.env.TEST_ADMIN_DATABASE_URL!, { max: 2, onnotice: () => {} });
 const worker = postgres(process.env.TEST_WORKER_DATABASE_URL!, {
   max: 2,
@@ -50,9 +51,30 @@ const stripe = createStripeProvider({
   apiBase: "https://stripe.test",
   fetchImpl,
 });
-const handler = new Map(createRefundHandlers({ db: worker, stripe: () => stripe })).get(
-  "refund.execute",
-)!;
+/** Mercado Pago simulado: POST crea el reembolso (estado pendiente) y GET da el estado actual. */
+const mpCalls: { method: string; path: string; body?: string }[] = [];
+const mpRefunds = new Map<string, string>();
+const mercadopago = createMercadoPagoProvider({
+  accessToken: "TEST-0000000000000000-000000-refunds",
+  webhookSecret: "mprefunds0000000000000",
+  apiBase: "https://mp.test",
+  fetchImpl: (async (url: string, init: RequestInit) => {
+    const path = new URL(url).pathname;
+    const method = init.method ?? "GET";
+    mpCalls.push({ method, path, ...(init.body ? { body: String(init.body) } : {}) });
+    if (method === "POST" && /^\/v1\/payments\/\d+\/refunds$/.test(path)) {
+      mpRefunds.set("901", "in_process");
+      return Response.json({ id: 901, status: "in_process" });
+    }
+    const m = /^\/v1\/payments\/\d+\/refunds\/(\d+)$/.exec(path);
+    if (method === "GET" && m)
+      return Response.json({ id: Number(m[1]), status: mpRefunds.get(m[1]!) });
+    return new Response("{}", { status: 404 });
+  }) as unknown as typeof fetch,
+});
+const handler = new Map(
+  createRefundHandlers({ db: worker, stripe: () => stripe, mercadopago: () => mercadopago }),
+).get("refund.execute")!;
 const job = (refundId: string) =>
   ({
     id: randomBytes(4).toString("hex"),
@@ -62,7 +84,7 @@ const job = (refundId: string) =>
   }) as unknown as JobRecord;
 
 async function paidOrder(
-  provider: "manual" | "stripe",
+  provider: "manual" | "stripe" | "mercadopago",
 ): Promise<{ orderId: string; refundId: string }> {
   const [acct] = await admin<{ id: string }[]>`
     select id from public.payment_accounts where store_id = ${storeId} and provider = ${provider}`;
@@ -75,7 +97,9 @@ async function paidOrder(
       customer_name: "R",
       payment_account_id: acct!.id,
     })}, 10000, ${idem}, ${createHash("sha256").update(idem).digest()}) as r`;
-  await admin`update public.payments set provider_payment_id = ${`pi_${randomBytes(6).toString("hex")}`}
+  const providerPaymentId =
+    provider === "mercadopago" ? "123456789" : `pi_${randomBytes(6).toString("hex")}`;
+  await admin`update public.payments set provider_payment_id = ${providerPaymentId}
               where id = ${o!.r.payment.id}`;
   await admin`select app.confirm_order_payment(${o!.r.payment.id}, 'system', ${provider})`;
   const [r] = await admin<{ id: string }[]>`
@@ -114,7 +138,9 @@ beforeAll(async () => {
                 from public.inventory_levels l where l.variant_id = ${variantId}`;
   await admin`insert into public.payment_accounts (store_id, provider, status, display_name, public_config) values
     (${storeId}, 'manual', 'active', 'Transferencia', '{}'),
-    (${storeId}, 'stripe', 'active', 'Tarjeta', ${admin.json({ stripe_account_id: `acct_${run}refund0000` })})`;
+    (${storeId}, 'stripe', 'active', 'Tarjeta', ${admin.json({ stripe_account_id: `acct_${run}refund0000` })}),
+    (${storeId}, 'mercadopago', 'active', 'Mercado Pago',
+     ${admin.json({ mp_user_id: String(Date.now()).slice(-10) + String(Math.floor(Math.random() * 1e6)) })})`;
 });
 
 afterAll(async () => {
@@ -145,6 +171,21 @@ describe("job refund.execute", () => {
     current.set(r!.provider_refund_id, "succeeded"); // Stripe lo completa después
     await handler(job(refundId), { log } as never);
     expect(calls.map((c) => c.method)).toEqual(["POST", "GET"]);
+    expect((await orderState(orderId)).refunded_total).toBe("4000");
+  });
+
+  it("mercadopago: crea con idempotencia por el monto en pesos y luego CONSULTA su estado", async () => {
+    const { orderId, refundId } = await paidOrder("mercadopago");
+    mpCalls.length = 0;
+    await expect(handler(job(refundId), { log } as never)).rejects.toThrow("refund_pending");
+    expect(mpCalls[0]).toMatchObject({
+      method: "POST",
+      path: "/v1/payments/123456789/refunds",
+      body: JSON.stringify({ amount: 40 }),
+    });
+    mpRefunds.set("901", "approved"); // Mercado Pago lo completa después
+    await handler(job(refundId), { log } as never);
+    expect(mpCalls.map((c) => c.method)).toEqual(["POST", "GET"]);
     expect((await orderState(orderId)).refunded_total).toBe("4000");
   });
 

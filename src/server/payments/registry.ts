@@ -5,6 +5,7 @@ import { serverEnv } from "@/server/env";
 
 import { createFakeProvider } from "./fake";
 import { manualProvider } from "./manual";
+import { createMercadoPagoProvider, type MercadoPagoProvider } from "./mercadopago";
 import type { PaymentProvider } from "./provider";
 import { createStripeProvider, type StripeProvider } from "./stripe";
 
@@ -22,6 +23,22 @@ export function stripeProvider(): StripeProvider | null {
   });
 }
 
+/** Mercado Pago configurado (access token y secreto de la firma del webhook), o null. */
+export function mercadoPagoProvider(): MercadoPagoProvider | null {
+  const env = serverEnv();
+  if (!env.MERCADOPAGO_ACCESS_TOKEN || !env.MERCADOPAGO_WEBHOOK_SECRET) return null;
+  return createMercadoPagoProvider({
+    accessToken: env.MERCADOPAGO_ACCESS_TOKEN,
+    webhookSecret: env.MERCADOPAGO_WEBHOOK_SECRET,
+    ...(env.MERCADOPAGO_API_BASE ? { apiBase: env.MERCADOPAGO_API_BASE } : {}),
+  });
+}
+
+/** Modo de las cuentas de Mercado Pago: en producción solo cobros reales; fuera, solo de prueba. */
+export function mercadoPagoMode(): "test" | "live" {
+  return serverEnv().APP_ENV === "production" ? "live" : "test";
+}
+
 /** Adaptador por clave. `fake` no existe en producción, aunque la base lo permitiera. */
 export function paymentProvider(key: string): PaymentProvider {
   const env = serverEnv();
@@ -31,6 +48,10 @@ export function paymentProvider(key: string): PaymentProvider {
   if (key === "stripe") {
     const stripe = stripeProvider();
     if (stripe) return stripe;
+  }
+  if (key === "mercadopago") {
+    const mp = mercadoPagoProvider();
+    if (mp) return mp;
   }
   throw new AppError("provider_error", "Este método de pago no está disponible.");
 }

@@ -26,6 +26,11 @@ test("pagos y notificaciones de la tienda", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Pagos", level: 1 })).toBeVisible();
   // Sin claves de Stripe en el entorno: el cobro con tarjeta no se ofrece.
   await expect(page.getByText("El cobro con tarjeta aún no está disponible")).toBeVisible();
+  // Sin credenciales de Mercado Pago: se dice tal cual, sin botón de conectar (ADR-028).
+  await expect(
+    page.getByText("Aún no está disponible: faltan las credenciales de Mercado Pago"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conectar Mercado Pago" })).toHaveCount(0);
   await page.getByLabel("Instrucciones de pago").fill("Banco Ejemplo · CLABE 012345678901234567");
   await page.getByRole("button", { name: "Guardar pago" }).click();
   await expect(page.getByText("Pago por transferencia guardado.")).toBeVisible();
