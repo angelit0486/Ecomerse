@@ -5,7 +5,13 @@ import { notFound } from "next/navigation";
 import { formatMoney } from "@/lib/money/format";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
-import { decodeCursor, listCategories, searchProducts } from "@/server/catalog/queries";
+import {
+  decodeCursor,
+  listCategories,
+  publicMediaUrl,
+  searchProducts,
+} from "@/server/catalog/queries";
+import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
@@ -24,6 +30,21 @@ const STATUSES = ["draft", "active", "archived"] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" && value.length <= 200 ? value : undefined;
+}
+
+interface ListExtras {
+  image: string | null;
+  brand: string | null;
+  available: number | null;
+  sold_out_variants: number | null;
+}
+
+/** «12 disponibles» · «Agotado» · «Sin control de existencias»; null sin permiso de inventario. */
+function stockLabel(extras: ListExtras | undefined): string | null {
+  if (!extras || extras.sold_out_variants == null) return null;
+  if (extras.available == null) return "Sin control de existencias";
+  if (extras.available <= 0) return "Agotado";
+  return extras.available === 1 ? "1 disponible" : `${extras.available} disponibles`;
 }
 
 export default async function ProductsPage({ params, searchParams }: Props) {
@@ -69,6 +90,14 @@ export default async function ProductsPage({ params, searchParams }: Props) {
     status: hasPermission(ctx, "products.publish"),
     delete: hasPermission(ctx, "products.delete"),
   };
+  // Miniatura, marca y existencias de la página (una consulta; existencias solo con inventory.read).
+  const extras =
+    page.rows.length > 0
+      ? await callRpc<Record<string, ListExtras>>(supabase, "catalog_list_extras", {
+          p_store_id: ctx.store.id,
+          p_product_ids: page.rows.map((r) => r.id),
+        })
+      : {};
 
   return (
     <section className="space-y-5">
@@ -231,6 +260,10 @@ export default async function ProductsPage({ params, searchParams }: Props) {
                   ? formatMoney(row.min_price, ctx.store.currency)
                   : `${formatMoney(row.min_price, ctx.store.currency)} – ${formatMoney(row.max_price ?? row.min_price, ctx.store.currency)}`,
             variants: row.variant_count,
+            image: extras[row.id]?.image ? publicMediaUrl(extras[row.id]!.image!) : null,
+            brand: extras[row.id]?.brand ?? null,
+            stock: stockLabel(extras[row.id]),
+            soldOut: (extras[row.id]?.sold_out_variants ?? 0) > 0,
           }))}
         />
       )}

@@ -93,7 +93,7 @@ export const REJECTION_REASONS: Record<string, string> = {
 };
 
 export const STATUS_LABELS: Record<string, string> = {
-  draft: "Borrador",
+  draft: "Pausado (borrador)",
   active: "Publicado",
   archived: "Archivado",
 };

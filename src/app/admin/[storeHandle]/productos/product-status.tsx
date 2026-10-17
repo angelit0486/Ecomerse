@@ -59,7 +59,9 @@ export function ProductStatusPanel({
         ) : (
           <>
             {can.publish && status !== "active" ? button("publish", "Publicar", "primary") : null}
-            {can.publish && status === "active" ? button("draft", "Despublicar") : null}
+            {can.publish && status === "active"
+              ? button("draft", "Pausar (ocultar de la tienda)")
+              : null}
             {can.publish && status !== "archived" ? button("archive", "Archivar") : null}
             {can.create ? button("duplicate", "Duplicar") : null}
             {can.delete ? button("delete", "Eliminar", "danger") : null}

@@ -16,6 +16,13 @@ interface Row {
   status: string;
   price: string;
   variants: number;
+  /** Miniatura (la primera foto lista). */
+  image: string | null;
+  brand: string | null;
+  /** null sin permiso de inventario. */
+  stock: string | null;
+  /** Alguna presentación activa sin existencias (y sin venta bajo pedido). */
+  soldOut: boolean;
 }
 
 export function BulkProductsTable({
@@ -71,7 +78,8 @@ export function BulkProductsTable({
             <option value="" disabled>
               Acción…
             </option>
-            {canBulkStatus ? <option value="draft">Pasar a borrador</option> : null}
+            {canBulkStatus ? <option value="publish">Publicar</option> : null}
+            {canBulkStatus ? <option value="draft">Pausar (ocultar de la tienda)</option> : null}
             {canBulkStatus ? <option value="archive">Archivar</option> : null}
             {canBulkDelete ? <option value="delete">Eliminar</option> : null}
           </select>
@@ -86,13 +94,20 @@ export function BulkProductsTable({
           </Button>
         </div>
       ) : null}
-      {state.ok ? (
+      {state.error ? (
+        <div role="alert" className="text-sm text-danger">
+          <p>{state.error}</p>
+          {state.issues?.length ? (
+            <ul className="list-disc pl-5">
+              {state.issues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : state.ok ? (
         <p role="status" className="text-sm text-success">
           {state.message}
-        </p>
-      ) : state.error ? (
-        <p role="alert" className="text-sm text-danger">
-          {state.error}
         </p>
       ) : null}
 
@@ -114,6 +129,7 @@ export function BulkProductsTable({
             <TH>Producto</TH>
             <TH>Estado</TH>
             <TH>Precio</TH>
+            {rows.some((r) => r.stock !== null) ? <TH>Existencias</TH> : null}
             <TH>Variantes</TH>
           </TR>
         </THead>
@@ -134,12 +150,50 @@ export function BulkProductsTable({
               ) : null}
               {/* Ancho mínimo: en móvil el título se partía palabra por palabra. */}
               <TD className="min-w-52">
-                <Link href={row.href} className="font-medium underline-offset-2 hover:underline">
-                  {row.title}
-                </Link>
+                <div className="flex items-center gap-3">
+                  {row.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- miniatura ya re-codificada por Storage
+                    <img
+                      src={row.image}
+                      alt=""
+                      width={40}
+                      height={40}
+                      loading="lazy"
+                      className="h-10 w-10 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-canvas text-[11px] text-fg-muted"
+                    >
+                      Sin foto
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <Link
+                      href={row.href}
+                      className="font-medium underline-offset-2 hover:underline"
+                    >
+                      {row.title}
+                    </Link>
+                    {row.brand ? (
+                      <span className="block text-[13px] text-fg-muted">{row.brand}</span>
+                    ) : null}
+                  </span>
+                </div>
               </TD>
               <TD className="whitespace-nowrap">{row.status}</TD>
               <TD className="whitespace-nowrap tabular-nums">{row.price}</TD>
+              {rows.some((r) => r.stock !== null) ? (
+                <TD className="whitespace-nowrap tabular-nums">
+                  {row.stock ?? "—"}
+                  {row.soldOut && row.stock !== "Agotado" ? (
+                    <span className="block text-[13px] text-warning">
+                      Alguna presentación agotada
+                    </span>
+                  ) : null}
+                </TD>
+              ) : null}
               <TD>{row.variants}</TD>
             </TR>
           ))}

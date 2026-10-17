@@ -11,9 +11,11 @@ import {
   finalizeProductImageUpload,
   mediaAction,
   requestProductImageUpload,
+  setVariantImageAction,
   type CatalogActionState,
 } from "./actions";
 import { FIELD_MESSAGES, REJECTION_REASONS } from "./messages";
+import { nativeControl } from "./styles";
 
 export interface ProductImage {
   id: string;
@@ -23,6 +25,13 @@ export interface ProductImage {
   width: number | null;
   height: number | null;
   rejection_reason: string | null;
+}
+
+/** Presentación del producto (sabor, tamaño) y su foto propia, si tiene. */
+export interface VariantImageChoice {
+  id: string;
+  label: string;
+  image_id: string | null;
 }
 
 /**
@@ -35,11 +44,14 @@ export function ProductImages({
   productId,
   images,
   canEdit,
+  variants = [],
 }: {
   storeHandle: string;
   productId: string;
   images: ProductImage[];
   canEdit: boolean;
+  /** Solo productos con varias presentaciones. */
+  variants?: VariantImageChoice[];
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -163,13 +175,98 @@ export function ProductImages({
               storeHandle={storeHandle}
               productId={productId}
               image={image}
-              first={index === 0}
+              index={index}
+              count={images.length}
               canEdit={canEdit}
             />
           ))}
         </ul>
       )}
+      {canEdit && variants.length > 1 && images.some((i) => i.status === "ready") ? (
+        <section aria-labelledby="fotos-presentaciones" className="space-y-2">
+          <h3 id="fotos-presentaciones" className="text-sm font-semibold">
+            Foto de cada presentación
+          </h3>
+          <p className="text-[13px] text-fg-muted">
+            Al elegir un sabor o tamaño en la tienda se muestra su foto. Sin foto propia, se usa la
+            principal.
+          </p>
+          <ul className="space-y-2">
+            {variants.map((v) => (
+              <VariantImageRow
+                key={v.id}
+                storeHandle={storeHandle}
+                productId={productId}
+                variant={v}
+                images={images}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </section>
+  );
+}
+
+function VariantImageRow({
+  storeHandle,
+  productId,
+  variant,
+  images,
+}: {
+  storeHandle: string;
+  productId: string;
+  variant: VariantImageChoice;
+  images: ProductImage[];
+}) {
+  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+    setVariantImageAction.bind(null, storeHandle, productId),
+    {},
+  );
+  const id = `foto-${variant.id}`;
+  return (
+    <li>
+      <form action={action} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="variant_id" value={variant.id} />
+        <label htmlFor={id} className="min-w-32 text-sm">
+          {variant.label}
+        </label>
+        <select
+          id={id}
+          name="media_id"
+          defaultValue={variant.image_id ?? ""}
+          className={nativeControl}
+        >
+          <option value="">La del producto</option>
+          {images.map((image, index) =>
+            image.status === "ready" ? (
+              <option key={image.id} value={image.id}>
+                Foto {index + 1}
+                {image.alt_text ? ` · ${image.alt_text.slice(0, 40)}` : ""}
+              </option>
+            ) : null,
+          )}
+        </select>
+        <Button
+          type="submit"
+          size="sm"
+          variant="secondary"
+          loading={pending}
+          aria-label={`Guardar foto de ${variant.label}`}
+        >
+          Guardar foto
+        </Button>
+        {state.error ? (
+          <span role="alert" className="text-[13px] text-danger">
+            {state.error}
+          </span>
+        ) : state.ok ? (
+          <span role="status" className="text-[13px] text-success">
+            {state.message}
+          </span>
+        ) : null}
+      </form>
+    </li>
   );
 }
 
@@ -177,15 +274,18 @@ function ImageCard({
   storeHandle,
   productId,
   image,
-  first,
+  index,
+  count,
   canEdit,
 }: {
   storeHandle: string;
   productId: string;
   image: ProductImage;
-  first: boolean;
+  index: number;
+  count: number;
   canEdit: boolean;
 }) {
+  const first = index === 0;
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
     mediaAction.bind(null, storeHandle, productId),
     {},
@@ -208,9 +308,10 @@ function ImageCard({
             : `Rechazada: ${REJECTION_REASONS[image.rejection_reason ?? ""] ?? "archivo no válido."}`}
         </div>
       )}
-      {first && image.status === "ready" ? (
-        <p className="text-[13px] font-medium">Imagen principal</p>
-      ) : null}
+      <p className="text-[13px] font-medium">
+        Foto {index + 1}
+        {first && image.status === "ready" ? " · principal" : ""}
+      </p>
       {canEdit ? (
         <form action={action} className="space-y-2">
           <input type="hidden" name="media_id" value={image.id} />
@@ -246,6 +347,32 @@ function ImageCard({
                 disabled={pending}
               >
                 Hacer principal
+              </Button>
+            ) : null}
+            {index > 0 ? (
+              <Button
+                type="submit"
+                name="action"
+                value="left"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                aria-label={`Mover la foto ${index + 1} antes`}
+              >
+                ← Antes
+              </Button>
+            ) : null}
+            {index < count - 1 ? (
+              <Button
+                type="submit"
+                name="action"
+                value="right"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                aria-label={`Mover la foto ${index + 1} después`}
+              >
+                Después →
               </Button>
             ) : null}
             <Button

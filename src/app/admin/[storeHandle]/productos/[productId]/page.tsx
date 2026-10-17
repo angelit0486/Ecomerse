@@ -106,6 +106,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
         productId={product.id}
         images={product.media}
         canEdit={canEdit}
+        variants={product.variants.map((v) => ({
+          id: v.id,
+          label: Object.values(v.options).join(" / ") || "Única",
+          image_id: v.image_id,
+        }))}
       />
 
       {canEdit && (declared.length > 0 || regulatory) ? (

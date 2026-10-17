@@ -121,7 +121,7 @@ type StatusAction = (typeof STATUS_ACTIONS)[number];
 
 const STATUS_MESSAGES: Record<StatusAction, string> = {
   publish: "Producto publicado: ya es visible en la tienda.",
-  draft: "Producto despublicado: ahora es un borrador.",
+  draft: "Producto pausado: ya no se ve en la tienda. Puedes publicarlo de nuevo cuando quieras.",
   archive: "Producto archivado.",
   delete: "Producto eliminado. Puedes restaurarlo desde «Eliminados».",
   restore: "Producto restaurado como borrador.",
@@ -198,7 +198,7 @@ class PublishBlocked extends Error {
   }
 }
 
-const BULK_ACTIONS = ["draft", "archive", "delete"] as const;
+const BULK_ACTIONS = ["publish", "draft", "archive", "delete"] as const;
 
 /** Acciones masivas del listado: cada producto pasa por la misma RPC y permisos. */
 export async function bulkProductsAction(
@@ -214,9 +214,22 @@ export async function bulkProductsAction(
     return { error: "Selección no válida." };
   }
   let done = 0;
+  // Publicar valida cada producto (precio, fotos, ficha sanitaria): los que no
+  // pasan no detienen a los demás; se informa cuántos y por qué.
+  const skipped: string[] = [];
   try {
     await withStore(storeHandle, async ({ supabase, storeId }) => {
       for (const id of ids) {
+        if (action === "publish") {
+          try {
+            await applyStatus(supabase, storeId, id, "publish");
+            done += 1;
+          } catch (error) {
+            const e = failure("catalog.bulk_publish", error);
+            skipped.push(e.error ?? "No se pudo publicar.");
+          }
+          continue;
+        }
         await applyStatus(supabase, storeId, id, action as StatusAction);
         done += 1;
       }
@@ -228,8 +241,19 @@ export async function bulkProductsAction(
   }
   revalidatePath(productsPath(storeHandle));
   const one = done === 1;
+  if (action === "publish" && skipped.length > 0) {
+    const reasons = [...new Set(skipped)];
+    return {
+      ...(done > 0 ? { ok: true } : {}),
+      error: `${done} publicado${done === 1 ? "" : "s"}; ${skipped.length} no se pudo publicar. Ábrelo para ver qué le falta.`,
+      issues: reasons.slice(0, 5),
+    };
+  }
   const verb = {
-    draft: one ? "producto pasó a borrador" : "productos pasaron a borrador",
+    publish: one ? "producto publicado" : "productos publicados",
+    draft: one
+      ? "producto pausado (ya no se ve en la tienda)"
+      : "productos pausados (ya no se ven en la tienda)",
     archive: one ? "producto archivado" : "productos archivados",
     delete: one ? "producto eliminado" : "productos eliminados",
   }[action as (typeof BULK_ACTIONS)[number]];
@@ -315,6 +339,27 @@ export async function mediaAction(
           p_product_id: productId,
           p_media_ids: [mediaId],
         });
+      } else if (action === "left" || action === "right") {
+        // Orden actual leído de la base (no del navegador) y se intercambia con la vecina.
+        const { data, error } = await supabase
+          .from("media")
+          .select("id")
+          .eq("store_id", storeId)
+          .eq("product_id", productId)
+          .is("deleted_at", null)
+          .order("position")
+          .order("id");
+        if (error) throw error;
+        const order = (data ?? []).map((m: { id: string }) => m.id);
+        const from = order.indexOf(mediaId);
+        const to = action === "left" ? from - 1 : from + 1;
+        if (from < 0 || to < 0 || to >= order.length) throw new AppError("validation_failed");
+        [order[from], order[to]] = [order[to]!, order[from]!];
+        await callRpc(supabase, "media_reorder_product", {
+          p_store_id: storeId,
+          p_product_id: productId,
+          p_media_ids: order,
+        });
       } else {
         throw new AppError("validation_failed");
       }
@@ -327,8 +372,44 @@ export async function mediaAction(
     alt: "Texto alternativo guardado.",
     delete: "Imagen eliminada.",
     first: "Imagen principal actualizada.",
+    left: "Foto movida.",
+    right: "Foto movida.",
   };
   return { ok: true, message: messages[action] ?? "Listo." };
+}
+
+/** Foto propia de una presentación (sabor, tamaño); vacío = usa la del producto. */
+export async function setVariantImageAction(
+  storeHandle: string,
+  productId: string,
+  _: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const variantId = String(formData.get("variant_id") ?? "");
+  const mediaId = String(formData.get("media_id") ?? "");
+  if (
+    !uuid.safeParse(productId).success ||
+    !uuid.safeParse(variantId).success ||
+    (mediaId && !uuid.safeParse(mediaId).success)
+  ) {
+    return { error: "Selección no válida." };
+  }
+  try {
+    await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc(supabase, "catalog_set_variant_image", {
+        p_store_id: storeId,
+        p_variant_id: variantId,
+        p_media_id: mediaId || null,
+      }),
+    );
+  } catch (error) {
+    return failure("catalog.variant_image", error);
+  }
+  revalidatePath(`${productsPath(storeHandle)}/${productId}`);
+  return {
+    ok: true,
+    message: mediaId ? "Foto de la presentación guardada." : "Usará la foto del producto.",
+  };
 }
 
 // -----------------------------------------------------------------------------
