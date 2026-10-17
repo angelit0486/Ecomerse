@@ -128,6 +128,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 - Tanda 4 (en bloque, todo o nada, auditado por producto): asignar marca, agregar o quitar una categoría y cambiar precios por porcentaje (al centavo o al peso) con vista previa antes de aplicar; si el «precio antes» deja de ser mayor, se quita y se avisa. Un producto publicado no puede quedar sin poderse publicar (pgTAP `73_bulk_catalog_edits`).
 - Ficha del producto: sección «Existencias» para fijar lo que hay en mano por presentación, con motivo (pasa por `inventory_adjust`).
 - Tanda 5: «Duplicar» copia el producto completo (contenido y porciones por presentación, ficha sanitaria, atributos y fotos: medios nuevos que el worker copia y vuelve a procesar con `media.copy`, con la foto de cada presentación); aviso y filtro «Con pocas existencias» según el mínimo de cada ubicación (pgTAP `74_duplicate_and_low_stock`, integración `media-worker`). El orden de las presentaciones sigue siendo el de los valores de cada opción (el editor ahora lo dice).
+- Tanda 6: sección «Historial» en la ficha (cambios auditados del producto con quién, cuándo y el antes y después de los precios; exige `audit.read`), enlace «Ver movimientos» por presentación al historial de Inventario, «Ver en la tienda» en productos publicados de una tienda abierta y etiquetas en bloque (agregar o quitar). pgTAP `75_product_history_and_tags`.
 
 ## Verificaciones pendientes con servicios reales (para el informe final)
 

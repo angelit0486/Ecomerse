@@ -52,6 +52,8 @@ test.beforeAll(async () => {
   await admin`insert into public.media (store_id, owner_type, product_id, status, storage_path, position, alt_text) values
     (${tenant.storeId}, 'product', ${wheyId}, 'ready', ${`e2e/${run}/frente.webp`}, 0, 'Frente'),
     (${tenant.storeId}, 'product', ${wheyId}, 'ready', ${`e2e/${run}/chocolate.webp`}, 1, 'Chocolate')`;
+  // Tienda abierta: «Ver en la tienda» solo aparece en una tienda publicada.
+  await admin`update public.stores set status = 'active', launched_at = now() where id = ${tenant.storeId}`;
 });
 
 test("listado, acciones en bloque y fotos de cada presentación", async ({ page }) => {
@@ -137,6 +139,16 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await expect(page.getByText("1 producto agregado a la categoría.")).toBeVisible();
 
   await page.getByLabel("Seleccionar Creatina Gestión").check();
+  await page.getByLabel("Acción masiva").selectOption("tags_add");
+  await page.getByLabel("Etiqueta para los seleccionados").fill("Oferta");
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await expect(page.getByText("1 producto con la etiqueta «Oferta».")).toBeVisible();
+  const [tagged] = await admin<{ tags: string[] }[]>`
+    select p.tags from public.products p join public.product_variants v on v.product_id = p.id
+     where v.sku = ${`GK-${run}`.toUpperCase()}`;
+  expect(tagged!.tags).toEqual(["Oferta"]);
+
+  await page.getByLabel("Seleccionar Creatina Gestión").check();
   await page.getByLabel("Acción masiva").selectOption("prices");
   await page.getByLabel("Porcentaje de cambio").fill("10");
   await page.getByLabel("Redondeo").selectOption("peso");
@@ -175,6 +187,13 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   await vanillaStock.getByRole("button", { name: "Fijar existencias de Vainilla" }).click();
   await expect(vanillaStock.getByText("Listo: 20 en mano, 20 disponibles.")).toBeVisible();
   await expect(vanillaStock.getByText("20 disponibles", { exact: true })).toBeVisible();
+  // Historial del producto: el cambio de precio rápido, con quién y el antes y después.
+  const history = page.getByRole("region", { name: "Historial" });
+  await expect(history.getByText("Cambió precios de un producto")).toBeVisible();
+  await expect(history.getByText(/Vainilla: \$699\.00 → \$649\.00/)).toBeVisible();
+  await expect(history.getByText(ownerEmail).first()).toBeVisible();
+  // Pausado: no hay «Ver en la tienda».
+  await expect(page.getByRole("link", { name: /Ver en la tienda/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Mover la foto 2 antes" }).click();
   await expect(page.getByText("Foto movida.")).toBeVisible();
   const order = await admin<{ alt_text: string }[]>`
@@ -213,4 +232,13 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
     select m.alt_text from public.product_variants v join public.media m on m.id = v.image_id
      where v.product_id = ${copyId} and v.option_signature = 'Sabor=Chocolate'`;
   expect(chocolate!.alt_text).toBe("Chocolate");
+
+  // Publicado en una tienda abierta: enlace directo a su página pública.
+  const [creatinaRow] = await admin<{ id: string }[]>`
+    select v.product_id as id from public.product_variants v where v.sku = ${`GK-${run}`.toUpperCase()}`;
+  await page.goto(`/admin/${tenant.handle}/productos/${creatinaRow!.id}`);
+  await expect(page.getByRole("link", { name: /Ver en la tienda/ })).toHaveAttribute(
+    "href",
+    new RegExp(`^http://${tenant.handle}\\.localhost(:\\d+)?/productos/creatina-gestion$`),
+  );
 });

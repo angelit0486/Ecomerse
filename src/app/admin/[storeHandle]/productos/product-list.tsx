@@ -68,6 +68,7 @@ export function BulkProductsTable({
   const [rounding, setRounding] = useState<"centavo" | "peso">("centavo");
   const [brandId, setBrandId] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [tag, setTag] = useState("");
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
     async (previous: CatalogActionState, formData: FormData) => {
       const result = await bulkProductsAction(storeHandle, previous, formData);
@@ -153,6 +154,8 @@ export function BulkProductsTable({
             {canBulkEdit && categories.length ? (
               <option value="category_remove">Quitar de una categoría…</option>
             ) : null}
+            {canBulkEdit ? <option value="tags_add">Agregar etiqueta…</option> : null}
+            {canBulkEdit ? <option value="tags_remove">Quitar etiqueta…</option> : null}
             {canBulkEdit ? <option value="prices">Cambiar precios (%)…</option> : null}
             {canBulkDelete ? <option value="delete">Eliminar</option> : null}
           </select>
@@ -199,6 +202,17 @@ export function BulkProductsTable({
                 ))}
               </select>
             </>
+          ) : null}
+          {bulkAction === "tags_add" || bulkAction === "tags_remove" ? (
+            <input
+              name="tag"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              maxLength={60}
+              placeholder="Etiqueta"
+              aria-label="Etiqueta para los seleccionados"
+              className={`${nativeControl} w-40`}
+            />
           ) : null}
           {bulkAction === "prices" ? (
             <>

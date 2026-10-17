@@ -8,6 +8,8 @@ import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
+import { AUDIT_ACTIONS as ACTIONS } from "./labels";
+
 export const metadata: Metadata = { title: "Actividad" };
 
 type Props = {
@@ -37,62 +39,6 @@ const AREAS: Record<string, string> = {
 };
 
 /** Etiquetas legibles; una acción nueva sin etiqueta muestra su clave. */
-const ACTIONS: Record<string, string> = {
-  "order.cancelled": "Canceló un pedido",
-  "order.fulfilled": "Registró un envío",
-  "order.refund_requested": "Solicitó un reembolso",
-  "order.payment_confirmed_manually": "Confirmó un pago manual",
-  "order.staff_note_updated": "Editó la nota de un pedido",
-  "order.unshipped_closed": "Cerró unidades no enviadas",
-  "order.attention_resolved": "Resolvió la atención de un pedido",
-  "payments.account_saved": "Configuró el pago por transferencia",
-  "payments.stripe_connected": "Conectó Stripe",
-  "payments.stripe_status_changed": "Cambió el estado de Stripe",
-  "payments.mercadopago_connected": "Conectó Mercado Pago",
-  "payments.mercadopago_status_changed": "Cambió el estado de Mercado Pago",
-  "review.published": "Publicó una opinión",
-  "review.rejected": "Rechazó una opinión",
-  "customer.updated": "Editó un cliente",
-  "customer.anonymized": "Eliminó los datos personales de un cliente",
-  "customer.account_linked": "Un cliente creó su cuenta",
-  "product.published": "Publicó un producto",
-  "product.prices_updated": "Cambió precios de un producto",
-  "product.deleted": "Archivó un producto",
-  "product.restored": "Restauró un producto",
-  "product.duplicated": "Duplicó un producto",
-  "product.unpublished": "Se despublicó un producto",
-  "product.regulatory_updated": "Editó la ficha sanitaria de un producto",
-  "product.attributes_updated": "Cambió los atributos de un producto",
-  "inventory.adjusted": "Ajustó inventario",
-  "inventory.threshold_set": "Cambió un mínimo de inventario",
-  "category.saved": "Guardó una categoría",
-  "brand.saved": "Guardó una marca",
-  "attribute.saved": "Guardó un atributo",
-  "attribute.deleted": "Eliminó un atributo",
-  "store.updated": "Editó los datos de la tienda",
-  "store.taxes_updated": "Cambió los impuestos",
-  "store.notifications_updated": "Cambió las notificaciones",
-  "store.launched": "Publicó la tienda",
-  "store.compliance_category_enabled": "Declaró una categoría regulada",
-  "store.compliance_category_disabled": "Retiró una categoría regulada",
-  "theme.published": "Publicó la apariencia",
-  "theme.draft_saved": "Guardó un borrador de apariencia",
-  "shipping.zone_saved": "Guardó una zona de envío",
-  "shipping.rate_saved": "Guardó una tarifa de envío",
-  "discount.saved": "Guardó un descuento",
-  "member.invited": "Invitó a alguien al equipo",
-  "member.joined": "Se unió al equipo",
-  "member.role_changed": "Cambió un rol",
-  "member.removed": "Quitó a alguien del equipo",
-  "support_session.started": "Soporte de la plataforma entró a la tienda",
-  "support_session.ended": "Terminó una sesión de soporte",
-  "support_session.page_viewed": "Soporte vio una página",
-  "export.requested": "Descargó una exportación",
-  "import.requested": "Subió un archivo de importación",
-  "import.committed": "Confirmó una importación de productos",
-  "import.failed": "Una importación no se aplicó (sin cambios)",
-};
-
 /** Motivos que pone el sistema (los del equipo se muestran tal cual). */
 const REASONS: Record<string, string> = {
   compliance: "dejó de cumplir las reglas sanitarias",

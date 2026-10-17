@@ -221,7 +221,14 @@ class PublishBlocked extends Error {
 }
 
 const BULK_ACTIONS = ["publish", "draft", "archive", "delete"] as const;
-const BULK_EDITS = ["brand", "category_add", "category_remove", "prices"] as const;
+const BULK_EDITS = [
+  "brand",
+  "category_add",
+  "category_remove",
+  "tags_add",
+  "tags_remove",
+  "prices",
+] as const;
 type BulkEdit = (typeof BULK_EDITS)[number];
 
 interface BulkResult {
@@ -249,6 +256,13 @@ async function bulkEdit(
     .trim()
     .replace(",", ".");
   const rounding = formData.get("rounding") === "peso" ? "peso" : "centavo";
+  const tag = String(formData.get("tag") ?? "").trim();
+  if (action.startsWith("tags") && (tag.length < 1 || tag.length > 60)) {
+    return {
+      error: "Escribe una etiqueta de 1 a 60 caracteres.",
+      fields: { tag: "Etiqueta no válida." },
+    };
+  }
   const apply = formData.get("confirm") === "1";
   if (action === "brand" && brandId && !uuid.safeParse(brandId).success) {
     return { error: "Elige una marca." };
@@ -286,6 +300,14 @@ async function bulkEdit(
             p_category_id: categoryId,
             p_mode: action === "category_add" ? "add" : "remove",
           });
+        case "tags_add":
+        case "tags_remove":
+          return callRpc<BulkResult>(supabase, "catalog_bulk_tags", {
+            p_store_id: storeId,
+            p_product_ids: ids,
+            p_tag: tag,
+            p_mode: action === "tags_add" ? "add" : "remove",
+          });
         case "prices":
           return callRpc<BulkResult>(supabase, "catalog_bulk_adjust_prices", {
             p_store_id: storeId,
@@ -321,6 +343,8 @@ async function bulkEdit(
       brand: brandId ? `con la marca nueva` : `sin marca`,
       category_add: `agregado${n} a la categoría`,
       category_remove: `quitado${n} de la categoría`,
+      tags_add: `con la etiqueta «${tag}»`,
+      tags_remove: `sin la etiqueta «${tag}»`,
     }[action];
     return { ok: true, message: `${changed} producto${n} ${what}.` };
   } catch (error) {

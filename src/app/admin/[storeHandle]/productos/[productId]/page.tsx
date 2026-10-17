@@ -7,11 +7,14 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { getProductAttributeValues, listAttributes } from "@/server/catalog/attributes";
 import { getProduct, listBrands, listCategories, validateProduct } from "@/server/catalog/queries";
 import { getComplianceStatus, getRegulatoryInfo } from "@/server/compliance/queries";
+import { callRpc } from "@/server/db/rpc";
+import { storeOrigin } from "@/server/storefront/seo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { ProductAttributesForm } from "../attribute-forms";
 import { toEditorProduct } from "../editor-model";
 import { publishIssueMessage, STATUS_LABELS } from "../messages";
+import { ProductHistory, type HistoryEvent } from "../product-history";
 import { StockAdjust } from "../stock-adjust";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
@@ -72,6 +75,30 @@ export default async function ProductPage({ params, searchParams }: Props) {
       if (l.inventory_locations?.is_default) onHandDefault[l.variant_id] = l.on_hand;
     }
   }
+  const canSeeHistory = hasPermission(ctx, "audit.read");
+  const [history, domains] = await Promise.all([
+    canSeeHistory
+      ? callRpc<HistoryEvent[]>(supabase, "catalog_product_history", {
+          p_store_id: ctx.store.id,
+          p_product_id: product.id,
+          p_limit: 30,
+        })
+      : Promise.resolve([] as HistoryEvent[]),
+    product.status === "active" && !product.deleted_at && ctx.store.status === "active"
+      ? supabase
+          .from("store_domains")
+          .select("hostname, is_primary, type")
+          .eq("store_id", ctx.store.id)
+          .eq("status", "active")
+      : Promise.resolve({ data: null }),
+  ]);
+  // «Ver en la tienda»: solo un producto publicado de una tienda abierta.
+  const domain =
+    domains.data?.find((d) => d.is_primary) ??
+    domains.data?.find((d) => d.type === "platform_subdomain");
+  const publicUrl = domain
+    ? `${storeOrigin({ primary_hostname: domain.hostname, handle: ctx.store.handle })}/productos/${product.slug}`
+    : null;
   const canAdjustStock =
     hasPermission(ctx, "inventory.adjust") &&
     hasPermission(ctx, "inventory.read") &&
@@ -101,6 +128,15 @@ export default async function ProductPage({ params, searchParams }: Props) {
         <h1 className="mt-2 text-xl font-semibold">{product.title}</h1>
         <p className="text-sm text-fg-muted">
           {product.deleted_at ? "Eliminado" : (STATUS_LABELS[product.status] ?? product.status)}
+          {publicUrl ? (
+            <>
+              {" · "}
+              <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                Ver en la tienda
+                <span className="sr-only"> (se abre en otra pestaña)</span>
+              </a>
+            </>
+          ) : null}
         </p>
         {sp.creado === "1" ? (
           <p role="status" className="mt-2 text-sm text-success">
@@ -204,7 +240,23 @@ export default async function ProductPage({ params, searchParams }: Props) {
               label: Object.values(v.options).join(" / ") || v.sku || "Única",
               onHand: onHandDefault[v.id] ?? 0,
               available: stock[v.id] ?? 0,
+              movementsHref: `/admin/${ctx.store.handle}/inventario/${v.id}`,
             }))}
+        />
+      ) : null}
+
+      {canSeeHistory ? (
+        <ProductHistory
+          events={history}
+          variantLabels={Object.fromEntries(
+            product.variants.map((v) => [
+              v.id,
+              Object.values(v.options).join(" / ") || v.sku || "Única",
+            ]),
+          )}
+          currency={ctx.store.currency}
+          timeZone={ctx.store.timezone}
+          activityHref={`/admin/${ctx.store.handle}/ajustes/actividad`}
         />
       ) : null}
 

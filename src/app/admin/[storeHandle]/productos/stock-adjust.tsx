@@ -14,6 +14,8 @@ export interface StockRow {
   /** En mano en la ubicación principal (lo que fija el ajuste). */
   onHand: number;
   available: number;
+  /** Historial de movimientos de la presentación (Inventario). */
+  movementsHref: string;
 }
 
 /**
@@ -76,6 +78,9 @@ function StockRowForm({ storeHandle, row }: { storeHandle: string; row: StockRow
         <p className="text-[13px] text-fg-muted">
           {row.available} disponible{row.available === 1 ? "" : "s"}
         </p>
+        <a href={row.movementsHref} className="text-[13px] underline">
+          Ver movimientos<span className="sr-only"> de {row.label}</span>
+        </a>
       </div>
       <label className="grid gap-0.5 text-[12px]">
         En mano
