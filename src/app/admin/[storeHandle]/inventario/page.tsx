@@ -53,6 +53,16 @@ export default async function InventoryPage({ params, searchParams }: Props) {
     p_limit: PAGE_SIZE + 1,
   });
   const visible = rows.slice(0, PAGE_SIZE);
+  // Lo que está a la venta con proveedores (ADR-025): solo cantidades.
+  const supplierRows =
+    visible.length > 0
+      ? await callRpc<{ variant_id: string; available: number; reserved: number }[]>(
+          supabase,
+          "inventory_supplier_totals",
+          { p_store_id: ctx.store.id, p_variant_ids: visible.map((r) => r.variant_id) },
+        )
+      : [];
+  const supplierTotals = new Map(supplierRows.map((r) => [r.variant_id, r]));
   const canAdjust = hasPermission(ctx, "inventory.adjust");
   const base = `/admin/${ctx.store.handle}/inventario`;
   const link = (overrides: Record<string, string | null>) => {
@@ -73,8 +83,8 @@ export default async function InventoryPage({ params, searchParams }: Props) {
       <header>
         <h1 className="text-xl font-semibold">Inventario</h1>
         <p className="text-sm text-fg-muted">
-          Existencias por variante. «Disponible» es lo que se puede vender: en mano menos reservado
-          por pedidos.
+          Existencias de tu bodega por variante. «Disponible» es lo que se puede vender: en mano
+          menos reservado por pedidos. Lo de proveedores se indica aparte.
         </p>
       </header>
 
@@ -174,6 +184,15 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                     Sin seguimiento de inventario: siempre disponible.
                   </p>
                 )}
+                {row.track_inventory && supplierTotals.get(row.variant_id) ? (
+                  <p className="text-sm text-fg-muted">
+                    Con proveedores: {supplierTotals.get(row.variant_id)!.available} disponibles
+                    {supplierTotals.get(row.variant_id)!.reserved > 0
+                      ? `, ${supplierTotals.get(row.variant_id)!.reserved} reservadas`
+                      : ""}
+                    . La tienda los vende cuando se acaban los tuyos.
+                  </p>
+                ) : null}
                 {canAdjust && row.track_inventory ? (
                   <details>
                     <summary className="cursor-pointer text-sm font-medium">

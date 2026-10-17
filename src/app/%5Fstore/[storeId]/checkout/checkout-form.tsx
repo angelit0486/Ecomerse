@@ -194,7 +194,7 @@ export function CheckoutForm({
           defaultValue={a?.phone ?? ""}
           error={f.phone}
         />
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 items-center gap-3 text-sm">
           <input type="checkbox" name="accepts_marketing" value="1" />
           Quiero recibir novedades y promociones por email
         </label>

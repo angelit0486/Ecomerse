@@ -91,21 +91,13 @@ export function SupplierOrderForm({
           className="rounded-[var(--radius-control)] border border-control bg-surface p-2 text-sm"
         />
       </label>
-      <div className="flex flex-wrap items-center gap-2">
+      {/* El siguiente paso, visible; los demás estados (saltar pasos, problema,
+          cancelar), agrupados para no mostrar seis botones a la vez. */}
+      <div className="flex flex-wrap items-center gap-3">
         {next.length > 0 ? (
-          next.map((s) => (
-            <Button
-              key={s}
-              type="submit"
-              name="status"
-              value={s}
-              size="sm"
-              variant={s === next[0] ? "primary" : "secondary"}
-              loading={pending}
-            >
-              {SUPPLIER_ORDER_ACTIONS[s]}
-            </Button>
-          ))
+          <Button type="submit" name="status" value={next[0]} size="sm" loading={pending}>
+            {SUPPLIER_ORDER_ACTIONS[next[0]!]}
+          </Button>
         ) : (
           <Button
             type="submit"
@@ -120,6 +112,28 @@ export function SupplierOrderForm({
         )}
         <FormFeedback state={state} />
       </div>
+      {next.length > 1 ? (
+        <details className="text-sm">
+          <summary className="inline-flex min-h-10 cursor-pointer items-center text-fg-muted underline underline-offset-4">
+            Otros estados
+          </summary>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {next.slice(1).map((s) => (
+              <Button
+                key={s}
+                type="submit"
+                name="status"
+                value={s}
+                size="sm"
+                variant={s === "cancelled" ? "danger" : "secondary"}
+                loading={pending}
+              >
+                {SUPPLIER_ORDER_ACTIONS[s]}
+              </Button>
+            ))}
+          </div>
+        </details>
+      ) : null}
     </form>
   );
 }

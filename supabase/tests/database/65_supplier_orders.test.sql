@@ -7,7 +7,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(31);
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text;
@@ -133,6 +133,15 @@ select is(public.supplier_orders_set_status(tests.fx('store_a'), tests.fx('so1')
           'entregado');
 select is(pg_temp.err(format($$select public.supplier_orders_set_status(%L, %L, 'cancelled')$$,
             tests.fx('store_a'), tests.fx('so1'))), 'conflict/invalid_transition', 'un despacho entregado es final');
+-- Volver a guardar datos de un despacho cerrado no mueve su fecha de cierre
+-- (now() es fijo en la transacción de la prueba: se simula un cierre de ayer).
+select tests.logout();
+update public.supplier_orders set closed_at = now() - interval '1 day' where id = tests.fx('so1');
+select tests.login('owner');
+select public.supplier_orders_set_status(tests.fx('store_a'), tests.fx('so1'), 'delivered', '{"note":"Cliente confirmó"}');
+select ok((select closed_at < now() - interval '23 hours' and note = 'Cliente confirmó'
+             from public.supplier_orders where id = tests.fx('so1')),
+          'guardar la nota de un despacho entregado conserva su fecha de cierre');
 select is((public.supplier_orders_list(tests.fx('store_a'), 'open') -> 'items'), '[]'::jsonb,
           'la bandeja de pendientes queda vacía');
 select is((public.supplier_orders_list(tests.fx('store_a'), 'all') -> 'counts' ->> 'delivered'), '1', 'con su conteo');

@@ -5,6 +5,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { centsToInput, formatMoney } from "@/lib/money/format";
+import {
+  axisValueLabel,
+  paymentAttemptLabel,
+  paymentProviderLabel,
+} from "@/lib/orders/axis-labels";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
@@ -159,6 +164,12 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   for (const r of [items, events, shipments, shipmentItems, refunds]) if (r.error) throw r.error;
   const supplierOrders = await getOrderSupplierOrders(supabase, ctx.store.id, orderId);
   const m = (cents: number) => formatMoney(cents, order.currency as string);
+  // Fechas en el calendario de la tienda (el servidor corre en UTC).
+  const when = new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: ctx.store.timezone,
+  });
   const lastPayment = payments.data?.at(-1) as { provider: string; status: string } | undefined;
   const canConfirm =
     hasPermission(ctx, "orders.update") &&
@@ -232,8 +243,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Pedido {order.display_number as string}</h1>
         <p className="text-sm text-fg-muted">
-          {visibleStatus(order as never)} ·{" "}
-          {new Date(order.placed_at as string).toLocaleString("es-MX")}
+          {visibleStatus(order as never)} · {when.format(new Date(order.placed_at as string))}
         </p>
       </header>
 
@@ -372,6 +382,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             <SupplierOrderCard
               key={so.id}
               storeHandle={ctx.store.handle}
+              timeZone={ctx.store.timezone}
               supplierOrder={so}
               canUpdate={hasPermission(ctx, "orders.update")}
             />
@@ -507,7 +518,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
           <ul className="space-y-1">
             {payments.data.map((p) => (
               <li key={p.id as string}>
-                {p.provider as string} · {p.status as string} · {m(p.amount as number)}
+                {paymentProviderLabel(p.provider as string)} ·{" "}
+                {paymentAttemptLabel(p.status as string)} · {m(p.amount as number)}
               </li>
             ))}
           </ul>
@@ -521,9 +533,13 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         <ol className="space-y-1">
           {(events.data ?? []).map((e) => (
             <li key={e.id as string}>
-              {new Date(e.created_at as string).toLocaleString("es-MX")} ·{" "}
-              {EVENT_LABELS[e.type as string] ?? (e.type as string)}
-              {e.to_value ? `: ${e.from_value as string} → ${e.to_value as string}` : ""}
+              <time dateTime={e.created_at as string} className="text-fg-muted tabular-nums">
+                {when.format(new Date(e.created_at as string))}
+              </time>{" "}
+              · {EVENT_LABELS[e.type as string] ?? (e.type as string)}
+              {e.to_value
+                ? `: ${axisValueLabel(e.from_value as string | null)} → ${axisValueLabel(e.to_value as string)}`
+                : ""}
               {e.message ? ` · ${e.message as string}` : ""}
             </li>
           ))}

@@ -100,7 +100,7 @@ function ProductCard({
               loading={eager ? "eager" : "lazy"}
               decoding="async"
               {...(eager ? { fetchPriority: "high" as const } : {})}
-              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+              className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] ${product.availability === "out_of_stock" ? "opacity-55 grayscale" : ""}`}
             />
           ) : (
             <div

@@ -186,14 +186,17 @@ export function StoreFooter({
   const legal = settings.footer?.legal_text;
   return (
     // Pie invertido (texto del tema sobre su color de texto): el contraste es el
-    // mismo par fg/bg que ya valida el tema; el gris sale de mezclar ambos.
-    <footer className="mt-24 bg-[var(--sf-fg)] text-[var(--sf-bg)] [--sf-footer-muted:color-mix(in_srgb,var(--sf-bg)_72%,var(--sf-fg))] [--sf-footer-rule:color-mix(in_srgb,var(--sf-bg)_22%,var(--sf-fg))]">
+    // mismo par fg/bg que ya valida el tema. Sin grises mezclados: con el par mínimo
+    // permitido (4.5:1) cualquier mezcla bajaría de 4.5:1; la jerarquía la dan
+    // tamaño, peso y mayúsculas. El foco usa el color de fondo del tema (el
+    // primario solo se valida contra el fondo claro).
+    <footer className="mt-24 bg-[var(--sf-fg)] text-[var(--sf-bg)] [--sf-footer-muted:var(--sf-bg)] [&_:focus-visible]:outline-[var(--sf-bg)] [--sf-footer-rule:color-mix(in_srgb,var(--sf-bg)_22%,var(--sf-fg))]">
       <div className="mx-auto max-w-6xl px-4 pt-14">
         <p className="text-4xl font-bold leading-none tracking-tight text-balance [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-6xl">
           {store.name}
         </p>
       </div>
-      <div className="mx-auto mt-10 grid max-w-6xl gap-10 px-4 py-10 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto mt-4 grid max-w-6xl gap-10 px-4 py-10 text-sm sm:mt-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
           {/* Accesos que toda tienda tiene (pulido visual): el pie nunca queda vacío. */}
           <nav aria-label="Tienda">

@@ -119,7 +119,7 @@ export function LineForm({
         name="remove"
         value="1"
         disabled={pending}
-        className="h-11 px-2 text-sm underline disabled:opacity-60"
+        className="h-11 px-0 text-sm underline underline-offset-4 disabled:opacity-60"
         aria-label={`Quitar ${title}`}
       >
         Quitar

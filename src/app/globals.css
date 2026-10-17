@@ -15,6 +15,12 @@
     line-height: 1.5;
   }
 
+  /* Un fieldset toma por defecto el ancho mínimo de su contenido (min-inline-size:
+     min-content): una tabla con scroll dentro desbordaba la página en móvil. */
+  fieldset {
+    min-width: 0;
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
@@ -41,6 +47,15 @@
     overflow-x: clip;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+  }
+  /* Casillas y opciones de 20 px con el color del tema (las nativas de 13 px
+     eran difíciles de tocar en móvil). */
+  .sf-root input[type="checkbox"],
+  .sf-root input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    accent-color: var(--sf-primary);
   }
   .sf-root :focus-visible {
     outline-color: var(--sf-primary);

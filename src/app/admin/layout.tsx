@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </Button>
         </form>
       </header>
-      <div className="mx-auto max-w-3xl px-4 py-8">{children}</div>
+      <div className="mx-auto max-w-6xl px-4 py-5 md:py-8">{children}</div>
     </div>
   );
 }

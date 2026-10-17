@@ -5,21 +5,27 @@ import type { SupplierOrder } from "@/server/orders/supplier-orders";
 
 import { SupplierOrderForm } from "./forms";
 
-const date = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : null;
-
 /** Un despacho de proveedor: qué pedirle, su estado y el formulario de avance. */
 export function SupplierOrderCard({
   storeHandle,
   supplierOrder: so,
   canUpdate,
   showOrder,
+  timeZone,
 }: {
   storeHandle: string;
   supplierOrder: SupplierOrder;
   canUpdate: boolean;
   showOrder?: boolean;
+  /** Zona horaria de la tienda (el servidor corre en UTC). */
+  timeZone: string;
 }) {
+  const fmt = new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  });
+  const date = (iso: string | null) => (iso ? fmt.format(new Date(iso)) : null);
   const lead =
     so.supplier.lead_time_min_days != null && so.supplier.lead_time_max_days != null
       ? `Plazo informado: ${so.supplier.lead_time_min_days}–${so.supplier.lead_time_max_days} días`

@@ -208,7 +208,8 @@ export interface SupplierCsvState {
   rowErrors?: { row: number; message: string }[];
 }
 
-const CSV_MAX_BYTES = 2 * 1024 * 1024;
+// Bajo el límite de 1 MB de las server actions de Next (5 000 filas caben de sobra).
+const CSV_MAX_BYTES = 900 * 1024;
 
 /**
  * Lista de disponibilidad del proveedor en CSV (ADR-025 paso 2): todo o nada.
@@ -223,7 +224,7 @@ export async function importSupplierCsv(
   if (!uuid.safeParse(supplierId).success) return { error: "Proveedor no válido." };
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Elige un archivo CSV." };
-  if (file.size > CSV_MAX_BYTES) return { error: "El archivo pasa de 2 MB." };
+  if (file.size > CSV_MAX_BYTES) return { error: "El archivo pasa de 900 KB." };
   const parsed = parseSupplierCsv(await file.text());
   const rowErrors = (errors: SupplierCsvError[]) =>
     errors.slice(0, 50).map((e) => ({ row: e.row, message: SUPPLIER_CSV_MESSAGES[e.field] }));

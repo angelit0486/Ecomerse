@@ -6,6 +6,8 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { AdminNav } from "./_shared/admin-nav";
+
 type Props = { children: ReactNode; params: Promise<{ storeHandle: string }> };
 
 interface MyStore {
@@ -72,10 +74,10 @@ export default async function StoreLayout({ children, params }: Props) {
   ].filter((item) => item.show);
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row">
+    <div className="flex flex-col gap-5 md:flex-row md:gap-8">
       <aside className="md:w-56 md:shrink-0">
-        <details className="mb-4 rounded-md border border-border">
-          <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+        <details className="mb-3 rounded-md border border-border md:mb-4">
+          <summary className="flex min-h-10 cursor-pointer items-center px-3 text-sm font-medium">
             {ctx.store.name}
           </summary>
           <ul className="border-t border-border py-1" aria-label="Cambiar de tienda">
@@ -92,20 +94,7 @@ export default async function StoreLayout({ children, params }: Props) {
             ))}
           </ul>
         </details>
-        <nav aria-label="Secciones de la tienda">
-          <ul className="space-y-1">
-            {nav.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="block rounded px-3 py-1.5 text-sm hover:bg-canvas"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <AdminNav items={nav.map(({ href, label }) => ({ href, label }))} base={base} />
       </aside>
       <div className="min-w-0 flex-1 space-y-4">
         {ctx.supportGrantId ? (

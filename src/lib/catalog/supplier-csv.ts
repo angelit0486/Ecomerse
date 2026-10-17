@@ -61,7 +61,8 @@ const AVAILABILITY: Record<string, SupplierCsvRow["availability"]> = {
 
 export const SUPPLIER_CSV_MESSAGES: Record<SupplierCsvField, string> = {
   sku: "No hay una variante con ese SKU en tu tienda.",
-  availability: "Disponibilidad: disponible, limitado, no disponible o desconocido.",
+  availability:
+    "Disponibilidad: disponible, limitado, no disponible o desconocido (o escribe la cantidad).",
   quantity: "Cantidad: número entero de 0 a 1 000 000 (obligatoria si está disponible).",
   supplier_sku: "SKU del proveedor: hasta 100 caracteres.",
   unit_cost: "Costo: un monto como 450.00.",
@@ -136,8 +137,12 @@ export function parseSupplierCsv(
     if (availText) {
       availability = AVAILABILITY[availText];
       if (!availability) errors.push({ row, field: "availability" });
+    } else if (qtyText) {
+      availability = "available";
     } else {
-      availability = qtyText ? "available" : "unknown";
+      // Fila sin disponibilidad ni cantidad: no se adivina. Tratarla como
+      // «desconocido» dejaría en 0 las existencias del proveedor sin aviso.
+      errors.push({ row, field: "availability" });
     }
     if ((availability === "available" || availability === "limited") && !qtyText) {
       errors.push({ row, field: "quantity" });

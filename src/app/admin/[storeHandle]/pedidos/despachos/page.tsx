@@ -84,6 +84,7 @@ export default async function SupplierOrdersPage({ params, searchParams }: Props
             <SupplierOrderCard
               key={so.id}
               storeHandle={ctx.store.handle}
+              timeZone={ctx.store.timezone}
               supplierOrder={so}
               canUpdate={canUpdate}
               showOrder

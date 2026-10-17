@@ -132,13 +132,14 @@ export function BulkProductsTable({
                   />
                 </TD>
               ) : null}
-              <TD>
+              {/* Ancho mínimo: en móvil el título se partía palabra por palabra. */}
+              <TD className="min-w-52">
                 <Link href={row.href} className="font-medium underline-offset-2 hover:underline">
                   {row.title}
                 </Link>
               </TD>
-              <TD>{row.status}</TD>
-              <TD>{row.price}</TD>
+              <TD className="whitespace-nowrap">{row.status}</TD>
+              <TD className="whitespace-nowrap tabular-nums">{row.price}</TD>
               <TD>{row.variants}</TD>
             </TR>
           ))}

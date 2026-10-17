@@ -74,6 +74,13 @@ describe("CSV de disponibilidad del proveedor", () => {
     }
   });
 
+  it("una fila sin disponibilidad ni cantidad es un error (no deja en 0 las existencias)", () => {
+    expect(parseSupplierCsv("sku,disponibilidad,cantidad\nPRO-1,,\n")).toEqual({
+      ok: false,
+      errors: [{ row: 2, field: "availability" }],
+    });
+  });
+
   it("exige sku y alguna de disponibilidad o cantidad", () => {
     expect(parseSupplierCsv("codigo,cantidad\nX,1\n")).toMatchObject({
       ok: false,

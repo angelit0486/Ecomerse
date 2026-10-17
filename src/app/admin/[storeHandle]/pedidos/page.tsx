@@ -78,6 +78,12 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   const last = rows.at(-1);
   const next = (data ?? []).length > PAGE && last ? `${last.placed_at}|${last.id}` : null;
   const base = `/admin/${ctx.store.handle}/pedidos`;
+  // Fechas en el calendario de la tienda (el servidor corre en UTC).
+  const when = new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: ctx.store.timezone,
+  });
 
   return (
     <section className="space-y-6">
@@ -133,7 +139,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
                       {o.display_number}
                     </Link>
                   </td>
-                  <td className="py-2 pr-3">{new Date(o.placed_at).toLocaleString("es-MX")}</td>
+                  <td className="py-2 pr-3 tabular-nums">{when.format(new Date(o.placed_at))}</td>
                   <td className="py-2 pr-3">{visibleStatus(o)}</td>
                   <td className="py-2 text-right">{formatMoney(o.total, o.currency)}</td>
                 </tr>
