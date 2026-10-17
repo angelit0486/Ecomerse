@@ -109,7 +109,10 @@ function deliver(
     url: new URL(
       `https://app.test/api/webhooks/payments/mercadopago?data.id=${opts.queryId ?? dataId}&type=payment`,
     ),
-    headers: new Headers({ "x-signature": `ts=${ts},v1=${sig}`, "x-request-id": requestId }),
+    headers: new Headers({
+      "x-signature": `ts=${ts},v1=${sig}`,
+      "x-upstream-request-id": requestId,
+    }),
     rawBody: body,
     now: new Date(),
     log,
@@ -245,6 +248,20 @@ describe("webhook de Mercado Pago (§34.4)", () => {
     const o = await order();
     expect((await deliver(charge(o.paymentId, "approved"))).body.outcome).toBe("paid");
     expect((await deliver(charge(o.paymentId, "approved"))).body.outcome).toBe("duplicate");
+    expect(await state(o.orderId)).toMatchObject({ payment_status: "paid", needs_attention: true });
+  });
+
+  it("dos cobros aprobados distintos a la vez: uno paga y el otro queda para reembolso", async () => {
+    const o = await order();
+    const outcomes = (
+      await Promise.all([
+        deliver(charge(o.paymentId, "approved")),
+        deliver(charge(o.paymentId, "approved")),
+      ])
+    )
+      .map((r) => r.body.outcome)
+      .sort();
+    expect(outcomes).toEqual(["duplicate", "paid"]);
     expect(await state(o.orderId)).toMatchObject({ payment_status: "paid", needs_attention: true });
   });
 

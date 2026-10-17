@@ -453,6 +453,12 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
    - Un error 4xx es un rechazo definitivo (`ProviderHttpError`, compartido con Stripe).
 7. **Sin expirar la preferencia al cancelar un pedido.** Vence sola en `expiration_date_to`. Un pago que llegue después de cancelar sigue el camino CF-04 existente: el pedido queda pagado, en atención y con reembolso solicitado.
 
+**Correcciones de la revisión adversarial (2026-10-17).**
+
+- El proxy sobrescribe `x-request-id` (request_id propio de la plataforma), y ese valor forma parte de lo que firma Mercado Pago. Sin corregirlo, toda notificación real se habría rechazado con `bad_signature`. Ahora el proxy copia el valor original a `x-upstream-request-id`, solo en `/api/webhooks/payments/mercadopago`, y descarta esa cabecera si la manda el cliente en cualquier ruta. El adaptador la lee de ahí. Lo cubre una prueba del proxy.
+- `system.apply_mercadopago_payment` bloquea pedido → intento antes de decidir (migración `20261018001400`). Así, dos cobros aprobados simultáneos dejan uno pagado y el otro en atención para reembolso. Lo cubre una prueba de integración concurrente.
+- Limitación conocida, ya prevista en el punto 1: con una sola credencial de plataforma solo **una** tienda puede conectar Mercado Pago. Para más tiendas hace falta OAuth (marketplace).
+
 **Alternativas descartadas.**
 
 - (a) Checkout API, con la tarjeta dentro de la tienda: más superficie PCI y más trabajo, sin beneficio para el lanzamiento.

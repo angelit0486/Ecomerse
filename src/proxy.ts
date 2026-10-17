@@ -2,7 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { serverEnv } from "@/server/env";
 import { createLogger } from "@/server/observability/logger";
-import { REQUEST_ID_HEADER, generateRequestId } from "@/server/observability/request-id";
+import {
+  MERCADOPAGO_WEBHOOK_PATH,
+  REQUEST_ID_HEADER,
+  UPSTREAM_REQUEST_ID_HEADER,
+  generateRequestId,
+} from "@/server/observability/request-id";
 import { classifyHost, isInternalStorePath, normalizeHost } from "@/server/routing/host";
 import { decideStorefront } from "@/server/routing/storefront-decision";
 import { buildSecurityHeaders, generateNonce } from "@/server/security/headers";
@@ -35,6 +40,7 @@ const INTERNAL_HEADERS = [
   "x-pathname",
   "x-nonce",
   REQUEST_ID_HEADER,
+  UPSTREAM_REQUEST_ID_HEADER,
 ];
 
 const log = createLogger();
@@ -52,6 +58,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const requestHeaders = new Headers(request.headers);
   for (const name of INTERNAL_HEADERS) requestHeaders.delete(name);
+  // La firma del webhook de Mercado Pago incluye su x-request-id (ADR-028).
+  const upstreamId = request.headers.get(REQUEST_ID_HEADER);
+  if (
+    request.nextUrl.pathname === MERCADOPAGO_WEBHOOK_PATH &&
+    upstreamId &&
+    /^[\x21-\x7e]{1,200}$/.test(upstreamId)
+  ) {
+    requestHeaders.set(UPSTREAM_REQUEST_ID_HEADER, upstreamId);
+  }
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
   // Next.js lee el nonce de la CSP del request para aplicarlo a sus scripts.

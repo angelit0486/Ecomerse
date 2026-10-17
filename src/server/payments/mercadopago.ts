@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 
 import { AppError } from "@/server/errors";
+import { UPSTREAM_REQUEST_ID_HEADER } from "@/server/observability/request-id";
 import { constantTimeEqual } from "@/server/security/hmac";
 
 import type {
@@ -323,7 +324,8 @@ export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoPr
       const check = verifyMercadoPagoSignature({
         secret: cfg.webhookSecret,
         header: headers.get("x-signature"),
-        requestId: headers.get("x-request-id"),
+        // El proxy reemplaza x-request-id; el original firmado llega aparte.
+        requestId: headers.get(UPSTREAM_REQUEST_ID_HEADER),
         dataId,
         now,
         ...(cfg.toleranceSeconds ? { toleranceSeconds: cfg.toleranceSeconds } : {}),

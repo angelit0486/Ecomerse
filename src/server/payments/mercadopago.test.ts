@@ -256,7 +256,7 @@ describe("adaptador", () => {
     });
     const ok = await p.verifyWebhook({
       account,
-      headers: new Headers({ "x-signature": header("123", "req"), "x-request-id": "req" }),
+      headers: new Headers({ "x-signature": header("123", "req"), "x-upstream-request-id": "req" }),
       rawBody,
       now: NOW,
     });
@@ -270,7 +270,7 @@ describe("adaptador", () => {
     });
     const bad = await p.verifyWebhook({
       account,
-      headers: new Headers({ "x-signature": header("124", "req"), "x-request-id": "req" }),
+      headers: new Headers({ "x-signature": header("124", "req"), "x-upstream-request-id": "req" }),
       rawBody,
       now: NOW,
     });

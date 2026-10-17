@@ -78,6 +78,25 @@ describe("proxy · cabeceras", () => {
     expect(requestId).not.toBe("valor-del-cliente");
   });
 
+  it("webhook de Mercado Pago: conserva su x-request-id firmado en una cabecera interna", async () => {
+    const mp = await proxy(
+      req("https://app.example.test/api/webhooks/payments/mercadopago?data.id=1", {
+        "x-request-id": "bb56a2f1-6aae-46ac-982e-9dcd3581d08e",
+      }),
+    );
+    expect(mp.headers.get("x-middleware-request-x-upstream-request-id")).toBe(
+      "bb56a2f1-6aae-46ac-982e-9dcd3581d08e",
+    );
+    // En cualquier otra ruta no se copia, y el cliente nunca la inyecta directamente.
+    const other = await proxy(
+      req("https://app.example.test/api/health", {
+        "x-request-id": "valor",
+        "x-upstream-request-id": "inyectado",
+      }),
+    );
+    expect(other.headers.get("x-middleware-request-x-upstream-request-id")).toBeNull();
+  });
+
   it("usa un nonce distinto en cada request", async () => {
     const a = (await proxy(req("https://app.example.test/"))).headers.get(
       "content-security-policy",
