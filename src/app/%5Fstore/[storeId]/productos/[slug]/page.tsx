@@ -31,7 +31,7 @@ import { AVAILABILITY_LABELS, money } from "../../_components/format";
 import { PAYMENT_LABELS } from "../../_components/header";
 import { JsonLd } from "../../_components/json-ld";
 import { ProductGallery } from "../../_components/product-gallery";
-import { ProductGrid } from "../../_components/product-card";
+import { ProductGrid } from "../../_components/rated-product-grid";
 import { ProductAttributes } from "../../_components/product-attributes";
 import { ProductReviews } from "../../_components/product-reviews";
 import { SupplementInfo } from "../../_components/supplement-info";

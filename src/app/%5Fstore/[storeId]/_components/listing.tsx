@@ -25,7 +25,7 @@ import {
 
 import { ActiveFilters, FacetFilters } from "./facet-filters";
 import { Pagination } from "./pagination";
-import { ProductGrid } from "./product-card";
+import { ProductGrid } from "./rated-product-grid";
 import { money } from "./format";
 import { SortForm } from "./sort-form";
 

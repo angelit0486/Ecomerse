@@ -5,7 +5,7 @@ import { mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { GoalChips } from "./goal-chips";
-import { ProductGrid } from "./product-card";
+import { ProductGrid } from "./rated-product-grid";
 import { ThemeLink } from "./theme-link";
 
 /**
@@ -14,7 +14,7 @@ import { ThemeLink } from "./theme-link";
  * enlaces se revalidan al mostrar (ThemeLink). Testimonios sin estrellas ni
  * JSON-LD de reseñas (D-F9-04).
  */
-type Store = { currency: string; locale: string; launched_at?: string | null };
+type Store = { id: string; currency: string; locale: string; launched_at?: string | null };
 
 const BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-6 font-medium text-[var(--sf-btn-fg)]";

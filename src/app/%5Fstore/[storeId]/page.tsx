@@ -13,7 +13,7 @@ import { GoalChips } from "./_components/goal-chips";
 import { HomeSections } from "./_components/home-sections";
 import { JsonLd } from "./_components/json-ld";
 import { TrustBar } from "./_components/trust-bar";
-import { ProductGrid } from "./_components/product-card";
+import { ProductGrid } from "./_components/rated-product-grid";
 
 /**
  * Inicio de la tienda (§20.2, F9-T02): las secciones que configuró la tienda
@@ -111,7 +111,7 @@ function TemplateHome({
 }: {
   goals: { key: string; label: string }[];
   trust: ReactNode;
-  store: { name: string; currency: string; locale: string };
+  store: { id: string; name: string; currency: string; locale: string };
   categories: NonNullable<Awaited<ReturnType<typeof getHome>>["categories"]>;
   featured: NonNullable<Awaited<ReturnType<typeof getHome>>["featured"]>;
 }) {

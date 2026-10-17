@@ -1,7 +1,11 @@
 import Link from "next/link";
 
 import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
-import { mediaUrl, type ProductCard as Card } from "@/server/storefront/catalog";
+import {
+  mediaUrl,
+  type ProductCard as Card,
+  type RatingSummaries,
+} from "@/server/storefront/catalog";
 
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
@@ -11,8 +15,11 @@ export function ProductGrid({
   store,
   eager = 0,
   carousel = false,
+  ratings = {},
 }: {
   products: Card[];
+  /** Calificaciones reales por producto (opiniones publicadas, ADR-029). */
+  ratings?: RatingSummaries;
   store: { currency: string; locale: string; launched_at?: string | null };
   /** Cuántas imágenes cargar sin lazy (las de arriba, para el LCP). */
   eager?: number;
@@ -38,7 +45,13 @@ export function ProductGrid({
           key={product.id}
           className={carousel ? "w-[46%] shrink-0 snap-start sm:w-auto" : undefined}
         >
-          <ProductCard product={product} store={store} eager={index < eager} now={now} />
+          <ProductCard
+            product={product}
+            store={store}
+            eager={index < eager}
+            now={now}
+            rating={ratings[product.id]}
+          />
         </li>
       ))}
     </ul>
@@ -50,11 +63,13 @@ function ProductCard({
   store,
   eager,
   now,
+  rating,
 }: {
   product: Card;
   store: { currency: string; locale: string; launched_at?: string | null };
   eager: boolean;
   now: Date;
+  rating?: { average: number; count: number } | undefined;
 }) {
   // Las mismas insignias que la ficha (F9-T04): una sola función.
   const badges = productBadges({
@@ -123,6 +138,23 @@ function ProductCard({
           {product.title}
         </h3>
       </Link>
+      {rating && rating.count > 0 ? (
+        <p className="mt-1 flex items-center gap-1 text-xs tabular-nums">
+          <span aria-hidden className="text-[var(--sf-fg)]">
+            ★
+          </span>
+          <span>
+            {rating.average.toLocaleString("es-MX", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}
+          </span>
+          <span className="text-[var(--sf-muted)]">
+            ({rating.count}
+            <span className="sr-only"> {rating.count === 1 ? "opinión" : "opiniones"}</span>)
+          </span>
+        </p>
+      ) : null}
       {product.min_price !== null ? (
         // Partes separadas con flex-wrap: sin espacios entre elementos JSX la línea
         // no se puede partir y desbordaba la tarjeta en móvil.

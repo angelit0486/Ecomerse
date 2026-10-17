@@ -380,6 +380,25 @@ const reviewsCached = cachedRead("product_reviews", (storeId: string, productId:
   ),
 );
 
+/** Calificación de las tarjetas (ADR-029): solo productos con opiniones publicadas. */
+export type RatingSummaries = Record<string, { average: number; count: number }>;
+
+export async function getRatingSummaries(
+  storeId: string,
+  productIds: string[],
+): Promise<RatingSummaries> {
+  assertStore(storeId);
+  const ids = [...new Set(productIds.filter((id) => UUID_RE.test(id)))].sort().slice(0, 100);
+  if (ids.length === 0) return {};
+  return (await ratingsCached(storeId, ids.join(","))) ?? {};
+}
+
+const ratingsCached = cachedRead("rating_summaries", (storeId: string, ids: string) =>
+  call<RatingSummaries>(
+    gatewayDb()`select storefront.rating_summaries(${storeId}::uuid, ${ids.split(",")}::uuid[]) as value`,
+  ),
+);
+
 /** Ficha sanitaria pública de un producto regulado (ADR-021, R-T03). */
 export interface ProductRegulatory {
   category: string;

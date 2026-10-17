@@ -6,7 +6,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(26);
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text;
@@ -103,6 +103,11 @@ select tests.logout();
 select is(storefront.product_reviews(tests.fx('store_a'), tests.fx('prod')) - 'items',
           '{"count": 1, "average": 4.0, "distribution": {"1": 0, "2": 0, "3": 0, "4": 1, "5": 0}}'::jsonb,
           'publicada: cuenta, promedio y distribución reales');
+select is(storefront.rating_summaries(tests.fx('store_a'), array[tests.fx('prod'), tests.fx('other')]),
+          jsonb_build_object(tests.fx('prod')::text, '{"average": 4.0, "count": 1}'::jsonb),
+          'tarjetas: calificación real solo de productos con opiniones publicadas');
+select is(storefront.rating_summaries(tests.fx('store_b'), array[tests.fx('prod')]), '{}'::jsonb,
+          'otra tienda no obtiene calificaciones de esta');
 select ok((storefront.product_reviews(tests.fx('store_a'), tests.fx('prod')))::text !~ 'ana@example|#3001|García',
           'sin email, sin número de pedido y sin apellido');
 select ok(exists (select 1 from audit.audit_logs where action = 'review.published' and store_id = tests.fx('store_a')),

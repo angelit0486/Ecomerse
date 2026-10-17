@@ -17,7 +17,7 @@ import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
 import { GoalChips } from "../_components/goal-chips";
-import { ProductGrid } from "../_components/product-card";
+import { ProductGrid } from "../_components/rated-product-grid";
 import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
 import { DiscountForm, LineForm } from "./cart-forms";

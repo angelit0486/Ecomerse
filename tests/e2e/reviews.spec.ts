@@ -106,6 +106,9 @@ test("la dueña la publica y la ficha muestra el promedio real", async ({ page }
   await expect(reviews.getByText("ana@example.test")).toHaveCount(0);
   await expectNoSeriousA11yViolations(page);
   const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join("");
+  // El listado muestra la calificación real en la tarjeta.
+  await page.goto(`${origin()}/productos`);
+  await expect(page.getByRole("article").getByText("(1 opinión)")).toBeVisible();
   expect(ld).toContain('"@type":"AggregateRating"');
   expect(ld).toContain('"reviewCount":1');
 });
