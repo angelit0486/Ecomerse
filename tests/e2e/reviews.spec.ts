@@ -104,6 +104,9 @@ test("la dueña la publica y la ficha muestra el promedio real", async ({ page }
   await page.goto(`${origin()}/productos/creatina`);
   const reviews = page.getByRole("region", { name: "Opiniones" });
   await expect(reviews.getByText("1 opinión de compradores verificados")).toBeVisible();
+  // Junto al título, el resumen lleva a las opiniones.
+  await page.getByRole("link", { name: /4,0 de 5 \(1 opinión\)/ }).click();
+  await expect(page).toHaveURL(/#sf-opiniones$/);
   await expect(reviews.getByText("Se disuelve bien")).toBeVisible();
   await expect(reviews.getByText(/Compra verificada/)).toBeVisible();
   await expect(reviews.getByText("ana@example.test")).toHaveCount(0);

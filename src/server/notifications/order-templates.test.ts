@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { orderShippedEmail, staffOrderEmail, type OrderEmailData } from "./order-templates";
+import {
+  orderDeliveredEmail,
+  orderShippedEmail,
+  staffOrderEmail,
+  type OrderEmailData,
+} from "./order-templates";
 
 const base: OrderEmailData = {
   store: {
@@ -54,6 +59,17 @@ describe("plantillas de pedidos", () => {
     );
     expect(ok.html).toContain('<img src="https://x/l.png"');
     expect(ok.html).not.toContain("red;x");
+  });
+
+  it("entregado: invita a opinar con el enlace del pedido y escapa los datos", () => {
+    const m = orderDeliveredEmail(
+      { ...base, orderUrl: "https://tienda.test/pedido/1?t=x" },
+      "c@x.test",
+    );
+    expect(m.subject).toContain("fue entregado");
+    expect(m.html).toContain("Opinar sobre mi compra");
+    expect(m.text).toContain("#opinar");
+    expect(m.html).not.toContain("<script");
   });
 
   it("staff: sin datos de contacto del comprador ni remitente de la tienda", () => {

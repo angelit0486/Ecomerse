@@ -268,6 +268,26 @@ export default async function ProductPage({ params }: Props) {
             >
               {product.title}
             </h1>
+            {reviews && reviews.count > 0 && reviews.average != null ? (
+              <a
+                href="#sf-opiniones"
+                className="inline-flex min-h-11 items-center gap-2 text-sm underline-offset-4 hover:underline"
+              >
+                <span aria-hidden className="text-[var(--sf-fg)]">
+                  ★
+                </span>
+                <span className="font-medium tabular-nums">
+                  {reviews.average.toLocaleString("es-MX", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+                  <span className="sr-only"> de 5</span>
+                </span>
+                <span className="text-[var(--sf-muted)]">
+                  ({reviews.count === 1 ? "1 opinión" : `${reviews.count} opiniones`})
+                </span>
+              </a>
+            ) : null}
           </header>
           {single ? (
             <div className="space-y-4">

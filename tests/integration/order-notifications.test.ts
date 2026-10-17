@@ -157,6 +157,21 @@ describe("notificaciones de pedidos", () => {
     await expect(runJob("order.paid", { order_id: "x" })).rejects.toThrow("payload.order_id");
   });
 
+  it("entregado: aviso con invitación a opinar en la página del pedido; una sola vez", async () => {
+    const { orderId, paymentId, idem } = await placeOrder("fake");
+    await admin`select app.confirm_order_payment(${paymentId}, 'system', 'fake')`;
+    const [sh] = await admin<{ id: string }[]>`
+      insert into public.shipments (store_id, order_id, status, shipped_at, delivered_at, idempotency_key)
+      values (${storeId}, ${orderId}, 'delivered', now(), now(), ${`ntf-del-${randomBytes(8).toString("hex")}`})
+      returning id`;
+    await runJob("order.delivered", { order_id: orderId, shipment_id: sh!.id });
+    await runJob("order.delivered", { order_id: orderId, shipment_id: sh!.id });
+    expect(channel.sent).toHaveLength(1);
+    const mail = channel.sent[0]!;
+    expect(mail.subject).toContain("fue entregado");
+    expect(mail.text).toContain(`/pedido/${orderId}?t=${guestToken(SECRET, idem)}#opinar`);
+  });
+
   it("cancelación y reembolso confirmado: un aviso cada uno", async () => {
     const { orderId, paymentId } = await placeOrder("fake");
     await admin`select app.confirm_order_payment(${paymentId}, 'system', 'fake')`;

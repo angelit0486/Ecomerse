@@ -3,7 +3,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(33);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('viewer', 'viewer@a.io');
@@ -146,6 +146,15 @@ select tests.set_fx('s3', public.orders_fulfill(tests.fx('store_a'), tests.fx('o
 select public.orders_mark_delivered(tests.fx('store_a'), tests.fx('s3'));
 select is((select status || '/' || fulfillment_status from public.orders where id = tests.fx('o3')), 'completed/fulfilled',
   'surtido y entregado: completado');
+select public.orders_mark_delivered(tests.fx('store_a'), tests.fx('s3'));
+select tests.logout();
+select is((select count(*)::int from system.jobs where type = 'order.delivered'
+            and payload ->> 'shipment_id' = tests.fx('s3')::text), 1,
+  'entregado: se encola una vez el aviso con la invitación a opinar (ADR-029), aunque se marque dos veces');
+select is((select dedupe_key from system.jobs where type = 'order.delivered'
+            and payload ->> 'shipment_id' = tests.fx('s3')::text), 'order.delivered:' || tests.fx('s3'),
+  'con clave por envío');
+select tests.login('owner');
 select tests.set_fx('r3', public.orders_request_refund(tests.fx('store_a'), tests.fx('o3'), 500, '[]', false, null,
   'reemb-00000000000010'));
 select tests.logout();

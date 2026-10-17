@@ -76,6 +76,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["payment.late_without_stock", lazy("payment.late_without_stock", orderNotifications)],
   ["orders.complete", lazy("orders.complete", orders)],
   ["order.shipped", lazy("order.shipped", orderNotifications)],
+  ["order.delivered", lazy("order.delivered", orderNotifications)],
   ["order.cancelled", lazy("order.cancelled", orderNotifications)],
   ["refund.succeeded", lazy("refund.succeeded", orderNotifications)],
   ["refund.execute", lazy("refund.execute", refunds)],

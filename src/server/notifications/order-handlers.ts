@@ -8,6 +8,7 @@ import { alreadyDelivered, payloadId, sendNotification } from "./handlers";
 import {
   orderCancelledEmail,
   orderConfirmationEmail,
+  orderDeliveredEmail,
   orderReceivedEmail,
   orderShippedEmail,
   paymentFailedEmail,
@@ -209,6 +210,19 @@ export function createOrderNotificationHandlers(
     );
   };
 
+  const delivered: JobHandler = async (job, { log }) => {
+    const shipmentId = payloadId(job, "shipment_id");
+    const n = await load(job, { shipment: shipmentId });
+    if (!n?.shipment) return log.info("Envío inexistente: nada que avisar");
+    await deliver(
+      job,
+      n,
+      shipmentId,
+      "order_delivered",
+      orderDeliveredEmail(emailData(n), n.order.email),
+    );
+  };
+
   const cancelled: JobHandler = async (job, { log }) => {
     const n = await load(job);
     if (!n) return log.info("Pedido inexistente: nada que avisar");
@@ -251,6 +265,7 @@ export function createOrderNotificationHandlers(
     ["order.paid", paid],
     ["payment.failed", failed],
     ["order.shipped", shipped],
+    ["order.delivered", delivered],
     ["order.cancelled", cancelled],
     ["refund.succeeded", refunded],
     ["payment.late_without_stock", lateWithoutStock],
