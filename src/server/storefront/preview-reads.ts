@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { gatewayDb } from "@/server/db/role-clients";
+import { gatewayDb, type TransactionSql } from "@/server/db/role-clients";
 
 import type { HomeData } from "./catalog";
 import { parseStorePublic, type StorePublic, UUID_RE } from "./store-public";
@@ -21,10 +21,30 @@ export const getStorePreview = cache(async (storeId: string): Promise<StorePubli
   return parseStorePublic(rows[0]?.store ?? null);
 });
 
-/** Portada del borrador (secciones resueltas con los mismos filtros públicos). */
+/**
+ * Catálogo con los productos en borrador de la tienda (ADR-032): una transacción
+ * del gateway con `pruva.preview_store` LOCAL (`set_config(…, true)`). Se descarta
+ * al terminar la transacción, así que nunca queda en una conexión del pool ni la
+ * ve otra lectura.
+ */
+export async function previewCatalogRead<T>(
+  storeId: string,
+  read: (db: TransactionSql) => Promise<T>,
+): Promise<T> {
+  if (!UUID_RE.test(storeId)) throw new Error("storeId inválido");
+  return (await gatewayDb().begin(async (tx) => {
+    await tx`select set_config('pruva.preview_store', ${storeId}, true)`;
+    return read(tx);
+  })) as T;
+}
+
+/** Portada del borrador (secciones resueltas con los mismos filtros, más los borradores). */
 export const getHomePreview = cache(async (storeId: string): Promise<HomeData> => {
   if (!UUID_RE.test(storeId)) return { sections: null, featured: [], categories: [] };
-  const rows = await gatewayDb()<{ home: HomeData | null }[]>`
-    select storefront.get_home_preview(${storeId}::uuid) as home`;
+  const rows = await previewCatalogRead(
+    storeId,
+    (db) => db<{ home: HomeData | null }[]>`
+      select storefront.get_home_preview(${storeId}::uuid) as home`,
+  );
   return rows[0]?.home ?? { sections: null, featured: [], categories: [] };
 });

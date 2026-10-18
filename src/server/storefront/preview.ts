@@ -27,6 +27,16 @@ export interface VerifiedPreview {
   exp: number;
 }
 
+/**
+ * Página de la tienda a la que lleva la vista previa (ADR-032: «Vista previa»
+ * de un producto en borrador desde el panel). Solo rutas internas con letras
+ * minúsculas, números, guiones y diagonales; cualquier otra cosa lleva al inicio
+ * (nunca una redirección a otro sitio).
+ */
+export function safePreviewPath(value: string | null | undefined): string {
+  return value && value.length <= 200 && /^\/[a-z0-9-]+(\/[a-z0-9-]+)*$/.test(value) ? value : "/";
+}
+
 /** Devuelve la tienda y la caducidad si el token es auténtico y vigente. */
 export function verifyPreviewToken(
   secret: string,

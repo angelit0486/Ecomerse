@@ -107,6 +107,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const publicUrl = domain
     ? `${storeOrigin({ primary_hostname: domain.hostname, handle: ctx.store.handle })}/productos/${product.slug}`
     : null;
+  // Un borrador se ve en la vista previa privada de la tienda (ADR-032): la ruta
+  // del panel crea el token y abre la ficha.
+  const previewHref =
+    product.status === "draft" && !product.deleted_at && hasPermission(ctx, "appearance.manage")
+      ? `/admin/${ctx.store.handle}/apariencia/vista-previa?ruta=${encodeURIComponent(`/productos/${product.slug}`)}`
+      : null;
   const canAdjustStock =
     hasPermission(ctx, "inventory.adjust") &&
     hasPermission(ctx, "inventory.read") &&
@@ -141,6 +147,15 @@ export default async function ProductPage({ params, searchParams }: Props) {
               {" · "}
               <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="underline">
                 Ver en la tienda
+                <span className="sr-only"> (se abre en otra pestaña)</span>
+              </a>
+            </>
+          ) : null}
+          {previewHref ? (
+            <>
+              {" · "}
+              <a href={previewHref} target="_blank" rel="noopener noreferrer" className="underline">
+                Ver en la vista previa (solo tú)
                 <span className="sr-only"> (se abre en otra pestaña)</span>
               </a>
             </>

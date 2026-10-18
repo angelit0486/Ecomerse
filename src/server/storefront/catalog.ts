@@ -4,10 +4,12 @@ import { cache } from "react";
 
 import { GOAL_KEY, hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
 import type { SupplementSheet } from "@/server/catalog/regulatory";
-import { gatewayDb } from "@/server/db/role-clients";
+import { gatewayDb, type TransactionSql } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 
 import { cachedRead, COMPLIANCE_TAG } from "./cache";
+import { isStorePreview } from "./preview-mode";
+import { previewCatalogRead } from "./preview-reads";
 
 /**
  * Lecturas del catálogo publicado (funciones storefront.*, rol
@@ -37,6 +39,8 @@ export interface ProductCard {
   published_at?: string | null;
   /** Porciones por envase de la ficha sanitaria (precio por porción en la tarjeta). */
   servings?: number | null;
+  /** Borrador visible solo en la vista previa de la tienda (ADR-032): nunca se compra. */
+  unpublished?: boolean;
 }
 
 export interface ProductPage {
@@ -102,6 +106,8 @@ export interface ProductDetail {
   max_price: number | null;
   updated_at: string;
   published_at: string | null;
+  /** Borrador visible solo en la vista previa de la tienda (ADR-032): nunca se compra. */
+  unpublished?: boolean;
   availability: Availability;
   brand: { name: string; slug: string } | null;
   options: { name: string; values: string[] }[];
@@ -205,6 +211,22 @@ async function call<T>(query: Promise<{ value: unknown }[]>): Promise<T | null> 
   return (rows[0]?.value as T | null | undefined) ?? null;
 }
 
+/** El pool del gateway o la transacción de la vista previa (ADR-032). */
+type Db = ReturnType<typeof gatewayDb> | TransactionSql;
+
+/**
+ * Lectura del catálogo (ADR-032): en la vista previa de ESTA tienda incluye sus
+ * borradores y nunca pasa por la caché compartida (depende de la cookie de la
+ * dueña); fuera de ella, la lectura publicada de siempre.
+ */
+async function catalogRead<R>(
+  storeId: string,
+  preview: (db: Db) => Promise<R>,
+  published: () => Promise<R>,
+): Promise<R> {
+  return (await isStorePreview(storeId)) ? previewCatalogRead(storeId, preview) : published();
+}
+
 /**
  * Solo se cachea la primera página sin búsqueda ni filtros de atributos:
  * cursores, textos libres y combinaciones de filtros son ilimitados y llenarían
@@ -230,7 +252,7 @@ function brandsParam(filters: ListFilters): string[] | null {
   return filters.brands?.length ? filters.brands.slice(0, 20) : null;
 }
 
-function attributesParam(db: ReturnType<typeof gatewayDb>, filters: ListFilters) {
+function attributesParam(db: Db, filters: ListFilters) {
   return filters.attributes && hasSelection(filters.attributes)
     ? db.json(filters.attributes)
     : null;
@@ -238,14 +260,22 @@ function attributesParam(db: ReturnType<typeof gatewayDb>, filters: ListFilters)
 
 export async function listProducts(storeId: string, filters: ListFilters): Promise<ProductPage> {
   assertStore(storeId);
-  return cacheable(filters)
-    ? listProductsCached(storeId, filters)
-    : readListProducts(storeId, filters);
+  return catalogRead(
+    storeId,
+    (db) => readListProducts(storeId, filters, db),
+    () =>
+      cacheable(filters)
+        ? listProductsCached(storeId, filters)
+        : readListProducts(storeId, filters),
+  );
 }
 
-const readListProducts = async (storeId: string, filters: ListFilters): Promise<ProductPage> => {
+const readListProducts = async (
+  storeId: string,
+  filters: ListFilters,
+  db: Db = gatewayDb(),
+): Promise<ProductPage> => {
   const cursor = decodeListCursor(filters.cursor);
-  const db = gatewayDb();
   const page = await call<ProductPage>(db`
     select storefront.list_products(
       ${storeId}::uuid, ${filters.categoryPath ?? null}, ${filters.brandSlug ?? null},
@@ -257,16 +287,26 @@ const readListProducts = async (storeId: string, filters: ListFilters): Promise<
   return page ?? ({ items: [], sort: "newest", next_cursor: null } satisfies ProductPage);
 };
 
-const listProductsCached = cachedRead("list_products", readListProducts);
+const listProductsCached = cachedRead("list_products", (storeId: string, filters: ListFilters) =>
+  readListProducts(storeId, filters),
+);
 
 /** Filtros con conteo del mismo listado (mismas reglas de caché que el listado). */
 export async function listFacets(storeId: string, filters: ListFilters): Promise<Facet[]> {
   assertStore(storeId);
-  return cacheable(filters) ? listFacetsCached(storeId, filters) : readListFacets(storeId, filters);
+  return catalogRead(
+    storeId,
+    (db) => readListFacets(storeId, filters, db),
+    () =>
+      cacheable(filters) ? listFacetsCached(storeId, filters) : readListFacets(storeId, filters),
+  );
 }
 
-const readListFacets = async (storeId: string, filters: ListFilters): Promise<Facet[]> => {
-  const db = gatewayDb();
+const readListFacets = async (
+  storeId: string,
+  filters: ListFilters,
+  db: Db = gatewayDb(),
+): Promise<Facet[]> => {
   return (
     (await call<Facet[]>(db`
       select storefront.list_facets(
@@ -278,7 +318,9 @@ const readListFacets = async (storeId: string, filters: ListFilters): Promise<Fa
   );
 };
 
-const listFacetsCached = cachedRead("list_facets", readListFacets);
+const listFacetsCached = cachedRead("list_facets", (storeId: string, filters: ListFilters) =>
+  readListFacets(storeId, filters),
+);
 
 /** Marca del directorio (super prompt §8): solo con productos publicados. */
 export interface BrandSummary {
@@ -290,12 +332,18 @@ export interface BrandSummary {
 
 export async function listBrands(storeId: string): Promise<BrandSummary[]> {
   assertStore(storeId);
-  return (await brandsCached(storeId)) ?? [];
+  return (
+    (await catalogRead(
+      storeId,
+      (db) => readBrands(storeId, db),
+      () => brandsCached(storeId),
+    )) ?? []
+  );
 }
 
-const brandsCached = cachedRead("list_brands", (storeId: string) =>
-  call<BrandSummary[]>(gatewayDb()`select storefront.list_brands(${storeId}::uuid) as value`),
-);
+const readBrands = (storeId: string, db: Db = gatewayDb()) =>
+  call<BrandSummary[]>(db`select storefront.list_brands(${storeId}::uuid) as value`);
+const brandsCached = cachedRead("list_brands", (storeId: string) => readBrands(storeId));
 
 /** Cuántas marcas y ofertas hay: el menú solo muestra lo que tiene contenido. */
 export interface DiscoverySummary {
@@ -305,20 +353,30 @@ export interface DiscoverySummary {
 
 export async function getDiscoverySummary(storeId: string): Promise<DiscoverySummary> {
   assertStore(storeId);
-  return (await discoveryCached(storeId)) ?? { brands: 0, offers: 0 };
+  return (
+    (await catalogRead(
+      storeId,
+      (db) => readDiscovery(storeId, db),
+      () => discoveryCached(storeId),
+    )) ?? { brands: 0, offers: 0 }
+  );
 }
 
+const readDiscovery = (storeId: string, db: Db = gatewayDb()) =>
+  call<DiscoverySummary>(db`select storefront.discovery_summary(${storeId}::uuid) as value`);
 const discoveryCached = cachedRead("discovery_summary", (storeId: string) =>
-  call<DiscoverySummary>(
-    gatewayDb()`select storefront.discovery_summary(${storeId}::uuid) as value`,
-  ),
+  readDiscovery(storeId),
 );
 
 export const getProduct = cache(
   async (storeId: string, slug: string): Promise<ProductDetail | null> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
-    return productCached(storeId, slug);
+    return catalogRead(
+      storeId,
+      (db) => readProduct(storeId, slug, db),
+      () => productCached(storeId, slug),
+    );
   },
 );
 
@@ -327,14 +385,22 @@ export const getRelatedProducts = cache(
   async (storeId: string, slug: string): Promise<ProductCard[]> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return [];
-    return (await relatedCached(storeId, slug)) ?? [];
+    return (
+      (await catalogRead(
+        storeId,
+        (db) => readRelated(storeId, slug, db),
+        () => relatedCached(storeId, slug),
+      )) ?? []
+    );
   },
 );
 
-const relatedCached = cachedRead("related_products", (storeId: string, slug: string) =>
+const readRelated = (storeId: string, slug: string, db: Db = gatewayDb()) =>
   call<ProductCard[]>(
-    gatewayDb()`select storefront.related_products(${storeId}::uuid, ${slug}, 8) as value`,
-  ),
+    db`select storefront.related_products(${storeId}::uuid, ${slug}, 8) as value`,
+  );
+const relatedCached = cachedRead("related_products", (storeId: string, slug: string) =>
+  readRelated(storeId, slug),
 );
 
 /** Umbral real de envío gratis para el país de la tienda (F9-T03); null si no hay. */
@@ -450,21 +516,24 @@ export async function getGoalCovers(
     .slice(0, 8);
   if (clean.length === 0) return {};
   try {
-    return await goalCoversCached(storeId, clean.join(","));
+    return await catalogRead(
+      storeId,
+      (db) => readGoalCovers(storeId, clean.join(","), db),
+      () => goalCoversCached(storeId, clean.join(",")),
+    );
   } catch {
     return {};
   }
 }
 
-const goalCoversCached = cachedRead("goal_covers", async (storeId: string, keys: string) => {
+const readGoalCovers = async (storeId: string, keys: string, db: Db = gatewayDb()) => {
   const pages = await Promise.all(
     keys.split(",").map(async (key) => {
-      const page = await readListProducts(storeId, {
-        attributes: { [GOAL_KEY]: [key] },
-        sort: "best_selling",
-        available: true,
-        limit: 4,
-      });
+      const page = await readListProducts(
+        storeId,
+        { attributes: { [GOAL_KEY]: [key] }, sort: "best_selling", available: true, limit: 4 },
+        db,
+      );
       return [key, page.items.filter((p) => p.image)] as const;
     }),
   );
@@ -477,7 +546,10 @@ const goalCoversCached = cachedRead("goal_covers", async (storeId: string, keys:
       return [key, pick?.image ?? null] as const;
     }),
   );
-});
+};
+const goalCoversCached = cachedRead("goal_covers", (storeId: string, keys: string) =>
+  readGoalCovers(storeId, keys),
+);
 
 const CATEGORY_PATH_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*)*$/;
 
@@ -496,26 +568,31 @@ export async function getCategoryCovers(
     .slice(0, 12);
   if (clean.length === 0) return {};
   try {
-    return await categoryCoversCached(storeId, clean.join(","));
+    return await catalogRead(
+      storeId,
+      (db) => readCategoryCovers(storeId, clean.join(","), db),
+      () => categoryCoversCached(storeId, clean.join(",")),
+    );
   } catch {
     return {};
   }
 }
 
-const categoryCoversCached = cachedRead("category_covers", async (storeId: string, paths: string) =>
+const readCategoryCovers = async (storeId: string, paths: string, db: Db = gatewayDb()) =>
   Object.fromEntries(
     await Promise.all(
       paths.split(",").map(async (path) => {
-        const page = await readListProducts(storeId, {
-          categoryPath: path,
-          sort: "best_selling",
-          available: true,
-          limit: 1,
-        });
+        const page = await readListProducts(
+          storeId,
+          { categoryPath: path, sort: "best_selling", available: true, limit: 1 },
+          db,
+        );
         return [path, page.items[0]?.image ?? null] as const;
       }),
     ),
-  ),
+  );
+const categoryCoversCached = cachedRead("category_covers", (storeId: string, paths: string) =>
+  readCategoryCovers(storeId, paths),
 );
 
 /** Ficha sanitaria pública de un producto regulado (ADR-021, R-T03). */
@@ -531,7 +608,11 @@ export const getProductRegulatory = cache(
   async (storeId: string, slug: string): Promise<ProductRegulatory | null> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return null;
-    return productRegulatoryCached(storeId, slug);
+    return catalogRead(
+      storeId,
+      (db) => readProductRegulatory(storeId, slug, db),
+      () => productRegulatoryCached(storeId, slug),
+    );
   },
 );
 
@@ -539,7 +620,13 @@ export const getProductAttributes = cache(
   async (storeId: string, slug: string): Promise<ProductAttribute[]> => {
     assertStore(storeId);
     if (!SLUG_RE.test(slug) || slug.length > 120) return [];
-    return (await productAttributesCached(storeId, slug)) ?? [];
+    return (
+      (await catalogRead(
+        storeId,
+        (db) => readProductAttributes(storeId, slug, db),
+        () => productAttributesCached(storeId, slug),
+      )) ?? []
+    );
   },
 );
 
@@ -674,25 +761,27 @@ export function mediaUrl(path: string): string {
   return `${serverEnv().NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-media/${path}`;
 }
 
+const readProduct = (storeId: string, slug: string, db: Db = gatewayDb()) =>
+  call<ProductDetail>(db`select storefront.get_product(${storeId}::uuid, ${slug}) as value`);
 const productCached = cachedRead("get_product", (storeId: string, slug: string) =>
-  call<ProductDetail>(
-    gatewayDb()`select storefront.get_product(${storeId}::uuid, ${slug}) as value`,
-  ),
+  readProduct(storeId, slug),
 );
+const readProductRegulatory = (storeId: string, slug: string, db: Db = gatewayDb()) =>
+  call<ProductRegulatory>(
+    db`select storefront.get_product_regulatory(${storeId}::uuid, ${slug}) as value`,
+  );
 const productRegulatoryCached = cachedRead(
   "get_product_regulatory",
-  (storeId: string, slug: string) =>
-    call<ProductRegulatory>(
-      gatewayDb()`select storefront.get_product_regulatory(${storeId}::uuid, ${slug}) as value`,
-    ),
+  (storeId: string, slug: string) => readProductRegulatory(storeId, slug),
   [COMPLIANCE_TAG],
 );
+const readProductAttributes = (storeId: string, slug: string, db: Db = gatewayDb()) =>
+  call<ProductAttribute[]>(
+    db`select storefront.get_product_attributes(${storeId}::uuid, ${slug}) as value`,
+  );
 const productAttributesCached = cachedRead(
   "get_product_attributes",
-  (storeId: string, slug: string) =>
-    call<ProductAttribute[]>(
-      gatewayDb()`select storefront.get_product_attributes(${storeId}::uuid, ${slug}) as value`,
-    ),
+  (storeId: string, slug: string) => readProductAttributes(storeId, slug),
 );
 const categoryCached = cachedRead("get_category", (storeId: string, path: string) =>
   call<CategoryDetail>(
@@ -706,7 +795,10 @@ const pageCached = cachedRead("get_page", (storeId: string, slug: string) =>
   call<PageDetail>(gatewayDb()`select storefront.get_page(${storeId}::uuid, ${slug}) as value`),
 );
 
-/** Sugerencias del buscador (F9-T04): lo publicado que coincide con lo escrito. */
+/**
+ * Sugerencias del buscador (F9-T04): lo publicado que coincide con lo escrito
+ * (en la vista previa, también los borradores, ADR-032).
+ */
 export interface SearchSuggestions {
   products: {
     slug: string;
@@ -739,9 +831,9 @@ export async function searchSuggestions(
   assertStore(storeId);
   const q = query.trim().slice(0, 60);
   if (q.length < 2) return EMPTY_SUGGESTIONS;
-  return (
-    (await call<SearchSuggestions>(
-      gatewayDb()`select storefront.search_suggestions(${storeId}::uuid, ${q}) as value`,
-    )) ?? EMPTY_SUGGESTIONS
-  );
+  const read = (db: Db) =>
+    call<SearchSuggestions>(
+      db`select storefront.search_suggestions(${storeId}::uuid, ${q}) as value`,
+    );
+  return (await catalogRead(storeId, read, () => read(gatewayDb()))) ?? EMPTY_SUGGESTIONS;
 }

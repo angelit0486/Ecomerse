@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AddToCart } from "./add-to-cart";
+import { UnpublishedNotice } from "./unpublished";
 import { VARIANT_IMAGE_EVENT } from "./product-gallery";
 
 /**
@@ -32,11 +33,14 @@ export function VariantSelector({
   title,
   options,
   variants,
+  unpublished = false,
 }: {
   storeId: string;
   title?: string;
   options: { name: string; values: string[] }[];
   variants: SelectorVariant[];
+  /** Borrador en la vista previa (ADR-032): se ven opciones y precios, sin comprar. */
+  unpublished?: boolean;
 }) {
   const initial = variants.find((v) => v.available) ?? variants[0];
   const [selection, setSelection] = useState<Record<string, string>>(initial?.options ?? {});
@@ -130,13 +134,17 @@ export function VariantSelector({
           </div>
         </fieldset>
       ))}
-      <AddToCart
-        storeId={storeId}
-        variantId={selected?.id ?? null}
-        available={Boolean(selected?.available)}
-        title={title}
-        price={selected?.price ?? null}
-      />
+      {unpublished ? (
+        <UnpublishedNotice />
+      ) : (
+        <AddToCart
+          storeId={storeId}
+          variantId={selected?.id ?? null}
+          available={Boolean(selected?.available)}
+          title={title}
+          price={selected?.price ?? null}
+        />
+      )}
     </div>
   );
 }

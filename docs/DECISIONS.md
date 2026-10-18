@@ -588,3 +588,39 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
 - Pruebas: pgTAP `78_staff_password_attempts` y E2E `password-login`, que cubre los requisitos, la creación con AAL2, el error genérico, que la contraseña sin TOTP no da acceso y el evento registrado.
 - Acción recomendada en Supabase alojado: subir la longitud mínima de contraseña a 12 (Authentication → Providers → Email) y, con el plan Pro, activar la protección contra contraseñas filtradas.
 - Mismo día, a pedido del propietario: en la vista previa, *almanzaangel164@gmail.com* pasó a ser el dueño de la organización de la tienda `demo`. El usuario de demostración quedó suspendido, con auditoría `organization.ownership_transferred`.
+
+### ADR-032 — Vista previa privada de los productos en borrador · **aprobado por el propietario el 2026-10-18**
+
+**Contexto.** Mientras el asesor regulatorio no revise el perfil de suplementos de México, los productos de la tienda se quedan en borrador: el validador no deja publicarlos. La vista previa mostraba el tema y la portada del borrador, pero sin productos, así que la dueña no podía ver su tienda real ni juzgar el diseño. Mostrar productos no publicados cambia qué lee la tienda pública (el catálogo, contrato crítico de GATE0 §43): por eso es un ADR.
+
+**Decisión.**
+
+1. **Solo en la vista previa de una tienda.** El servidor verifica la firma del proxy (la cookie de vista previa de ESA tienda) y abre una transacción del gateway con `set_config('pruva.preview_store', <tienda>, true)`. Es local a la transacción: se descarta al terminar y nunca queda en una conexión del pool. Sin esa marca, todo sigue igual que antes.
+2. **Qué incluye.** Con la marca, `app.visible_product_statuses` devuelve `active` y `draft`, y las lecturas del catálogo de esa tienda incluyen sus borradores:
+   - listados, filtros, «Ofertas», buscador y sugerencias, y la portada (`app.listing_products`, `storefront.list_products`);
+   - ficha, ficha sanitaria, atributos y relacionados;
+   - menú (marcas y ofertas) y directorio de marcas.
+     Archivados y borrados nunca se muestran.
+3. **Marcados y sin compra.** Cada tarjeta y cada ficha llevan `unpublished`. La tienda muestra «Sin publicar» y, en lugar de los botones de compra, el aviso «Solo tú ves este producto en la vista previa. Tus clientes no lo ven ni lo pueden comprar hasta que lo publiques desde el panel.» Tampoco hay JSON-LD de producto.
+   El carrito, el pedido, «Agregar» desde la tarjeta (`card_variants`), las opiniones y el sitemap siguen pidiendo productos activos y no leen la marca: un borrador nunca se compra, ni con la cookie.
+4. **Nunca en la caché pública.** En la vista previa las lecturas del catálogo no pasan por `unstable_cache`. La marca solo la pone `preview-reads.ts`; una prueba estática lo verifica.
+5. **Quién la ve.** Quien puede abrir la vista previa: el permiso de apariencia y, desde este ADR, también `products.read`. Los roles del sistema que tienen apariencia (dueña, administración y marketing) ya lo tenían. Un rol personalizado con apariencia pero sin productos pierde la vista previa.
+6. **Panel.** La ficha de un producto en borrador tiene «Ver en la vista previa (solo tú)». Abre la tienda directo en ese producto con `ruta`, que solo acepta rutas internas: letras minúsculas, números, guiones y diagonales; cualquier otra cosa lleva al inicio.
+7. **Orden.** Los borradores no tienen fecha de publicación. En «Más recientes» se ordenan por su fecha de creación: el cursor de páginas no se rompe y los activos no cambian, porque siempre tienen fecha (constraint `products_active_was_published`).
+
+**Alternativas descartadas.**
+
+- (a) **Publicar sin el validador:** saltarse el cumplimiento.
+- (b) **Funciones `*_preview` duplicadas** (lista, ficha, relacionados…): dos copias de cada lectura que se separarían con el tiempo.
+- (c) **Un parámetro `p_preview` en cada función:** cambia firmas usadas en muchos lugares por lo mismo que hace la marca transaccional.
+
+**Consecuencias.**
+
+- Migración `20261018003300_preview_drafts.sql` (helper y ocho lecturas redefinidas con los mismos cuerpos, más la marca).
+- Pruebas:
+  - pgTAP `80_preview_drafts` (28): sin marca, con marca, nunca en el carrito ni en «Agregar» ni en el sitemap, sin cruzar tiendas, tienda suspendida, marca ajena o vacía, y privilegios;
+  - unitarias de la tarjeta, de la ruta segura y de la marca local;
+  - E2E `preview-drafts`: cliente sin borrador, la dueña lo ve marcado y sin botones desde el panel, nada llega a la caché pública y al salir desaparece.
+- Precisión sobre el criterio de cierre de la Fase 0 del plan («agregas uno al carrito desde la tarjeta»): con este ADR un borrador no se puede agregar. «Agregar» funciona con los productos publicados. Probarlo con un borrador requeriría cambiar el contrato del carrito, que queda fuera de este ADR.
+
+**Decisión del propietario (2026-10-18).** Con «apruebo, empieza con la fase 0» aprobó el plan para la tienda premium, cuya Fase 0 incluye este ADR. Se tomó como aprobación del ADR-032 tal como se le propuso: «solo tú ves los productos en borrador, marcados “sin publicar”, sin poder comprarse». Puede revertirse: basta con quitar la marca en `preview-reads.ts`, sin migración.

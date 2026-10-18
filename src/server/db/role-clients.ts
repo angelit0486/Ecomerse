@@ -13,7 +13,9 @@ import { serverEnv } from "@/server/env";
  *   `storefront.*` (resolución de host, datos públicos de la tienda).
  *
  * Conexión vía Supavisor en modo transacción: `prepare: false` es obligatorio y no
- * se usa estado de sesión (SET); todo pasa por llamadas a funciones.
+ * se usa estado de sesión (SET); todo pasa por llamadas a funciones. La única
+ * marca es la de la vista previa (ADR-032): `set_config(…, true)` dentro de una
+ * transacción, que se descarta al terminarla.
  */
 
 let worker: Sql | undefined;
@@ -39,4 +41,4 @@ export function gatewayDb(): Sql {
   gateway ??= createRoleClient(serverEnv().GATEWAY_DATABASE_URL, "pruva-storefront-gateway");
   return gateway;
 }
-export type { Sql } from "postgres";
+export type { Sql, TransactionSql } from "postgres";

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createPreviewToken, PREVIEW_TTL_SECONDS, verifyPreviewToken } from "./preview";
+import {
+  createPreviewToken,
+  PREVIEW_TTL_SECONDS,
+  safePreviewPath,
+  verifyPreviewToken,
+} from "./preview";
 
 const SECRET = "s".repeat(32);
 const STORE = "0190a0d0-0000-7000-8000-00000000000a";
@@ -42,5 +47,30 @@ describe("token de vista previa (CF-09)", () => {
 
   it("dos tokens de la misma tienda son distintos (nonce)", () => {
     expect(createPreviewToken(SECRET, STORE, NOW)).not.toBe(createPreviewToken(SECRET, STORE, NOW));
+  });
+});
+
+describe("página de destino de la vista previa (ADR-032)", () => {
+  it("acepta rutas internas de la tienda", () => {
+    expect(safePreviewPath("/productos/proteina-en-borrador")).toBe(
+      "/productos/proteina-en-borrador",
+    );
+    expect(safePreviewPath("/categoria/proteinas/whey")).toBe("/categoria/proteinas/whey");
+  });
+
+  it.each([
+    null,
+    "",
+    "/",
+    "//otro-sitio.com",
+    "https://otro-sitio.com",
+    "/productos/../admin",
+    "/productos/x?y=1",
+    "/Productos/X",
+    "/productos/%2F%2Fotro",
+    "\\otro-sitio.com",
+    `/${"a".repeat(250)}`,
+  ])("cualquier otra cosa lleva al inicio: %s", (value) => {
+    expect(safePreviewPath(value)).toBe("/");
   });
 });

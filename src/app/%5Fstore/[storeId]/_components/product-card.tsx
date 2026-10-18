@@ -12,6 +12,7 @@ import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
 import { QuickAdd } from "./quick-add";
 import { Stars } from "./stars";
+import { UnpublishedBadge } from "./unpublished";
 
 export function ProductGrid({
   products,
@@ -68,7 +69,8 @@ export function ProductGrid({
 /**
  * Tarjeta de anaquel (rediseño A+B): foto sobre gris de anaquel, una insignia,
  * marca, nombre, calificación real, precio (rojo solo con descuento real) y
- * «Agregar». Con opciones, «Elegir opción» lleva a la ficha.
+ * «Agregar». Con opciones, «Elegir opción» lleva a la ficha. Un borrador (solo
+ * en la vista previa, ADR-032) lleva «Sin publicar» y ningún botón de compra.
  */
 function ProductCard({
   product,
@@ -117,8 +119,9 @@ function ProductCard({
         className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"
       >
         <div className="relative aspect-square overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)]">
-          {badges.length > 0 ? (
-            <div className="absolute left-2 top-2 z-[1]">
+          {product.unpublished || badges.length > 0 ? (
+            <div className="absolute left-2 top-2 z-[1] flex flex-col items-start gap-1.5">
+              {product.unpublished ? <UnpublishedBadge /> : null}
               <Badges
                 badges={badges}
                 label={`Destacados de ${product.title}`}
@@ -203,7 +206,7 @@ function ProductCard({
           {AVAILABILITY_LABELS[product.availability]}
         </p>
       ) : null}
-      {soldOut || variant === undefined || !store.id ? null : variant ? (
+      {product.unpublished || soldOut || variant === undefined || !store.id ? null : variant ? (
         <QuickAdd storeId={store.id} variantId={variant} title={product.title} />
       ) : (
         // Mismo destino que el enlace de la tarjeta: para el lector de pantalla y el

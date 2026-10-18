@@ -38,6 +38,7 @@ import { ProductAttributes } from "../../_components/product-attributes";
 import { ProductReviews } from "../../_components/product-reviews";
 import { SupplementInfo } from "../../_components/supplement-info";
 import { AddToCart } from "../../_components/add-to-cart";
+import { UnpublishedBadge, UnpublishedNotice } from "../../_components/unpublished";
 import { VariantSelector } from "../../_components/variant-selector";
 
 type Props = { params: Promise<{ storeId: string; slug: string }> };
@@ -267,7 +268,8 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="space-y-6 md:space-y-12">
-      <JsonLd data={productJsonLd(store, product, reviews)} />
+      {/* Un borrador (vista previa, ADR-032) no se describe como producto a la venta. */}
+      {product.unpublished ? null : <JsonLd data={productJsonLd(store, product, reviews)} />}
       <Breadcrumb
         items={[
           { label: "Inicio", href: "/" },
@@ -282,6 +284,7 @@ export default async function ProductPage({ params }: Props) {
         </section>
         <section aria-labelledby="sf-producto" className="space-y-5">
           <header className="space-y-2">
+            {product.unpublished ? <UnpublishedBadge /> : null}
             <Badges badges={badges} />
             {product.brand ? (
               <p className="text-sm font-semibold text-[var(--sf-muted)]">
@@ -354,18 +357,23 @@ export default async function ProductPage({ params }: Props) {
                   {availabilityText(single.availability, single.ships_in_days)}
                 </p>
               </div>
-              <AddToCart
-                storeId={store.id}
-                variantId={single.id}
-                available={single.availability !== "out_of_stock"}
-                title={product.title}
-                price={money(single.price, store)}
-              />
+              {product.unpublished ? (
+                <UnpublishedNotice />
+              ) : (
+                <AddToCart
+                  storeId={store.id}
+                  variantId={single.id}
+                  available={single.availability !== "out_of_stock"}
+                  title={product.title}
+                  price={money(single.price, store)}
+                />
+              )}
             </div>
           ) : product.variants.length > 0 ? (
             <VariantSelector
               storeId={store.id}
               title={product.title}
+              unpublished={product.unpublished}
               options={product.options}
               variants={product.variants.map((v) => ({
                 id: v.id,

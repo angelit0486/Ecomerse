@@ -14,7 +14,7 @@ type Params = { params: Promise<{ storeId: string }> };
 export async function GET(request: Request, { params }: Params): Promise<Response> {
   const resolved = await storefrontForRoute((await params).storeId, request.headers);
   if (!resolved) return new Response("Not found", { status: 404 });
-  const { store } = resolved;
+  const { store, preview } = resolved;
   const q = new URL(request.url).searchParams.get("q") ?? "";
   const s = await searchSuggestions(store.id, q);
   const items: SuggestionItem[] = [
@@ -51,6 +51,12 @@ export async function GET(request: Request, { params }: Params): Promise<Respons
   ];
   return Response.json(
     { items },
-    { headers: { "cache-control": "private, max-age=30", "x-robots-tag": "noindex" } },
+    {
+      headers: {
+        // En la vista previa incluye borradores (ADR-032): no se guarda ni en el navegador.
+        "cache-control": preview ? "no-store" : "private, max-age=30",
+        "x-robots-tag": "noindex",
+      },
+    },
   );
 }

@@ -14,6 +14,7 @@ import { buildSecurityHeaders, generateNonce } from "@/server/security/headers";
 import {
   PREVIEW_COOKIE,
   PREVIEW_TTL_SECONDS,
+  safePreviewPath,
   verifyPreviewToken,
 } from "@/server/storefront/preview";
 import { resolveHost } from "@/server/storefront/resolve-host";
@@ -155,7 +156,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
           nowSeconds,
         );
         if (!token || token.storeId !== resolution.storeId) return finish(notFound());
-        const response = NextResponse.redirect(new URL("/", request.nextUrl), 303);
+        const response = NextResponse.redirect(
+          new URL(safePreviewPath(request.nextUrl.searchParams.get("ruta")), request.nextUrl),
+          303,
+        );
         response.cookies.set(PREVIEW_COOKIE, request.nextUrl.searchParams.get("token")!, {
           httpOnly: true,
           secure,

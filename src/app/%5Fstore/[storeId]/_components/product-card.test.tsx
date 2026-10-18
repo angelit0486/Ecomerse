@@ -81,3 +81,17 @@ describe("«Agregar» desde la tarjeta (rediseño A+B)", () => {
     expect(unknown).not.toContain("Elegir opción");
   });
 });
+
+describe("borrador en la vista previa (ADR-032)", () => {
+  it("lleva «Sin publicar» y ningún botón de compra, aunque llegue una variante", () => {
+    const simple = card({ unpublished: true }, { p1: "v1" });
+    expect(simple).toContain("Sin publicar");
+    expect(simple).not.toContain("variant_id");
+    const options = card({ unpublished: true }, { p1: null });
+    expect(options).not.toContain("Elegir opción");
+  });
+
+  it("un producto publicado no lleva la marca", () => {
+    expect(card({ unpublished: false }, { p1: "v1" })).not.toContain("Sin publicar");
+  });
+});
