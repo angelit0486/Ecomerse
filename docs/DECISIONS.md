@@ -512,3 +512,52 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
 - (a) Publicar sin moderar: riesgo regulatorio.
 - (b) Opiniones de cualquiera: no son verificables.
 - (c) Un servicio externo de reseñas: otra dependencia, y los datos salen de la plataforma.
+
+### ADR-030 — Precios de oferta con fechas · **propuesta: requiere aprobación del propietario**
+
+**Contexto.** Hoy una oferta se arma a mano: la dueña baja el precio, pone el «precio antes» y, al terminar la oferta, se acuerda de regresarlos. Una oferta de fin de semana o de Buen Fin exige estar frente al panel a la hora exacta, y si se olvida, el precio rebajado se queda. Programarla toca el precio que cobra la tienda, que es contrato crítico (GATE0 §43: Product / Variant y Cart, «el precio se calcula siempre en vivo»): por eso es un ADR.
+
+**Decisión propuesta.**
+
+1. **El precio vigente sigue siendo uno solo: `product_variants.price`.** La oferta no agrega un segundo precio que cada lector tenga que calcular. Un job cambia `price` y `compare_at_price` al empezar y los regresa al terminar. Así el carrito, `place_order`, el listado, el orden por precio, los filtros, el JSON-LD y Mercado Pago no cambian, y el snapshot del pedido sigue guardando lo que se cobró.
+2. **`variant_price_schedules`** (tabla de tienda): `store_id NOT NULL`, RLS forzado con `products.read`, `prevent_tenant_change` y FK compuestas a la variante.
+   - Columnas: `sale_price bigint`, `starts_at`, `ends_at` y estado (`scheduled → active → ended`, o `cancelled`).
+   - Al empezar guarda el precio y el «precio antes» que tenía la variante, para regresarlos al final.
+   - Reglas: `0 < sale_price < precio actual`; `ends_at > starts_at`; duración máxima de 90 días; empieza dentro del próximo año.
+   - Una sola oferta programada o activa por variante a la vez; dos ofertas que se enciman se rechazan.
+3. **Job `catalog.apply_price_schedules`** cada minuto, encolado por `system.enqueue_maintenance` como la publicación programada.
+   - **Al empezar:** `compare_at_price` = precio actual y `price` = precio de oferta. La oferta se muestra como hoy, con el «precio antes» tachado y el filtro «Ofertas».
+   - **Al terminar:** si el precio sigue siendo el de la oferta, regresa el precio y el «precio antes» originales.
+   - **Si la dueña cambió el precio a mano durante la oferta,** el job no lo toca, la marca `ended` con el motivo `price_changed` y avisa en el historial. Nunca se pisa una decisión posterior de la dueña.
+   - **Tienda suspendida:** las ofertas no empiezan. Si una ya está activa, termina igual, para que nunca se quede un precio rebajado.
+   - Todo se audita con la misma acción de precios (`product.prices_updated`, con `metadata.scheduled`), así que aparece en el historial del producto.
+4. **Carrito y pago, sin cambios.** El carrito ya no guarda precios. Si la oferta empieza o termina mientras alguien paga, `place_order` responde `price_changed` con el `expected_total` actual y el comprador ve el precio nuevo antes de pagar.
+5. **Panel:**
+   - En la ficha, «Programar oferta» por presentación (precio fijo) o para todo el producto (porcentaje, al centavo o al peso, con vista previa como en la tanda 4).
+   - Fechas en la zona horaria de la tienda.
+   - Lista de ofertas programadas y activas, con «Cancelar». Cancelar una oferta activa regresa el precio al momento.
+   - Desde el listado de productos, oferta en bloque para los seleccionados.
+6. **Tienda:** la ficha dice «Oferta válida hasta el 31 de octubre». La Ley Federal de Protección al Consumidor pide informar la vigencia de las ofertas y promociones (conviene confirmarlo con su asesor). No hay contadores regresivos ni urgencia inventada.
+
+**Precisión de la hora.** En producción el cron corre cada minuto, así que la oferta empieza y termina con hasta un minuto de diferencia. En staging (plan Hobby de Vercel) el cron corre una vez al día: ahí las fechas solo se pueden probar con la ejecución manual del job.
+
+**Alternativas descartadas.**
+
+- (a) **Calcular el precio vigente al leer** (`price` o `sale_price` según la hora): es exacto al segundo, pero obliga a cambiar todos los lectores del precio y los índices de orden y filtro. Una sola lectura olvidada cobraría un precio distinto del mostrado.
+- (b) **Usar cupones o descuentos automáticos:** son otro contrato (`discount_invalid`, asignación por línea en el snapshot), no muestran el «precio antes» en el listado y no entran en el filtro «Ofertas».
+- (c) **Dejarlo manual:** es justo lo que la dueña pidió evitar.
+
+**Consecuencias.**
+
+- Alcance: 1 tabla, 1 job y unas 4 RPC (`catalog_schedule_sale`, `catalog_cancel_sale`, `catalog_list_sales` y la versión en bloque), más `system.apply_price_schedules`.
+- Pruebas necesarias:
+  - pgTAP de inicio y fin, de la restauración, del cambio manual durante la oferta, de las ofertas encimadas, de la tienda suspendida, del aislamiento entre tiendas y de los permisos (`products.update`);
+  - integración del job y de `price_changed` en el checkout;
+  - E2E de programar y cancelar.
+- Esfuerzo estimado: M.
+
+**Decisiones pendientes del propietario:**
+
+1. ¿Aprueba el enfoque, en el que el job cambia el precio, en lugar de calcularlo al leer?
+2. ¿Le sirve el límite de 90 días por oferta?
+3. ¿Quiere que la ficha muestre la vigencia de la oferta?

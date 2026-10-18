@@ -219,7 +219,9 @@ export function createOrderNotificationHandlers(
       n,
       shipmentId,
       "order_delivered",
-      orderDeliveredEmail(emailData(n), n.order.email),
+      orderDeliveredEmail(emailData(n), n.order.email, {
+        inviteReview: ["paid", "partially_refunded"].includes(n.order.payment_status),
+      }),
     );
   };
 

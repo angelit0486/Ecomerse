@@ -199,22 +199,33 @@ export function orderShippedEmail(d: OrderEmailData, to: string): EmailMessage {
   );
 }
 
-/** Entrega + invitación a opinar (ADR-029): la opinión se deja en la página del pedido. */
-export function orderDeliveredEmail(d: OrderEmailData, to: string): EmailMessage {
+/**
+ * Entrega + invitación a opinar (ADR-029): la opinión se deja en la página del
+ * pedido. Solo se invita si el pedido está pagado: es la condición de la base
+ * para aceptar la opinión (app.order_reviewable).
+ */
+export function orderDeliveredEmail(
+  d: OrderEmailData,
+  to: string,
+  options: { inviteReview: boolean } = { inviteReview: true },
+): EmailMessage {
   const subject = `Tu pedido ${d.order.display_number} fue entregado`;
-  const reviewUrl = d.orderUrl ? `${d.orderUrl}#opinar` : null;
+  const reviewUrl = options.inviteReview && d.orderUrl ? `${d.orderUrl}#opinar` : null;
+  const invite = options.inviteReview
+    ? "¿Qué te pareció? Tu opinión ayuda a otros clientes a elegir."
+    : "";
   return message(
     d,
     to,
     subject,
-    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Tu pedido <strong>${escapeHtml(d.order.display_number)}</strong> fue entregado. ¡Gracias por tu compra!</p><p>¿Qué te pareció? Tu opinión ayuda a otros clientes a elegir.</p>${
-      reviewUrl ? button("Opinar sobre mi compra", reviewUrl, color(d)) : ""
-    }`,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Tu pedido <strong>${escapeHtml(d.order.display_number)}</strong> fue entregado. ¡Gracias por tu compra!</p>${
+      invite ? `<p>${invite}</p>` : ""
+    }${reviewUrl ? button("Opinar sobre mi compra", reviewUrl, color(d)) : ""}`,
     [
       `Hola, ${d.order.customer_name}:`,
       "",
       `Tu pedido ${d.order.display_number} fue entregado. ¡Gracias por tu compra!`,
-      "¿Qué te pareció? Tu opinión ayuda a otros clientes a elegir.",
+      invite,
       reviewUrl ?? "",
     ],
   );

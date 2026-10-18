@@ -3,7 +3,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(34);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('viewer', 'viewer@a.io');
@@ -152,8 +152,15 @@ select is((select count(*)::int from system.jobs where type = 'order.delivered'
             and payload ->> 'shipment_id' = tests.fx('s3')::text), 1,
   'entregado: se encola una vez el aviso con la invitación a opinar (ADR-029), aunque se marque dos veces');
 select is((select dedupe_key from system.jobs where type = 'order.delivered'
-            and payload ->> 'shipment_id' = tests.fx('s3')::text), 'order.delivered:' || tests.fx('s3'),
-  'con clave por envío');
+            and payload ->> 'shipment_id' = tests.fx('s3')::text), 'order.delivered:' || tests.fx('o3'),
+  'con clave por pedido');
+-- Envío parcial entregado (o1 aún tiene unidades sin surtir): no se dice «entregado».
+select tests.login('owner');
+select public.orders_mark_delivered(tests.fx('store_a'), tests.fx('s1'));
+select tests.logout();
+select is((select count(*)::int from system.jobs where type = 'order.delivered'
+            and payload ->> 'order_id' = tests.fx('o1')::text), 0,
+  'un envío parcial entregado no avisa «tu pedido fue entregado»');
 select tests.login('owner');
 select tests.set_fx('r3', public.orders_request_refund(tests.fx('store_a'), tests.fx('o3'), 500, '[]', false, null,
   'reemb-00000000000010'));

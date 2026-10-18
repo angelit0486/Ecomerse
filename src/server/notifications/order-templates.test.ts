@@ -72,6 +72,18 @@ describe("plantillas de pedidos", () => {
     expect(m.html).not.toContain("<script");
   });
 
+  it("entregado sin pagar (p. ej. contra entrega pendiente): no invita a opinar", () => {
+    const m = orderDeliveredEmail(
+      { ...base, orderUrl: "https://tienda.test/pedido/1?t=x" },
+      "c@x.test",
+      { inviteReview: false },
+    );
+    expect(m.subject).toContain("fue entregado");
+    expect(m.html).not.toContain("Opinar sobre mi compra");
+    expect(m.text).not.toContain("#opinar");
+    expect(m.text).not.toContain("Tu opinión");
+  });
+
   it("staff: sin datos de contacto del comprador ni remitente de la tienda", () => {
     const m = staffOrderEmail(base, "s@x.test", "paid", "https://panel.test/admin/t/pedidos/1");
     expect(m.text).toContain("https://panel.test/admin/t/pedidos/1");

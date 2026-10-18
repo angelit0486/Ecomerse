@@ -39,7 +39,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
   if (!order) notFound();
 
   // Solo pedidos pagados y entregados ofrecen opinar (lo decide la base, ADR-029).
-  const reviewables = await orderReviewables(store.id, order.id, t);
+  // Un fallo al leer las opiniones no tumba la página del pedido.
+  const reviewables = await orderReviewables(store.id, order.id, t).catch(() => []);
   const label = visibleStatus(order);
   const minutesLeft = order.minutes_left;
   const payment = order.payment;
