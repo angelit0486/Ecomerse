@@ -63,22 +63,22 @@ export function TrustBar({
     });
   }
   if (items.length === 0) return null;
-  // Franja tipo ficha técnica: reglas finas, antetítulo pequeño y el dato; sin
-  // cajas ni íconos en círculos.
+  // Panel gris de anaquel con los datos en rejilla de 2 (rediseño A+B). Texto en el
+  // color de texto del tema: sobre la superficie gris, el gris tenue podría bajar de 4.5:1.
   return (
-    <section aria-label="Compra con confianza">
-      <ul className="grid border-y border-[var(--sf-border)] sm:grid-cols-2 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr">
-        {items.map((item, i) => (
-          <li
-            key={item.key}
-            className={`flex items-start gap-3 py-4 lg:px-6 lg:first:pl-0 ${i > 0 ? "border-t border-[var(--sf-border)] sm:border-t-0 lg:border-l" : ""} ${i > 1 ? "sm:border-t lg:border-t-0" : ""}`}
-          >
-            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--sf-primary)]">
+    <section
+      aria-label="Compra con confianza"
+      className="rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] px-4 py-5 sm:px-6"
+    >
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
+        {items.map((item) => (
+          <li key={item.key} className="flex items-start gap-2.5">
+            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--sf-link)]">
               {item.icon}
             </span>
-            <span className="min-w-0 text-sm">
-              <span className="block font-semibold">{item.title}</span>
-              {item.text ? <span className="block text-[var(--sf-muted)]">{item.text}</span> : null}
+            <span className="min-w-0 text-[0.8125rem] leading-snug sm:text-sm">
+              <span className="block font-bold">{item.title}</span>
+              {item.text ? <span className="block">{item.text}</span> : null}
             </span>
           </li>
         ))}
@@ -89,10 +89,10 @@ export function TrustBar({
 
 const ICON = {
   viewBox: "0 0 24 24",
-  className: "h-5 w-5",
+  className: "h-6 w-6",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.5,
+  strokeWidth: 1.8,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };

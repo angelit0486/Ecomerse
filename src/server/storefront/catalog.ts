@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
+import { GOAL_KEY, hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
 import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
@@ -401,6 +401,120 @@ export async function getRatingSummaries(
 const ratingsCached = cachedRead("rating_summaries", (storeId: string, ids: string) =>
   call<RatingSummaries>(
     gatewayDb()`select storefront.rating_summaries(${storeId}::uuid, ${ids.split(",")}::uuid[]) as value`,
+  ),
+);
+
+/**
+ * «Agregar» desde la tarjeta (rediseño A+B): por producto, la variante que se
+ * agrega directo o null si hay que elegir una opción en la ficha. Un producto
+ * ausente no lleva botón. Si la lectura falla (p. ej. una base sin la migración
+ * nueva), las tarjetas quedan sin botón y siguen funcionando.
+ */
+export type CardVariants = Record<string, string | null>;
+
+export async function getCardVariants(
+  storeId: string,
+  productIds: string[],
+): Promise<CardVariants> {
+  assertStore(storeId);
+  const ids = [...new Set(productIds.filter((id) => UUID_RE.test(id)))].sort().slice(0, 100);
+  if (ids.length === 0) return {};
+  try {
+    return (await cardVariantsCached(storeId, ids.join(","))) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+const cardVariantsCached = cachedRead("card_variants", (storeId: string, ids: string) =>
+  call<CardVariants>(
+    gatewayDb()`select storefront.card_variants(${storeId}::uuid, ${ids.split(",")}::uuid[]) as value`,
+  ),
+);
+
+const GOAL_VALUE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * Foto de cada bloque «¿Qué quieres lograr?» (rediseño A+B): la portada del
+ * producto disponible más vendido de cada objetivo. Las claves salen de los
+ * filtros de la propia tienda (nunca de la URL), así que la lectura se cachea
+ * aunque lleve atributos. Sin foto, el bloque se ve solo con su color.
+ */
+export async function getGoalCovers(
+  storeId: string,
+  keys: string[],
+): Promise<Record<string, ImageRef | null>> {
+  assertStore(storeId);
+  const clean = [...new Set(keys.filter((k) => k.length <= 60 && GOAL_VALUE_RE.test(k)))]
+    .sort()
+    .slice(0, 8);
+  if (clean.length === 0) return {};
+  try {
+    return await goalCoversCached(storeId, clean.join(","));
+  } catch {
+    return {};
+  }
+}
+
+const goalCoversCached = cachedRead("goal_covers", async (storeId: string, keys: string) => {
+  const pages = await Promise.all(
+    keys.split(",").map(async (key) => {
+      const page = await readListProducts(storeId, {
+        attributes: { [GOAL_KEY]: [key] },
+        sort: "best_selling",
+        available: true,
+        limit: 4,
+      });
+      return [key, page.items.filter((p) => p.image)] as const;
+    }),
+  );
+  // Un producto en varios objetivos no repite foto si el objetivo tiene otro.
+  const used = new Set<string>();
+  return Object.fromEntries(
+    pages.map(([key, items]) => {
+      const pick = items.find((p) => !used.has(p.id)) ?? items[0];
+      if (pick) used.add(pick.id);
+      return [key, pick?.image ?? null] as const;
+    }),
+  );
+});
+
+const CATEGORY_PATH_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*)*$/;
+
+/**
+ * Foto de respaldo de las categorías sin imagen propia (círculos de «Compra por
+ * categoría», rediseño A+B): la portada de su producto disponible más vendido.
+ * Las rutas salen de la portada configurada por la tienda, nunca de la URL.
+ */
+export async function getCategoryCovers(
+  storeId: string,
+  paths: string[],
+): Promise<Record<string, ImageRef | null>> {
+  assertStore(storeId);
+  const clean = [...new Set(paths.filter((p) => p.length <= 200 && CATEGORY_PATH_RE.test(p)))]
+    .sort()
+    .slice(0, 12);
+  if (clean.length === 0) return {};
+  try {
+    return await categoryCoversCached(storeId, clean.join(","));
+  } catch {
+    return {};
+  }
+}
+
+const categoryCoversCached = cachedRead("category_covers", async (storeId: string, paths: string) =>
+  Object.fromEntries(
+    await Promise.all(
+      paths.split(",").map(async (path) => {
+        const page = await readListProducts(storeId, {
+          categoryPath: path,
+          sort: "best_selling",
+          available: true,
+          limit: 1,
+        });
+        return [path, page.items[0]?.image ?? null] as const;
+      }),
+    ),
   ),
 );
 

@@ -1,23 +1,23 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
+import { getCategoryCovers, mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
 import { SafeHtml } from "@/ui/safe-html";
 
-import { GoalChips } from "./goal-chips";
+import { GoalTiles, type GoalTile } from "./goal-chips";
 import { ProductGrid } from "./rated-product-grid";
 import { ThemeLink } from "./theme-link";
 
 /**
- * Secciones de la portada (GATE0 §20.2, F9-DESIGN §3 y §6). Todo es servidor y
- * texto escapado por React; el único HTML es `rich_text`, por `SafeHtml`. Los
- * enlaces se revalidan al mostrar (ThemeLink). Testimonios sin estrellas ni
- * JSON-LD de reseñas (D-F9-04).
+ * Secciones de la portada (GATE0 §20.2, F9-DESIGN §3 y §6; rediseño A+B). Todo
+ * es servidor y texto escapado por React; el único HTML es `rich_text`, por
+ * `SafeHtml`. Los enlaces se revalidan al mostrar (ThemeLink). Testimonios sin
+ * estrellas ni JSON-LD de reseñas (D-F9-04).
  */
 type Store = { id: string; currency: string; locale: string; launched_at?: string | null };
 
 const BUTTON =
-  "inline-flex min-h-11 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-6 font-medium text-[var(--sf-btn-fg)]";
+  "inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-6 font-bold text-[var(--sf-btn-fg)]";
 
 function Paragraphs({ text, className }: { text: string; className?: string }) {
   return (
@@ -34,35 +34,35 @@ function Paragraphs({ text, className }: { text: string; className?: string }) {
   );
 }
 
-/**
- * Encabezado de sección editorial: regla fina, número de sección y título
- * grande (sin cajas). El número es decorativo (aria-hidden): el nombre accesible
- * del encabezado sigue siendo solo el título.
- */
-function SectionHeading({
+/** Título de sección a la izquierda y, si hay, «Ver todos» a la derecha (rediseño A+B). */
+export function SectionHeading({
   id,
-  number,
   title,
   action,
 }: {
   id: string;
-  number: number;
   title: string;
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 border-t border-[var(--sf-fg)] pt-3">
-      <h2 id={id} className="text-2xl font-semibold leading-none tracking-tight sm:text-4xl">
-        <span
-          aria-hidden="true"
-          className="sf-text-font mr-3 inline-block align-top text-xs font-semibold tabular-nums tracking-normal text-[var(--sf-muted)] sm:text-sm"
-        >
-          {String(number).padStart(2, "0")}
-        </span>
+    <div className="flex items-end justify-between gap-4">
+      <h2 id={id} className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
         {title}
       </h2>
       {action}
     </div>
+  );
+}
+
+/** «Ver todos» de una sección: el nombre accesible dice de qué. */
+export function ViewAll({ href, title }: { href: string; title: string }) {
+  return (
+    <Link
+      href={href}
+      className="shrink-0 pb-1 text-sm font-semibold text-[var(--sf-link)] underline-offset-4 hover:underline"
+    >
+      Ver todos<span className="sr-only"> de {title}</span>
+    </Link>
   );
 }
 
@@ -83,6 +83,11 @@ export function viewAllHref(
   }
 }
 
+/**
+ * Hero de anaquel (rediseño A+B): tarjeta en el color de compra con el texto que
+ * ese color ya garantiza (≥ 4.5:1) y el botón invertido (mismo par). Con imagen,
+ * va a la derecha en escritorio y abajo en móvil.
+ */
 function Hero({
   section,
   headingLevel,
@@ -92,55 +97,109 @@ function Hero({
 }) {
   const Heading = headingLevel === 1 ? "h1" : "h2";
   const centered = section.align === "center";
-  const content = (
-    <div
-      className={`flex max-w-2xl flex-col gap-4 ${centered ? "mx-auto items-center text-center" : "items-start"}`}
-    >
-      <Heading className="text-4xl font-bold leading-[1.02] tracking-tight text-balance sm:text-6xl">
-        {section.heading}
-      </Heading>
-      {section.subheading ? (
-        <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-          {section.subheading}
-        </p>
-      ) : null}
-      {section.cta ? (
-        <ThemeLink href={section.cta.link} className={BUTTON}>
-          {section.cta.label}
-        </ThemeLink>
-      ) : null}
-    </div>
-  );
-  if (!section.image) {
-    return (
-      <section className="rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] px-6 py-12 sm:px-12 sm:py-16">
-        {content}
-      </section>
-    );
-  }
-  // Móvil (revisión de conversión, A5): la imagen va arriba como banda y el texto
-  // debajo sobre el fondo del tema; recortada detrás del texto a 375 px parecía
-  // una losa rota. Desde `sm`, la imagen de fondo con velo.
+  const image = section.image;
   return (
-    <section className="overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] sm:relative sm:isolate sm:bg-transparent">
-      {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la portada */}
-      <img
-        src={mediaUrl(section.image.path)}
-        alt={section.image.alt ?? ""}
-        width={section.image.width ?? 1600}
-        height={section.image.height ?? 600}
-        fetchPriority="high"
-        decoding="async"
-        className="block aspect-[16/9] w-full object-cover sm:absolute sm:inset-0 sm:-z-10 sm:aspect-auto sm:h-full"
-      />
-      {/* Velo fijo del tema: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
-      {/* Alineado a la izquierda, el velo se degrada hacia la derecha para dejar ver la
-          imagen; bajo el texto mantiene la misma opacidad (contraste garantizado). */}
+    <section
+      className={`grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
+        image && !centered ? "sm:grid-cols-[1.1fr_1fr] sm:items-center" : ""
+      }`}
+    >
       <div
-        aria-hidden="true"
-        className={`absolute inset-0 -z-10 hidden sm:block ${centered ? "bg-black/60" : "bg-gradient-to-r from-black/75 from-45% via-black/60 via-65% to-black/20"}`}
-      />
-      <div className="px-5 py-6 sm:px-12 sm:py-24 sm:text-white">{content}</div>
+        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${image ? "pb-2" : "pb-7"} ${centered ? "items-center text-center" : "items-start"}`}
+      >
+        <Heading className="max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          {section.heading}
+        </Heading>
+        {section.subheading ? (
+          <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+            {section.subheading}
+          </p>
+        ) : null}
+        {section.cta ? (
+          <ThemeLink
+            href={section.cta.link}
+            className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-on-primary)] px-7 font-bold text-[var(--sf-primary)]"
+          >
+            {section.cta.label}
+          </ThemeLink>
+        ) : null}
+      </div>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la portada
+        <img
+          src={mediaUrl(image.path)}
+          alt={image.alt ?? ""}
+          width={image.width ?? 1600}
+          height={image.height ?? 640}
+          fetchPriority="high"
+          decoding="async"
+          className={`block w-full object-cover ${
+            centered ? "aspect-[16/7]" : "aspect-[16/9] sm:aspect-auto sm:h-full sm:min-h-80"
+          }`}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * «Compra por categoría» en círculos (rediseño A+B). Sin imagen propia, la foto
+ * del producto más vendido de la categoría; sin productos, la inicial.
+ */
+async function CategoryCircles({
+  section,
+  store,
+  headingId,
+}: {
+  section: Extract<HomeSectionData, { type: "category_grid" }>;
+  store: Store;
+  headingId: string;
+}) {
+  const covers = await getCategoryCovers(
+    store.id,
+    section.categories.filter((c) => !c.image).map((c) => c.path),
+  );
+  return (
+    <section aria-labelledby={headingId} className="space-y-4">
+      <SectionHeading id={headingId} title={section.title} />
+      <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-5 sm:gap-5 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+        {section.categories.map((category) => {
+          const image = category.image ?? covers[category.path] ?? null;
+          return (
+            <li key={category.path} className="w-[5.5rem] shrink-0 sm:w-auto">
+              <Link
+                href={`/categoria/${category.path}`}
+                className="group flex flex-col items-center gap-2 text-center"
+              >
+                <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-[var(--sf-surface)] ring-1 ring-[var(--sf-border)] motion-safe:transition-shadow group-hover:ring-2 group-hover:ring-[var(--sf-primary)]">
+                  {image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
+                    <img
+                      src={mediaUrl(image.path)}
+                      alt=""
+                      width={image.width ?? 320}
+                      height={image.height ?? 320}
+                      loading="lazy"
+                      decoding="async"
+                      className={`h-full w-full mix-blend-multiply ${category.image ? "object-cover" : "object-contain p-1.5"}`}
+                    />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="text-2xl font-extrabold text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]"
+                    >
+                      {category.name.slice(0, 1)}
+                    </span>
+                  )}
+                </span>
+                <span className="text-sm font-semibold leading-tight text-balance">
+                  {category.name}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -157,28 +216,19 @@ export function HomeSections({
   sections: HomeSectionData[];
   store: Store;
   storeName: string;
-  /** Objetivos con productos: chips bajo el hero (o bajo el título, sin hero). */
-  goals?: { key: string; label: string }[];
+  /** Objetivos con productos: bloques de color bajo el hero (o bajo el título, sin hero). */
+  goals?: GoalTile[];
 }) {
   const heroFirst = sections[0]?.type === "hero";
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
-  // Numeración de las secciones con título (01, 02…), en el orden en que se ven.
-  const numbered = new Map<number, number>();
-  sections.forEach((section, index) => {
-    if (
-      ["featured_products", "category_grid", "brand_logos", "testimonials"].includes(section.type)
-    ) {
-      numbered.set(index, numbered.size + 1);
-    }
-  });
   return (
-    <div className="space-y-16 sm:space-y-24">
+    <div className="space-y-12 sm:space-y-16">
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
       {heroFirst ? null : (
-        <div className="space-y-4">
-          <h1 className="text-2xl font-semibold sm:text-3xl">{storeName}</h1>
-          <GoalChips goals={goals} />
+        <div className="space-y-8">
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{storeName}</h1>
+          <GoalTiles goals={goals} />
           {trust}
         </div>
       )}
@@ -187,9 +237,9 @@ export function HomeSections({
         switch (section.type) {
           case "hero":
             return index === 0 ? (
-              <div key={section.id} className="space-y-4">
+              <div key={section.id} className="space-y-12 sm:space-y-16">
                 <Hero section={section} headingLevel={1} />
-                <GoalChips goals={goals} />
+                <GoalTiles goals={goals} />
                 {trust}
               </div>
             ) : (
@@ -198,19 +248,13 @@ export function HomeSections({
           case "featured_products": {
             const eager = index === eagerIndex ? 4 : 0;
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
+              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
                 <SectionHeading
                   id={headingId}
-                  number={numbered.get(index) ?? 0}
                   title={section.title}
                   action={
                     section.show_view_all ? (
-                      <Link
-                        href={viewAllHref(section.source)}
-                        className="shrink-0 pb-0.5 text-sm font-medium underline decoration-1 underline-offset-4 hover:decoration-2"
-                      >
-                        Ver todos<span className="sr-only"> de {section.title}</span>
-                      </Link>
+                      <ViewAll href={viewAllHref(section.source)} title={section.title} />
                     ) : null
                   }
                 />
@@ -219,55 +263,20 @@ export function HomeSections({
             );
           }
           case "category_grid":
-            // Índice tipográfico: nombres grandes en renglones con regla fina. Con
-            // imágenes de categoría, la miniatura acompaña al nombre.
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-2">
-                <SectionHeading
-                  id={headingId}
-                  number={numbered.get(index) ?? 0}
-                  title={section.title}
-                />
-                <ul className="grid sm:grid-cols-2 sm:gap-x-10">
-                  {section.categories.map((category) => (
-                    <li key={category.path} className="border-b border-[var(--sf-border)]">
-                      <Link
-                        href={`/categoria/${category.path}`}
-                        className="group flex min-h-16 items-center gap-4 py-3"
-                      >
-                        {category.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
-                          <img
-                            src={mediaUrl(category.image.path)}
-                            alt=""
-                            width={category.image.width ?? 320}
-                            height={category.image.height ?? 320}
-                            loading="lazy"
-                            decoding="async"
-                            className="h-12 w-12 shrink-0 rounded-[var(--sf-radius-control)] object-cover"
-                          />
-                        ) : null}
-                        <span className="text-xl font-medium tracking-tight decoration-1 underline-offset-[6px] group-hover:underline sm:text-2xl">
-                          {category.name}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className="ml-auto text-lg text-[var(--sf-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--sf-fg)]"
-                        >
-                          →
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <CategoryCircles
+                key={section.id}
+                section={section}
+                store={store}
+                headingId={headingId}
+              />
             );
           case "promo_banner":
             return (
               <section
                 key={section.id}
                 aria-label={section.heading ?? "Promoción"}
-                className="relative isolate overflow-hidden rounded-[var(--sf-radius-card)]"
+                className="relative isolate overflow-hidden rounded-[var(--sf-radius-panel)]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
                 <img
@@ -285,12 +294,15 @@ export function HomeSections({
                 />
                 {section.heading || section.text ? (
                   <>
+                    {/* Velo fijo: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
                     <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
-                    <div className="flex flex-col items-start gap-3 px-6 py-12 text-white sm:px-12">
+                    <div className="flex flex-col items-start gap-3 px-6 py-12 text-white sm:px-12 [&_:focus-visible]:outline-white">
                       {section.heading ? (
-                        <h2 className="text-2xl font-bold sm:text-3xl">{section.heading}</h2>
+                        <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
+                          {section.heading}
+                        </h2>
                       ) : null}
-                      {section.text ? <p>{section.text}</p> : null}
+                      {section.text ? <p className="max-w-xl">{section.text}</p> : null}
                       {section.cta ? (
                         <ThemeLink href={section.cta.link} className={BUTTON}>
                           {section.cta.label}
@@ -308,11 +320,12 @@ export function HomeSections({
               </section>
             );
           case "image_with_text":
+            // Tarjeta de guía (rediseño A+B): borde marcado, texto y foto lado a lado.
             return (
               <section
                 key={section.id}
                 aria-labelledby={headingId}
-                className="grid items-center gap-6 sm:grid-cols-2 sm:gap-10"
+                className="grid items-center gap-5 overflow-hidden rounded-[var(--sf-radius-panel)] border-2 border-[var(--sf-fg)] p-5 sm:grid-cols-2 sm:gap-10 sm:p-8"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
                 <img
@@ -325,12 +338,18 @@ export function HomeSections({
                   className={`w-full rounded-[var(--sf-radius-card)] object-cover ${section.image_position === "right" ? "sm:order-last" : ""}`}
                 />
                 <div className="space-y-3">
-                  <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
+                  <h2
+                    id={headingId}
+                    className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                  >
                     {section.heading}
                   </h2>
                   <Paragraphs text={section.body} className="text-[var(--sf-muted)]" />
                   {section.cta ? (
-                    <ThemeLink href={section.cta.link} className={BUTTON}>
+                    <ThemeLink
+                      href={section.cta.link}
+                      className="inline-flex min-h-11 items-center font-bold text-[var(--sf-link)] underline underline-offset-4"
+                    >
                       {section.cta.label}
                     </ThemeLink>
                   ) : null}
@@ -339,18 +358,14 @@ export function HomeSections({
             );
           case "brand_logos":
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
-                <SectionHeading
-                  id={headingId}
-                  number={numbered.get(index) ?? 0}
-                  title={section.title}
-                />
-                <ul className="grid grid-cols-3 items-center gap-6 sm:grid-cols-6">
+              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
+                <SectionHeading id={headingId} title={section.title} />
+                <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
                   {section.brands.map((brand) => (
                     <li key={brand.slug}>
                       <Link
                         href={`/marca/${encodeURIComponent(brand.slug)}`}
-                        className="flex min-h-16 items-center justify-center rounded-[var(--sf-radius-control)] p-2 hover:bg-[var(--sf-surface)]"
+                        className="flex h-20 items-center justify-center rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-primary)]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado */}
                         <img
@@ -370,22 +385,18 @@ export function HomeSections({
             );
           case "testimonials":
             return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-6">
-                <SectionHeading
-                  id={headingId}
-                  number={numbered.get(index) ?? 0}
-                  title={section.title}
-                />
-                <ul className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
+                <SectionHeading id={headingId} title={section.title} />
+                <ul className="grid gap-3 sm:grid-cols-3 sm:gap-4">
                   {section.items.map((item, i) => (
                     <li key={i}>
-                      <figure className="flex h-full flex-col gap-4 border-l-2 border-[var(--sf-fg)] pl-5">
-                        <blockquote className="text-lg leading-relaxed">
+                      <figure className="flex h-full flex-col gap-4 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-5">
+                        <blockquote className="text-base leading-relaxed">
                           <Paragraphs text={item.quote} />
                         </blockquote>
-                        <figcaption className="mt-auto text-sm text-[var(--sf-muted)]">
-                          <span className="font-medium text-[var(--sf-fg)]">{item.author}</span>
-                          {item.detail ? ` · ${item.detail}` : null}
+                        <figcaption className="mt-auto text-sm">
+                          <span className="font-bold">{item.author}</span>
+                          {item.detail ? <span className="block">{item.detail}</span> : null}
                         </figcaption>
                       </figure>
                     </li>
@@ -402,7 +413,10 @@ export function HomeSections({
                 className="max-w-3xl space-y-3"
               >
                 {section.heading ? (
-                  <h2 id={headingId} className="text-xl font-semibold sm:text-2xl">
+                  <h2
+                    id={headingId}
+                    className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                  >
                     {section.heading}
                   </h2>
                 ) : null}

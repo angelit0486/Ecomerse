@@ -190,40 +190,46 @@ export async function ProductListing({
   const heading = title && goal ? `Para tu ${goal.toLocaleLowerCase("es-MX")}` : title;
   const nothing = page.items.length === 0 && !filtered;
 
+  const count =
+    typeof page.total === "number" && page.total > 0 ? (
+      <p className="text-sm text-[var(--sf-muted)]">
+        {page.total} {page.total === 1 ? "producto" : "productos"}
+      </p>
+    ) : null;
+
   return (
-    <div className="space-y-6">
-      {heading ? (
-        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
-          {heading}
-        </h1>
+    <div className="space-y-5">
+      {/* Título y conteo en un renglón; debajo, el orden (rediseño A+B: menos alto). */}
+      {heading || (count && !(nothing && query)) ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          {heading ? (
+            <h1 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance sm:text-4xl">
+              {heading}
+            </h1>
+          ) : null}
+          {nothing && query ? null : count}
+        </div>
       ) : null}
       {nothing && query ? (
         <NoResults store={store} />
       ) : (
         <>
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-            {nothing ? null : (
-              <SortForm
-                action={basePath}
-                sort={page.sort}
-                available={available}
-                hidden={selectionParams}
-                {...(query ? { query } : {})}
-              />
-            )}
-            {typeof page.total === "number" && page.total > 0 ? (
-              <p className="text-sm text-[var(--sf-muted)]">
-                {page.total} {page.total === 1 ? "producto" : "productos"}
-              </p>
-            ) : null}
-          </div>
+          {nothing ? null : (
+            <SortForm
+              action={basePath}
+              sort={page.sort}
+              available={available}
+              hidden={selectionParams}
+              {...(query ? { query } : {})}
+            />
+          )}
           <div className="grid gap-6 md:grid-cols-[15rem_1fr]">
             {nothing ? null : (
               <div>
                 {/* Móvil: plegados tras «Filtros (n)» (sin JS ni saltos de diseño); escritorio:
                 siempre visibles. Solo uno de los dos está en pantalla. */}
                 <details className="md:hidden">
-                  <summary className="mb-3 inline-flex min-h-11 cursor-pointer items-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium">
+                  <summary className="mb-3 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-4 text-sm font-bold">
                     {selected.length + extraChips.length > 0
                       ? `Filtros (${selected.length + extraChips.length})`
                       : "Filtros"}
@@ -248,7 +254,7 @@ export async function ProductListing({
                 ]}
               />
               {page.items.length === 0 ? (
-                <section className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-6">
+                <section className="rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-6">
                   {filtered ? (
                     <>
                       <h2 className="font-semibold">Ningún producto coincide con estos filtros</h2>
@@ -300,7 +306,7 @@ async function NoResults({ store }: { store: StorePublic }) {
   return (
     <div className="space-y-8">
       <section className="space-y-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-6">
-        <h2 className="font-semibold">Sin resultados</h2>
+        <h2 className="text-lg font-extrabold">Sin resultados</h2>
         <p className="text-sm text-[var(--sf-muted)]">
           Revisa la ortografía, prueba con menos palabras o explora por objetivo.
         </p>
@@ -310,7 +316,7 @@ async function NoResults({ store }: { store: StorePublic }) {
               <li key={g.key}>
                 <Link
                   href={`/productos?${new URLSearchParams([[GOAL_KEY, g.key]])}`}
-                  className="inline-flex min-h-11 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium hover:bg-[var(--sf-surface)]"
+                  className="inline-flex min-h-11 items-center rounded-full border border-[var(--sf-border-strong)] px-4 text-sm font-semibold hover:border-[var(--sf-primary)]"
                 >
                   {g.label}
                 </Link>
@@ -326,7 +332,7 @@ async function NoResults({ store }: { store: StorePublic }) {
       </section>
       {best.items.length > 0 ? (
         <section aria-labelledby="sf-mas-vendido" className="space-y-4">
-          <h2 id="sf-mas-vendido" className="text-2xl font-semibold tracking-tight">
+          <h2 id="sf-mas-vendido" className="text-2xl font-extrabold tracking-tight">
             Lo más vendido
           </h2>
           <ProductGrid products={best.items} store={store} />

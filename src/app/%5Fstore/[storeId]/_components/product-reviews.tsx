@@ -1,16 +1,7 @@
 import type { ProductReviews as Reviews } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
-/** Estrellas de 1 a 5 (decorativas: el texto lleva la calificación). */
-function Stars({ value, className = "" }: { value: number; className?: string }) {
-  const full = Math.round(value);
-  return (
-    <span aria-hidden className={`tracking-tight ${className}`}>
-      <span className="text-[var(--sf-fg)]">{"★".repeat(full)}</span>
-      <span className="text-[var(--sf-border-strong)]">{"★".repeat(5 - full)}</span>
-    </span>
-  );
-}
+import { Stars } from "./stars";
 
 const dateLabel = (iso: string, store: StorePublic) =>
   new Date(iso).toLocaleDateString(store.locale ?? "es-MX", {

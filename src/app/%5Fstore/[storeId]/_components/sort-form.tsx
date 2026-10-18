@@ -27,17 +27,17 @@ export function SortForm({
     ? Object.keys(SORT_LABELS)
     : Object.keys(SORT_LABELS).filter((s) => s !== "relevance");
   return (
-    <AutoSubmitForm action={action} className="flex flex-wrap items-end gap-x-4 gap-y-2 text-sm">
+    <AutoSubmitForm action={action} className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
       {query ? <input type="hidden" name="q" value={query} /> : null}
       {hidden.map(([name, value]) => (
         <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
       ))}
-      <label className="flex flex-col gap-1">
-        <span className="font-medium">Ordenar por</span>
+      <label className="flex items-center gap-2">
+        <span className="font-semibold">Ordenar por</span>
         <select
           name="orden"
           defaultValue={sort}
-          className="h-11 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-2"
+          className="h-11 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-2 font-medium"
         >
           {sorts.map((s) => (
             <option key={s} value={s}>

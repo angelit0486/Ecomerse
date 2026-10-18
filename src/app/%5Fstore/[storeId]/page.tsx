@@ -4,13 +4,19 @@ import type { ReactNode } from "react";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { ThemeSettingsV1 } from "@/lib/theme/schema";
-import { getHome, getShippingPromo, listFacets, mediaUrl } from "@/server/storefront/catalog";
+import {
+  getGoalCovers,
+  getHome,
+  getShippingPromo,
+  listFacets,
+  mediaUrl,
+} from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { getHomePreview } from "@/server/storefront/preview-reads";
 import { canonicalUrl, pageMetadata } from "@/server/storefront/seo";
 
-import { GoalChips } from "./_components/goal-chips";
-import { HomeSections } from "./_components/home-sections";
+import { GoalTiles, type GoalTile } from "./_components/goal-chips";
+import { HomeSections, SectionHeading, ViewAll } from "./_components/home-sections";
 import { JsonLd } from "./_components/json-ld";
 import { TrustBar } from "./_components/trust-bar";
 import { ProductGrid } from "./_components/rated-product-grid";
@@ -48,15 +54,26 @@ export default async function StoreHomePage({ params }: Props) {
       store={store}
     />
   );
-  // Objetivos con productos publicados (revisión de conversión, M9).
-  const goals = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
+  // Objetivos con productos publicados (revisión de conversión, M9), con su conteo
+  // real y la foto de su producto más vendido (bloques de color, rediseño A+B).
+  const goalValues = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
     .filter((v) => v.count > 0)
-    .map(({ key, label }) => ({ key, label }));
+    .slice(0, 8);
+  const covers = await getGoalCovers(
+    store.id,
+    goalValues.map((v) => v.key),
+  );
+  const goals: GoalTile[] = goalValues.map(({ key, label, count }) => ({
+    key,
+    label,
+    count,
+    image: covers[key] ?? null,
+  }));
   const sections = home.sections ?? [];
   const categories = home.categories ?? [];
   const featured = home.featured ?? [];
   return (
-    <div className="space-y-12">
+    <div>
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -101,7 +118,7 @@ export default async function StoreHomePage({ params }: Props) {
   );
 }
 
-/** Plantilla del tema (§20.2): el nombre, las categorías raíz y las novedades. */
+/** Plantilla del tema (§20.2): el nombre, los objetivos, las categorías raíz y las novedades. */
 function TemplateHome({
   store,
   categories,
@@ -109,30 +126,28 @@ function TemplateHome({
   goals,
   trust,
 }: {
-  goals: { key: string; label: string }[];
+  goals: GoalTile[];
   trust: ReactNode;
   store: { id: string; name: string; currency: string; locale: string };
   categories: NonNullable<Awaited<ReturnType<typeof getHome>>["categories"]>;
   featured: NonNullable<Awaited<ReturnType<typeof getHome>>["featured"]>;
 }) {
   return (
-    <div className="space-y-12">
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold sm:text-3xl">{store.name}</h1>
-        <GoalChips goals={goals} />
+    <div className="space-y-12 sm:space-y-16">
+      <div className="space-y-8">
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{store.name}</h1>
+        <GoalTiles goals={goals} />
         {trust}
       </div>
       {categories.length > 0 ? (
         <section aria-labelledby="sf-categorias" className="space-y-4">
-          <h2 id="sf-categorias" className="text-lg font-semibold">
-            Categorías
-          </h2>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <SectionHeading id="sf-categorias" title="Categorías" />
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {categories.map((category) => (
               <li key={category.path}>
                 <Link
                   href={`/categoria/${category.path}`}
-                  className="flex flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:bg-[var(--sf-surface)]"
+                  className="flex h-full flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 font-semibold hover:border-[var(--sf-primary)]"
                 >
                   {category.image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
@@ -142,10 +157,10 @@ function TemplateHome({
                       width={category.image.width ?? 320}
                       height={category.image.height ?? 320}
                       loading="lazy"
-                      className="aspect-square w-full rounded object-cover"
+                      className="aspect-square w-full rounded-[var(--sf-radius-control)] object-cover"
                     />
                   ) : null}
-                  <span className="font-medium">{category.name}</span>
+                  <span>{category.name}</span>
                 </Link>
               </li>
             ))}
@@ -153,18 +168,17 @@ function TemplateHome({
         </section>
       ) : null}
       <section aria-labelledby="sf-novedades" className="space-y-4">
-        <div className="flex items-baseline justify-between">
-          <h2 id="sf-novedades" className="text-lg font-semibold">
-            Novedades
-          </h2>
-          <Link href="/productos" className="text-sm underline underline-offset-4">
-            Ver todo
-          </Link>
-        </div>
+        <SectionHeading
+          id="sf-novedades"
+          title="Novedades"
+          action={<ViewAll href="/productos" title="Novedades" />}
+        />
         {featured.length > 0 ? (
           <ProductGrid products={featured} store={store} eager={4} />
         ) : (
-          <p className="text-[var(--sf-muted)]">Muy pronto encontrarás aquí nuestros productos.</p>
+          <p className="rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-6 text-center">
+            Muy pronto encontrarás aquí nuestros productos.
+          </p>
         )}
       </section>
     </div>

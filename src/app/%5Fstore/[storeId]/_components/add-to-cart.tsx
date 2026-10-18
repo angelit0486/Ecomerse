@@ -108,25 +108,26 @@ export function AddToCart({
       </div>
       {available ? (
         <div ref={buttons} className="grid gap-3 sm:grid-cols-2">
-          {/* «Comprar ahora» (F9-T03): agrega y lleva directo al pago. */}
+          {/* Anaquel (rediseño A+B): «Agregar al carrito» en el color de compra y
+              «Comprar ahora» (F9-T03: agrega y lleva directo al pago) en el de texto. */}
+          <button
+            type="submit"
+            name="intent"
+            value="add"
+            disabled={!variantId || pending}
+            className="h-14 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 text-base font-bold text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? "Agregando…" : "Agregar al carrito"}
+          </button>
           <button
             type="submit"
             name="intent"
             value="buy"
             disabled={!variantId || pending}
             aria-busy={pending || undefined}
-            className="h-12 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-5 font-semibold text-[var(--sf-btn-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-14 rounded-[var(--sf-radius-btn)] border border-[var(--sf-fg)] bg-[var(--sf-fg)] px-5 text-base font-bold text-[var(--sf-bg)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Comprar ahora
-          </button>
-          <button
-            type="submit"
-            name="intent"
-            value="add"
-            disabled={!variantId || pending}
-            className="h-12 rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-fg)] bg-[var(--sf-bg)] px-5 font-semibold text-[var(--sf-fg)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {pending ? "Agregando…" : "Agregar al carrito"}
           </button>
         </div>
       ) : (

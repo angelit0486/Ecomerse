@@ -112,41 +112,58 @@ export function SearchBox() {
       method="get"
       action="/buscar"
       role="search"
-      className="relative order-last flex w-full gap-2 px-2 sm:order-none sm:ml-auto sm:w-auto sm:px-0"
+      className="relative order-last w-full px-2 sm:order-none sm:max-w-2xl sm:flex-1 sm:px-0"
     >
       <label htmlFor={`${id}-q`} className="sr-only">
         Buscar productos
       </label>
-      <input
-        id={`${id}-q`}
-        name="q"
-        type="search"
-        role="combobox"
-        aria-autocomplete="list"
-        aria-expanded={expanded}
-        aria-controls={listId}
-        aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
-        autoComplete="off"
-        placeholder="Buscar productos, objetivos o marcas"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          // Lo elegido con flechas era para el texto anterior.
-          setActive(-1);
-          if (e.target.value.trim().length < 2) setItems([]);
-        }}
-        onKeyDown={onKeyDown}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        className="h-10 min-w-0 flex-1 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm sm:w-72"
-      />
-      <button
-        type="submit"
-        className="h-10 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-4 text-sm font-medium text-[var(--sf-btn-fg)]"
-      >
-        Buscar
-      </button>
+      {/* Campo con el botón dentro (rediseño A+B): el borde de 2 px en el color de
+          compra marca dónde se busca; el foco se ve en todo el control. */}
+      <div className="flex h-11 items-center gap-1 rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] bg-[var(--sf-bg)] p-0.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--sf-primary)]">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="ml-2 h-5 w-5 shrink-0 text-[var(--sf-muted)]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+        <input
+          id={`${id}-q`}
+          name="q"
+          type="search"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
+          autoComplete="off"
+          placeholder="¿Qué estás buscando?"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            // Lo elegido con flechas era para el texto anterior.
+            setActive(-1);
+            if (e.target.value.trim().length < 2) setItems([]);
+          }}
+          onKeyDown={onKeyDown}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          // 16 px: Safari en iPhone no acerca la página al tocar el campo.
+          className="h-full min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-[var(--sf-muted)]"
+        />
+        <button
+          type="submit"
+          className="h-full shrink-0 rounded-[max(calc(var(--sf-radius-btn)-3px),0px)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-4 text-sm font-semibold text-[var(--sf-btn-fg)]"
+        >
+          Buscar
+        </button>
+      </div>
       <div
         id={listId}
         role="listbox"

@@ -10,7 +10,8 @@ import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
-import { AnnouncementBar, StoreFooter, StoreHeader } from "./_components/header";
+import { AnnouncementBar, QuickLinks, StoreFooter, StoreHeader } from "./_components/header";
+import { CartToast } from "./_components/quick-add";
 
 /**
  * Marco del storefront (F5-T03): tema de la tienda como variables CSS (lista
@@ -24,7 +25,10 @@ const BASE_CSS = [
   "--sf-surface:color-mix(in srgb,var(--sf-fg) 5%,var(--sf-bg))",
   "--sf-border:color-mix(in srgb,var(--sf-fg) 15%,var(--sf-bg))",
   "--sf-border-strong:color-mix(in srgb,var(--sf-fg) 55%,var(--sf-bg))",
-  "--sf-radius-card:min(var(--sf-radius),12px)",
+  // Rediseño A+B: tarjetas y paneles (hero, bloques de objetivo) más redondos que
+  // los controles; con radio «none» todo sigue recto.
+  "--sf-radius-card:min(calc(var(--sf-radius)*1.5),14px)",
+  "--sf-radius-panel:min(calc(var(--sf-radius)*2.5),22px)",
   "--sf-radius-control:min(var(--sf-radius),8px)",
   "--sf-radius-btn:var(--sf-radius)",
   "font-family:var(--sf-font-body),system-ui,sans-serif",
@@ -113,7 +117,9 @@ export default async function StoreLayout({ children, params }: Props) {
         discovery={discoveryLinks}
         cartCount={cart?.item_count ?? 0}
         logoPosition={theme.logoPosition}
+        whatsapp={settings.contact?.whatsapp}
       />
+      <QuickLinks menu={menus.main} discovery={discoveryLinks} />
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>
@@ -138,6 +144,7 @@ export default async function StoreLayout({ children, params }: Props) {
           <span className="sr-only">Abrir chat de WhatsApp con la tienda</span>
         </a>
       ) : null}
+      <CartToast />
     </div>
   );
 }

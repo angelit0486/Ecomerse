@@ -35,7 +35,7 @@ export function FacetFilters({
         <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
       ))}
       <fieldset className="space-y-2">
-        <legend className="font-semibold">Precio</legend>
+        <legend className="font-bold">Precio</legend>
         <div className="flex items-end gap-2">
           <label className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-[var(--sf-muted)]">Mínimo</span>
@@ -88,7 +88,7 @@ export function FacetFilters({
       </fieldset>
       {facets.map((facet) => (
         <fieldset key={facet.key} className="space-y-1">
-          <legend className="font-semibold">{facet.name}</legend>
+          <legend className="font-bold">{facet.name}</legend>
           <ul className="grid grid-cols-2 gap-x-4 md:block">
             {facet.values.map((value) => (
               <li key={value.key}>
@@ -138,7 +138,7 @@ export function ActiveFilters({
             <Link
               href={item.href}
               aria-label={`Quitar el filtro ${item.facet}: ${item.label}`}
-              className="inline-flex min-h-11 items-center gap-1 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border)] px-3 hover:bg-[var(--sf-surface)]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--sf-surface)] px-4 font-semibold hover:bg-[var(--sf-border)]"
             >
               {item.label}
               <span aria-hidden="true">×</span>

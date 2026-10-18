@@ -98,11 +98,46 @@ export function saleColors(theme: ResolvedTheme): { bg: string; fg: string; text
   return { ...badge, text };
 }
 
+/** Mezcla `hex` con negro (factor 0–1): oscurecer solo sube el contraste con el blanco. */
+function darken(hex: string, factor: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return `#${[n >> 16, (n >> 8) & 255, n & 255]
+    .map((c) =>
+      Math.round(c * (1 - factor))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+/**
+ * Pie de la tienda (rediseño A+B): el primario oscurecido con texto blanco cuando
+ * el primario ya lleva texto blanco (≥ 4.5:1, y oscurecer solo lo sube); si el
+ * primario es claro, el par texto/fondo del tema invertido, que ya se valida.
+ */
+export function footerColors(theme: ResolvedTheme): { bg: string; fg: string } {
+  const p = theme.palette;
+  return theme.buttonText === "#ffffff"
+    ? { bg: darken(p.primary, 0.35), fg: "#ffffff" }
+    : { bg: p.foreground, fg: p.background };
+}
+
+/**
+ * Color de enlaces y botones de contorno sobre el fondo (rediseño A+B): el
+ * primario solo si llega a 4.5:1 como texto (con botones rellenos el tema solo le
+ * exige 3:1); si no, el color de texto.
+ */
+export function linkColor(theme: ResolvedTheme): string {
+  const p = theme.palette;
+  return contrastRatio(p.primary, p.background) >= 4.5 ? p.primary : p.foreground;
+}
+
 /** Declaraciones CSS de las variables del storefront (solo valores de la lista blanca). */
 export function themeCss(theme: ResolvedTheme): string {
   const p = theme.palette;
   const outline = theme.buttonStyle === "outline";
   const sale = saleColors(theme);
+  const footer = footerColors(theme);
   const declarations = [
     `--sf-primary:${p.primary}`,
     `--sf-accent:${p.accent}`,
@@ -118,6 +153,9 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-sale-bg:${sale.bg}`,
     `--sf-sale-fg:${sale.fg}`,
     `--sf-sale-text:${sale.text}`,
+    `--sf-footer-bg:${footer.bg}`,
+    `--sf-footer-fg:${footer.fg}`,
+    `--sf-link:${linkColor(theme)}`,
     `--sf-font-heading:var(--font-${theme.fonts.heading})`,
     `--sf-font-body:var(--font-${theme.fonts.body})`,
   ];

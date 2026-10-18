@@ -28,10 +28,9 @@ export function ProductAttributes({ attributes }: { attributes: ProductAttribute
             <li key={value.key}>
               <Link
                 href={`/productos?${new URLSearchParams([[GOAL_KEY, value.key]])}`}
-                className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                className="inline-flex min-h-11 items-center font-semibold text-[var(--sf-link)] underline underline-offset-4"
               >
                 Ver más para {value.label}
-                <span aria-hidden="true">&nbsp;→</span>
               </Link>
             </li>
           ))}

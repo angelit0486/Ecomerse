@@ -10,14 +10,20 @@ export function Pagination({
 }) {
   if (!firstHref && !nextHref) return null;
   return (
-    <nav aria-label="Paginación" className="flex justify-center gap-6 text-sm">
+    <nav aria-label="Paginación" className="flex flex-wrap justify-center gap-3 text-sm">
       {firstHref ? (
-        <Link href={firstHref} className="underline underline-offset-4">
+        <Link
+          href={firstHref}
+          className="inline-flex h-12 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-6 font-semibold"
+        >
           Volver al inicio
         </Link>
       ) : null}
       {nextHref ? (
-        <Link href={nextHref} className="underline underline-offset-4">
+        <Link
+          href={nextHref}
+          className="inline-flex h-12 items-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-6 font-bold text-[var(--sf-link)]"
+        >
           Ver más productos
         </Link>
       ) : null}

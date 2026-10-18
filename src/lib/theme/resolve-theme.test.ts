@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_COLORS } from "./palette";
 import { contrastRatio } from "@/lib/color/contrast";
 
-import { resolveTheme, saleColors, themeCss } from "./resolve-theme";
+import { footerColors, linkColor, resolveTheme, saleColors, themeCss } from "./resolve-theme";
 
 describe("resolveTheme", () => {
   it("sin tema: defaults", () => {
@@ -103,5 +103,39 @@ describe("saleColors (revisión de conversión, M8)", () => {
       expect(contrastRatio(sale.text, theme.palette.background)).toBeGreaterThanOrEqual(4.5);
       expect(themeCss(theme)).toContain(`--sf-sale-bg:${sale.bg}`);
     }
+  });
+});
+
+describe("footerColors (rediseño A+B)", () => {
+  it("el primario oscurecido con texto blanco, o el tema invertido si el primario es claro", () => {
+    expect(footerColors(resolveTheme({ colors: { primary: "#1d3fd1" } }))).toEqual({
+      bg: "#132988",
+      fg: "#ffffff",
+    });
+    const light = resolveTheme({ colors: { primary: "#f5c400" } });
+    expect(footerColors(light)).toEqual({
+      bg: light.palette.foreground,
+      fg: light.palette.background,
+    });
+  });
+
+  it("siempre con contraste ≥ 4.5:1, y en la lista blanca del CSS", () => {
+    for (const primary of ["#777777", "#808080", "#1d3fd1", "#ffffff", "#000000", "#0b5d4b"]) {
+      const theme = resolveTheme({ colors: { primary } });
+      const footer = footerColors(theme);
+      expect(contrastRatio(footer.fg, footer.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(themeCss(theme)).toContain(`--sf-footer-bg:${footer.bg}`);
+    }
+  });
+});
+
+describe("linkColor (rediseño A+B)", () => {
+  it("el primario si llega a 4.5:1 sobre el fondo; si no, el color de texto", () => {
+    expect(linkColor(resolveTheme({ colors: { primary: "#1d3fd1" } }))).toBe("#1d3fd1");
+    // Botones rellenos: el tema acepta un primario de 3:1, que como texto no basta.
+    const soft = resolveTheme({ colors: { primary: "#2f9e8f" } });
+    expect(contrastRatio(soft.palette.primary, soft.palette.background)).toBeLessThan(4.5);
+    expect(linkColor(soft)).toBe(soft.palette.foreground);
+    expect(themeCss(soft)).toContain(`--sf-link:${soft.palette.foreground}`);
   });
 });

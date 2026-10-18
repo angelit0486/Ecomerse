@@ -61,7 +61,9 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
 
   return (
     <div className="space-y-3">
-      <div className="relative">
+      {/* Anaquel (rediseño A+B): la foto sobre el gris de la tienda; multiplicar quita
+          el blanco de fondo de una foto de producto. */}
+      <div className="relative overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)]">
         {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage */}
         <img
           src={current.src}
@@ -70,7 +72,7 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
           height={current.height}
           fetchPriority={index === 0 ? "high" : "auto"}
           decoding="async"
-          className="aspect-square w-full rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] object-contain"
+          className="aspect-square w-full object-contain p-4 mix-blend-multiply sm:p-8"
         />
         {many ? (
           <>
@@ -108,8 +110,8 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
                 }}
                 aria-label={`Ver imagen ${i + 1} de ${images.length}`}
                 aria-pressed={!extra && i === index}
-                className={`block w-full overflow-hidden rounded-[var(--sf-radius-control)] border-2 ${
-                  !extra && i === index ? "border-[var(--sf-fg)]" : "border-transparent"
+                className={`block w-full overflow-hidden rounded-[var(--sf-radius-control)] border-2 bg-[var(--sf-surface)] ${
+                  !extra && i === index ? "border-[var(--sf-primary)]" : "border-transparent"
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura re-codificada */}
@@ -120,7 +122,7 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
                   height={image.height}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-square w-full object-cover"
+                  className="aspect-square w-full object-contain p-1 mix-blend-multiply"
                 />
               </button>
             </li>

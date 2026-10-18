@@ -16,7 +16,7 @@ import type { StorePublic } from "@/server/storefront/store-public";
 import { getStorefront } from "@/server/storefront/context";
 
 import { money } from "../_components/format";
-import { GoalChips } from "../_components/goal-chips";
+import { GoalTiles } from "../_components/goal-chips";
 import { ProductGrid } from "../_components/rated-product-grid";
 import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
@@ -44,21 +44,21 @@ export default async function CartPage({ params }: Props) {
     const facets = await listFacets(store.id, {});
     const goals = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
       .filter((v) => v.count > 0)
-      .map(({ key, label }) => ({ key, label }));
+      .map(({ key, label, count }) => ({ key, label, count }));
     return (
-      <section className="mx-auto max-w-xl space-y-5 py-6 text-center">
-        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+      <section className="mx-auto max-w-2xl space-y-5 py-4 text-center">
+        <h1 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance sm:text-5xl">
           Tu carrito está vacío
         </h1>
         <p className="text-[var(--sf-muted)]">Encuentra lo que necesitas para tu objetivo.</p>
         <Link
           href="/productos"
-          className="inline-flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-8 font-semibold text-[var(--sf-btn-fg)]"
+          className="inline-flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-8 font-bold text-[var(--sf-btn-fg)]"
         >
           Ver productos
         </Link>
-        <div className="pt-2">
-          <GoalChips goals={goals} centered />
+        <div className="pt-4">
+          <GoalTiles goals={goals} compact />
         </div>
       </section>
     );
@@ -80,10 +80,10 @@ export default async function CartPage({ params }: Props) {
       : [];
 
   return (
-    <section className="grid grid-cols-1 gap-8 md:grid-cols-[2fr_1fr]">
+    <section className="grid grid-cols-1 gap-6 md:grid-cols-[2fr_1fr] md:gap-8">
       {/* min-w-0: un nombre largo no ensancha la columna en móvil (sin scroll horizontal). */}
       <div className="min-w-0 space-y-4">
-        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+        <h1 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance sm:text-4xl">
           Tu carrito
         </h1>
         {promo && cart.requires_shipping ? (
@@ -94,36 +94,41 @@ export default async function CartPage({ params }: Props) {
             store={store}
           />
         ) : null}
-        <ul className="divide-y divide-[var(--sf-border)]" aria-label="Productos en el carrito">
+        <ul className="space-y-3" aria-label="Productos en el carrito">
           {cart.lines.map((line) => (
-            <li key={line.variant_id} className="flex gap-4 py-4">
-              {line.image ? (
-                // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
-                <img
-                  src={mediaUrl(line.image.path)}
-                  alt=""
-                  width={80}
-                  height={80}
-                  className="h-20 w-20 rounded object-cover"
-                />
-              ) : (
-                <div className="h-20 w-20 rounded bg-[var(--sf-surface)]" />
-              )}
+            <li
+              key={line.variant_id}
+              className="flex gap-3 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 sm:gap-4"
+            >
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)] sm:h-24 sm:w-24">
+                {line.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
+                  <img
+                    src={mediaUrl(line.image.path)}
+                    alt=""
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-contain p-1 mix-blend-multiply"
+                  />
+                ) : null}
+              </div>
               <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex justify-between gap-4">
-                  <div>
+                <div className="flex justify-between gap-3">
+                  <div className="min-w-0">
                     <Link
                       href={`/productos/${line.product_slug}`}
-                      className="font-medium hover:underline"
+                      className="font-semibold leading-snug hover:underline"
                     >
                       {line.product_title}
                     </Link>
                     {line.variant_title ? (
                       <p className="text-sm text-[var(--sf-muted)]">{line.variant_title}</p>
                     ) : null}
-                    <p className="text-sm">{money(line.unit_price, store)} c/u</p>
+                    <p className="text-sm text-[var(--sf-muted)]">
+                      {money(line.unit_price, store)} c/u
+                    </p>
                   </div>
-                  <p className="font-medium">
+                  <p className="shrink-0 font-extrabold tabular-nums [font-family:var(--sf-font-heading),system-ui,sans-serif]">
                     {money(line.line_subtotal ?? line.unit_price * line.quantity, store)}
                   </p>
                 </div>
@@ -143,8 +148,8 @@ export default async function CartPage({ params }: Props) {
           ))}
         </ul>
         {suggestions.length > 0 ? (
-          <section aria-labelledby="sf-completa" className="space-y-3">
-            <h2 id="sf-completa" className="font-semibold">
+          <section aria-labelledby="sf-completa" className="space-y-3 pt-4">
+            <h2 id="sf-completa" className="text-xl font-extrabold tracking-tight">
               Completa tu envío gratis
             </h2>
             <ProductGrid products={suggestions} store={store} carousel />
@@ -155,7 +160,7 @@ export default async function CartPage({ params }: Props) {
         aria-label="Resumen"
         className="h-fit space-y-5 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-5 md:sticky md:top-36 md:max-h-[calc(100dvh-10rem)] md:self-start md:overflow-y-auto"
       >
-        <DiscountForm storeId={store.id} code={cart.discount_code} />
+        <h2 className="text-lg font-extrabold">Resumen</h2>
         <Totals
           cart={{
             ...cart,
@@ -163,17 +168,18 @@ export default async function CartPage({ params }: Props) {
           }}
           store={store}
         />
-        <PurchaseLegends legends={legends} />
         {cart.has_unavailable ? (
           <p className="text-sm">Quita los productos no disponibles para continuar.</p>
         ) : (
           <Link
             href="/checkout"
-            className="flex h-11 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-medium text-[var(--sf-btn-fg)]"
+            className="flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-bold text-[var(--sf-btn-fg)]"
           >
             Continuar al pago
           </Link>
         )}
+        <DiscountForm storeId={store.id} code={cart.discount_code} />
+        <PurchaseLegends legends={legends} />
       </aside>
     </section>
   );
@@ -210,8 +216,8 @@ function FreeShippingBar({
   if (!progress) return null;
   const where = promo.conditional ? " (según destino)" : "";
   return (
-    <div className="space-y-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4 text-sm">
-      <p id="sf-envio-gratis" className="font-medium">
+    <div className="space-y-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-4 text-sm">
+      <p id="sf-envio-gratis" className="font-semibold">
         {progress.reached
           ? `Tu pedido tiene envío gratis${where}.`
           : `Te faltan ${money(progress.remaining, store)} para el envío gratis${where}.`}
@@ -221,7 +227,7 @@ function FreeShippingBar({
         aria-labelledby="sf-envio-gratis"
         max={100}
         value={progress.percent}
-        className="block h-2 w-full appearance-none overflow-hidden rounded-full [&::-moz-progress-bar]:bg-[var(--sf-btn-bg)] [&::-webkit-progress-bar]:bg-[var(--sf-bg)] [&::-webkit-progress-value]:bg-[var(--sf-btn-bg)]"
+        className="block h-2 w-full appearance-none overflow-hidden rounded-full [&::-moz-progress-bar]:bg-[var(--sf-btn-bg)] [&::-webkit-progress-bar]:bg-[var(--sf-surface)] [&::-webkit-progress-value]:bg-[var(--sf-btn-bg)]"
       />
     </div>
   );

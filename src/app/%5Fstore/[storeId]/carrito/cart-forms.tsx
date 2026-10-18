@@ -66,7 +66,9 @@ export function LineForm({
     <form action={action} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="variant_id" value={variantId} />
       <div className="flex flex-col gap-1 text-sm">
-        <label htmlFor={`qty-${variantId}`}>Cantidad de {title}</label>
+        <label htmlFor={`qty-${variantId}`}>
+          Cantidad<span className="sr-only"> de {title}</span>
+        </label>
         <div className="inline-flex w-fit items-stretch rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)]">
           {hydrated ? (
             <button

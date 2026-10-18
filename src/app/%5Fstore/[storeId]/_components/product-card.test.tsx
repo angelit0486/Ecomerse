@@ -2,10 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/server/storefront/catalog", () => ({ mediaUrl: (p: string) => `https://m.test/${p}` }));
+vi.mock("../carrito/actions", () => ({ addItem: async () => ({}) }));
 
 const { ProductGrid } = await import("./product-card");
 
-const store = { currency: "MXN", locale: "es-MX" };
+const store = { id: "s1", currency: "MXN", locale: "es-MX" };
 const base = {
   id: "p1",
   slug: "proteina",
@@ -16,13 +17,17 @@ const base = {
   published_at: null,
 };
 
-function card(overrides: Record<string, unknown>): string {
+function card(
+  overrides: Record<string, unknown>,
+  quickAdd: Record<string, string | null> = {},
+): string {
   return renderToStaticMarkup(
     <ProductGrid
       products={[
         { ...base, min_price: 89900, max_price: 89900, compare_at_price: null, ...overrides },
       ]}
       store={store}
+      quickAdd={quickAdd}
     />,
   );
 }
@@ -30,8 +35,9 @@ function card(overrides: Record<string, unknown>): string {
 describe("tarjeta de producto (revisión de conversión, A6)", () => {
   it("descuento redondeado hacia abajo y precio por porción", () => {
     const markup = card({ compare_at_price: 104900, servings: 30 });
-    expect(markup).toContain("−14\u00a0%");
-    expect(markup).toContain("$29.97 por porción · 30 porciones");
+    expect(markup).toContain("−14 %");
+    expect(markup).toContain("$29.97 por porción");
+    expect(markup).toContain("30 porciones");
   });
 
   it("con una sola porción no muestra precio por porción", () => {
@@ -49,5 +55,29 @@ describe("tarjeta de producto (revisión de conversión, A6)", () => {
     expect(markup).toContain("Desde");
     expect(markup).not.toContain("por porción");
     expect(markup).not.toContain("−");
+  });
+});
+
+describe("«Agregar» desde la tarjeta (rediseño A+B)", () => {
+  it("producto simple: formulario con solo la variante y una pieza", () => {
+    const markup = card({}, { p1: "v1" });
+    expect(markup).toContain('name="variant_id" value="v1"');
+    expect(markup).toContain('name="quantity" value="1"');
+    expect(markup).toContain("Agregar<span");
+    expect(markup).not.toMatch(/name="(price|total|unit_price)"/);
+  });
+
+  it("con opciones: «Elegir opción» lleva a la ficha", () => {
+    const markup = card({}, { p1: null });
+    expect(markup).toContain('href="/productos/proteina"');
+    expect(markup).toContain("Elegir opción");
+    expect(markup).not.toContain("variant_id");
+  });
+
+  it("agotado o sin dato de variante: sin botón", () => {
+    expect(card({ availability: "out_of_stock" }, { p1: "v1" })).not.toContain("variant_id");
+    const unknown = card({});
+    expect(unknown).not.toContain("variant_id");
+    expect(unknown).not.toContain("Elegir opción");
   });
 });

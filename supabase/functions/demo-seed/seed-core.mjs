@@ -15,16 +15,16 @@
 
 // Mismos valores que src/lib/theme/presets.ts (este módulo no importa TypeScript).
 export const STYLES = {
-  deportivo: {
+  anaquel: {
     colors: {
-      primary: "#0b5d4b",
-      accent: "#b4500c",
-      background: "#fbfaf7",
-      foreground: "#14181f",
-      muted: "#4a5260",
+      primary: "#1d3fd1",
+      accent: "#d62d20",
+      background: "#ffffff",
+      foreground: "#1a1c22",
+      muted: "#5b616e",
     },
-    typography: { heading: "barlow-condensed", body: "inter" },
-    shape: { radius: "sm", button_style: "solid" },
+    typography: { heading: "montserrat", body: "inter" },
+    shape: { radius: "md", button_style: "solid" },
   },
   neutral: {
     colors: {
@@ -40,94 +40,133 @@ export const STYLES = {
 };
 
 // -----------------------------------------------------------------------------
-// Imágenes de ejemplo: ilustraciones planas de envases (sin personas, sin
-// sellos, sin claims), con la palabra EJEMPLO visible.
+// Imágenes de ejemplo: envases ilustrados sobre blanco (sin personas, sin sellos,
+// sin claims), con la palabra EJEMPLO visible. Fondo blanco: en la tienda el
+// anaquel gris lo absorbe (mix-blend-multiply).
 // -----------------------------------------------------------------------------
 function escapeXml(text) {
   return text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** Hasta 2 renglones de ~16 caracteres para que el nombre quepa en la etiqueta. */
-function lines(label) {
-  const out = [""];
-  for (const word of label.split(" ")) {
-    const current = out[out.length - 1];
-    if (current && (current + " " + word).length > 16 && out.length < 2) out.push(word);
-    else out[out.length - 1] = current ? `${current} ${word}` : word;
-  }
-  return out;
+/** Mezcla un color hex con negro (f < 0) o blanco (f > 0). */
+function shade(hex, f) {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const target = f < 0 ? 0 : 255;
+  const k = Math.abs(f);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (target - v) * k));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
-export function packSvg({ label, color, shape }) {
-  const body =
-    shape === "tub"
-      ? `<rect x="230" y="250" width="340" height="400" rx="40" fill="${color}"/>
-         <rect x="215" y="210" width="370" height="70" rx="18" fill="#14181f"/>`
-      : shape === "bottle"
-        ? `<rect x="300" y="200" width="200" height="460" rx="60" fill="${color}"/>
-           <rect x="345" y="150" width="110" height="70" rx="14" fill="#14181f"/>`
-        : `<rect x="250" y="230" width="300" height="420" rx="24" fill="${color}"/>
-           <path d="M250 300 L550 300" stroke="#fbfaf7" stroke-width="6" opacity="0.5"/>`;
+/** Tamaño de letra para que `text` quepa en `width` (`em`: ancho medio de un carácter). */
+function fit(text, width, max, em) {
+  return Math.min(max, Math.floor(width / (Math.max(text.length, 1) * em)));
+}
+
+/** Etiqueta del envase: nombre en 1–2 renglones y EJEMPLO, centrada en (cx, top). */
+function label({ cx, top, width, ink, line1, line2 }) {
+  const size1 = fit(line1, width, 20, 0.78);
+  const size2 = line2 ? fit(line2, width, 12, 0.62) : 0;
+  return `
+    <text x="${cx}" y="${top + size1 + 6}" text-anchor="middle" font-family="DejaVu Sans, sans-serif"
+          font-weight="800" font-size="${size1}" fill="${ink}">${escapeXml(line1)}</text>
+    ${
+      line2
+        ? `<text x="${cx}" y="${top + size1 + size2 + 12}" text-anchor="middle" font-family="DejaVu Sans, sans-serif"
+          font-weight="600" font-size="${size2}" fill="${ink}" opacity=".85">${escapeXml(line2)}</text>`
+        : ""
+    }
+    <text x="${cx}" y="${top + size1 + size2 + (line2 ? 30 : 22)}" text-anchor="middle" font-family="DejaVu Sans, sans-serif"
+          font-weight="600" font-size="8.5" letter-spacing="1.6" fill="${ink}" opacity=".75">EJEMPLO</text>`;
+}
+
+function cylinder(id, body) {
+  return `<linearGradient id="${id}" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="${shade(body, -0.45)}"/><stop offset=".35" stop-color="${shade(body, 0.28)}"/>
+      <stop offset=".6" stop-color="${body}"/><stop offset="1" stop-color="${shade(body, -0.45)}"/></linearGradient>`;
+}
+
+/** Un envase en el sistema de 200×220 (bote, bote alto, frasco o bolsa). */
+function packShape({ shape, body, lid, labelBg, ink, line1, line2 }, id) {
+  const shadow = `<ellipse cx="100" cy="206" rx="70" ry="9" fill="#000" opacity=".12"/>`;
+  if (shape === "tub") {
+    return `<defs>${cylinder(id, body)}</defs>${shadow}
+      <rect x="34" y="62" width="132" height="142" rx="14" fill="url(#${id})"/>
+      <rect x="30" y="36" width="140" height="34" rx="8" fill="${lid}"/>
+      <rect x="30" y="62" width="140" height="6" fill="#000" opacity=".18"/>
+      <rect x="34" y="96" width="132" height="80" fill="${labelBg}"/>
+      ${label({ cx: 100, top: 100, width: 120, ink, line1, line2 })}`;
+  }
+  if (shape === "canister") {
+    return `<defs>${cylinder(id, body)}</defs>${shadow}
+      <rect x="56" y="48" width="88" height="156" rx="12" fill="url(#${id})"/>
+      <rect x="52" y="26" width="96" height="28" rx="7" fill="${lid}"/>
+      <rect x="52" y="48" width="96" height="5" fill="#000" opacity=".2"/>
+      <rect x="56" y="90" width="88" height="80" fill="${labelBg}"/>
+      ${label({ cx: 100, top: 94, width: 80, ink, line1, line2 })}`;
+  }
+  if (shape === "bottle") {
+    return `<defs>${cylinder(id, body)}</defs>${shadow}
+      <path d="M66 70 Q66 58 78 56 L122 56 Q134 58 134 70 L140 86 L140 196 Q140 204 132 204 L68 204 Q60 204 60 196 L60 86 Z" fill="url(#${id})"/>
+      <rect x="74" y="28" width="52" height="30" rx="5" fill="${lid}"/>
+      <rect x="60" y="102" width="80" height="76" fill="${labelBg}"/>
+      ${label({ cx: 100, top: 106, width: 72, ink, line1, line2 })}`;
+  }
+  return `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="${shade(body, -0.35)}"/>
+      <stop offset=".4" stop-color="${shade(body, 0.3)}"/><stop offset="1" stop-color="${body}"/></linearGradient></defs>${shadow}
+    <path d="M52 34 L148 34 L152 60 Q160 140 150 198 Q100 208 50 198 Q40 140 48 60 Z" fill="url(#${id})"/>
+    <rect x="52" y="34" width="96" height="14" fill="#000" opacity=".14"/>
+    <rect x="58" y="94" width="84" height="74" rx="6" fill="${labelBg}"/>
+    ${label({ cx: 100, top: 98, width: 76, ink, line1, line2 })}`;
+}
+
+/** Renglones de la etiqueta: la primera palabra del nombre y el resto. */
+function packLines(title) {
+  const [first, ...rest] = title.replace(" (ejemplo)", "").split(" ");
+  return { line1: first.toUpperCase(), line2: rest.join(" ") };
+}
+
+export function packSvg({ title, shape, pack }) {
+  const { line1, line2 } = packLines(title);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
-    <rect width="800" height="800" fill="#efece4"/>
-    <ellipse cx="400" cy="680" rx="230" ry="26" fill="#d9d4c7"/>
-    ${body}
-    <rect x="262" y="380" width="276" height="150" rx="10" fill="#fbfaf7"/>
-    ${lines(label)
-      .map(
-        (line, i) => `<text x="400" y="${422 + i * 34}" font-family="DejaVu Sans, sans-serif"
-          font-size="26" font-weight="700" text-anchor="middle" fill="#14181f">${escapeXml(line)}</text>`,
-      )
-      .join("")}
-    <text x="400" y="510" font-family="DejaVu Sans, sans-serif" font-size="20" letter-spacing="4"
-          text-anchor="middle" fill="#4a5260">EJEMPLO</text>
+    <rect width="800" height="800" fill="#ffffff"/>
+    <svg x="55" y="20" width="690" height="759" viewBox="0 0 200 220">
+      ${packShape({ shape, ...pack, line1, line2 }, "g")}
+    </svg>
   </svg>`;
 }
 
 /**
- * Banner del hero: envases ilustrados (los mismos del catálogo de ejemplo)
- * sobre el verde de la marca, centrados para que el recorte 16:9 de móvil los
- * conserve. Sin personas, sellos ni claims; la etiqueta dice EJEMPLO.
+ * Imagen del hero: tres envases de ejemplo sobre fondo transparente, para que se
+ * vean sobre el color de compra de cualquier tema. Centrados: el recorte de móvil
+ * y el de escritorio los conservan.
  */
-/** Oscurece un color hex (factor 0–1) para el degradado del banner. */
-function darken(hex, factor) {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v * (1 - factor)));
-  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-export function bannerSvg(colors = STYLES.deportivo.colors) {
-  const { primary, accent } = colors;
-  const pack = (x, w, h, color, cap, capW) => `
-    <ellipse cx="${x + w / 2}" cy="560" rx="${w * 0.62}" ry="16" fill="#000" opacity="0.28"/>
-    <rect x="${x}" y="${560 - h}" width="${w}" height="${h}" rx="${Math.min(36, w / 5)}" fill="${color}"/>
-    <rect x="${x + (w - capW) / 2}" y="${560 - h - 46}" width="${capW}" height="56" rx="12" fill="${cap}"/>
-    <rect x="${x + w * 0.12}" y="${560 - h * 0.62}" width="${w * 0.76}" height="${Math.min(110, h * 0.34)}" rx="8" fill="#fbfaf7"/>
-    <rect x="${x + w * 0.22}" y="${560 - h * 0.62 + 26}" width="${w * 0.56}" height="12" rx="6" fill="#14181f" opacity="0.85"/>
-    <text x="${x + w / 2}" y="${560 - h * 0.62 + 74}" font-family="DejaVu Sans, sans-serif" font-size="18"
-          letter-spacing="4" text-anchor="middle" fill="#4a5260">EJEMPLO</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640">
-    <defs>
-      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0" stop-color="${primary}"/><stop offset="1" stop-color="${darken(primary, 0.55)}"/>
-      </linearGradient>
-      <radialGradient id="glow" cx="0.68" cy="0.42" r="0.5">
-        <stop offset="0" stop-color="#e9c46a" stop-opacity="0.35"/><stop offset="1" stop-color="#e9c46a" stop-opacity="0"/>
-      </radialGradient>
-      <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
-        <circle cx="2" cy="2" r="1.6" fill="#fbfaf7" opacity="0.07"/>
-      </pattern>
-    </defs>
-    <rect width="1600" height="640" fill="url(#g)"/>
-    <rect width="1600" height="640" fill="url(#dots)"/>
-    <rect width="1600" height="640" fill="url(#glow)"/>
-    <path d="M1600 470 C 1320 400, 1080 520, 760 640 L1600 640 Z" fill="${accent}" opacity="0.9"/>
-    <path d="M1600 540 C 1340 490, 1120 580, 940 640 L1600 640 Z" fill="${darken(accent, 0.25)}"/>
-    ${pack(740, 200, 300, "#b4500c", "#14181f", 220)}
-    ${pack(980, 150, 360, "#14181f", "#2b313b", 90)}
-    ${pack(1170, 190, 260, "#0e7490", "#14181f", 210)}
+export function bannerSvg() {
+  const item = (x, y, w, shape, pack, title, id, rotate) => `
+    <svg x="${x}" y="${y}" width="${w}" height="${w * 1.1}" viewBox="0 0 200 220">
+      <g transform="rotate(${rotate} 100 110)">${packShape({ shape, ...pack, ...packLines(title) }, id)}</g>
+    </svg>`;
+  // 16:9; los envases ocupan el centro (x 330–1270) para sobrevivir al recorte.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+    ${item(330, 170, 600, "tub", PACKS.whey, "Proteína de suero", "b1", -4)}
+    ${item(790, 40, 470, "canister", PACKS.crea, "Creatina monohidratada", "b2", 3)}
+    ${item(1030, 380, 360, "bottle", PACKS.omega, "Omega 3", "b3", 6)}
   </svg>`;
 }
+
+/** Colores de cada envase de ejemplo. */
+export const PACKS = {
+  whey: { body: "#3a2418", lid: "#1a1a1a", labelBg: "#f4ead9", ink: "#2a1a10" },
+  veg: { body: "#4f6b22", lid: "#1a1a1a", labelBg: "#f5f1e6", ink: "#33461a" },
+  crea: { body: "#e9e9e6", lid: "#202020", labelBg: "#e3412b", ink: "#ffffff" },
+  creaCaps: { body: "#202226", lid: "#e3412b", labelBg: "#ffffff", ink: "#202226" },
+  pre: { body: "#6b1fb8", lid: "#111111", labelBg: "#c6f24e", ink: "#2a0a4d" },
+  caf: { body: "#1a1c22", lid: "#f5c400", labelBg: "#f5c400", ink: "#1a1c22" },
+  multi: { body: "#1e9e6a", lid: "#f7f7f7", labelBg: "#ffffff", ink: "#0f6e48" },
+  magn: { body: "#dfe6f2", lid: "#2d6bea", labelBg: "#2d6bea", ink: "#ffffff" },
+  elec: { body: "#13a3c9", labelBg: "#ffffff", ink: "#0b6f8a" },
+  hidra: { body: "#f4c430", lid: "#ffffff", labelBg: "#ffffff", ink: "#7a5200" },
+  omega: { body: "#f4c430", lid: "#ffffff", labelBg: "#ffffff", ink: "#7a5200" },
+};
 
 // -----------------------------------------------------------------------------
 // Catálogo de ejemplo
@@ -144,7 +183,7 @@ export const GOALS = ["Energía", "Fuerza", "Recuperación", "Bienestar"];
 export const FLAVORS = ["Vainilla", "Chocolate", "Limón", "Sin sabor"];
 
 // [título, marca, categoría, objetivos, sabor, precio, precio antes, existencias,
-//  porciones, forma, color]
+//  porciones, envase, colores del envase (PACKS)]
 export const PRODUCTS = [
   [
     "Proteína de suero (ejemplo)",
@@ -157,7 +196,7 @@ export const PRODUCTS = [
     30,
     30,
     "tub",
-    "#0b5d4b",
+    "whey",
   ],
   [
     "Proteína vegetal (ejemplo)",
@@ -170,7 +209,7 @@ export const PRODUCTS = [
     25,
     30,
     "tub",
-    "#5b3a29",
+    "veg",
   ],
   [
     "Creatina monohidratada (ejemplo)",
@@ -182,8 +221,8 @@ export const PRODUCTS = [
     59900,
     60,
     60,
-    "tub",
-    "#2f3e5c",
+    "canister",
+    "crea",
   ],
   [
     "Creatina en cápsulas (ejemplo)",
@@ -196,7 +235,7 @@ export const PRODUCTS = [
     4,
     90,
     "bottle",
-    "#2f3e5c",
+    "creaCaps",
   ],
   [
     "Pre-entreno cítrico (ejemplo)",
@@ -208,8 +247,8 @@ export const PRODUCTS = [
     79900,
     18,
     30,
-    "tub",
-    "#b4500c",
+    "canister",
+    "pre",
   ],
   [
     "Cafeína en tabletas (ejemplo)",
@@ -222,7 +261,7 @@ export const PRODUCTS = [
     40,
     100,
     "bottle",
-    "#14181f",
+    "caf",
   ],
   [
     "Multivitamínico diario (ejemplo)",
@@ -235,7 +274,7 @@ export const PRODUCTS = [
     50,
     60,
     "bottle",
-    "#6b7d2a",
+    "multi",
   ],
   [
     "Magnesio (ejemplo)",
@@ -248,7 +287,7 @@ export const PRODUCTS = [
     22,
     60,
     "bottle",
-    "#475569",
+    "magn",
   ],
   [
     "Electrolitos en polvo (ejemplo)",
@@ -260,8 +299,8 @@ export const PRODUCTS = [
     null,
     35,
     20,
-    "sachet",
-    "#0e7490",
+    "pouch",
+    "elec",
   ],
   [
     "Bebida de hidratación (ejemplo)",
@@ -274,20 +313,16 @@ export const PRODUCTS = [
     0,
     1,
     "bottle",
-    "#0e7490",
+    "hidra",
   ],
 ];
 
-const productSvg = ([title, , , , , , , , , shape, color]) =>
-  packSvg({ label: title.replace(" (ejemplo)", ""), color, shape });
+const productSvg = ([title, , , , , , , , , shape, pack]) =>
+  packSvg({ title, shape, pack: PACKS[pack] });
 
 /** Todas las ilustraciones de la siembra (para pre-renderizarlas fuera de Node). */
 export function demoSvgs() {
-  return [
-    bannerSvg(STYLES.deportivo.colors),
-    bannerSvg(STYLES.neutral.colors),
-    ...PRODUCTS.map(productSvg),
-  ];
+  return [bannerSvg(), ...PRODUCTS.map(productSvg)];
 }
 
 export const LEGEND_TEXT =
@@ -303,7 +338,7 @@ const EXAMPLE_SHEET = {
 const DEMO_REVIEWER = "Demostración (sin revisión real)";
 
 /**
- * Siembra la tienda `demo` (estilo «Deportivo») o `demo2` (`neutral`, estilo
+ * Siembra la tienda `demo` (estilo «Anaquel») o `demo2` (`neutral`, estilo
  * «Neutral») publicada en `hostname`. Idempotente: si la tienda existe, solo
  * restaura las reglas de prueba y agrega el host.
  *
@@ -323,7 +358,7 @@ export async function seedDemo({
 }) {
   const handle = neutral ? "demo2" : "demo";
   const ownerEmail = `${handle}@example.test`;
-  const style = neutral ? STYLES.neutral : STYLES.deportivo;
+  const style = neutral ? STYLES.neutral : STYLES.anaquel;
   const productsToImage = [];
   const shared = {};
 
@@ -385,7 +420,7 @@ export async function seedDemo({
    * (y en el borrador, si hay). Idempotente: el sha256 del SVG va en la ruta.
    */
   async function refreshBanner(storeId) {
-    const svg = bannerSvg(style.colors);
+    const svg = bannerSvg();
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(svg));
     const key = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0"))
       .join("")
@@ -469,7 +504,7 @@ export async function seedDemo({
     brandIds.push(b.id);
   }
 
-  const banner = await uploadImage(storeId, "banner", null, bannerSvg(style.colors), "", 0);
+  const banner = await uploadImage(storeId, "banner", null, bannerSvg(), "", 0);
   // (Las siguientes siembras reemplazan el banner con refreshBanner si cambia.)
 
   await asOwner(
@@ -553,7 +588,7 @@ export async function seedDemo({
       await tx`select public.shipping_upsert_zone(${storeId}, ${tx.json({ name: "México", countries: ["MX"] })}) as id`;
     await tx`select public.shipping_upsert_rate(${storeId}, ${tx.json({ zone_id: zone[0].id, name: "Envío estándar", type: "free_over", price: 9900, free_over_subtotal: 99900, est_days_min: 2, est_days_max: 5 })})`;
 
-    // Tema: estilo «Deportivo» (F9-DESIGN §15) o «Neutral» + aviso de demostración + portada.
+    // Tema: estilo «Anaquel» (rediseño A+B) o «Neutral» + aviso de demostración + portada.
     const rev = async () =>
       (await tx`select draft_revision from public.store_themes where store_id = ${storeId}`)[0]
         .draft_revision;
@@ -562,8 +597,8 @@ export async function seedDemo({
       header: {
         announcement: {
           text: "Tienda de demostración: los productos son ejemplos y no están a la venta.",
-          background: "#14181f",
-          foreground: "#fbfaf7",
+          background: "#1a1c22",
+          foreground: "#ffffff",
         },
       },
       footer: {
@@ -579,30 +614,30 @@ export async function seedDemo({
     });
     await tx`select public.appearance_save_home_draft(${storeId}, ${tx.json([
       section(1, "hero", {
-        heading: "Suplementos para tu entrenamiento y tu día a día",
-        subheading: "Elige por objetivo, sabor o marca. Envío gratis en compras desde $999.",
+        heading: "Todo para tu entrenamiento y tu día a día",
+        subheading: "Proteínas, creatinas, pre-entrenos y vitaminas. Envío gratis desde $999.",
         image_media_id: banner,
         cta: { label: "Ver productos", link: "/productos" },
         align: "left",
       }),
-      section(2, "featured_products", {
-        title: "Para tu energía",
-        source: { type: "attribute_value", id: shared.goalEnergy },
-        limit: 4,
-        show_view_all: true,
-      }),
-      section(3, "category_grid", {
+      section(2, "category_grid", {
         title: "Compra por categoría",
         category_ids: shared.categoryIds,
+      }),
+      section(3, "featured_products", {
+        title: "Para tu energía",
+        source: { type: "attribute_value", id: shared.goalEnergy },
+        limit: 8,
+        show_view_all: true,
       }),
       section(4, "featured_products", {
         title: "Para tu fuerza",
         source: { type: "attribute_value", id: shared.goalStrength },
-        limit: 4,
+        limit: 8,
         show_view_all: true,
       }),
       section(5, "featured_products", {
-        title: "Lo más nuevo",
+        title: "Novedades",
         source: { type: "newest" },
         limit: 8,
         show_view_all: true,

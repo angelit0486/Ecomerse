@@ -31,6 +31,8 @@ import { AVAILABILITY_LABELS, money } from "../../_components/format";
 import { PAYMENT_LABELS } from "../../_components/header";
 import { JsonLd } from "../../_components/json-ld";
 import { ProductGallery } from "../../_components/product-gallery";
+import { SectionHeading } from "../../_components/home-sections";
+import { Stars } from "../../_components/stars";
 import { ProductGrid } from "../../_components/rated-product-grid";
 import { ProductAttributes } from "../../_components/product-attributes";
 import { ProductReviews } from "../../_components/product-reviews";
@@ -282,10 +284,10 @@ export default async function ProductPage({ params }: Props) {
           <header className="space-y-2">
             <Badges badges={badges} />
             {product.brand ? (
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sf-muted)]">
+              <p className="text-sm font-semibold text-[var(--sf-muted)]">
                 <Link
                   href={`/marca/${encodeURIComponent(product.brand.slug)}`}
-                  className="hover:underline"
+                  className="underline-offset-4 hover:underline"
                 >
                   {product.brand.name}
                 </Link>
@@ -293,7 +295,7 @@ export default async function ProductPage({ params }: Props) {
             ) : null}
             <h1
               id="sf-producto"
-              className="text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-5xl"
+              className="text-[1.75rem] font-extrabold leading-[1.1] tracking-tight text-balance sm:text-4xl"
             >
               {product.title}
             </h1>
@@ -302,10 +304,8 @@ export default async function ProductPage({ params }: Props) {
                 href="#sf-opiniones"
                 className="inline-flex min-h-11 items-center gap-2 text-sm underline-offset-4 hover:underline"
               >
-                <span aria-hidden className="text-[var(--sf-fg)]">
-                  ★
-                </span>
-                <span className="font-medium tabular-nums">
+                <Stars value={reviews.average} className="text-base" />
+                <span className="font-semibold tabular-nums">
                   {reviews.average.toLocaleString("es-MX", {
                     minimumFractionDigits: 1,
                     maximumFractionDigits: 1,
@@ -321,17 +321,21 @@ export default async function ProductPage({ params }: Props) {
           {single ? (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-3xl font-semibold tabular-nums tracking-tight">
-                  {money(single.price, store)}
+                <p className="flex flex-wrap items-baseline gap-x-3 tabular-nums">
+                  <span
+                    className={`text-[2rem] font-extrabold leading-none tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${single.compare_at_price && single.compare_at_price > single.price ? "text-[var(--sf-sale-text)]" : ""}`}
+                  >
+                    {money(single.price, store)}
+                  </span>
                   {single.compare_at_price && single.compare_at_price > single.price ? (
-                    <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
+                    <s className="text-base text-[var(--sf-muted)]">
                       <span className="sr-only">Antes </span>
                       {money(single.compare_at_price, store)}
                     </s>
                   ) : null}
                 </p>
                 {savingText(single.price, single.compare_at_price, store) ? (
-                  <p className="text-sm font-semibold text-[var(--sf-sale-text)]">
+                  <p className="text-sm font-bold text-[var(--sf-sale-text)]">
                     {savingText(single.price, single.compare_at_price, store)}
                   </p>
                 ) : null}
@@ -410,14 +414,9 @@ export default async function ProductPage({ params }: Props) {
         />
       ) : null}
       {related.length > 0 ? (
-        <section aria-labelledby="sf-relacionados" className="space-y-6">
-          <h2
-            id="sf-relacionados"
-            className="border-t border-[var(--sf-fg)] pt-3 text-2xl font-semibold leading-none tracking-tight sm:text-4xl"
-          >
-            Más para tu objetivo
-          </h2>
-          <ProductGrid products={related} store={store} />
+        <section aria-labelledby="sf-relacionados" className="space-y-4">
+          <SectionHeading id="sf-relacionados" title="Más para tu objetivo" />
+          <ProductGrid products={related} store={store} carousel />
         </section>
       ) : null}
     </div>
@@ -457,7 +456,7 @@ function PurchaseInfo({
   if (!shipping && payments.length === 0 && !whatsapp) return null;
   const message = encodeURIComponent(`Hola, tengo una duda sobre ${productTitle}.`);
   return (
-    <ul className="divide-y divide-[var(--sf-border)] border-y border-[var(--sf-border)] text-sm [&>li]:py-3">
+    <ul className="divide-y divide-[var(--sf-border)] rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] px-4 text-sm [&>li]:py-3">
       {shipping ? (
         <li>
           <span className="font-semibold">Envío gratis</span> en compras desde{" "}
@@ -483,7 +482,7 @@ function PurchaseInfo({
             href={`https://wa.me/${whatsapp.slice(1)}?text=${message}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold underline underline-offset-4"
+            className="font-semibold text-[var(--sf-link)] underline underline-offset-4"
           >
             Escríbenos por WhatsApp
           </a>

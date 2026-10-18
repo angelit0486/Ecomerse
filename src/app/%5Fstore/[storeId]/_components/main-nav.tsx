@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useRef,
   useState,
   type FocusEvent,
   type KeyboardEvent,
@@ -15,11 +16,10 @@ import {
 /**
  * Menú principal de 2 niveles (F9-T04, F9-DESIGN §10): patrón de navegación de
  * divulgación (enlaces y botones con `aria-expanded`), no menú de aplicación.
- * En móvil, un botón «Menú» (en la primera fila del encabezado, revisión de
- * conversión A4) muestra la lista con los subniveles abiertos; en
- * escritorio, cada entrada con hijos tiene su botón que abre el submenú (Escape
- * lo cierra y devuelve el foco). «Objetivos» es una entrada más del menú que
- * enlaza a `?objetivo=…`.
+ * Escritorio: una fila donde cada entrada con hijos abre su submenú con su nombre
+ * (Escape lo cierra y devuelve el foco). Móvil (rediseño A+B): el botón «Menú»
+ * de la primera fila abre un panel a pantalla completa con los subniveles
+ * abiertos, la cuenta, el carrito y el WhatsApp; Escape o «Cerrar» lo cierran.
  */
 export interface NavEntry {
   label: string;
@@ -35,11 +35,11 @@ interface MobileMenu {
 
 const MobileMenuContext = createContext<MobileMenu | null>(null);
 
-/** Comparte el estado del menú de móvil entre su botón y la lista. */
+/** Comparte el estado del menú de móvil entre su botón y el panel. */
 export function NavProvider({ children }: { children: ReactNode }) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  // Escape cierra la lista de móvil desde cualquier parte y devuelve el foco al botón.
+  // Escape cierra el panel desde cualquier parte y devuelve el foco al botón.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -48,7 +48,12 @@ export function NavProvider({ children }: { children: ReactNode }) {
       document.getElementById(`${id}-menu`)?.focus();
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    // Con el panel abierto, la página de atrás no se desplaza.
+    document.documentElement.classList.add("overflow-hidden");
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.documentElement.classList.remove("overflow-hidden");
+    };
   }, [open, id]);
   return (
     <MobileMenuContext.Provider value={{ id, open, setOpen }}>
@@ -63,6 +68,16 @@ function useMobileMenu(): MobileMenu {
   return menu;
 }
 
+const ICON = {
+  "aria-hidden": true,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
 /** Botón «☰ Menú» de móvil. */
 export function MenuButton() {
   const { id, open, setOpen } = useMobileMenu();
@@ -71,25 +86,35 @@ export function MenuButton() {
       id={`${id}-menu`}
       type="button"
       aria-expanded={open}
-      aria-controls={`${id}-lista`}
+      aria-controls={`${id}-panel`}
       onClick={() => setOpen((v) => !v)}
       className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--sf-radius-control)] sm:hidden"
     >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className="h-6 w-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      >
-        {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+      <svg {...ICON} className="h-6 w-6">
+        <path d="M4 7h16M4 12h16M4 17h16" />
       </svg>
       <span className="sr-only">Menú</span>
     </button>
   );
 }
+
+/**
+ * «Todos los productos», «Ofertas» (si hay; arriba, es de lo más buscado), el
+ * menú de la tienda y los demás accesos que no estén ya en él.
+ */
+function navEntries(menu: NavEntry[], discovery: { label: string; href: string }[]): NavEntry[] {
+  const inMenu = new Set(menu.flatMap((m) => [m.href, ...m.children.map((c) => c.href)]));
+  const extra = discovery.filter((d) => !inMenu.has(d.href)).map((d) => ({ ...d, children: [] }));
+  return [
+    { label: "Todos los productos", href: "/productos", children: [] },
+    ...extra.filter((d) => d.href === "/ofertas"),
+    ...menu,
+    ...extra.filter((d) => d.href !== "/ofertas"),
+  ];
+}
+
+/** «Ofertas» va en el color de ahorro (§15 reserva el acento para ofertas). */
+const offerClass = (href: string) => (href === "/ofertas" ? "text-[var(--sf-sale-text)]" : "");
 
 export function MainNav({
   menu,
@@ -99,7 +124,7 @@ export function MainNav({
   /** «Marcas» y «Ofertas», si no están ya en el menú de la tienda. */
   discovery?: { label: string; href: string }[];
 }) {
-  const { id, open: mobileOpen, setOpen: setMobileOpen } = useMobileMenu();
+  const { id } = useMobileMenu();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   // Un clic fuera cierra el submenú (Safari no da foco a los botones al hacer
   // clic, así que onBlur no basta).
@@ -113,18 +138,7 @@ export function MainNav({
     return () => document.removeEventListener("pointerdown", onPointer);
   }, [openIndex, id]);
 
-  // Al elegir un enlace se cierra todo.
-  const closeAll = () => {
-    setMobileOpen(false);
-    setOpenIndex(null);
-  };
-
-  const inMenu = new Set(menu.flatMap((m) => [m.href, ...m.children.map((c) => c.href)]));
-  const entries: NavEntry[] = [
-    { label: "Todos los productos", href: "/productos", children: [] },
-    ...menu,
-    ...discovery.filter((d) => !inMenu.has(d.href)).map((d) => ({ ...d, children: [] })),
-  ];
+  const entries = navEntries(menu, discovery);
 
   function closeOnEscape(event: KeyboardEvent<HTMLLIElement>, index: number) {
     if (event.key !== "Escape" || openIndex !== index) return;
@@ -139,11 +153,8 @@ export function MainNav({
   }
 
   return (
-    <nav aria-label="Principal" className="mx-auto max-w-6xl px-4 text-sm">
-      <ul
-        id={`${id}-lista`}
-        className={`${mobileOpen ? "flex" : "hidden"} max-h-[calc(100dvh-9rem)] flex-col gap-0.5 overflow-y-auto overscroll-contain pb-4 sm:flex sm:max-h-none sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2 sm:overflow-visible`}
-      >
+    <nav aria-label="Principal" className="mx-auto hidden max-w-6xl px-4 text-sm sm:block">
+      <ul className="flex flex-wrap items-center gap-x-7">
         {entries.map((item, index) => {
           const hasChildren = item.children.length > 0;
           const open = openIndex === index;
@@ -154,50 +165,43 @@ export function MainNav({
               onKeyDown={(e) => closeOnEscape(e, index)}
               onBlur={(e) => closeOnLeave(e, index)}
             >
-              <div className="flex items-center gap-1">
-                {/* Escritorio (revisión de conversión, B2): una entrada con hijos abre su
-                    submenú con su propio nombre, no solo con una flecha pequeña; el
-                    destino de la entrada queda como «Ver todo» dentro del submenú. */}
+              {/* Una entrada con hijos abre su submenú con su propio nombre (revisión de
+                  conversión, B2); su destino queda como «Ver todo» dentro del submenú. */}
+              {hasChildren ? (
+                <button
+                  id={`${id}-btn-${index}`}
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={`${id}-sub-${index}`}
+                  onClick={() => setOpenIndex(open ? null : index)}
+                  className="inline-flex h-11 items-center gap-1 font-semibold hover:text-[var(--sf-link)]"
+                >
+                  {item.label}
+                  <svg {...ICON} className={`h-4 w-4 ${open ? "rotate-180" : ""}`}>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              ) : (
                 <Link
                   href={item.href}
-                  onClick={closeAll}
-                  className={`flex min-h-11 items-center font-medium hover:underline sm:min-h-0 sm:py-1 sm:text-sm ${
-                    hasChildren
-                      ? // En móvil, el grupo es un antetítulo y sus opciones van debajo.
-                        "mt-2 text-xs uppercase tracking-[0.12em] text-[var(--sf-muted)] sm:hidden"
-                      : "text-lg"
-                  }`}
+                  onClick={() => setOpenIndex(null)}
+                  className={`inline-flex h-11 items-center font-semibold hover:underline ${offerClass(item.href)}`}
                 >
                   {item.label}
                 </Link>
-                {hasChildren ? (
-                  <button
-                    id={`${id}-btn-${index}`}
-                    type="button"
-                    aria-expanded={open}
-                    aria-controls={`${id}-sub-${index}`}
-                    onClick={() => setOpenIndex(open ? null : index)}
-                    className="hidden items-center gap-1 py-1 font-medium hover:underline sm:inline-flex"
-                  >
-                    {item.label}
-                    <span aria-hidden="true" className={open ? "rotate-180" : ""}>
-                      ▾
-                    </span>
-                  </button>
-                ) : null}
-              </div>
+              )}
               {hasChildren ? (
                 <ul
                   id={`${id}-sub-${index}`}
-                  className={`mt-1 flex flex-col gap-2 border-l border-[var(--sf-border)] pl-3 sm:absolute sm:left-0 sm:z-20 sm:mt-1 sm:min-w-52 sm:gap-1 sm:rounded-[var(--sf-radius-card)] sm:border sm:bg-[var(--sf-bg)] sm:p-2 sm:shadow-lg ${
-                    open ? "sm:flex" : "sm:hidden"
+                  className={`absolute left-0 top-full z-20 min-w-56 flex-col gap-0.5 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2 shadow-lg ${
+                    open ? "flex" : "hidden"
                   }`}
                 >
-                  <li className="hidden sm:block">
+                  <li>
                     <Link
                       href={item.href}
-                      onClick={closeAll}
-                      className="flex items-center rounded-[var(--sf-radius-control)] font-semibold hover:underline sm:px-2 sm:py-1.5 sm:hover:bg-[var(--sf-surface)]"
+                      onClick={() => setOpenIndex(null)}
+                      className="flex rounded-[var(--sf-radius-control)] px-3 py-2 font-semibold hover:bg-[var(--sf-surface)]"
                     >
                       Ver todo en {item.label}
                     </Link>
@@ -206,8 +210,8 @@ export function MainNav({
                     <li key={child.href + child.label}>
                       <Link
                         href={child.href}
-                        onClick={closeAll}
-                        className="flex min-h-11 items-center rounded-[var(--sf-radius-control)] text-lg hover:underline sm:min-h-0 sm:px-2 sm:py-1.5 sm:text-sm sm:hover:bg-[var(--sf-surface)]"
+                        onClick={() => setOpenIndex(null)}
+                        className="flex rounded-[var(--sf-radius-control)] px-3 py-2 hover:bg-[var(--sf-surface)]"
                       >
                         {child.label}
                       </Link>
@@ -220,5 +224,134 @@ export function MainNav({
         })}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * Panel del menú en móvil (rediseño A+B): ocupa la pantalla, retiene el foco
+ * mientras está abierto y lo devuelve al botón «Menú» al cerrarse.
+ */
+export function MobileMenu({
+  menu,
+  discovery = [],
+  cartCount,
+  whatsapp,
+}: {
+  menu: NavEntry[];
+  discovery?: { label: string; href: string }[];
+  cartCount: number;
+  whatsapp?: string | undefined;
+}) {
+  const { id, open, setOpen } = useMobileMenu();
+  const panel = useRef<HTMLDivElement>(null);
+  const entries = navEntries(menu, discovery);
+
+  useEffect(() => {
+    if (open) panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+  }, [open]);
+
+  function close(returnFocus: boolean) {
+    setOpen(false);
+    if (returnFocus) document.getElementById(`${id}-menu`)?.focus();
+  }
+
+  // Tab no sale del panel mientras está abierto.
+  function trapFocus(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab" || !panel.current) return;
+    const items = panel.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  const row = "flex min-h-14 items-center text-lg font-semibold";
+  return (
+    <div
+      ref={panel}
+      id={`${id}-panel`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú"
+      hidden={!open}
+      onKeyDown={trapFocus}
+      className={`fixed inset-0 z-50 flex-col overflow-y-auto overscroll-contain bg-[var(--sf-bg)] sm:hidden ${open ? "flex" : "hidden"}`}
+    >
+      <div className="sticky top-0 flex items-center justify-between border-b border-[var(--sf-border)] bg-[var(--sf-bg)] py-1.5 pl-4 pr-2">
+        <p className="text-lg font-bold">Menú</p>
+        <button
+          type="button"
+          data-autofocus
+          onClick={() => close(true)}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--sf-radius-control)]"
+        >
+          <svg {...ICON} className="h-6 w-6">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+          <span className="sr-only">Cerrar</span>
+        </button>
+      </div>
+      <nav aria-label="Principal" className="px-4 pb-2">
+        <ul className="divide-y divide-[var(--sf-border)]">
+          {entries.map((item) => (
+            <li key={item.href + item.label} className="py-1">
+              <Link
+                href={item.href}
+                onClick={() => close(false)}
+                className={
+                  item.children.length > 0
+                    ? "flex min-h-11 items-center pt-2 text-sm font-semibold text-[var(--sf-muted)]"
+                    : `${row} ${offerClass(item.href)}`
+                }
+              >
+                {item.label}
+              </Link>
+              {item.children.length > 0 ? (
+                <ul className="pb-2">
+                  {item.children.map((child) => (
+                    <li key={child.href + child.label}>
+                      <Link href={child.href} onClick={() => close(false)} className={row}>
+                        {child.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[var(--sf-border)] p-4">
+        <Link
+          href="/cuenta"
+          onClick={() => close(false)}
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] font-semibold"
+        >
+          Mi cuenta
+        </Link>
+        <Link
+          href="/carrito"
+          onClick={() => close(false)}
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-semibold text-[var(--sf-btn-fg)]"
+        >
+          Ver carrito ({cartCount})
+        </Link>
+        {whatsapp ? (
+          <a
+            href={`https://wa.me/${whatsapp.slice(1)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="col-span-2 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-surface)] px-4 text-center text-sm font-semibold"
+          >
+            ¿Dudas? Escríbenos por WhatsApp
+          </a>
+        ) : null}
+      </div>
+    </div>
   );
 }

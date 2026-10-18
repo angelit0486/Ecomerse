@@ -3,12 +3,15 @@ import Link from "next/link";
 import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
 import {
   mediaUrl,
+  type CardVariants,
   type ProductCard as Card,
   type RatingSummaries,
 } from "@/server/storefront/catalog";
 
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
+import { QuickAdd } from "./quick-add";
+import { Stars } from "./stars";
 
 export function ProductGrid({
   products,
@@ -16,11 +19,14 @@ export function ProductGrid({
   eager = 0,
   carousel = false,
   ratings = {},
+  quickAdd = {},
 }: {
   products: Card[];
   /** Calificaciones reales por producto (opiniones publicadas, ADR-029). */
   ratings?: RatingSummaries;
-  store: { currency: string; locale: string; launched_at?: string | null };
+  /** Variante de «Agregar» por producto (rediseño A+B); sin clave, sin botón. */
+  quickAdd?: CardVariants;
+  store: { id?: string; currency: string; locale: string; launched_at?: string | null };
   /** Cuántas imágenes cargar sin lazy (las de arriba, para el LCP). */
   eager?: number;
   /**
@@ -36,8 +42,8 @@ export function ProductGrid({
     <ul
       className={
         carousel
-          ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-x-5 sm:gap-y-10 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
-          : `grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-5 ${desktop}`
+          ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
+          : `grid grid-cols-2 gap-3 sm:gap-4 ${desktop}`
       }
     >
       {products.map((product, index) => (
@@ -51,6 +57,7 @@ export function ProductGrid({
             eager={index < eager}
             now={now}
             rating={ratings[product.id]}
+            variant={quickAdd[product.id]}
           />
         </li>
       ))}
@@ -58,18 +65,26 @@ export function ProductGrid({
   );
 }
 
+/**
+ * Tarjeta de anaquel (rediseño A+B): foto sobre gris de anaquel, una insignia,
+ * marca, nombre, calificación real, precio (rojo solo con descuento real) y
+ * «Agregar». Con opciones, «Elegir opción» lleva a la ficha.
+ */
 function ProductCard({
   product,
   store,
   eager,
   now,
   rating,
+  variant,
 }: {
   product: Card;
-  store: { currency: string; locale: string; launched_at?: string | null };
+  store: { id?: string; currency: string; locale: string; launched_at?: string | null };
   eager: boolean;
   now: Date;
   rating?: { average: number; count: number } | undefined;
+  /** string: se agrega directo; null: hay que elegir opción; undefined: sin botón. */
+  variant: string | null | undefined;
 }) {
   // Las mismas insignias que la ficha (F9-T04): una sola función.
   const badges = productBadges({
@@ -91,18 +106,24 @@ function ProductCard({
   // Con una sola porción el «precio por porción» es el precio: no aporta nada.
   const perServing =
     price !== null && (product.servings ?? 0) > 1 ? pricePerServing(price, product.servings) : null;
+  const soldOut = product.availability === "out_of_stock";
+  const href = `/productos/${product.slug}`;
   return (
     // `relative`: los textos sr-only (absolutos) quedan dentro de la tarjeta y del
     // carrusel; sin él escapaban al viewport y abrían scroll horizontal en móvil.
-    <article className="group relative flex h-full flex-col">
+    <article className="group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 sm:p-3">
       <Link
-        href={`/productos/${product.slug}`}
-        className="flex flex-col focus-visible:outline-2 focus-visible:outline-[var(--sf-primary)]"
+        href={href}
+        className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"
       >
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)]">
+        <div className="relative aspect-square overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)]">
           {badges.length > 0 ? (
             <div className="absolute left-2 top-2 z-[1]">
-              <Badges badges={badges} label={`Destacados de ${product.title}`} />
+              <Badges
+                badges={badges}
+                label={`Destacados de ${product.title}`}
+                salePercent={sale?.percent ?? null}
+              />
             </div>
           ) : null}
           {product.image ? (
@@ -115,7 +136,8 @@ function ProductCard({
               loading={eager ? "eager" : "lazy"}
               decoding="async"
               {...(eager ? { fetchPriority: "high" as const } : {})}
-              className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] ${product.availability === "out_of_stock" ? "opacity-55 grayscale" : ""}`}
+              // Multiplicar: el fondo blanco de una foto de producto toma el gris del anaquel.
+              className={`h-full w-full object-contain p-1.5 mix-blend-multiply motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
             />
           ) : (
             <div
@@ -126,24 +148,22 @@ function ProductCard({
             </div>
           )}
         </div>
-        {/* Marca como antetítulo: en suplementos es lo primero que se busca con la vista. */}
         {product.brand ? (
-          <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--sf-muted)]">
-            {product.brand}
-          </p>
+          <p className="mt-2.5 truncate text-xs text-[var(--sf-muted)]">{product.brand}</p>
         ) : null}
         <h3
-          className={`sf-text-font text-[0.9375rem] font-medium leading-snug decoration-1 underline-offset-4 group-hover:underline ${product.brand ? "mt-1" : "mt-3"}`}
+          className={`sf-text-font line-clamp-2 text-[0.9375rem] font-semibold leading-snug decoration-1 underline-offset-4 group-hover:underline ${product.brand ? "mt-0.5" : "mt-2.5"}`}
         >
           {product.title}
         </h3>
+        {(product.servings ?? 0) > 1 ? (
+          <p className="mt-0.5 text-xs text-[var(--sf-muted)]">{product.servings} porciones</p>
+        ) : null}
       </Link>
       {rating && rating.count > 0 ? (
         <p className="mt-1 flex items-center gap-1 text-xs tabular-nums">
-          <span aria-hidden className="text-[var(--sf-fg)]">
-            ★
-          </span>
-          <span>
+          <Stars value={rating.average} className="text-[0.8125rem]" />
+          <span className="font-medium">
             {rating.average.toLocaleString("es-MX", {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
@@ -158,34 +178,41 @@ function ProductCard({
       {product.min_price !== null ? (
         // Partes separadas con flex-wrap: sin espacios entre elementos JSX la línea
         // no se puede partir y desbordaba la tarjeta en móvil.
-        <p className="mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 text-sm tabular-nums">
-          <span className="font-semibold">
-            {ranged ? "Desde " : null}
+        <p className="mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 tabular-nums">
+          <span
+            className={`text-lg font-extrabold leading-tight tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${sale ? "text-[var(--sf-sale-text)]" : ""}`}
+          >
+            {ranged ? <span className="text-sm font-semibold">Desde </span> : null}
             {money(product.min_price, store)}
           </span>
           {product.compare_at_price ? (
-            <s className="text-[var(--sf-muted)]">
+            <s className="text-xs text-[var(--sf-muted)]">
               <span className="sr-only">Antes </span>
               {money(product.compare_at_price, store)}
             </s>
-          ) : null}
-          {sale && sale.percent >= 1 ? (
-            <span className="whitespace-nowrap font-semibold text-[var(--sf-sale-text)]">
-              <span className="sr-only">Ahorras </span>−{sale.percent}&nbsp;%
-            </span>
           ) : null}
         </p>
       ) : null}
       {perServing !== null ? (
         <p className="mt-0.5 text-xs tabular-nums text-[var(--sf-muted)]">
-          {money(perServing, store)} por porción · {product.servings} porciones
+          {money(perServing, store)} por porción
         </p>
       ) : null}
       {product.availability === "backorder" ? (
-        <p className="text-xs text-[var(--sf-muted)]">
+        <p className="mt-0.5 text-xs text-[var(--sf-muted)]">
           {AVAILABILITY_LABELS[product.availability]}
         </p>
       ) : null}
+      {soldOut || variant === undefined || !store.id ? null : variant ? (
+        <QuickAdd storeId={store.id} variantId={variant} title={product.title} />
+      ) : (
+        <Link
+          href={href}
+          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-3 text-sm font-semibold text-[var(--sf-link)]"
+        >
+          Elegir opción<span className="sr-only"> de {product.title}</span>
+        </Link>
+      )}
     </article>
   );
 }

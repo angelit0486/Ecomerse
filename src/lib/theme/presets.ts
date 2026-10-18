@@ -4,8 +4,8 @@ import type { FontKey } from "./schema";
 /**
  * Estilos sugeridos de Apariencia (F9-T05): puntos de partida que la tienda
  * aplica a su borrador y luego ajusta. No es código especial de ninguna tienda:
- * cualquier comerciante los ve y elige. «Deportivo» es la identidad de la tienda
- * insignia (F9-DESIGN §15), propia y distinta de GNC, Birdman y B Life.
+ * cualquier comerciante los ve y elige. «Anaquel» es la identidad de la tienda
+ * insignia desde el rediseño A+B (aprobado por la dueña): tienda grande y clara.
  */
 export interface ThemePreset {
   key: string;
@@ -19,6 +19,23 @@ export interface ThemePreset {
 }
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
+  {
+    key: "anaquel",
+    name: "Anaquel",
+    description:
+      "Blanco de anaquel, azul para comprar y rojo solo para las ofertas; títulos Montserrat. Tienda grande y clara.",
+    colors: {
+      primary: "#1d3fd1",
+      accent: "#d62d20",
+      background: "#ffffff",
+      foreground: "#1a1c22",
+      muted: "#5b616e",
+    },
+    heading: "montserrat",
+    body: "inter",
+    radius: "md",
+    buttonStyle: "solid",
+  },
   {
     key: "deportivo",
     name: "Deportivo",

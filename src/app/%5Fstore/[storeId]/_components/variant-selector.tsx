@@ -68,17 +68,21 @@ export function VariantSelector({
       <div aria-live="polite" className="space-y-1">
         {selected ? (
           <>
-            <p className="text-3xl font-semibold tabular-nums tracking-tight">
-              {selected.price}
+            <p className="flex flex-wrap items-baseline gap-x-3 tabular-nums">
+              <span
+                className={`text-[2rem] font-extrabold leading-none tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${selected.compareAt ? "text-[var(--sf-sale-text)]" : ""}`}
+              >
+                {selected.price}
+              </span>
               {selected.compareAt ? (
-                <s className="ml-3 text-base font-normal text-[var(--sf-muted)]">
+                <s className="text-base text-[var(--sf-muted)]">
                   <span className="sr-only">Antes </span>
                   {selected.compareAt}
                 </s>
               ) : null}
             </p>
             {selected.saving ? (
-              <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
+              <p className="text-sm font-bold text-[var(--sf-sale-text)]">{selected.saving}</p>
             ) : null}
             {selected.saleEnds ? (
               <p className="text-sm text-[var(--sf-muted)]">{selected.saleEnds}</p>
@@ -116,7 +120,7 @@ export function VariantSelector({
                   />
                   <label
                     htmlFor={id}
-                    className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-3 text-sm peer-checked:border-[var(--sf-fg)] peer-checked:bg-[var(--sf-fg)] peer-checked:text-[var(--sf-bg)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--sf-primary)] peer-disabled:cursor-not-allowed peer-disabled:line-through peer-disabled:opacity-50"
+                    className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-4 text-sm font-semibold peer-checked:border-2 peer-checked:border-[var(--sf-primary)] peer-checked:bg-[var(--sf-surface)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--sf-primary)] peer-disabled:cursor-not-allowed peer-disabled:line-through peer-disabled:opacity-50"
                   >
                     {value}
                   </label>
