@@ -91,8 +91,9 @@ test("listado: insignias en las tarjetas y filtro de marca", async ({ page }) =>
   await page.goto(`${origin()}/productos`);
   const card = (title: string) =>
     page.getByRole("article").filter({ has: page.getByRole("heading", { name: title }) });
-  // Una sola insignia: Agotado > Oferta > Últimas piezas > Nuevo (revisión M8).
-  await expect(card("Cafeína anhidra").getByRole("listitem")).toHaveText(["Oferta"]);
+  // Una sola insignia: Agotado > Oferta > Últimas piezas > Nuevo (revisión M8). La
+  // oferta se ve como «−20 %» y el lector de pantalla oye «Oferta −20 %» (rediseño A+B).
+  await expect(card("Cafeína anhidra").getByRole("listitem")).toHaveText(["Oferta −20 %"]);
   await expect(card("Creatina pura").getByRole("listitem")).toHaveText(["Últimas piezas"]);
   await expect(card("Electrolitos").getByRole("listitem")).toHaveText(["Nuevo"]);
   // Nunca la cantidad exacta.

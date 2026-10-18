@@ -206,11 +206,15 @@ function ProductCard({
       {soldOut || variant === undefined || !store.id ? null : variant ? (
         <QuickAdd storeId={store.id} variantId={variant} title={product.title} />
       ) : (
+        // Mismo destino que el enlace de la tarjeta: para el lector de pantalla y el
+        // teclado sería un enlace repetido, así que solo es una ayuda visual.
         <Link
           href={href}
+          aria-hidden="true"
+          tabIndex={-1}
           className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-3 text-sm font-semibold text-[var(--sf-link)]"
         >
-          Elegir opción<span className="sr-only"> de {product.title}</span>
+          Elegir opción
         </Link>
       )}
     </article>
