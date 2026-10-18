@@ -326,7 +326,11 @@ test("Fase A: leyenda de la tienda — el borrador sugerido no se aprueba; la ap
   await legend.getByLabel("Texto de la leyenda (borrador)").fill(STORE_LEGEND);
   await legend.getByRole("checkbox").check();
   await legend.getByRole("button", { name: "Aprobar y publicar leyenda" }).click();
-  await expect(legend.getByRole("status").filter({ hasText: "Leyenda aprobada" })).toBeVisible();
+  // El mensaje completo: «Aún no hay leyenda aprobada.» también es un status
+  // y coincide con «Leyenda aprobada» (hasText no distingue mayúsculas).
+  await expect(
+    legend.getByRole("status").filter({ hasText: "Leyenda aprobada: ya se muestra en tu tienda." }),
+  ).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("region", { name: "Productos que no se pueden publicar" }),
