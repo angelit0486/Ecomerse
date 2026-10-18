@@ -237,4 +237,45 @@ describe("place_order concurrente", () => {
       select reserved from public.inventory_levels where variant_id = ${variantId}`;
     expect(level!.reserved).toBe(paid);
   });
+  it("oferta con fechas (ADR-030): si empieza mientras se paga, price_changed; el pedido guarda el precio de oferta", async () => {
+    const variantId = await product(`OFE-${run}`, 5, 10000);
+    const [v] = await admin<{ product_id: string }[]>`
+      select product_id from public.product_variants where id = ${variantId}`;
+    const c = await cart(variantId);
+    const [sale] = await admin<{ id: string }[]>`
+      insert into public.variant_price_schedules (store_id, product_id, variant_id, sale_price, starts_at, ends_at)
+      values (${storeId}, ${v!.product_id}, ${variantId}, 8000, now() - interval '1 minute', now() + interval '1 day')
+      returning id`;
+    // El worker con su rol, como el job catalog.apply_sales.
+    const worker = () =>
+      admin.begin(async (sql) => {
+        await sql`set local role system_worker`;
+        return sql<
+          { result: string }[]
+        >`select result from system.apply_price_schedules(100) where sale_id = ${sale!.id}`;
+      });
+    expect((await worker()).map((r) => r.result)).toEqual(["started"]);
+
+    // El comprador vio $100.00: el checkout se detiene y le muestra el precio nuevo.
+    await expect(place(c, 10000)).rejects.toThrow("price_changed");
+    const [order] = await place(c, 8000);
+    const orderId = (order!.r as { order_id: string }).order_id;
+    const [item] = await admin<{ unit_price: string; compare_at_price: string | null }[]>`
+      select unit_price, compare_at_price from public.order_items where order_id = ${orderId}`;
+    expect([Number(item!.unit_price), Number(item!.compare_at_price)]).toEqual([8000, 10000]);
+
+    // Al terminar, el precio regresa; el pedido conserva lo que se cobró.
+    await admin.begin(async (sql) => {
+      await sql`set local session_replication_role = replica`;
+      await sql`update public.variant_price_schedules
+                   set starts_at = now() - interval '2 days', ends_at = now() - interval '1 minute' where id = ${sale!.id}`;
+    });
+    expect((await worker()).map((r) => r.result)).toEqual(["expired"]);
+    const [after] = await admin<{ price: string; compare_at_price: string | null }[]>`
+      select price, compare_at_price from public.product_variants where id = ${variantId}`;
+    expect([Number(after!.price), after!.compare_at_price]).toEqual([10000, null]);
+    const [kept] = await admin<{ unit_price: string }[]>`
+      select unit_price from public.order_items where order_id = ${orderId}`;
+    expect(Number(kept!.unit_price)).toBe(8000);
+  });
 });

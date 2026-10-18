@@ -175,6 +175,9 @@ export default async function ProductsPage({ params, searchParams }: Props) {
           <Link href={`${base}/opiniones`} className={`${linkButton} border border-control`}>
             Opiniones
           </Link>
+          <Link href={`${base}/ofertas`} className={`${linkButton} border border-control`}>
+            Ofertas
+          </Link>
           {hasPermission(ctx, "products.cost.read") ? (
             <Link href={`${base}/proveedores`} className={`${linkButton} border border-control`}>
               Proveedores

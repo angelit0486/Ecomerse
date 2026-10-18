@@ -90,6 +90,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["import.commit", lazy("import.commit", imports)],
   ["compliance.recheck", lazy("compliance.recheck", compliance)],
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
+  ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

@@ -34,6 +34,26 @@ export interface CatalogActionState {
   issues?: string[];
   /** Vista previa de precios en bloque (aún sin aplicar). */
   preview?: BulkPricePreview;
+  /** Vista previa de una oferta con fechas (ADR-030), aún sin programar. */
+  salePreview?: SalePreview;
+}
+
+export interface SalePreview {
+  /** Lo que se envió: «Programar» reenvía exactamente esto (lo que se vio). */
+  params: Record<string, string>;
+  starts_at: string;
+  ends_at: string;
+  rows: {
+    product_id: string;
+    title: string;
+    variant_id: string;
+    signature: string;
+    sku: string | null;
+    price: number;
+    sale_price: number;
+    /** not_lower: no queda más barato · overlap: ya tiene una oferta en esas fechas. */
+    issue: "not_lower" | "overlap" | null;
+  }[];
 }
 
 export interface BulkPricePreview {
@@ -634,6 +654,150 @@ export async function schedulePublishAction(
       ? "Programación quitada."
       : "Publicación programada. Se publicará sola si cumple lo necesario para estar a la venta.",
   };
+}
+
+// -----------------------------------------------------------------------------
+// Ofertas con fechas (ADR-030)
+// -----------------------------------------------------------------------------
+
+const LOCAL_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * Programa una oferta (o la previsualiza). Los productos vienen fijos (ficha) o
+ * de la selección del listado. La base calcula el precio de oferta, valida y
+ * cambia el precio a su hora; aquí solo se revisa la forma de los datos.
+ */
+export async function scheduleSaleAction(
+  storeHandle: string,
+  fixedProductIds: string[] | null,
+  _: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const ids = fixedProductIds ?? formData.getAll("ids").map(String);
+  if (ids.length === 0 || ids.length > 100 || !ids.every((id) => uuid.safeParse(id).success)) {
+    return { error: "Selección no válida." };
+  }
+  const variantId = String(formData.get("variant_id") ?? "");
+  const mode = formData.get("mode") === "fixed" ? "fixed" : "percent";
+  const salePriceText = String(formData.get("sale_price") ?? "").trim();
+  const percentText = String(formData.get("percent") ?? "")
+    .trim()
+    .replace(",", ".");
+  const rounding = formData.get("rounding") === "peso" ? "peso" : "centavo";
+  const starts = String(formData.get("starts_at") ?? "").trim();
+  const ends = String(formData.get("ends_at") ?? "").trim();
+  const apply = formData.get("confirm") === "1";
+
+  if (variantId && !uuid.safeParse(variantId).success) return { error: "Elige una presentación." };
+  const salePrice = mode === "fixed" ? parseMoneyToCents(salePriceText) : null;
+  if (mode === "fixed" && (salePrice === null || salePrice <= 0)) {
+    return {
+      error: "Escribe el precio de oferta (por ejemplo 599 o 599.90).",
+      fields: { sale_price: "Precio no válido." },
+    };
+  }
+  const percent = Number(percentText);
+  if (
+    mode === "percent" &&
+    (!/^\d{1,2}(\.\d{1,2})?$/.test(percentText) || percent < 1 || percent > 90)
+  ) {
+    return {
+      error: "Escribe un descuento entre 1 y 90 %.",
+      fields: { percent: "Descuento no válido." },
+    };
+  }
+  if (starts && !LOCAL_DATETIME.test(starts)) {
+    return { error: "Revisa el inicio.", fields: { starts_at: "Fecha y hora no válidas." } };
+  }
+  if (!LOCAL_DATETIME.test(ends)) {
+    return {
+      error: "Elige cuándo termina la oferta.",
+      fields: { ends_at: "Fecha y hora no válidas." },
+    };
+  }
+  const params: Record<string, string> = {
+    variant_id: variantId,
+    mode,
+    sale_price: mode === "fixed" ? salePriceText : "",
+    percent: mode === "percent" ? percentText : "",
+    rounding,
+    starts_at: starts,
+    ends_at: ends,
+  };
+  try {
+    const result = await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc<{
+        rows?: SalePreview["rows"];
+        starts_at: string;
+        ends_at: string;
+        scheduled?: number;
+        started?: number;
+      }>(supabase, "catalog_schedule_sale", {
+        p_store_id: storeId,
+        p_product_ids: ids,
+        p_variant_ids: variantId ? [variantId] : null,
+        p_sale_price: salePrice,
+        p_percent: mode === "percent" ? percent : null,
+        p_rounding: mode === "percent" ? rounding : null,
+        p_starts_local: starts || null,
+        p_ends_local: ends,
+        p_apply: apply,
+      }),
+    );
+    if (!apply) {
+      return {
+        salePreview: {
+          params,
+          starts_at: result.starts_at,
+          ends_at: result.ends_at,
+          rows: result.rows ?? [],
+        },
+      };
+    }
+    revalidatePath(productsPath(storeHandle));
+    const n = result.scheduled ?? 0;
+    const started = result.started ?? 0;
+    return {
+      ok: true,
+      message:
+        started > 0
+          ? `Oferta aplicada en ${started} presentación${started === 1 ? "" : "es"}: ya se ve en la tienda.`
+          : `Oferta programada en ${n} presentación${n === 1 ? "" : "es"}. El precio cambia solo a la hora de inicio y regresa al terminar.`,
+    };
+  } catch (error) {
+    const state = failure("catalog.schedule_sale", error);
+    return state.fields?.publish ? { error: BULK_PUBLISH_BLOCKED } : state;
+  }
+}
+
+/** Cancela una oferta: si ya empezó, el precio regresa al momento. */
+export async function cancelSaleAction(
+  storeHandle: string,
+  _: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const saleId = String(formData.get("sale_id") ?? "");
+  if (!uuid.safeParse(saleId).success) return { error: "Oferta no válida." };
+  try {
+    const result = await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc<{ status: string; reason?: string }>(supabase, "catalog_cancel_sale", {
+        p_store_id: storeId,
+        p_sale_id: saleId,
+      }),
+    );
+    revalidatePath(productsPath(storeHandle));
+    if (result.status !== "cancelled")
+      return { ok: true, message: "Esa oferta ya había terminado." };
+    return {
+      ok: true,
+      message:
+        result.reason === "price_changed"
+          ? "Oferta cancelada. El precio no se tocó porque lo cambiaste durante la oferta."
+          : "Oferta cancelada.",
+    };
+  } catch (error) {
+    return failure("catalog.cancel_sale", error);
+  }
 }
 
 /** Foto propia de una presentación (sabor, tamaño); vacío = usa la del producto. */

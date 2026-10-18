@@ -56,3 +56,62 @@ describe("catalog.publish_scheduled", () => {
     expect(lines).toEqual([]);
   });
 });
+
+describe("catalog.apply_sales", () => {
+  it("invalida solo las tiendas cuyo precio cambió", async () => {
+    const { db, queries } = fakeDb([
+      { store_id: "a", result: "started" },
+      { store_id: "a", result: "expired" },
+      { store_id: "b", result: "price_changed" },
+      { store_id: "c", result: "expired" },
+      { store_id: "d", result: "not_started" },
+    ] as unknown as { store_id: string; published: boolean }[]);
+    const invalidated: string[] = [];
+    const lines: string[] = [];
+    const handlers = new Map(
+      createCatalogHandlers({ db, onPublished: (s) => invalidated.push(s) }),
+    );
+    await handlers.get("catalog.apply_sales")!(job, {
+      log: createLogger({ sink: (l) => lines.push(l) }),
+      deadline: Date.now() + 1000,
+    });
+    expect(queries[0]).toContain("system.apply_price_schedules");
+    expect(invalidated.sort()).toEqual(["a", "c"]);
+    expect(lines.join("\n")).toContain('"started":1');
+    expect(lines.join("\n")).toContain('"ended":4');
+  });
+
+  it("sin ofertas que empiecen o terminen no hace nada", async () => {
+    const { db } = fakeDb([]);
+    const invalidated: string[] = [];
+    const lines: string[] = [];
+    const handlers = new Map(
+      createCatalogHandlers({ db, onPublished: (s) => invalidated.push(s) }),
+    );
+    await handlers.get("catalog.apply_sales")!(job, {
+      log: createLogger({ sink: (l) => lines.push(l) }),
+      deadline: Date.now() + 1000,
+    });
+    expect(invalidated).toEqual([]);
+    expect(lines).toEqual([]);
+  });
+
+  it("procesa en lotes hasta vaciar lo pendiente", async () => {
+    const batches = [
+      Array.from({ length: 200 }, () => ({ store_id: "a", result: "expired" })),
+      [{ store_id: "b", result: "expired" }],
+    ];
+    let calls = 0;
+    const db = (() => Promise.resolve(batches[calls++] ?? [])) as unknown as Sql;
+    const invalidated: string[] = [];
+    const handlers = new Map(
+      createCatalogHandlers({ db, onPublished: (s) => invalidated.push(s) }),
+    );
+    await handlers.get("catalog.apply_sales")!(job, {
+      log: createLogger({ sink: () => {} }),
+      deadline: Date.now() + 1000,
+    });
+    expect(calls).toBe(2);
+    expect(invalidated.sort()).toEqual(["a", "b"]);
+  });
+});

@@ -9,7 +9,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { bulkProductsAction, type CatalogActionState } from "./actions";
 import { QuickPrices, type QuickPriceVariant } from "./quick-prices";
-import { nativeControl } from "./styles";
+import { linkButton, nativeControl } from "./styles";
 
 interface Row {
   id: string;
@@ -157,6 +157,7 @@ export function BulkProductsTable({
             {canBulkEdit ? <option value="tags_add">Agregar etiqueta…</option> : null}
             {canBulkEdit ? <option value="tags_remove">Quitar etiqueta…</option> : null}
             {canBulkEdit ? <option value="prices">Cambiar precios (%)…</option> : null}
+            {canBulkEdit ? <option value="sale">Programar oferta…</option> : null}
             {canBulkDelete ? <option value="delete">Eliminar</option> : null}
           </select>
           {bulkAction === "brand" ? (
@@ -248,15 +249,29 @@ export function BulkProductsTable({
               </span>
             </>
           ) : null}
-          <Button
-            type="submit"
-            variant="secondary"
-            size="sm"
-            loading={pending}
-            disabled={selected.size === 0 || !bulkAction}
-          >
-            {bulkAction === "prices" ? "Ver vista previa" : "Aplicar"}
-          </Button>
+          {bulkAction === "sale" ? (
+            // La oferta se arma en su propia página (fechas y vista previa).
+            selected.size > 0 ? (
+              <Link
+                href={`/admin/${storeHandle}/productos/ofertas/nueva?${[...selected]
+                  .map((id) => `ids=${id}`)
+                  .join("&")}`}
+                className={`${linkButton} border border-control`}
+              >
+                Continuar
+              </Link>
+            ) : null
+          ) : (
+            <Button
+              type="submit"
+              variant="secondary"
+              size="sm"
+              loading={pending}
+              disabled={selected.size === 0 || !bulkAction}
+            >
+              {bulkAction === "prices" ? "Ver vista previa" : "Aplicar"}
+            </Button>
+          )}
         </form>
       ) : null}
       {preview ? (

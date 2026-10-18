@@ -16,6 +16,15 @@ export interface HistoryEvent {
 
 type PriceChange = { id: string; price: number; compare_at_price: number | null };
 
+/** Motivos de fin de una oferta (ADR-030). */
+const SALE_REASONS: Record<string, string> = {
+  cancelled: "el precio regular regresó",
+  price_changed: "el precio se cambió durante la oferta y se respetó",
+  not_lower: "no empezó: el precio ya era menor o igual al de oferta",
+  variant_removed: "la presentación ya no está a la venta",
+  not_started: "no empezó: la tienda no podía vender en esas fechas",
+};
+
 /**
  * Historial de un producto en su ficha (tanda 6): quién cambió qué y cuándo,
  * desde la auditoría (catalog_product_history, exige audit.read).
@@ -49,7 +58,7 @@ export function ProductHistory({
       const old = new Map(
         ((before.variants as PriceChange[] | undefined) ?? []).map((v) => [v.id, v]),
       );
-      return ((after.variants as PriceChange[] | undefined) ?? []).map((v) => {
+      const changes = ((after.variants as PriceChange[] | undefined) ?? []).map((v) => {
         const prev = old.get(v.id);
         const label = variantLabels[v.id] ?? "Presentación";
         const compare =
@@ -58,6 +67,30 @@ export function ProductHistory({
             : "";
         return `${label}: ${money(prev?.price)} → ${money(v.price)}${compare}`;
       });
+      // Oferta con fechas (ADR-030): la hizo el sistema a la hora programada.
+      if (e.metadata?.sale === "start") changes.push("Empezó la oferta programada");
+      if (e.metadata?.sale === "end") changes.push("Terminó la oferta: regresó el precio regular");
+      return changes;
+    }
+    if (e.action === "product.sale_scheduled") {
+      const variants = (after.variants as { id: string; sale_price: number }[] | undefined) ?? [];
+      const range =
+        typeof after.starts_at === "string" && typeof after.ends_at === "string"
+          ? `Del ${when.format(new Date(after.starts_at))} al ${when.format(new Date(after.ends_at))}`
+          : null;
+      return [
+        ...(range ? [range] : []),
+        ...variants.map(
+          (v) => `${variantLabels[v.id] ?? "Presentación"}: ${money(v.sale_price)} de oferta`,
+        ),
+        ...(e.metadata?.bulk ? ["Desde una acción en bloque"] : []),
+      ];
+    }
+    if (e.action === "product.sale_cancelled" || e.action === "product.sale_ended") {
+      const label = variantLabels[String(after.variant_id)] ?? "Presentación";
+      if (before.status === "scheduled") return [`${label}: se canceló antes de empezar`];
+      const reason = SALE_REASONS[String(after.reason)];
+      return [reason ? `${label}: ${reason}` : label];
     }
     if (e.action === "product.publish_failed") {
       return ((after.codes as string[] | undefined) ?? []).map(publishIssueMessage);

@@ -182,6 +182,20 @@ function savingText(price: number, compareAt: number | null, store: StorePublic)
   return `Ahorras ${money(s.amount, store)}${s.percent >= 1 ? ` (${s.percent} %)` : ""}`;
 }
 
+/**
+ * Vigencia de una oferta con fechas (ADR-030): la LFPC pide informarla. Sin
+ * contadores ni urgencia: solo la fecha y hora en que termina, en la hora de la tienda.
+ */
+function saleEndsText(endsAt: string | null | undefined, store: StorePublic): string | null {
+  if (!endsAt) return null;
+  const when = new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: store.timezone || "America/Mexico_City",
+  }).format(new Date(endsAt));
+  return `Oferta válida hasta el ${when}.`;
+}
+
 /** Espacio para contenido que la tienda aún no tiene (D-F9-09): solo en la vista previa. */
 function PendingContent({ title, text }: { title: string; text: string }) {
   return (
@@ -321,6 +335,11 @@ export default async function ProductPage({ params }: Props) {
                     {savingText(single.price, single.compare_at_price, store)}
                   </p>
                 ) : null}
+                {saleEndsText(single.sale_ends_at, store) ? (
+                  <p className="text-sm text-[var(--sf-muted)]">
+                    {saleEndsText(single.sale_ends_at, store)}
+                  </p>
+                ) : null}
                 {perServing !== null ? (
                   <p className="text-sm text-[var(--sf-muted)]">
                     {single.net_content ? `${single.net_content} · ` : ""}
@@ -353,6 +372,7 @@ export default async function ProductPage({ params }: Props) {
                     ? money(v.compare_at_price, store)
                     : null,
                 saving: savingText(v.price, v.compare_at_price, store),
+                saleEnds: saleEndsText(v.sale_ends_at, store),
                 availability: availabilityText(v.availability, v.ships_in_days),
                 available: v.availability !== "out_of_stock",
                 imageUrl: v.image ? mediaUrl(v.image.path) : null,

@@ -73,6 +73,14 @@ export const FIELD_MESSAGES: Record<string, string> = {
   brand_id: "Esa marca ya no existe.",
   compare_at_price: "El «precio antes» debe ser mayor que el precio.",
   publish_at: "Elige una fecha y hora en el futuro y dentro de un año.",
+  sale_price:
+    "El precio de oferta debe ser mayor que 0 y menor que el precio regular de cada presentación.",
+  percent: "Revisa el porcentaje.",
+  starts_at: "El inicio no puede estar en el pasado ni a más de un año.",
+  ends_at: "El fin debe ser después del inicio y como máximo 90 días después.",
+  overlap:
+    "Alguna presentación ya tiene una oferta en esas fechas. Cancélala o elige otras fechas.",
+  sale: "Esa oferta ya no existe.",
   status: "Solo se programa un borrador: este producto ya está publicado o archivado.",
   prices: "Revisa los precios: números enteros de centavos o con dos decimales.",
   description_html: "La descripción es demasiado larga.",

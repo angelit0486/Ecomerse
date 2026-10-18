@@ -20,6 +20,7 @@ import { StockAdjust } from "../stock-adjust";
 import { ProductEditor } from "../product-editor";
 import { ProductImages } from "../product-images";
 import { ProductStatusPanel } from "../product-status";
+import { SalesList, ScheduleSaleForm, type SaleRow } from "../product-sales";
 import { RegulatoryForm, type RegulatoryInitial } from "../regulatory-form";
 
 export const metadata: Metadata = { title: "Producto" };
@@ -77,7 +78,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
     }
   }
   const canSeeHistory = hasPermission(ctx, "audit.read");
-  const [history, domains] = await Promise.all([
+  const [history, domains, sales] = await Promise.all([
     canSeeHistory
       ? callRpc<HistoryEvent[]>(supabase, "catalog_product_history", {
           p_store_id: ctx.store.id,
@@ -92,6 +93,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
           .eq("store_id", ctx.store.id)
           .eq("status", "active")
       : Promise.resolve({ data: null }),
+    callRpc<SaleRow[]>(supabase, "catalog_list_sales", {
+      p_store_id: ctx.store.id,
+      p_product_id: product.id,
+      p_include_past: true,
+      p_limit: 20,
+    }),
   ]);
   // «Ver en la tienda»: solo un producto publicado de una tienda abierta.
   const domain =
@@ -185,6 +192,38 @@ export default async function ProductPage({ params, searchParams }: Props) {
           }
           timeZoneLabel={ctx.store.timezone.replace(/^America\//, "").replace(/_/g, " ")}
         />
+      ) : null}
+
+      {(canEdit && product.variants.length > 0) || sales.length > 0 ? (
+        <section aria-labelledby="ofertas-titulo" className="space-y-3">
+          <h2 id="ofertas-titulo" className="text-base font-semibold">
+            Ofertas con fechas
+          </h2>
+          {canEdit && product.variants.length > 0 ? (
+            <ScheduleSaleForm
+              storeHandle={ctx.store.handle}
+              productIds={[product.id]}
+              variants={product.variants
+                .filter((v) => v.status === "active")
+                .map((v) => ({
+                  id: v.id,
+                  label:
+                    (Object.values(v.options).join(" / ") || "Única") +
+                    (v.sku ? ` (${v.sku})` : ""),
+                }))}
+              currency={ctx.store.currency}
+              timeZone={ctx.store.timezone}
+              timeZoneLabel={ctx.store.timezone.replace(/^America\//, "").replace(/_/g, " ")}
+            />
+          ) : null}
+          <SalesList
+            storeHandle={ctx.store.handle}
+            sales={sales}
+            currency={ctx.store.currency}
+            timeZone={ctx.store.timezone}
+            canEdit={canEdit}
+          />
+        </section>
       ) : null}
 
       <ProductImages

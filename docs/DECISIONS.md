@@ -513,7 +513,7 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
 - (b) Opiniones de cualquiera: no son verificables.
 - (c) Un servicio externo de reseñas: otra dependencia, y los datos salen de la plataforma.
 
-### ADR-030 — Precios de oferta con fechas · **propuesta: requiere aprobación del propietario**
+### ADR-030 — Precios de oferta con fechas · **aprobado por el propietario el 2026-10-18**
 
 **Contexto.** Hoy una oferta se arma a mano: la dueña baja el precio, pone el «precio antes» y, al terminar la oferta, se acuerda de regresarlos. Una oferta de fin de semana o de Buen Fin exige estar frente al panel a la hora exacta, y si se olvida, el precio rebajado se queda. Programarla toca el precio que cobra la tienda, que es contrato crítico (GATE0 §43: Product / Variant y Cart, «el precio se calcula siempre en vivo»): por eso es un ADR.
 
@@ -525,7 +525,7 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
    - Al empezar guarda el precio y el «precio antes» que tenía la variante, para regresarlos al final.
    - Reglas: `0 < sale_price < precio actual`; `ends_at > starts_at`; duración máxima de 90 días; empieza dentro del próximo año.
    - Una sola oferta programada o activa por variante a la vez; dos ofertas que se enciman se rechazan.
-3. **Job `catalog.apply_price_schedules`** cada minuto, encolado por `system.enqueue_maintenance` como la publicación programada.
+3. **Job `catalog.apply_sales`** cada minuto, encolado por `system.enqueue_maintenance` como la publicación programada.
    - **Al empezar:** `compare_at_price` = precio actual y `price` = precio de oferta. La oferta se muestra como hoy, con el «precio antes» tachado y el filtro «Ofertas».
    - **Al terminar:** si el precio sigue siendo el de la oferta, regresa el precio y el «precio antes» originales.
    - **Si la dueña cambió el precio a mano durante la oferta,** el job no lo toca, la marca `ended` con el motivo `price_changed` y avisa en el historial. Nunca se pisa una decisión posterior de la dueña.
@@ -556,8 +556,13 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
   - E2E de programar y cancelar.
 - Esfuerzo estimado: M.
 
-**Decisiones pendientes del propietario:**
+**Decisión del propietario (2026-10-18):** aprobó el enfoque tal como está, con el límite de 90 días y la vigencia en la ficha.
 
-1. ¿Aprueba el enfoque, en el que el job cambia el precio, en lugar de calcularlo al leer?
-2. ¿Le sirve el límite de 90 días por oferta?
-3. ¿Quiere que la ficha muestre la vigencia de la oferta?
+**Implementación (`20261018003000_scheduled_sale_prices.sql`):**
+
+- Varias ofertas por presentación, siempre que no se encimen (por ejemplo, un fin de semana y luego el Buen Fin).
+- Si el inicio es «ahora», la oferta empieza en la misma transacción, sin esperar al cron. Esto también sirve en staging, donde el cron es diario.
+- El descuento se calcula sobre el precio regular. Si la presentación ya tiene una oferta activa, se usa el precio que regresará al terminar.
+- Duplicar un producto durante una oferta copia el precio regular.
+- El job (`catalog.apply_sales`, que llama a `system.apply_price_schedules`) procesa en lotes de 200 hasta vaciar lo pendiente.
+- Pruebas: pgTAP `77_scheduled_sales`, integración del checkout con `price_changed` (`checkout-concurrency`), unitarias del job y E2E `scheduled-sales`.

@@ -18,6 +18,8 @@ export interface SelectorVariant {
   compareAt: string | null;
   /** «Ahorras $X (Y %)» calculado en el servidor; null sin descuento. */
   saving: string | null;
+  /** «Oferta válida hasta el …» (ADR-030); null sin oferta con fechas. */
+  saleEnds?: string | null;
   availability: string;
   available: boolean;
   imageUrl: string | null;
@@ -77,6 +79,9 @@ export function VariantSelector({
             </p>
             {selected.saving ? (
               <p className="text-sm font-semibold text-[var(--sf-sale-text)]">{selected.saving}</p>
+            ) : null}
+            {selected.saleEnds ? (
+              <p className="text-sm text-[var(--sf-muted)]">{selected.saleEnds}</p>
             ) : null}
             {selected.serving ? (
               <p className="text-sm text-[var(--sf-muted)]">{selected.serving}</p>

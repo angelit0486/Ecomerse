@@ -118,6 +118,8 @@ export interface ProductDetail {
     /** ADR-026: contenido y porciones de esta presentación (null = los del producto). */
     net_content?: string | null;
     servings_per_container?: number | null;
+    /** ADR-030: fin de la oferta con fechas en curso (null sin oferta programada). */
+    sale_ends_at?: string | null;
     image: ImageRef | null;
   }[];
   images: ImageRef[];
