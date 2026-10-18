@@ -566,3 +566,25 @@ El propietario delegó las decisiones que lleven a esa meta («toma solo decisio
 - Duplicar un producto durante una oferta copia el precio regular.
 - El job (`catalog.apply_sales`, que llama a `system.apply_price_schedules`) procesa en lotes de 200 hasta vaciar lo pendiente.
 - Pruebas: pgTAP `77_scheduled_sales`, integración del checkout con `price_changed` (`checkout-concurrency`), unitarias del job y E2E `scheduled-sales`.
+
+### ADR-031 — Contraseña del panel como alternativa al código por email · **aprobado por el propietario el 2026-10-18**
+
+**Contexto.** El acceso del staff (GATE0 §7.2) era código por email → TOTP → AAL2. En la vista previa los códigos no llegaban, porque el correo estaba apagado. El propietario pidió entrar sin depender del correo. Entrar solo con el email dejaría la tienda abierta a cualquiera que lo conozca, así que se descartó. Cambiar cómo se inicia sesión toca un contrato crítico (AuthorizationContext, `aal`): por eso es un ADR.
+
+**Decisión.**
+
+1. **Primer paso alternativo:** el staff puede entrar con **email + contraseña** (`/ingresar/contrasena`) en lugar del código por email. La sesión queda en `aal1` y el **TOTP sigue siendo obligatorio**: sin él no hay panel. La base exige AAL2 como antes.
+2. **La contraseña solo se crea con la sesión completa (AAL2)** en `/seguridad/contrasena`, con enlace «Contraseña» en el encabezado del panel.
+   - Requisitos: de 12 a 72 bytes, confirmación y que no contenga el email.
+   - Supabase Auth guarda el hash; la app nunca la registra.
+3. **Mismo mensaje** para un email sin cuenta y para una contraseña incorrecta. **Límite propio de intentos** (`system.take_staff_login_attempt`, migración `20261018003100`): 10 por email y 30 por IP cada 15 minutos, con evento `auth.password_rate_limited`. Los límites de Supabase Auth son por la IP del servidor, compartida por todos los inicios de sesión; el hallazgo es de la revisión de seguridad independiente.
+4. **Eventos de seguridad:** `auth.login_failed` con `reason: invalid_password`, `auth.login_succeeded` con `method: password` y el nuevo `auth.password_set` (warning).
+5. **Sin «olvidé mi contraseña» por correo:** quien la olvida entra con el código por email y crea otra.
+
+**Alternativas descartadas.** (a) Entrar solo con el email. (b) Desactivar la 2FA. (c) Enlaces mágicos permanentes. Las tres dejan el panel abierto a quien conozca o intercepte el correo.
+
+**Consecuencias.**
+
+- Pruebas: pgTAP `78_staff_password_attempts` y E2E `password-login`, que cubre los requisitos, la creación con AAL2, el error genérico, que la contraseña sin TOTP no da acceso y el evento registrado.
+- Acción recomendada en Supabase alojado: subir la longitud mínima de contraseña a 12 (Authentication → Providers → Email) y, con el plan Pro, activar la protección contra contraseñas filtradas.
+- Mismo día, a pedido del propietario: en la vista previa, *almanzaangel164@gmail.com* pasó a ser el dueño de la organización de la tienda `demo`. El usuario de demostración quedó suspendido, con auditoría `organization.ownership_transferred`.

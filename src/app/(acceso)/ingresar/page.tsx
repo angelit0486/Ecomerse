@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/server/auth/session";
@@ -18,6 +19,9 @@ export default async function LoginPage() {
         <p className="text-sm text-fg-muted">Te enviaremos un código de un solo uso a tu email.</p>
       </header>
       <EmailForm action={requestLoginCode} />
+      <Link href="/ingresar/contrasena" className="text-sm underline">
+        Entrar con contraseña
+      </Link>
     </>
   );
 }

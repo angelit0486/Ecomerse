@@ -10,16 +10,19 @@ import { callRpc } from "@/server/db/rpc";
 import { peekInvitation } from "@/server/invitations/peek";
 import { getSession } from "@/server/auth/session";
 import { serverEnv } from "@/server/env";
+import { workerDb } from "@/server/db/role-clients";
+import { clientIpHash } from "@/server/storefront/cart";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /**
- * Acceso del staff (GATE0 §7.2, Q-B2): código por email → TOTP obligatorio →
- * AAL2. Sin autorregistro: el staff entra solo por invitación.
+ * Acceso del staff (GATE0 §7.2, Q-B2): código por email o contraseña (ADR-031)
+ * → TOTP obligatorio → AAL2. Sin autorregistro: el staff entra solo por invitación.
  */
 
 export interface FormState {
   error?: string;
   values?: Record<string, string>;
+  ok?: boolean;
 }
 
 const LOGIN_EMAIL_COOKIE = "staff_login_email";
@@ -86,6 +89,89 @@ export async function verifyLoginCode(_: FormState, formData: FormData): Promise
   await recordSecurityEvent("auth.login_succeeded", { userId: data.user.id });
   cookieStore.delete(LOGIN_EMAIL_COOKIE);
   redirect("/seguridad/2fa");
+}
+
+/** Contraseña del staff (ADR-031): 12 a 72 caracteres (bcrypt corta en 72 bytes). */
+const passwordSchema = z
+  .string()
+  .min(12)
+  .refine((p) => new TextEncoder().encode(p).length <= 72)
+  .refine((p) => p.trim().length >= 12);
+
+/**
+ * Entrar con email y contraseña (ADR-031): la contraseña reemplaza solo al código
+ * por email; la sesión queda en aal1 y el TOTP sigue siendo obligatorio.
+ */
+export async function signInWithPassword(_: FormState, formData: FormData): Promise<FormState> {
+  const email = emailSchema.safeParse(
+    String(formData.get("email") ?? "")
+      .trim()
+      .toLowerCase(),
+  );
+  const password = String(formData.get("password") ?? "");
+  const values = { email: String(formData.get("email") ?? "") };
+  if (!email.success || password.length === 0 || password.length > 200) {
+    return { error: "Escribe tu email y tu contraseña.", values };
+  }
+  // Límite propio por email y por IP: los de Supabase Auth son por la IP del
+  // servidor, compartida por todos los inicios de sesión.
+  const [attempt] = await workerDb()<{ ok: boolean }[]>`
+    select system.take_staff_login_attempt(${email.data}, ${await clientIpHash()}) as ok`;
+  if (attempt?.ok !== true) {
+    return { error: "Demasiados intentos. Espera unos minutos.", values };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.data,
+    password,
+  });
+  if (error || !data.user) {
+    await recordSecurityEvent("auth.login_failed", { metadata: { reason: "invalid_password" } });
+    // El mismo mensaje para email sin cuenta y contraseña incorrecta.
+    return {
+      error:
+        error?.status === 429
+          ? "Demasiados intentos. Espera unos minutos."
+          : "El email o la contraseña no son correctos.",
+      values,
+    };
+  }
+  await recordSecurityEvent("auth.login_succeeded", {
+    userId: data.user.id,
+    metadata: { method: "password" },
+  });
+  redirect("/seguridad/2fa");
+}
+
+/** Crear o cambiar la contraseña (ADR-031): solo con la sesión completa (AAL2). */
+export async function setPassword(_: FormState, formData: FormData): Promise<FormState> {
+  const session = await getSession();
+  if (!session) redirect("/ingresar");
+  if (session.aal !== "aal2") redirect("/seguridad/2fa");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (!passwordSchema.safeParse(password).success) {
+    return { error: "Usa al menos 12 caracteres (máximo 72)." };
+  }
+  if (password !== confirm) return { error: "Las dos contraseñas no coinciden." };
+  const supabase = await createSupabaseServerClient();
+  const { data: user } = await supabase.auth.getUser();
+  if (user.user?.email && password.toLowerCase().includes(user.user.email.toLowerCase())) {
+    return { error: "La contraseña no puede contener tu email." };
+  }
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return {
+      error:
+        error.code === "weak_password"
+          ? "Esa contraseña es demasiado débil o ya apareció en filtraciones. Elige otra."
+          : error.code === "same_password"
+            ? "Es la misma contraseña que ya tenías."
+            : "No pudimos guardar la contraseña. Inténtalo de nuevo.",
+    };
+  }
+  await recordSecurityEvent("auth.password_set", { userId: session.userId });
+  return { ok: true };
 }
 
 export interface EnrollState extends FormState {

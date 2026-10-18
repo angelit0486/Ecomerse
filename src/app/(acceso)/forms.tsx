@@ -147,3 +147,86 @@ export function ActionButton({
     </form>
   );
 }
+
+/** Entrar con email y contraseña (ADR-031); después se pide el código de la app. */
+export function PasswordLoginForm({ action }: { action: Action }) {
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
+      {state.error ? (
+        <p role="alert" className="text-[13px] text-danger">
+          {state.error}
+        </p>
+      ) : null}
+      <Field label="Email" required>
+        {(control) => (
+          <Input
+            {...control}
+            name="email"
+            type="email"
+            defaultValue={state.values?.email}
+            autoComplete="username"
+            inputMode="email"
+            autoFocus
+          />
+        )}
+      </Field>
+      <Field label="Contraseña" required>
+        {(control) => (
+          <Input {...control} name="password" type="password" autoComplete="current-password" />
+        )}
+      </Field>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Entrando…" : "Entrar"}
+      </Button>
+    </form>
+  );
+}
+
+/** Crear o cambiar la contraseña del panel (ADR-031). */
+export function SetPasswordForm({ action }: { action: Action }) {
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
+      <Field
+        label="Contraseña nueva"
+        hint="Al menos 12 caracteres, con mayúsculas, minúsculas, números y algún símbolo."
+        required
+      >
+        {(control) => (
+          <Input
+            {...control}
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={72}
+          />
+        )}
+      </Field>
+      <Field label="Repite la contraseña" required>
+        {(control) => (
+          <Input
+            {...control}
+            name="confirm"
+            type="password"
+            autoComplete="new-password"
+            maxLength={72}
+          />
+        )}
+      </Field>
+      {state.error ? (
+        <p role="alert" className="text-[13px] text-danger">
+          {state.error}
+        </p>
+      ) : state.ok ? (
+        <p role="status" className="text-[13px] text-success">
+          Contraseña guardada. La próxima vez puedes entrar con ella y el código de tu app.
+        </p>
+      ) : null}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Guardando…" : "Guardar contraseña"}
+      </Button>
+    </form>
+  );
+}
