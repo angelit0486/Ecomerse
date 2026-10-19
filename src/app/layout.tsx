@@ -6,8 +6,15 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  // Neutro (white-label): la tienda define su propio título; esto solo se ve en el panel.
-  title: { default: "Panel", template: "%s · Panel" },
+  // Marca de la plataforma (PRUVA) solo en panel, consola y acceso: la tienda define
+  // su propio título y sus íconos (white-label).
+  title: { default: "PRUVA", template: "%s · PRUVA" },
+  // Íconos del panel (marca de la plataforma, fase 3). La tienda declara los
+  // suyos en su layout y los reemplaza: nunca muestra la marca PRUVA (white-label).
+  icons: {
+    icon: [{ url: "/brand/pruva-icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/brand/pruva-apple-touch-icon.png", sizes: "180x180" }],
+  },
   // Sin sitio público todavía: no se indexa ningún entorno.
   robots: { index: false, follow: false },
 };
