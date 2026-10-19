@@ -85,6 +85,15 @@ export default async function ImportPage({ params, searchParams }: Props) {
           Sube un CSV con una fila por variante. Primero verás una vista previa con los errores por
           fila; nada cambia en tu catálogo hasta que confirmes.
         </p>
+        {hasPermission(ctx, "products.update") ? (
+          <p className="text-sm">
+            ¿Ya tienes los productos?{" "}
+            <Link href={`${base}/imagenes`} className="underline">
+              Sube sus fotos en lote
+            </Link>{" "}
+            (se asignan por SKU o nombre del archivo).
+          </p>
+        ) : null}
       </header>
 
       {error ? (

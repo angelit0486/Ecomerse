@@ -10,6 +10,7 @@ import { productInputSchema } from "@/server/catalog/product-input";
 import { validateProduct } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { AppError } from "@/server/errors";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { invalidateStore } from "@/server/storefront/cache";
@@ -447,7 +448,9 @@ const uploadSchema = z.object({
 });
 
 export type UploadTicketResult =
-  { ok: true; mediaId: string; signedUrl: string } | { ok: false; error: string };
+  | { ok: true; mediaId: string; signedUrl: string }
+  /** retry: el tope de subidas pendientes de la tienda; se libera al procesarlas. */
+  | { ok: false; error: string; retry?: boolean };
 
 export async function requestProductImageUpload(
   storeHandle: string,
@@ -469,7 +472,11 @@ export async function requestProductImageUpload(
   } catch (error) {
     const state = failure("media.upload", error);
     const field = Object.values(state.fields ?? {})[0];
-    return { ok: false, error: field ?? state.error ?? "No pudimos preparar la subida." };
+    return {
+      ok: false,
+      error: field ?? state.error ?? "No pudimos preparar la subida.",
+      ...(error instanceof AppError && error.code === "limit_reached" ? { retry: true } : {}),
+    };
   }
 }
 
@@ -485,6 +492,8 @@ export async function finalizeProductImageUpload(
   } catch (error) {
     return { ok: false, error: failure("media.finalize", error).error };
   }
+  // La optimización (media.process) corre ya, no en la siguiente pasada del cron.
+  processQueueSoon("media.finalize");
   revalidatePath(productsPath(storeHandle), "layout");
   return { ok: true };
 }

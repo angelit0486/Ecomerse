@@ -2,9 +2,7 @@ import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 import { AppError, errorResponse } from "@/server/errors";
 import { authorizeJobRunner } from "@/server/jobs/authorize";
-import { jobRegistry } from "@/server/jobs/registry";
-import { runJobs } from "@/server/jobs/runner";
-import { createPostgresJobStore } from "@/server/jobs/store";
+import { runQueuedJobs } from "@/server/jobs/run-now";
 import { log } from "@/server/observability/logger";
 import { requestIdFrom } from "@/server/observability/request-id";
 
@@ -38,22 +36,10 @@ async function handle(request: Request): Promise<Response> {
       return errorResponse(new AppError("unauthenticated"), requestId);
     }
 
-    const workerId = `${process.env.VERCEL_REGION ?? "local"}:${crypto.randomUUID()}`;
     const db = workerDb();
     // Mantenimiento periódico (purga diaria de medios): idempotente por día.
     await db`select system.enqueue_maintenance()`;
-    const result = await runJobs({
-      store: createPostgresJobStore(db),
-      registry: jobRegistry,
-      workerId,
-      log: reqLog.child({ worker_id: workerId }),
-      deadlineMs: 45_000,
-      // maxDuration = 60: los handlers largos (importación) se ajustan a este límite.
-      hardDeadlineMs: 55_000,
-      // Un job por reclamo: el plazo se comprueba antes de cada uno y un medio
-      // pesado (≤ 15 s con el timeout de sharp) no arrastra a otros (Gate F3).
-      batchSize: 1,
-    });
+    const result = await runQueuedJobs(reqLog);
 
     reqLog.info("Runner de jobs completado", { method: auth.method, ...result });
     return Response.json({ ok: true, data: result }, { headers: { "cache-control": "no-store" } });

@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
+import { processQueueSoon } from "@/server/jobs/run-now";
 
 import { storeClient } from "../../_shared/action-state";
 
@@ -23,6 +24,7 @@ export async function commitImport(storeHandle: string, jobId: string): Promise<
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
     await callRpc(supabase, "imports_commit", { p_store_id: storeId, p_job_id: jobId });
+    processQueueSoon("imports.commit");
   } catch (error) {
     const e = reportActionError("imports", error);
     notice = e.code === "forbidden" ? "?aviso=permiso" : "?aviso=no-listo";

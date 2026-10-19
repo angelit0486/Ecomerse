@@ -360,3 +360,79 @@ export function getCatalogQuality(
 ): Promise<CatalogQuality> {
   return callRpc<CatalogQuality>(supabase, "catalog_quality_report", { p_store_id: storeId });
 }
+
+/** Producto al que puede ir una foto de la subida en lote (por nombre corto o SKU). */
+export interface ImageTarget {
+  id: string;
+  title: string;
+  slug: string;
+  skus: string[];
+  image_count: number;
+}
+
+const READ_PAGE = 1000;
+
+/** Lee todas las filas en páginas: la Data API devuelve como mucho `max_rows` (1000). */
+async function readAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += READ_PAGE) {
+    const { data, error } = await page(from, from + READ_PAGE - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < READ_PAGE) return rows;
+  }
+}
+
+/** Productos vigentes de la tienda con sus SKU (RLS: solo lo que el usuario puede ver). */
+export async function listImageTargets(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<ImageTarget[]> {
+  const [products, variants, media] = await Promise.all([
+    readAll<{ id: string; title: string; slug: string }>((from, to) =>
+      supabase
+        .from("products")
+        .select("id, title, slug")
+        .eq("store_id", storeId)
+        .is("deleted_at", null)
+        .order("id")
+        .range(from, to),
+    ),
+    readAll<{ product_id: string; sku: string | null }>((from, to) =>
+      supabase
+        .from("product_variants")
+        .select("product_id, sku")
+        .eq("store_id", storeId)
+        .is("deleted_at", null)
+        .not("sku", "is", null)
+        .order("id")
+        .range(from, to),
+    ),
+    readAll<{ product_id: string | null }>((from, to) =>
+      supabase
+        .from("media")
+        .select("product_id")
+        .eq("store_id", storeId)
+        .eq("owner_type", "product")
+        .is("deleted_at", null)
+        .neq("status", "rejected")
+        .order("id")
+        .range(from, to),
+    ),
+  ]);
+  const skus = new Map<string, string[]>();
+  for (const v of variants) {
+    if (v.sku) skus.set(v.product_id, [...(skus.get(v.product_id) ?? []), v.sku]);
+  }
+  const images = new Map<string, number>();
+  for (const m of media) {
+    if (m.product_id) images.set(m.product_id, (images.get(m.product_id) ?? 0) + 1);
+  }
+  return products.map((p) => ({
+    ...p,
+    skus: skus.get(p.id) ?? [],
+    image_count: images.get(p.id) ?? 0,
+  }));
+}

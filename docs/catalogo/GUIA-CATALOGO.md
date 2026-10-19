@@ -59,6 +59,18 @@ Por presentación (opcional): `variant_net_content` (contenido de ese tamaño, p
 - Un **término prohibido** en el título, la descripción, la ficha, las etiquetas, las opciones, la marca, los atributos o el texto alternativo de las imágenes: curar, cura, curativo/a, tratar, prevenir, previene, prevención, milagro, milagroso/a, «resultados garantizados», «sin efectos secundarios». Lista propuesta, pendiente de tu asesor.
 - Ajustes → Cumplimiento muestra **qué productos no se pueden publicar y por qué**.
 
+## 4b. Subir tus fotos en lote
+
+En **Productos → Importar → Sube sus fotos en lote** eliges todas las fotos a la vez (hasta 500 por tanda) y cada una se asigna sola a su producto por el nombre del archivo:
+
+| Nombre del archivo     | Va a                                          |
+| ---------------------- | --------------------------------------------- |
+| `PRV-001.jpg`          | el producto con el SKU PRV-001 (foto 1)       |
+| `PRV-001-2.jpg`        | el mismo producto, foto 2 (`_2` también vale) |
+| `proteina-aislada.jpg` | el producto con ese nombre corto (handle)     |
+
+Antes de subir ves una tabla con la asignación y qué archivos no coinciden. Las fotos se aligeran en tu dispositivo (más rápido con datos móviles) y se agregan a las que el producto ya tiene. En unos segundos aparecen optimizadas en cada producto.
+
 ## 5. Imágenes provisionales
 
 Mientras llegan tus fotos, cada producto puede llevar una imagen genérica **marcada como provisional** en su texto alternativo («Imagen provisional»). Propuesta de fotos libres de Unsplash (licencia Unsplash: uso comercial gratuito; se da crédito al autor), frascos y envases sin marca:

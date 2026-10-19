@@ -3,19 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 
-import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
+import { ALLOWED_IMAGE_MIME } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 
-import {
-  finalizeProductImageUpload,
-  mediaAction,
-  requestProductImageUpload,
-  setVariantImageAction,
-  type CatalogActionState,
-} from "./actions";
-import { FIELD_MESSAGES, REJECTION_REASONS } from "./messages";
+import { mediaAction, setVariantImageAction, type CatalogActionState } from "./actions";
+import { REJECTION_REASONS } from "./messages";
 import { nativeControl } from "./styles";
+import { uploadProductImages } from "./upload-client";
 
 export interface ProductImage {
   id: string;
@@ -57,6 +52,7 @@ export function ProductImages({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const processing = images.some((i) => i.status === "pending");
 
   useEffect(() => {
@@ -67,60 +63,33 @@ export function ProductImages({
 
   async function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const list = Array.from(files);
     setUploading(true);
     setMessage(null);
-    let done = 0;
+    setProgress({ done: 0, total: list.length });
     try {
-      for (const file of Array.from(files).slice(0, 10)) {
-        if (
-          !(ALLOWED_IMAGE_MIME as readonly string[]).includes(file.type) ||
-          file.size > MAX_UPLOAD_BYTES
-        ) {
-          setMessage({ kind: "error", text: `${file.name}: ${FIELD_MESSAGES.file}` });
-          continue;
-        }
-        const ticket = await requestProductImageUpload(storeHandle, {
-          productId,
-          mimeType: file.type,
-          bytes: file.size,
-        });
-        if (!ticket.ok) {
-          setMessage({ kind: "error", text: `${file.name}: ${ticket.error}` });
-          continue;
-        }
-        const response = await fetch(ticket.signedUrl, {
-          method: "PUT",
-          headers: { "content-type": file.type },
-          body: file,
-        }).catch(() => null);
-        if (!response?.ok) {
-          setMessage({
-            kind: "error",
-            text: `${file.name}: no se pudo subir. Revisa tu conexión e inténtalo de nuevo.`,
-          });
-          continue;
-        }
-        const finalized = await finalizeProductImageUpload(storeHandle, ticket.mediaId);
-        if (!finalized.ok) {
-          setMessage({ kind: "error", text: `${file.name}: ${finalized.error}` });
-          continue;
-        }
-        done += 1;
-      }
-      if (done > 0) {
+      let finished = 0;
+      const outcomes = await uploadProductImages(
+        storeHandle,
+        list.map((file) => ({ productId, file })),
+        () => setProgress({ done: ++finished, total: list.length }),
+      );
+      const failed = outcomes
+        .map((outcome, index) => (outcome.ok ? null : `${list[index]!.name}: ${outcome.error}`))
+        .filter((line): line is string => line !== null);
+      const done = outcomes.length - failed.length;
+      if (failed.length > 0) {
+        setMessage({ kind: "error", text: failed.join(" · ") });
+      } else if (done > 0) {
         setMessage({
           kind: "ok",
           text: `${done} ${done === 1 ? "imagen subida" : "imágenes subidas"}; las estamos procesando.`,
         });
       }
-    } catch {
-      setMessage({
-        kind: "error",
-        text: "Se perdió la conexión. Recarga la página e inténtalo de nuevo.",
-      });
     } finally {
       if (fileRef.current) fileRef.current.value = "";
       setUploading(false);
+      setProgress(null);
       router.refresh();
     }
   }
@@ -139,7 +108,8 @@ export function ProductImages({
             Agregar imágenes
           </label>
           <p id="product-images-hint" className="text-[13px] text-fg-muted">
-            JPG, PNG, WebP o AVIF de hasta 10 MB. Quitamos los datos de ubicación de las fotos.
+            JPG, PNG, WebP o AVIF. Las aligeramos antes de subirlas y quitamos los datos de
+            ubicación.
           </p>
           <input
             ref={fileRef}
@@ -155,7 +125,11 @@ export function ProductImages({
         </div>
       ) : null}
       <div aria-live="polite">
-        {uploading ? <p className="text-sm text-fg-muted">Subiendo…</p> : null}
+        {uploading ? (
+          <p className="text-sm text-fg-muted">
+            {progress ? `Subiendo ${progress.done} de ${progress.total}…` : "Subiendo…"}
+          </p>
+        ) : null}
         {message ? (
           <p
             role={message.kind === "error" ? "alert" : "status"}

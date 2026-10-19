@@ -113,7 +113,8 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
     .getByLabel("Agregar imágenes")
     .setInputFiles({ name: "playera.jpg", mimeType: "image/jpeg", buffer: photo });
   await expect(page.getByRole("status").filter({ hasText: "imagen subida" })).toBeVisible();
-  await expect(page.getByText("Procesando…")).toBeVisible();
+  // La cola se procesa al terminar la subida; «Procesando…» puede durar solo un
+  // instante. runJobs() sigue siendo el respaldo (idempotente).
   await runJobs();
   const image = page.locator("img[src*='/storage/v1/object/public/store-media/']");
   await expect(image).toBeVisible({ timeout: 15_000 });
