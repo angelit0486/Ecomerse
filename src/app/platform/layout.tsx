@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { requirePlatformRole } from "@/server/auth/platform";
+import { PruvaLogo } from "@/ui/brand/pruva-logo";
 import { Button } from "@/ui/primitives/button";
 
 export const metadata: Metadata = { title: { default: "Plataforma", template: "%s · Plataforma" } };
@@ -19,7 +20,10 @@ export default async function PlatformLayout({ children }: { children: ReactNode
     <div className="min-h-dvh">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
         <nav aria-label="Consola de plataforma" className="flex items-center gap-4 text-sm">
-          <span className="font-semibold">Consola</span>
+          <span className="flex items-center gap-2 font-semibold">
+            <PruvaLogo title="PRUVA" className="h-6 w-auto text-accent" />
+            Consola
+          </span>
           <Link href="/platform">Organizaciones</Link>
           <Link href="/platform/soporte">Soporte</Link>
           <Link href="/platform/cumplimiento">Cumplimiento</Link>

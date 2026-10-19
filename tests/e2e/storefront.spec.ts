@@ -181,6 +181,14 @@ test("SEO por host: canonical al primario, JSON-LD válido, sitemap y robots sin
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", a.name);
+  // White-label: la tienda declara sus propios íconos; nunca los de la marca de la
+  // plataforma (fase 3, public/brand) ni su nombre en el título.
+  const icons = await page
+    .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .evaluateAll((links) => links.map((l) => l.getAttribute("href") ?? ""));
+  expect(icons.length).toBeGreaterThan(0);
+  expect(icons.filter((href) => href.includes("/brand/"))).toEqual([]);
+  await expect(page).not.toHaveTitle(/PRUVA/);
   const ld = JSON.parse(
     (await page.locator('script[type="application/ld+json"]').textContent())!,
   ) as {
