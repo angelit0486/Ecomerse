@@ -5,20 +5,23 @@
  * Los tokens del storefront son de cada tienda (Fase 9) y no viven aquí.
  */
 @theme {
-  --color-canvas: #f6f7f9;
+  /* Identidad PRUVA (fase 2): núcleo azul marino #0B2D5B, azul grisáceo #4F7EA8,
+     acero #A7B8C6 (solo bordes decorativos: 1.91:1), blanco frío #F6F8FB y
+     grafito #172638. Texto secundario #446C92 y estados accesibles. */
+  --color-canvas: #f6f8fb;
   --color-surface: #ffffff;
-  --color-fg: #1b1f24;
-  --color-fg-muted: #59636e;
-  --color-border: #dde1e6;
-  --color-control: #858e99;
-  --color-accent: #2448c4;
-  --color-accent-hover: #1c3aa3;
+  --color-fg: #172638;
+  --color-fg-muted: #446c92;
+  --color-border: #a7b8c6;
+  --color-control: #4f7ea8;
+  --color-accent: #0b2d5b;
+  --color-accent-hover: #082245;
   --color-accent-fg: #ffffff;
   --color-danger: #b42318;
   --color-danger-fg: #ffffff;
-  --color-success: #1a7f37;
-  --color-warning: #9a6700;
-  --color-focus: #2448c4;
+  --color-success: #16703a;
+  --color-warning: #8a5a00;
+  --color-focus: #4f7ea8;
 
   --radius-control: 6px;
   --radius-container: 8px;

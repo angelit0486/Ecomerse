@@ -148,7 +148,7 @@ export function AddToCart({
             </Link>
           </p>
         ) : state.error ? (
-          <p role="alert" className="text-[var(--sf-danger,#b91c1c)]">
+          <p role="alert" className="text-[var(--sf-danger)]">
             {state.error}
           </p>
         ) : null}

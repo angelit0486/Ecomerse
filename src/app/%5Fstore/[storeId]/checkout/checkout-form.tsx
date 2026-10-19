@@ -58,7 +58,7 @@ function Field({
         {...rest}
       />
       {error ? (
-        <p id={`${id}-error`} className="text-sm text-[var(--sf-danger,#b91c1c)]">
+        <p id={`${id}-error`} className="text-sm text-[var(--sf-danger)]">
           {error}
         </p>
       ) : null}
@@ -204,7 +204,7 @@ export function CheckoutForm({
         <fieldset className="space-y-4" onBlur={quoteOnBlur}>
           <legend className="text-lg font-semibold">Dirección de envío</legend>
           {f.shipping_address ? (
-            <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+            <p role="alert" className="text-sm text-[var(--sf-danger)]">
               {f.shipping_address}
             </p>
           ) : null}
@@ -315,7 +315,7 @@ export function CheckoutForm({
               ))
             )}
             {f.shipping_rate_id ? (
-              <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+              <p role="alert" className="text-sm text-[var(--sf-danger)]">
                 {f.shipping_rate_id}
               </p>
             ) : null}
@@ -339,7 +339,7 @@ export function CheckoutForm({
           ))
         )}
         {f.payment_account_id ? (
-          <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+          <p role="alert" className="text-sm text-[var(--sf-danger)]">
             {f.payment_account_id}
           </p>
         ) : null}
@@ -360,7 +360,7 @@ export function CheckoutForm({
 
       <div aria-live="polite">
         {state.error ? (
-          <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+          <p role="alert" className="text-sm text-[var(--sf-danger)]">
             {state.error}
           </p>
         ) : state.ok ? (

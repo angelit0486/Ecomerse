@@ -52,7 +52,7 @@ export function ReviewForm({
           ))}
         </div>
         {state.fields?.rating ? (
-          <p className="text-sm text-[var(--sf-danger,#b91c1c)]">{state.fields.rating}</p>
+          <p className="text-sm text-[var(--sf-danger)]">{state.fields.rating}</p>
         ) : null}
       </fieldset>
       <div className="space-y-1">
@@ -81,7 +81,7 @@ export function ReviewForm({
         </p>
       </div>
       {state.error && !state.fields?.rating ? (
-        <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+        <p role="alert" className="text-sm text-[var(--sf-danger)]">
           {state.error}
         </p>
       ) : null}

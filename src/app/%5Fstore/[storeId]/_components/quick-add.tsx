@@ -70,7 +70,7 @@ export function QuickAdd({
         <span className="sr-only"> {title} al carrito</span>
       </button>
       {state.error ? (
-        <p role="alert" className="mt-1 text-xs text-[var(--sf-danger,#b91c1c)]">
+        <p role="alert" className="mt-1 text-xs text-[var(--sf-danger)]">
           {state.error}
         </p>
       ) : null}

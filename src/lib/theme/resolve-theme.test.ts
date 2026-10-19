@@ -3,7 +3,16 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_COLORS } from "./palette";
 import { contrastRatio } from "@/lib/color/contrast";
 
-import { footerColors, linkColor, resolveTheme, saleColors, themeCss } from "./resolve-theme";
+import { THEME_PRESETS } from "./presets";
+import {
+  footerColors,
+  linkColor,
+  resolveTheme,
+  saleColors,
+  STATE_COLORS,
+  stateColors,
+  themeCss,
+} from "./resolve-theme";
 
 describe("resolveTheme", () => {
   it("sin tema: defaults", () => {
@@ -137,5 +146,45 @@ describe("linkColor (rediseño A+B)", () => {
     expect(contrastRatio(soft.palette.primary, soft.palette.background)).toBeLessThan(4.5);
     expect(linkColor(soft)).toBe(soft.palette.foreground);
     expect(themeCss(soft)).toContain(`--sf-link:${soft.palette.foreground}`);
+  });
+});
+
+describe("stateColors (identidad PRUVA, fase 2)", () => {
+  const surfaceOf = (theme: ReturnType<typeof resolveTheme>) => {
+    // Igual que --sf-surface: el texto al 5 % sobre el fondo.
+    const a = Number.parseInt(theme.palette.foreground.slice(1), 16);
+    const b = Number.parseInt(theme.palette.background.slice(1), 16);
+    return `#${[16, 8, 0]
+      .map((s) =>
+        Math.round(((a >> s) & 255) * 0.05 + ((b >> s) & 255) * 0.95)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+  };
+
+  it("cada estilo sugerido usa los colores fijos, con ≥ 4.5:1 en fondo y superficie", () => {
+    for (const preset of THEME_PRESETS) {
+      const theme = resolveTheme({ colors: preset.colors });
+      const state = stateColors(theme);
+      expect(state).toEqual(STATE_COLORS);
+      for (const color of Object.values(state)) {
+        expect(contrastRatio(color, theme.palette.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(color, surfaceOf(theme))).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("con un fondo oscuro cae en el color de texto y siempre llega al CSS", () => {
+    const dark = resolveTheme({
+      colors: { background: "#101418", foreground: "#f5f5f5", muted: "#c8ccd2" },
+    });
+    expect(stateColors(dark)).toEqual({
+      danger: "#f5f5f5",
+      success: "#f5f5f5",
+      warning: "#f5f5f5",
+    });
+    expect(themeCss(dark)).toContain("--sf-danger:#f5f5f5");
+    expect(themeCss(resolveTheme({}))).toContain(`--sf-success:${STATE_COLORS.success}`);
   });
 });

@@ -22,7 +22,7 @@ const secondary =
 function Feedback({ state }: { state: AccountState }) {
   if (state.error) {
     return (
-      <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+      <p role="alert" className="text-sm text-[var(--sf-danger)]">
         {state.error}
       </p>
     );

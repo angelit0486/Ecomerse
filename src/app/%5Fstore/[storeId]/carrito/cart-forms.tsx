@@ -14,7 +14,7 @@ const noSubscribe = () => () => {};
 function Message({ state }: { state: CartActionState }) {
   if (state.error) {
     return (
-      <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+      <p role="alert" className="text-sm text-[var(--sf-danger)]">
         {state.error}
       </p>
     );

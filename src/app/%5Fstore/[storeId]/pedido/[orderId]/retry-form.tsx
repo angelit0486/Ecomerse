@@ -27,7 +27,7 @@ export function RetryPayment({
         {pending ? "Redirigiendo…" : "Reintentar el pago"}
       </button>
       {state.error ? (
-        <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+        <p role="alert" className="text-sm text-[var(--sf-danger)]">
           {state.error}
         </p>
       ) : null}

@@ -20,6 +20,26 @@ export interface ThemePreset {
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
   {
+    key: "pruva",
+    name: "PRUVA",
+    description:
+      "Azul marino para comprar, azul grisáceo de acento y blanco frío; títulos Montserrat. Deportivo y tecnológico, sin degradados.",
+    // Identidad oficial PRUVA (decisiones del propietario, 2026-10-19). El acero
+    // #A7B8C6 (1.91:1) no es color de texto; el texto secundario es #446C92
+    // (5.19:1), el azul grisáceo con 20 % de grafito.
+    colors: {
+      primary: "#0b2d5b",
+      accent: "#4f7ea8",
+      background: "#f6f8fb",
+      foreground: "#172638",
+      muted: "#446c92",
+    },
+    heading: "montserrat",
+    body: "inter",
+    radius: "md",
+    buttonStyle: "solid",
+  },
+  {
     key: "anaquel",
     name: "Anaquel",
     description:

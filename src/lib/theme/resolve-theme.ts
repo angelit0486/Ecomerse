@@ -98,6 +98,43 @@ export function saleColors(theme: ResolvedTheme): { bg: string; fg: string; text
   return { ...badge, text };
 }
 
+/**
+ * Colores de estado del storefront (identidad PRUVA, fase 2): error, éxito y
+ * aviso fijos, elegidos con ≥ 4.5:1 sobre el fondo y la superficie gris de todos
+ * los estilos sugeridos. Si un fondo propio de la tienda no llega a 4.5:1 con
+ * alguno (p. ej. un fondo oscuro), ese estado usa el color de texto: el mensaje
+ * se sigue leyendo y su sentido lo da el texto, nunca solo el color.
+ */
+export const STATE_COLORS = { danger: "#b42318", success: "#16703a", warning: "#8a5a00" } as const;
+
+export function stateColors(theme: ResolvedTheme): Record<keyof typeof STATE_COLORS, string> {
+  const p = theme.palette;
+  // La superficie (`--sf-surface`) es el texto al 5 % sobre el fondo.
+  const surface = mix(p.foreground, p.background, 0.05);
+  const pick = (color: string) =>
+    Math.min(contrastRatio(color, p.background), contrastRatio(color, surface)) >= 4.5
+      ? color
+      : p.foreground;
+  return {
+    danger: pick(STATE_COLORS.danger),
+    success: pick(STATE_COLORS.success),
+    warning: pick(STATE_COLORS.warning),
+  };
+}
+
+/** `a` al `share` (0–1) sobre `b`, como `color-mix(in srgb, a share, b)`. */
+function mix(a: string, b: string, share: number): string {
+  const ca = Number.parseInt(a.slice(1), 16);
+  const cb = Number.parseInt(b.slice(1), 16);
+  return `#${[16, 8, 0]
+    .map((shift) =>
+      Math.round(((ca >> shift) & 255) * share + ((cb >> shift) & 255) * (1 - share))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
 /** Mezcla `hex` con negro (factor 0–1): oscurecer solo sube el contraste con el blanco. */
 function darken(hex: string, factor: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -138,6 +175,7 @@ export function themeCss(theme: ResolvedTheme): string {
   const outline = theme.buttonStyle === "outline";
   const sale = saleColors(theme);
   const footer = footerColors(theme);
+  const state = stateColors(theme);
   const declarations = [
     `--sf-primary:${p.primary}`,
     `--sf-accent:${p.accent}`,
@@ -156,6 +194,9 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-footer-bg:${footer.bg}`,
     `--sf-footer-fg:${footer.fg}`,
     `--sf-link:${linkColor(theme)}`,
+    `--sf-danger:${state.danger}`,
+    `--sf-success:${state.success}`,
+    `--sf-warning:${state.warning}`,
     `--sf-font-heading:var(--font-${theme.fonts.heading})`,
     `--sf-font-body:var(--font-${theme.fonts.body})`,
   ];

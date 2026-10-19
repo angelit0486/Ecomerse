@@ -133,7 +133,7 @@ export default async function CartPage({ params }: Props) {
                   </p>
                 </div>
                 {line.state !== "ok" ? (
-                  <p role="alert" className="text-sm text-[var(--sf-danger,#b91c1c)]">
+                  <p role="alert" className="text-sm text-[var(--sf-danger)]">
                     {STATE_NOTES[line.state]}
                   </p>
                 ) : null}
