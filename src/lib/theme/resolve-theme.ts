@@ -88,13 +88,28 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
 export function saleColors(theme: ResolvedTheme): { bg: string; fg: string; text: string } {
   const p = theme.palette;
   const onAccent = buttonTextColor(p.accent);
-  const badge =
-    contrastRatio(onAccent, p.accent) >= 4.5
+  // Acento de tono medio (decisión del propietario 2026-10-19, azul grisáceo de
+  // PRUVA): no lleva texto blanco y tampoco es un color claro de insignia (como un
+  // ámbar). Con texto negro la oferta perdía jerarquía: toma el botón relleno
+  // (azul marino con blanco en PRUVA) y su texto, el color de enlace.
+  const midTone =
+    onAccent === "#000000" &&
+    theme.buttonText === "#ffffff" &&
+    theme.buttonStyle === "solid" &&
+    contrastRatio(p.accent, p.background) >= 3;
+  const badge = midTone
+    ? { bg: p.primary, fg: theme.buttonText }
+    : contrastRatio(onAccent, p.accent) >= 4.5
       ? { bg: p.accent, fg: onAccent }
       : theme.buttonStyle === "outline"
         ? { bg: p.background, fg: p.primary }
         : { bg: p.primary, fg: theme.buttonText };
-  const text = contrastRatio(p.accent, p.background) >= 4.5 ? p.accent : p.foreground;
+  const text =
+    contrastRatio(p.accent, p.background) >= 4.5
+      ? p.accent
+      : midTone
+        ? linkColor(theme)
+        : p.foreground;
   return { ...badge, text };
 }
 

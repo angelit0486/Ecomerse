@@ -115,6 +115,40 @@ describe("saleColors (revisión de conversión, M8)", () => {
   });
 });
 
+describe("saleColors con acento de tono medio (PRUVA, 2026-10-19)", () => {
+  it("PRUVA: insignia azul marino con blanco y texto de oferta azul marino", () => {
+    const pruva = THEME_PRESETS.find((p) => p.key === "pruva")!;
+    const theme = resolveTheme({ colors: pruva.colors });
+    expect(saleColors(theme)).toEqual({ bg: "#0b2d5b", fg: "#ffffff", text: "#0b2d5b" });
+    expect(contrastRatio("#ffffff", "#0b2d5b")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("los demás estilos sugeridos no cambian (acento con texto blanco)", () => {
+    const expected: Record<string, { bg: string; fg: string; text: string }> = {
+      anaquel: { bg: "#d62d20", fg: "#ffffff", text: "#d62d20" },
+      deportivo: { bg: "#b4500c", fg: "#ffffff", text: "#b4500c" },
+      neutral: { bg: "#b42318", fg: "#ffffff", text: "#b42318" },
+      grafito: { bg: "#a3471a", fg: "#ffffff", text: "#a3471a" },
+    };
+    for (const [key, value] of Object.entries(expected)) {
+      const preset = THEME_PRESETS.find((p) => p.key === key)!;
+      expect(saleColors(resolveTheme({ colors: preset.colors }))).toEqual(value);
+    }
+  });
+
+  it("con botones de contorno el acento de tono medio conserva la regla anterior", () => {
+    const theme = resolveTheme({
+      colors: { accent: "#4f7ea8", background: "#f6f8fb", primary: "#0b2d5b" },
+      shape: { button_style: "outline" },
+    });
+    expect(saleColors(theme)).toEqual({
+      bg: "#4f7ea8",
+      fg: "#000000",
+      text: theme.palette.foreground,
+    });
+  });
+});
+
 describe("footerColors (rediseño A+B)", () => {
   it("el primario oscurecido con texto blanco, o el tema invertido si el primario es claro", () => {
     expect(footerColors(resolveTheme({ colors: { primary: "#1d3fd1" } }))).toEqual({
