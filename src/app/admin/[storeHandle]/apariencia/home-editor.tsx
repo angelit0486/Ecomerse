@@ -8,7 +8,7 @@ import { MAX_PRODUCT_SECTIONS, MAX_SECTIONS, type HomeSectionType } from "@/lib/
 import { Button } from "@/ui/primitives/button";
 
 import { FormFeedback } from "../_shared/form-feedback";
-import { submitKeepingState } from "../_shared/submit";
+import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import {
   finalizeBannerUpload,
@@ -173,7 +173,7 @@ function ImagePicker({
                 checked={value === b.id}
                 onChange={() => onChange(b.id)}
               />
-              {b.alt ?? "Imagen sin descripción"}
+              {b.alt || "Imagen sin descripción"}
             </span>
           </label>
         ))}

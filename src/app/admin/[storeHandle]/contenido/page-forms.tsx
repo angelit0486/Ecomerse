@@ -6,28 +6,11 @@ import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
+import { FormFeedback } from "../_shared/form-feedback";
 import { pageAction, savePage, type ContentActionState } from "./actions";
 
 const textarea =
   "rounded-[var(--radius-control)] border border-control bg-surface p-3 font-mono text-sm";
-
-function Feedback({ state }: { state: ContentActionState }) {
-  if (state.ok) {
-    return (
-      <p role="status" className="text-sm text-success">
-        {state.message}
-      </p>
-    );
-  }
-  if (state.error) {
-    return (
-      <p role="alert" className="text-sm text-danger">
-        {state.error}
-      </p>
-    );
-  }
-  return null;
-}
 
 export function NewPageForm({ storeHandle }: { storeHandle: string }) {
   const [state, action, pending] = useActionState<ContentActionState, FormData>(
@@ -49,7 +32,7 @@ export function NewPageForm({ storeHandle }: { storeHandle: string }) {
       <Button type="submit" size="sm" loading={pending}>
         Crear página
       </Button>
-      {!state.fields ? <Feedback state={state} /> : null}
+      {!state.fields ? <FormFeedback state={state} /> : null}
     </form>
   );
 }
@@ -147,7 +130,7 @@ export function PageEditorForm({
             <Button type="submit" loading={pending}>
               Guardar
             </Button>
-            <Feedback state={state} />
+            <FormFeedback state={state} />
           </div>
         ) : null}
       </fieldset>
@@ -194,7 +177,7 @@ export function PageStatusForm({
           Eliminar página
         </Button>
       ) : null}
-      <Feedback state={state} />
+      <FormFeedback state={state} />
     </form>
   );
 }

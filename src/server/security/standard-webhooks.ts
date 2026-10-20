@@ -9,10 +9,6 @@ import { constantTimeEqual } from "./hmac";
  */
 const SECRET_RE = /^v1,whsec_([A-Za-z0-9+/=]{24,})$/;
 
-export function isStandardWebhookSecret(secret: string): boolean {
-  return SECRET_RE.test(secret);
-}
-
 export function signStandardWebhook(secret: string, id: string, timestamp: number, body: string) {
   const key = Buffer.from(SECRET_RE.exec(secret)![1]!, "base64");
   return `v1,${createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest("base64")}`;

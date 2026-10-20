@@ -108,10 +108,6 @@ async function setCartCookie(token: string): Promise<void> {
   });
 }
 
-export async function clearCartCookie(): Promise<void> {
-  (await cookies()).delete(CART_COOKIE);
-}
-
 /** `detail` del error de la base (p. ej. el total nuevo en `price_changed`). */
 export function dbDetail(error: AppError): string | undefined {
   const cause = error.cause as DbErrorLike | undefined;

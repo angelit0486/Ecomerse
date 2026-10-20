@@ -49,31 +49,18 @@ export default async function ProductPage({ params, searchParams }: Props) {
   if (!processingBlocked && product.media.some((m) => m.status === "pending")) {
     resumeQueue("media.page");
   }
-  const [brands, categories, issues, compliance, regulatory, attributes, attributeValues] =
-    await Promise.all([
-      listBrands(supabase, ctx.store.id),
-      listCategories(supabase, ctx.store.id),
-      product.deleted_at
-        ? Promise.resolve([])
-        : validateProduct(supabase, ctx.store.id, product.id),
-      canEdit ? getComplianceStatus(supabase, ctx.store.id) : Promise.resolve(null),
-      canEdit ? getRegulatoryInfo(supabase, ctx.store.id, product.id) : Promise.resolve(null),
-      canEdit ? listAttributes(supabase, ctx.store.id) : Promise.resolve([]),
-      canEdit ? getProductAttributeValues(supabase, ctx.store.id, product.id) : Promise.resolve([]),
-    ]);
   // La ficha sanitaria aparece cuando la tienda declaró una categoría regulada (ADR-021).
   // Existencias por presentación (solo con inventory.read): suma de las ubicaciones.
   const stock: Record<string, number> = {};
   // En mano en la ubicación principal: lo que fija el ajuste rápido.
   const onHandDefault: Record<string, number> = {};
-  if (hasPermission(ctx, "inventory.read") && product.variants.length > 0) {
+  const variantIds = product.variants.map((v) => v.id);
+  async function loadStock() {
+    if (!hasPermission(ctx, "inventory.read") || variantIds.length === 0) return;
     const { data: levels, error: levelsError } = await supabase
       .from("inventory_levels")
       .select("variant_id, available, on_hand, inventory_locations(is_default)")
-      .in(
-        "variant_id",
-        product.variants.map((v) => v.id),
-      );
+      .in("variant_id", variantIds);
     if (levelsError) throw levelsError;
     for (const l of (levels ?? []) as unknown as {
       variant_id: string;
@@ -86,7 +73,26 @@ export default async function ProductPage({ params, searchParams }: Props) {
     }
   }
   const canSeeHistory = hasPermission(ctx, "audit.read");
-  const [history, domains, sales] = await Promise.all([
+  // Todas las lecturas de la ficha en una sola ronda (misión panel, F4).
+  const [
+    brands,
+    categories,
+    issues,
+    compliance,
+    regulatory,
+    attributes,
+    attributeValues,
+    history,
+    domains,
+    sales,
+  ] = await Promise.all([
+    listBrands(supabase, ctx.store.id),
+    listCategories(supabase, ctx.store.id),
+    product.deleted_at ? Promise.resolve([]) : validateProduct(supabase, ctx.store.id, product.id),
+    canEdit ? getComplianceStatus(supabase, ctx.store.id) : Promise.resolve(null),
+    canEdit ? getRegulatoryInfo(supabase, ctx.store.id, product.id) : Promise.resolve(null),
+    canEdit ? listAttributes(supabase, ctx.store.id) : Promise.resolve([]),
+    canEdit ? getProductAttributeValues(supabase, ctx.store.id, product.id) : Promise.resolve([]),
     canSeeHistory
       ? callRpc<HistoryEvent[]>(supabase, "catalog_product_history", {
           p_store_id: ctx.store.id,
@@ -107,6 +113,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
       p_include_past: true,
       p_limit: 20,
     }),
+    loadStock(),
   ]);
   // «Ver en la tienda»: solo un producto publicado de una tienda abierta.
   const domain =

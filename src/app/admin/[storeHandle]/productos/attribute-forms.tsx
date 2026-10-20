@@ -8,7 +8,7 @@ import { Input } from "@/ui/primitives/input";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
-import { submitKeepingState } from "../_shared/submit";
+import { submitKeepingState } from "@/ui/submit";
 import { deleteAttribute, saveAttribute, saveProductAttributes } from "./attribute-actions";
 
 export interface AttributeFormData {

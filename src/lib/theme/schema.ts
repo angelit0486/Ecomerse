@@ -21,8 +21,6 @@ z.config({ jitless: true });
  * `char_length` (§13 M2).
  */
 
-export const THEME_VERSION = 1;
-
 export const FONT_KEYS = [
   "inter",
   "dm-sans",

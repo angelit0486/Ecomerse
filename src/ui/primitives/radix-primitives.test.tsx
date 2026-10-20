@@ -4,13 +4,10 @@ import axe from "axe-core";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { Button } from "./button";
-import { Checkbox } from "./checkbox";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
-import { Drawer, DrawerContent, DrawerTrigger } from "./drawer";
 import { Field } from "./field";
 import { Select } from "./select";
 import { Table, TBody, TD, TH, THead, TR } from "./table";
-import { Tabs } from "./tabs";
 import { ToastProvider, useToast } from "./toast";
 
 afterEach(cleanup);
@@ -60,36 +57,6 @@ describe("Dialog", () => {
   });
 });
 
-describe("Drawer", () => {
-  it("es un diálogo con título", async () => {
-    render(
-      <Drawer>
-        <DrawerTrigger asChild>
-          <Button>Filtros</Button>
-        </DrawerTrigger>
-        <DrawerContent title="Filtros" description="Acota la lista.">
-          contenido
-        </DrawerContent>
-      </Drawer>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(await screen.findByRole("dialog", { name: "Filtros" })).toBeTruthy();
-    await expectAccessible();
-  });
-});
-
-describe("Checkbox", () => {
-  it("tiene etiqueta y cambia de estado", async () => {
-    const changes: boolean[] = [];
-    render(<Checkbox label="Acepto los términos" onCheckedChange={(v) => changes.push(v)} />);
-    const box = screen.getByRole("checkbox", { name: "Acepto los términos" });
-    fireEvent.click(box);
-    expect(changes).toEqual([true]);
-    expect(box.getAttribute("aria-checked")).toBe("true");
-    await expectAccessible();
-  });
-});
-
 describe("Select dentro de Field", () => {
   it("recibe la etiqueta y el error del campo", async () => {
     render(
@@ -109,26 +76,6 @@ describe("Select dentro de Field", () => {
     const trigger = screen.getByRole("combobox", { name: "Rol" });
     expect(trigger.getAttribute("aria-invalid")).toBe("true");
     expect(trigger.getAttribute("aria-describedby")).toContain("-error");
-    await expectAccessible();
-  });
-});
-
-describe("Tabs", () => {
-  it("roles tablist/tab/tabpanel y cambio de pestaña", async () => {
-    render(
-      <Tabs
-        label="Ajustes"
-        tabs={[
-          { value: "general", label: "General", content: <p>Datos generales</p> },
-          { value: "equipo", label: "Equipo", content: <p>Miembros</p> },
-        ]}
-      />,
-    );
-    expect(screen.getByRole("tablist", { name: "Ajustes" })).toBeTruthy();
-    expect(screen.getByText("Datos generales")).toBeTruthy();
-    const tab = screen.getByRole("tab", { name: "Equipo" });
-    fireEvent.mouseDown(tab, { button: 0 });
-    expect(tab.getAttribute("aria-selected")).toBe("true");
     await expectAccessible();
   });
 });

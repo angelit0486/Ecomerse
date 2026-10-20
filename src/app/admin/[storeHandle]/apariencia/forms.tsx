@@ -26,7 +26,7 @@ import { Select } from "@/ui/primitives/select";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
-import { submitKeepingState } from "../_shared/submit";
+import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { discardThemeDraft, publishTheme, saveThemeSection } from "./actions";
 import type { ThemeSection } from "./patch";
@@ -688,7 +688,8 @@ export function SeoForm({
                   checked={image === img.id}
                   onChange={() => setImage(img.id)}
                 />
-                {img.alt ?? "Imagen sin descripción"}
+                {/* `||`: una descripción vacía dejaría la opción sin nombre (axe «label»). */}
+                {img.alt || "Imagen sin descripción"}
               </span>
             </label>
           ))}

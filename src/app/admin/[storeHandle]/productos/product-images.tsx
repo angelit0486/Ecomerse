@@ -225,7 +225,8 @@ function VariantImageRow({
           id={id}
           name="media_id"
           defaultValue={variant.image_id ?? ""}
-          className={nativeControl}
+          // Las descripciones largas no deben ensanchar la pantalla a 375 px.
+          className={`${nativeControl} min-w-0 max-w-full`}
         >
           <option value="">La del producto</option>
           {images.map((image, index) =>
