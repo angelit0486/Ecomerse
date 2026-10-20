@@ -150,7 +150,7 @@ test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia 
   await page.getByRole("button", { name: "Validar archivo" }).click();
   await expect(page.getByRole("heading", { name: "products_export.csv" })).toBeVisible();
   await expect(page.getByText(/Leímos tu archivo de Shopify/)).toBeVisible();
-  await expect(page.getByText(/1 producto trae su foto como enlace/)).toBeVisible();
+  await expect(page.getByText(/1 producto trae sus fotos como enlaces/)).toBeVisible();
   await expect(
     page.getByText(/Se ignoraron columnas que no son de la plantilla: type, image position/i),
   ).toBeVisible();
@@ -165,6 +165,17 @@ test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia 
   await expect(
     page.getByRole("link", { name: "Subir las fotos de todos los productos" }),
   ).toBeVisible();
+  // ADR-033: las 2 fotos de los enlaces (también la de la fila de solo foto) quedan
+  // reservadas para que el worker las descargue con los controles de SSRF.
+  await expect(page.getByText(/Estamos descargando 2 fotos desde sus enlaces/)).toBeVisible();
+  const photos = await admin<{ source_url: string; position: number }[]>`
+    select m.source_url, m.position from public.media m
+      join public.products p on p.id = m.product_id
+     where p.store_id = ${shop.storeId} and p.slug = ${handle} order by m.position`;
+  expect(photos).toEqual([
+    { source_url: "https://cdn.shopify.com/a.jpg", position: 0 },
+    { source_url: "https://cdn.shopify.com/b.jpg", position: 1 },
+  ]);
 
   const variants = await admin<
     { title: string; sku: string; price: string; compare: string | null; on_hand: number }[]

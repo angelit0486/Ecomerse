@@ -104,6 +104,12 @@ export const REJECTION_REASONS: Record<string, string> = {
   too_many_pixels: "La imagen tiene demasiados píxeles (máximo 40 megapíxeles).",
   decode_failed: "No pudimos leer la imagen. ¿Está dañada?",
   missing_file: "La subida no terminó. Inténtalo de nuevo.",
+  // ADR-033: fotos desde los enlaces del archivo de importación.
+  fetch_blocked: "No descargamos fotos de esa dirección (solo enlaces públicos https).",
+  fetch_not_found: "El enlace de la foto ya no existe o no lleva a una imagen.",
+  fetch_too_large: "La foto del enlace pesa demasiado.",
+  fetch_failed: "No pudimos descargar la foto del enlace después de varios intentos.",
+  quota_exceeded: "Se acabó el espacio de almacenamiento de tu plan.",
 };
 
 export const STATUS_LABELS: Record<string, string> = {

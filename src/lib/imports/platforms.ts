@@ -8,8 +8,9 @@
  *
  * Lo que no se traduce y por qué:
  *   - Categorías: en PRUVA deben existir antes; se asignan en bloque después.
- *   - URLs de imágenes: el servidor no descarga URLs remotas (GATE0 T-08). Se
- *     cuentan para avisar y las fotos se suben en lote por carpeta o nombre.
+ *   - Fotos: los enlaces de cada producto (incluidas las filas de Shopify que solo
+ *     traen una foto extra) van a `image_urls` de su primera fila; el worker los
+ *     descarga al confirmar con los controles de SSRF (ADR-033, GATE0 T-08).
  */
 
 export type SourcePlatform = "pruva" | "shopify" | "tiendanube";
@@ -23,7 +24,7 @@ export interface TranslatedCsv {
   ignored: string[];
   /** Filas de Shopify que solo traen una foto extra del producto. */
   imageOnlyRows: number;
-  /** Productos con URL de imagen en el archivo (no se descargan). */
+  /** Productos con enlaces de fotos en el archivo (se descargan al confirmar). */
   productsWithImageUrl: number;
 }
 
@@ -124,6 +125,7 @@ const SHOPIFY: PlatformSpec = {
     weight_g: ["variant grams"],
     seo_title: ["seo title"],
     seo_description: ["seo description"],
+    image_urls: ["image src", "variant image"],
   },
   imageHeaders: ["image src", "variant image"],
   // Shopify agrega una fila por cada foto extra: solo trae Handle e Image Src.
@@ -270,21 +272,40 @@ export function translatePlatformCsv(
     .map(([column]) => column);
   const handleHeader = platform === "shopify" ? "handle" : "identificador de url";
 
-  const translated: string[][] = [];
-  const numbers: number[] = [];
-  const withImage = new Set<string>();
-  let imageOnlyRows = 0;
-  rows.forEach((row, i) => {
-    const get: Getter = (h) => {
+  const getter =
+    (row: readonly string[]): Getter =>
+    (h) => {
       const at = position.get(h);
       return at === undefined ? "" : (row[at] ?? "").trim();
     };
-    if (spec.imageHeaders.some((h) => get(h))) withImage.add(get(handleHeader));
+  // Enlaces de fotos de cada producto, en el orden del archivo y sin repetir.
+  const images = new Map<string, string[]>();
+  for (const row of rows) {
+    const get = getter(row);
+    for (const h of spec.imageHeaders) {
+      const url = get(h);
+      if (!url) continue;
+      const list = images.get(get(handleHeader)) ?? [];
+      if (!list.includes(url)) list.push(url);
+      images.set(get(handleHeader), list);
+    }
+  }
+
+  const translated: string[][] = [];
+  const numbers: number[] = [];
+  const emitted = new Set<string>();
+  let imageOnlyRows = 0;
+  rows.forEach((row, i) => {
+    const get = getter(row);
     if (spec.skip?.(get)) {
       imageOnlyRows += 1;
       return;
     }
     const values = spec.translate(get);
+    const handle = get(handleHeader);
+    // Las fotos van en la primera fila del producto (la que describe el producto).
+    values.image_urls = emitted.has(handle) ? "" : (images.get(handle) ?? []).join("|");
+    emitted.add(handle);
     translated.push(out.map((h) => values[h] ?? ""));
     numbers.push(rowNumbers[i] ?? i + 2);
   });
@@ -297,6 +318,6 @@ export function translatePlatformCsv(
     rowNumbers: numbers,
     ignored: [...new Set(headers.filter((h) => h.trim() && !used.has(normalizeHeader(h))))],
     imageOnlyRows,
-    productsWithImageUrl: withImage.size,
+    productsWithImageUrl: [...images.values()].filter((l) => l.length > 0).length,
   };
 }

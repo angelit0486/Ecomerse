@@ -36,6 +36,8 @@ interface Totals {
   errors?: number;
   created?: number;
   updated?: number;
+  /** ADR-033: fotos reservadas para descargar desde sus enlaces. */
+  remote_images?: number;
 }
 
 /** Fecha de hace `h` horas para filtrar (fuera del render: la consulta es por petición). */
@@ -163,9 +165,9 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
           {Number.isInteger(withPhotoUrl) && withPhotoUrl > 0 ? (
             <p>
               {withPhotoUrl === 1
-                ? "1 producto trae su foto como enlace: no la descargamos de internet."
-                : `${withPhotoUrl} productos traen sus fotos como enlaces: no las descargamos de internet.`}{" "}
-              Cuando termine la importación, sube todas las fotos de una vez desde tu computadora.
+                ? "1 producto trae sus fotos como enlaces"
+                : `${withPhotoUrl} productos traen sus fotos como enlaces`}
+              : al confirmar las descargamos y las agregamos a cada producto.
             </p>
           ) : null}
         </div>
@@ -173,6 +175,14 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {done ? (
         <p role="status" className="rounded-md border border-success p-3 text-sm">
           Importación terminada.{" "}
+          {totals.remote_images ? (
+            <>
+              {totals.remote_images === 1
+                ? "Estamos descargando 1 foto desde su enlace"
+                : `Estamos descargando ${totals.remote_images} fotos desde sus enlaces`}
+              ; aparecen en cada producto en unos minutos.{" "}
+            </>
+          ) : null}
           <Link href={`/admin/${ctx.store.handle}/productos`} className="underline">
             Ver productos
           </Link>

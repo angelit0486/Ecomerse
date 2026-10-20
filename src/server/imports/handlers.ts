@@ -50,6 +50,11 @@ export function createImportHandlers(deps: ImportDeps): Array<[string, JobHandle
         const [row] = await tx<{ result: CommitResult }[]>`
           select system.import_commit(${importJobId}) as result
         `;
+        // ADR-033: las fotos con enlace se reservan y encolan en la misma
+        // transacción (si la importación falla, no queda ninguna a medias).
+        if (row!.result.status === "completed") {
+          await tx`select system.import_queue_remote_images(${importJobId})`;
+        }
         return row!.result;
       });
       log.info("Importación procesada", {

@@ -1,6 +1,7 @@
 import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
-import { processImage } from "./image";
+import { processImage, sniffImageMime } from "./image";
+import { fetchRemoteImage, type RemoteFetchResult } from "./remote-fetch";
 import {
   isStorePrefixedPath,
   ObjectTooLargeError,
@@ -18,6 +19,8 @@ export interface MediaDeps {
   storage: StorageAdmin;
   /** Una imagen nueva cambia la tienda pública: invalida su caché (§21.4). */
   onPublished?: (storeId: string) => void;
+  /** Descarga de fotos remotas (ADR-033); inyectable en pruebas. */
+  fetchImage?: (url: string, maxBytes: number) => Promise<RemoteFetchResult>;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -152,9 +155,64 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     await processMedia(job, ctx);
   };
 
+  // Foto desde el enlace de una importación (ADR-033, GATE0 T-08). La descarga
+  // aplica los controles de SSRF; lo descargado sigue el camino de una subida:
+  // store-uploads → media.process (recodificación). El enlace no se registra en
+  // los logs: puede llevar una firma en la consulta.
+  const fetchRemote: JobHandler = async (job, ctx) => {
+    const id = mediaId(job);
+    const [source] = await deps.db<
+      { store_id: string; storage_path: string; source_url: string; max_bytes: string }[]
+    >`select * from system.media_remote_source(${id}::uuid)`;
+    if (!source) return; // ya descargada, rechazada o borrada
+    if (job.storeId && job.storeId !== source.store_id) {
+      throw new PermanentJobError("La tienda del job no coincide con la del medio");
+    }
+    const download =
+      deps.fetchImage ?? ((url: string, maxBytes: number) => fetchRemoteImage(url, { maxBytes }));
+    const result = await download(source.source_url, Number(source.max_bytes));
+    if (!result.ok) {
+      // Red, tiempo o 5xx: otro intento más tarde (la cola espera entre intentos).
+      if (result.retryable && job.attempts < job.maxAttempts) {
+        throw new Error(`Descarga de foto remota: ${result.detail ?? result.reason}`);
+      }
+      await deps.db`select system.media_mark_rejected(${id}::uuid, ${result.reason})`;
+      ctx.log.info("Foto remota rechazada", {
+        media_id: id,
+        reason: result.reason,
+        detail: result.detail,
+      });
+      return;
+    }
+    const mime = sniffImageMime(result.data);
+    if (!mime) {
+      await deps.db`select system.media_mark_rejected(${id}::uuid, ${"unsupported_format"})`;
+      ctx.log.info("Foto remota rechazada", { media_id: id, reason: "unsupported_format" });
+      return;
+    }
+    let path: string | null;
+    try {
+      const [row] = await deps.db<{ path: string | null }[]>`
+        select system.media_set_remote_original(${id}::uuid, ${mime}, ${result.data.length}) as path`;
+      path = row?.path ?? null;
+    } catch (error) {
+      // Cuota de almacenamiento de la organización agotada: no se reintenta.
+      if (error instanceof Error && error.message === "limit_reached") {
+        await deps.db`select system.media_mark_rejected(${id}::uuid, ${"quota_exceeded"})`;
+        ctx.log.info("Foto remota rechazada", { media_id: id, reason: "quota_exceeded" });
+        return;
+      }
+      throw error;
+    }
+    if (!path) return;
+    await deps.storage.upload("store-uploads", path, result.data, mime);
+    await processMedia(job, ctx);
+  };
+
   return [
     ["media.process", processMedia],
     ["media.copy", copyMedia],
+    ["media.fetch_remote", fetchRemote],
     ["media.purge_orphans", purgeOrphans],
   ];
 }

@@ -714,7 +714,7 @@ Pedido del propietario: «que una dueña sin conocimientos técnicos monte y ope
   - Al terminar una importación, el panel ofrece «Subir las fotos de todos los productos».
   - Si el archivo vino de otra plataforma, la vista previa dice qué se tradujo y cuántos productos traían fotos como enlace.
 
-### ADR-033 — Traer las fotos desde los enlaces del archivo · **propuesto, pendiente de aprobación**
+### ADR-033 — Traer las fotos desde los enlaces del archivo · **aprobado por el propietario el 2026-10-20**
 
 **Contexto.**
 
@@ -745,3 +745,29 @@ Pedido del propietario: «que una dueña sin conocimientos técnicos monte y ope
 Cambia un contrato crítico (§25, T-08), por eso necesita tu aprobación antes de escribir código.
 
 **Alternativa sin ADR (lo implementado hoy):** descargar las fotos una vez a la computadora y subirlas por carpeta (D-CAT-02).
+
+**Decisión del propietario (2026-10-20).** «Sí, apruébalo». Se implementó así (diferencias con la propuesta, en negritas):
+
+- **Columna nueva `image_urls`** en la plantilla y en el formato propio: hasta 10 enlaces separados por `|`, en la primera fila del producto. Shopify llena la columna con «Image Src» y «Variant Image», incluidas las filas de solo foto.
+- **Validación en dos lugares.** En el servidor: solo https, sin usuario, ≤ 2 000 caracteres y ≤ 10. En la base, `imports_create` lo vuelve a exigir y pide `products.update`, que es el permiso de medios de producto.
+- **Reserva en la misma transacción que la importación.** `system.import_queue_remote_images` corre dentro del job `import.commit`: si la importación falla, no queda ninguna foto reservada. No duplica: hay un índice único por (producto, enlace) vivo. Como máximo 5 000 fotos por importación, y anota `remote_images` en los totales.
+- **Descarga** con `src/server/media/remote-fetch.ts`, sin dependencias nuevas:
+  - solo https al puerto 443;
+  - si cualquier IP del DNS es privada, de loopback, link-local, de metadatos, multicast o reservada, se rechaza; incluye IPv4 mapeado en IPv6, NAT64, 6to4 y Teredo;
+  - conecta a la IP ya validada;
+  - redirecciones solo al mismo host, como mucho 3;
+  - **10 s de tiempo y 10 MB** (el máximo de una foto de producto, en vez de 15);
+  - el tipo se toma de los magic bytes;
+  - el enlace no se registra en los logs porque puede llevar una firma.
+- **Después, el camino de siempre:** el original va a `store-uploads` y luego a `media.process`.
+- **Ruta inmutable.** **La ruta se reserva como `original.jpg` y no cambia** (`media_immutable`); el tipo real se fija al subir. La cuota `storage_mb` se comprueba al conocer el tamaño.
+- **Errores y reintentos:**
+  - `fetch_blocked`, `fetch_not_found`, `fetch_too_large`, `unsupported_format` y `quota_exceeded` se rechazan sin reintentar, con su mensaje en la ficha;
+  - red, tiempo, 429 y 5xx se reintentan hasta 5 veces.
+- **Migración:** `20261020000100_remote_images.sql`.
+- **Pruebas:**
+  - pgTAP `81_remote_images` (21);
+  - unitarias `remote-fetch` (38: rangos, DNS mezclado, formas de escribir 127.0.0.1, esquema, puerto, credenciales, redirecciones, tamaño, tiempo y códigos HTTP) y `platforms` (17);
+  - integración `remote-images` (5: tipo real con cabecera engañosa, bloqueada, SVG, reintento y borrada);
+  - E2E `imports`: Shopify con 2 fotos reservadas.
+- **Despliegue:** la migración debe aplicarse en staging **antes** de publicar el código, porque el job `import.commit` llama a la función nueva.

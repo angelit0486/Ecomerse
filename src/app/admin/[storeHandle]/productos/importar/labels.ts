@@ -62,6 +62,7 @@ export const COLUMN_LABELS: Record<string, string> = {
   variant_servings: "Porciones de la presentación",
   regulatory_category: "Tipo de producto regulado",
   attributes: "Atributos",
+  image_urls: "Fotos (enlaces)",
 };
 
 /**

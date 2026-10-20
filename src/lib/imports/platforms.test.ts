@@ -117,6 +117,14 @@ describe("translatePlatformCsv · Shopify", () => {
     expect(col(0, "weight_g")).toBe("907");
   });
 
+  it("junta las fotos del producto (también las de filas de solo foto) en su primera fila", () => {
+    expect(col(0, "image_urls")).toBe(
+      "https://cdn.shopify.com/a.jpg|https://cdn.shopify.com/b.jpg",
+    );
+    expect(col(1, "image_urls")).toBe("");
+    expect(col(2, "image_urls")).toBe("");
+  });
+
   it("existencias negativas quedan en 0 y «Default Title» es un producto sin opciones", () => {
     expect(col(1, "inventory_quantity")).toBe("0");
     expect(col(2, "option1_name")).toBe("");
@@ -147,6 +155,7 @@ describe("translatePlatformCsv · Shopify", () => {
     expect(whey.variants[0]!.price).toBe(89900);
     expect(whey.variants[0]!.compare_at_price).toBe(99900);
     expect(whey.variants[1]!.quantity).toBe(0);
+    expect(whey.images).toEqual(["https://cdn.shopify.com/a.jpg", "https://cdn.shopify.com/b.jpg"]);
     const creatina = plan.find((p) => p.normalized?.handle === "creatina")!.normalized!;
     expect(creatina.status).toBe("draft");
     expect(creatina.option_names).toEqual([]);
@@ -252,5 +261,37 @@ describe("translatePlatformCsv · formato propio", () => {
   it("lo deja igual", () => {
     const out = translatePlatformCsv(["handle", "title"], [["a", "A"]], [2]);
     expect(out).toMatchObject({ platform: "pruva", headers: ["handle", "title"], ignored: [] });
+  });
+});
+
+describe("planProductImport · image_urls (ADR-033)", () => {
+  const plan = (cell: string) =>
+    planProductImport(
+      ["handle", "title", "price", "image_urls"],
+      [["cafe", "Café", "10", cell]],
+      [2],
+    );
+
+  it("enlaces https separados por «|», sin repetidos", () => {
+    const [row] = plan("https://a.example/1.jpg | https://a.example/2.png|https://a.example/1.jpg");
+    expect(row!.errors).toEqual([]);
+    expect(row!.normalized!.images).toEqual(["https://a.example/1.jpg", "https://a.example/2.png"]);
+  });
+
+  it("vacío: no agrega fotos (nunca se borran)", () => {
+    expect(plan("")[0]!.normalized!.images).toBeUndefined();
+  });
+
+  it("http, con usuario o que no es enlace: error de la fila", () => {
+    for (const bad of ["http://a.example/1.jpg", "https://u:p@a.example/1.jpg", "foto.jpg"]) {
+      expect(plan(bad)[0]!.errors, bad).toEqual([
+        "image_urls: el enlace 1 debe empezar con https:// y ser una dirección completa",
+      ]);
+    }
+  });
+
+  it("más de 10 fotos: error de la fila", () => {
+    const many = Array.from({ length: 11 }, (_, i) => `https://a.example/${i}.jpg`).join("|");
+    expect(plan(many)[0]!.errors).toEqual(["image_urls: máximo 10 fotos por producto"]);
   });
 });

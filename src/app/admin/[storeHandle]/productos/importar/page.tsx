@@ -109,7 +109,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
         <p>
           No llenes la plantilla: exporta tus productos desde allá y sube ese mismo archivo en el
           paso 3. Lo pasamos al formato de PRUVA (presentaciones, precios, existencias, marca, peso
-          y SEO). Después sube todas las fotos de una vez, con una carpeta por producto.
+          y SEO). Las fotos de Shopify se descargan solas desde sus enlaces; las demás, súbelas
+          todas de una vez con una carpeta por producto.
         </p>
       </section>
 

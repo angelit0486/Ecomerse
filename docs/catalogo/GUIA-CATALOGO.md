@@ -53,6 +53,8 @@ Por presentación (opcional): `variant_net_content` (contenido de ese tamaño, p
 
 `attributes`: claves de atributo y de valor, p. ej. `objetivo:<clave>|<clave>; sabor:<clave>`. Las claves están en Productos → Atributos.
 
+`image_urls`: enlaces `https://` a las fotos del producto, separados por `|` (hasta 10, en el orden en que se mostrarán). Se ponen en la primera fila del producto. Al confirmar la importación, la tienda descarga cada foto, la optimiza y la agrega al producto; un enlace a una dirección interna, que no sea una imagen o que pese más de 10 MB se rechaza y se avisa en la ficha (ADR-033).
+
 ## 4. Lo que bloquea la publicación
 
 - Falta un campo obligatorio o la leyenda de la tienda no está aprobada.

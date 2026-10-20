@@ -78,12 +78,20 @@ export const COST_HEADERS = ["cost"] as const;
  */
 export const VARIANT_SUPPLEMENT_HEADERS = ["variant_net_content", "variant_servings"] as const;
 export const MAX_VARIANT_SERVINGS = 10_000;
+/**
+ * ADR-033: enlaces https a las fotos del producto, separados por «|» (hasta 10).
+ * Al terminar la importación el worker las descarga con los controles de SSRF.
+ */
+export const IMAGE_HEADERS = ["image_urls"] as const;
+export const MAX_IMAGES_PER_PRODUCT = 10;
+
 export const ALL_IMPORT_HEADERS = [
   ...IMPORT_HEADERS,
   ...COST_HEADERS,
   ...REGULATORY_HEADERS,
   ...VARIANT_SUPPLEMENT_HEADERS,
   ...ATTRIBUTE_HEADERS,
+  ...IMAGE_HEADERS,
 ] as const;
 export type ImportColumn = (typeof ALL_IMPORT_HEADERS)[number];
 
@@ -129,6 +137,8 @@ export interface PlannedProduct {
   regulatory?: { category: string | null; data: Record<string, unknown> };
   /** Clave del atributo → claves de sus valores; {} = sin atributos. */
   attributes?: Record<string, string[]>;
+  /** ADR-033: enlaces https de fotos para descargar (se agregan; nunca se borran fotos). */
+  images?: string[];
   brand?: string | null;
   categories?: string[];
   /** null: el archivo no trae columnas de opciones. */
@@ -262,6 +272,43 @@ const list = (v: string) =>
 
 const DIMENSIONS = ["weight_g", "length_mm", "width_mm", "height_mm"] as const;
 
+/**
+ * Enlaces de fotos (ADR-033): solo https, sin usuario ni contraseña, ≤ 2 000
+ * caracteres y ≤ 10 por producto, sin repetidos. La base los vuelve a validar y
+ * el worker, al descargar, bloquea las direcciones internas (T-08).
+ */
+function parseImageUrls(value: string, errors: string[]): string[] {
+  const urls = [...new Set(list(value))];
+  const valid: string[] = [];
+  urls.forEach((raw, i) => {
+    let url: URL | null = null;
+    try {
+      url = new URL(raw);
+    } catch {
+      url = null;
+    }
+    if (
+      !url ||
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      raw.length > 2000 ||
+      /\s/.test(raw)
+    ) {
+      errors.push(
+        `image_urls: el enlace ${i + 1} debe empezar con https:// y ser una dirección completa`,
+      );
+      return;
+    }
+    valid.push(raw);
+  });
+  if (valid.length > MAX_IMAGES_PER_PRODUCT) {
+    errors.push(`image_urls: máximo ${MAX_IMAGES_PER_PRODUCT} fotos por producto`);
+    return [];
+  }
+  return valid;
+}
+
 export function planProductImport(
   headers: string[],
   rows: string[][],
@@ -327,6 +374,10 @@ export function planProductImport(
       const parsed = parseAttributes(f("attributes"));
       if (parsed.ok) normalized.attributes = parsed.value;
       else fe.push(`attributes: ${parsed.error}`);
+    }
+    if (has("image_urls") && f("image_urls")) {
+      const images = parseImageUrls(f("image_urls"), fe);
+      if (images.length > 0) normalized.images = images;
     }
 
     // Opciones: mismos nombres en todas las filas del producto.

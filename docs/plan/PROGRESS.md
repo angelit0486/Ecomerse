@@ -27,7 +27,8 @@
   - **Fotos por carpeta:** una carpeta por producto, nombrada con su SKU o nombre, y sin renombrar las fotos; hasta 2 000 por tanda (D-CAT-02).
   - **Del CSV a las fotos:** al terminar una importación, el panel lleva a subir las fotos (D-CAT-03).
   - **Pruebas:** unitarias `platforms` (12) y `bulk-match` (16); E2E `bulk-images` (carpeta real) e `imports` (Shopify en Latin-1).
-  - **Pendiente del propietario:** aprobar el ADR-033 para traer las fotos desde los enlaces del archivo.
+  - **ADR-033 (aprobado y hecho):** las fotos de los enlaces del archivo (Shopify o columna `image_urls`) se descargan solas al confirmar, con controles de SSRF. Migración `20261020000100_remote_images.sql`. db:test 2068 + 260, verify 739, E2E de importación.
+  - **Pendiente del propietario:** aprobar que se aplique la migración en staging. Es requisito antes de publicar este código.
 
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:
   - **Fase 1 (`2940220`):** E2E 56/56 en dos corridas, verify y db:test en verde. Directorio de marcas.
