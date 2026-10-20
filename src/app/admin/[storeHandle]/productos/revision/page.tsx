@@ -8,6 +8,7 @@ import { getCatalogQuality } from "@/server/catalog/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { STATUS_LABELS, qualityIssueMessage, QUALITY_ISSUES } from "../messages";
+import { PublishReady } from "./publish-ready";
 
 export const metadata: Metadata = { title: "Revisión del catálogo" };
 
@@ -26,6 +27,18 @@ export default async function CatalogQualityPage({ params }: Props) {
   const report = await getCatalogQuality(supabase, ctx.store.id);
   const base = `/admin/${ctx.store.handle}/productos`;
   const summary = Object.entries(report.by_code).sort((a, b) => b[1] - a[1]);
+  // Borradores nuevos sin fecha programada (no pausados): los que se intentarían.
+  const canPublish = hasPermission(ctx, "products.publish");
+  const { count: drafts } = canPublish
+    ? await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ctx.store.id)
+        .eq("status", "draft")
+        .is("deleted_at", null)
+        .is("publish_at", null)
+        .is("published_at", null)
+    : { count: 0 };
 
   return (
     <section className="space-y-6">
@@ -42,6 +55,9 @@ export default async function CatalogQualityPage({ params }: Props) {
           y confíe.
         </p>
       </header>
+
+      {/* Montado aunque ya no queden: así se ve el resultado tras publicar. */}
+      {canPublish ? <PublishReady storeHandle={ctx.store.handle} drafts={drafts ?? 0} /> : null}
 
       {report.total === 0 ? (
         <p role="status" className="rounded-md border border-border p-4 text-sm">

@@ -18,6 +18,8 @@ type Props = {
 
 const FILTERS: Record<string, string> = {
   todos: "Todos",
+  "por-surtir": "Por surtir",
+  atencion: "Requieren atención",
   pendientes: "Pendientes de pago",
   pagados: "Pagados",
   cancelados: "Cancelados",
@@ -31,6 +33,8 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   if (!hasPermission(ctx, "orders.read")) notFound();
   const sp = await searchParams;
   const filter = typeof sp.estado === "string" && FILTERS[sp.estado] ? sp.estado : "todos";
+  // Por surtir se atiende del más antiguo al más nuevo (plan del panel, C2).
+  const oldestFirst = filter === "por-surtir";
   // Cursor (placed_at, id): pedidos con la misma hora no se saltan (Gate F6).
   const cursor =
     typeof sp.antes === "string" ? /^(.{10,40})\|([0-9a-f-]{36})$/.exec(sp.antes) : null;
@@ -44,14 +48,24 @@ export default async function OrdersPage({ params, searchParams }: Props) {
       "id, display_number, placed_at, total, currency, status, payment_status, fulfillment_status, needs_attention",
     )
     .eq("store_id", ctx.store.id)
-    .order("placed_at", { ascending: false })
-    .order("id", { ascending: false })
+    .order("placed_at", { ascending: oldestFirst })
+    .order("id", { ascending: oldestFirst })
     .limit(PAGE + 1);
+  // Misma definición que el contador «por surtir» de Inicio (dashboard_kpis).
+  if (filter === "por-surtir") {
+    query = query
+      .eq("status", "open")
+      .in("fulfillment_status", ["unfulfilled", "partially_fulfilled"]);
+  }
+  if (filter === "atencion") query = query.eq("needs_attention", true);
   if (filter === "pendientes") query = query.eq("status", "pending_payment");
   if (filter === "pagados") query = query.eq("status", "open");
   if (filter === "cancelados") query = query.eq("status", "cancelled");
   if (before) {
-    query = query.or(`placed_at.lt.${before.at},and(placed_at.eq.${before.at},id.lt.${before.id})`);
+    const op = oldestFirst ? "gt" : "lt";
+    query = query.or(
+      `placed_at.${op}.${before.at},and(placed_at.eq.${before.at},id.${op}.${before.id})`,
+    );
   }
   const [{ data, error }, dispatches] = await Promise.all([
     query,
@@ -110,7 +124,14 @@ export default async function OrdersPage({ params, searchParams }: Props) {
         </nav>
       </header>
       {rows.length === 0 ? (
-        <EmptyState title="Sin pedidos" description="Los pedidos de tu tienda aparecerán aquí." />
+        filter === "por-surtir" ? (
+          <EmptyState
+            title="Nada por surtir"
+            description="Todos los pedidos pagados ya salieron. Los nuevos aparecerán aquí."
+          />
+        ) : (
+          <EmptyState title="Sin pedidos" description="Los pedidos de tu tienda aparecerán aquí." />
+        )
       ) : (
         <div role="region" aria-label="Pedidos" tabIndex={0} className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -153,7 +174,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
           href={`${base}?estado=${filter}&antes=${encodeURIComponent(next)}`}
           className="text-sm underline"
         >
-          Pedidos anteriores
+          {oldestFirst ? "Más pedidos" : "Pedidos anteriores"}
         </Link>
       ) : null}
     </section>

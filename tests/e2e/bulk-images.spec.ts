@@ -41,6 +41,27 @@ test.beforeAll(async () => {
         })}) as r`;
       ids[slug] = p!.r.id;
     }
+    const [g] = await sql<{ r: { id: string } }[]>`
+      select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({
+        title: "Ganador de peso",
+        slug: "ganador",
+        options: [{ name: "Sabor", values: ["Vainilla", "Chocolate"] }],
+        variants: [
+          {
+            price: 69900,
+            sku: `GV-${run}`,
+            options: { Sabor: "Vainilla" },
+            inventory_policy: "continue",
+          },
+          {
+            price: 69900,
+            sku: `GC-${run}`,
+            options: { Sabor: "Chocolate" },
+            inventory_policy: "continue",
+          },
+        ],
+      })}) as r`;
+    ids.ganador = g!.r.id;
   });
 });
 
@@ -64,11 +85,15 @@ test("fotos en lote por SKU y nombre, y varias a la vez en la ficha, sin esperar
     { name: `PRV-${run}-2.jpg`, mimeType: "image/jpeg", buffer: await photo("#0b2d5b") },
     { name: `prv-${run}.jpg`, mimeType: "image/jpeg", buffer: await photo("#4f7ea8") },
     { name: "creatina.jpg", mimeType: "image/jpeg", buffer: await photo("#a7b8c6") },
+    { name: `GC-${run}.jpg`, mimeType: "image/jpeg", buffer: await photo("#5b3a1e", 1200) },
     { name: "sin-producto.jpg", mimeType: "image/jpeg", buffer: await photo("#172638", 200) },
   ]);
 
   // Vista previa: nada se sube todavía.
-  await expect(page.getByText(/3\s+fotos para\s+2\s+productos/)).toBeVisible();
+  await expect(page.getByText(/4\s+fotos para\s+3\s+productos/)).toBeVisible();
+  await expect(
+    page.getByRole("row", { name: new RegExp(`GC-${run}\\.jpg.*foto del sabor GC-${run}`, "i") }),
+  ).toBeVisible();
   await expect(
     page.getByRole("row", { name: /sin-producto\.jpg.*Sin coincidencia/ }),
   ).toBeVisible();
@@ -80,10 +105,21 @@ test("fotos en lote por SKU y nombre, y varias a la vez en la ficha, sin esperar
     select count(*)::int as count from public.media where store_id = ${tenant.storeId}`;
   expect(before!.count).toBe(0);
 
-  await page.getByRole("button", { name: "Subir 3 fotos" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "3 fotos subidas" })).toBeVisible({
+  await page.getByRole("button", { name: "Subir 4 fotos" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "4 fotos subidas" })).toBeVisible({
     timeout: 60_000,
   });
+  // La foto nombrada con el SKU del sabor queda como la foto de ese sabor.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Foto de sabor o tamaño asignada: 1 de 1." }),
+  ).toBeVisible({ timeout: 60_000 });
+  const variants = await admin<{ sku: string; has_image: boolean }[]>`
+    select sku, image_id is not null as has_image from public.product_variants
+     where product_id = ${ids.ganador!} order by sku`;
+  expect(variants).toEqual([
+    { sku: `GC-${run}`.toUpperCase(), has_image: true },
+    { sku: `GV-${run}`.toUpperCase(), has_image: false },
+  ]);
   // Lo ya subido no se puede volver a mandar: no hay botón que duplique fotos.
   await expect(page.getByRole("button", { name: /^(Subir|Reintentar)/ })).toHaveCount(0);
 
@@ -100,18 +136,19 @@ test("fotos en lote por SKU y nombre, y varias a la vez en la ficha, sin esperar
       },
       { timeout: 30_000 },
     )
-    .toBe(3);
+    .toBe(4);
   const media = await admin<
     { product_id: string; position: number; status: string; width: number; mime_type: string }[]
   >`select product_id, position, status, width, mime_type from public.media
      where store_id = ${tenant.storeId} order by product_id, position`;
-  expect(media).toHaveLength(3);
+  expect(media).toHaveLength(4);
   expect(media.every((m) => m.status === "ready")).toBe(true);
   // Aligeradas en el navegador: 3000 px → como mucho 2400 px.
   expect(Math.max(...media.map((m) => m.width))).toBeLessThanOrEqual(2400);
   const aislada = media.filter((m) => m.product_id === ids["proteina-aislada"]);
   expect(aislada).toHaveLength(2);
   expect(media.filter((m) => m.product_id === ids.creatina)).toHaveLength(1);
+  expect(media.filter((m) => m.product_id === ids.ganador)).toHaveLength(1);
 
   // La ficha: varias fotos a la vez, procesadas sin llamar al runner.
   await page.goto(`/admin/${tenant.handle}/productos/${ids.creatina!}`);

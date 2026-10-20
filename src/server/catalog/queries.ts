@@ -166,6 +166,7 @@ export interface MediaRow {
   width: number | null;
   height: number | null;
   rejection_reason: string | null;
+  created_at: string;
   url: string | null;
 }
 
@@ -257,7 +258,9 @@ export async function getProduct(
       .eq("product_id", productId),
     supabase
       .from("media")
-      .select("id, status, alt_text, position, width, height, rejection_reason, storage_path")
+      .select(
+        "id, status, alt_text, position, width, height, rejection_reason, storage_path, created_at",
+      )
       .eq("product_id", productId)
       .is("deleted_at", null)
       .order("position"),
@@ -367,6 +370,7 @@ export interface ImageTarget {
   title: string;
   slug: string;
   skus: string[];
+  variants: { id: string; sku: string }[];
   image_count: number;
 }
 
@@ -400,10 +404,10 @@ export async function listImageTargets(
         .order("id")
         .range(from, to),
     ),
-    readAll<{ product_id: string; sku: string | null }>((from, to) =>
+    readAll<{ id: string; product_id: string; sku: string | null }>((from, to) =>
       supabase
         .from("product_variants")
-        .select("product_id, sku")
+        .select("id, product_id, sku")
         .eq("store_id", storeId)
         .is("deleted_at", null)
         .not("sku", "is", null)
@@ -422,9 +426,13 @@ export async function listImageTargets(
         .range(from, to),
     ),
   ]);
-  const skus = new Map<string, string[]>();
+  const byProduct = new Map<string, { id: string; sku: string }[]>();
   for (const v of variants) {
-    if (v.sku) skus.set(v.product_id, [...(skus.get(v.product_id) ?? []), v.sku]);
+    if (v.sku)
+      byProduct.set(v.product_id, [
+        ...(byProduct.get(v.product_id) ?? []),
+        { id: v.id, sku: v.sku },
+      ]);
   }
   const images = new Map<string, number>();
   for (const m of media) {
@@ -432,7 +440,8 @@ export async function listImageTargets(
   }
   return products.map((p) => ({
     ...p,
-    skus: skus.get(p.id) ?? [],
+    skus: (byProduct.get(p.id) ?? []).map((v) => v.sku),
+    variants: byProduct.get(p.id) ?? [],
     image_count: images.get(p.id) ?? 0,
   }));
 }

@@ -24,7 +24,7 @@ export interface UploadItem {
   file: File;
 }
 
-export type UploadOutcome = { ok: true } | { ok: false; error: string };
+export type UploadOutcome = { ok: true; mediaId: string } | { ok: false; error: string };
 
 /** La foto, ya aligerada, sigue fuera de formato o de tamaño. */
 class TooLarge extends Error {}
@@ -97,7 +97,7 @@ export async function uploadProductImages(
       }
       const finalized = await finalizeProductImageUpload(storeHandle, ticket.mediaId);
       return finalized.ok
-        ? { ok: true }
+        ? { ok: true, mediaId: ticket.mediaId }
         : { ok: false, error: finalized.error ?? "No se pudo guardar." };
     } catch (error) {
       if (error instanceof TooLarge) return { ok: false, error: FIELD_MESSAGES.file! };

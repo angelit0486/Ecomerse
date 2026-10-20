@@ -9,6 +9,7 @@ import { getProduct, listBrands, listCategories, validateProduct } from "@/serve
 import { getComplianceStatus, getRegulatoryInfo } from "@/server/compliance/queries";
 import { callRpc } from "@/server/db/rpc";
 import { resumeQueue } from "@/server/jobs/run-now";
+import { imageProcessingBlocked } from "@/server/system/health";
 import { storeOrigin } from "@/server/storefront/seo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -42,8 +43,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const product = await getProduct(supabase, ctx.store.id, productId, canReadCost);
   if (!product) notFound();
   const canEdit = hasPermission(ctx, "products.update") && !product.deleted_at;
-  // Fotos «Procesando»: la cola se retoma al mirar la ficha (D-LOTE-05).
-  if (product.media.some((m) => m.status === "pending")) resumeQueue("media.page");
+  // Fotos «Procesando»: la cola se retoma al mirar la ficha (D-LOTE-05). Sin la
+  // clave de Storage no: cada pasada gastaría un intento de esas fotos (D-PANEL-10).
+  const processingBlocked = imageProcessingBlocked();
+  if (!processingBlocked && product.media.some((m) => m.status === "pending")) {
+    resumeQueue("media.page");
+  }
   const [brands, categories, issues, compliance, regulatory, attributes, attributeValues] =
     await Promise.all([
       listBrands(supabase, ctx.store.id),
@@ -249,6 +254,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         productId={product.id}
         images={product.media}
         canEdit={canEdit}
+        processingBlocked={processingBlocked}
         variants={product.variants.map((v) => ({
           id: v.id,
           label: Object.values(v.options).join(" / ") || "Única",

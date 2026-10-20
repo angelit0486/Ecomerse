@@ -4,6 +4,8 @@
  *   PRV-001.jpg            → producto con el SKU PRV-001 (foto 1)
  *   PRV-001-2.jpg          → mismo producto, foto 2 («_2» y « 2» también valen)
  *   proteina-aislada.webp  → producto con ese nombre corto (slug)
+ *   PRV-001-CHO.jpg        → si es el SKU de un sabor o tamaño de un producto con
+ *                            varias presentaciones, además es la foto de ese sabor
  *
  * Sin distinguir mayúsculas. Se prueba primero el nombre completo y después sin
  * el número final: así un SKU que termina en número no se confunde con la foto 2.
@@ -14,6 +16,8 @@ export interface MatchTarget {
   title: string;
   slug: string;
   skus: readonly string[];
+  /** Presentaciones con SKU; solo importan si el producto tiene más de una. */
+  variants?: readonly { id: string; sku: string }[];
 }
 
 export interface FileMatch {
@@ -27,6 +31,9 @@ export interface FileMatch {
   order: number;
   /** El mismo SKU está en varios productos: no se asigna para no adivinar. */
   ambiguous: boolean;
+  /** Presentación cuyo SKU es el nombre exacto del archivo (foto de ese sabor). */
+  variantId: string | null;
+  variantSku: string | null;
 }
 
 const SUFFIX = /^(.*?)[-_ ](\d{1,2})$/;
@@ -90,6 +97,13 @@ export function matchFiles(
         order = Math.max(1, Number(suffix[2]));
       }
     }
+    // Solo con el SKU exacto (sin número de foto) y si hay varias presentaciones:
+    // con una sola, la foto del producto ya es la suya.
+    const variants = found.target?.variants ?? [];
+    const variant =
+      found.by === "sku" && order === 1 && variants.length > 1
+        ? (variants.find((v) => normalizeKey(v.sku) === key) ?? null)
+        : null;
     return {
       index: i,
       name,
@@ -98,6 +112,8 @@ export function matchFiles(
       matchedBy: found.by,
       order,
       ambiguous: found.ambiguous,
+      variantId: variant?.id ?? null,
+      variantSku: variant?.sku ?? null,
     };
   });
 }

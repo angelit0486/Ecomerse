@@ -8,6 +8,7 @@ import { ALLOWED_IMAGE_MIME } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
+import { assignVariantPhotosWhenReady } from "../../actions";
 import { uploadProductImages, type UploadOutcome } from "../../upload-client";
 
 export interface BulkTarget {
@@ -15,20 +16,34 @@ export interface BulkTarget {
   title: string;
   slug: string;
   skus: string[];
+  variants: { id: string; sku: string }[];
   imageCount: number;
 }
 
 /** Más fotos por tanda harían eterna la vista previa en un celular. */
 const MAX_FILES = 500;
+/** La foto de cada sabor se asigna cuando termina de optimizarse (segundos). */
+const VARIANT_POLL_MS = 3_000;
+const VARIANT_POLL_TRIES = 60;
+
+type VariantPhotos =
+  | { phase: "asignando"; total: number; assigned: number }
+  | { phase: "listo"; total: number; assigned: number; failed: number }
+  | { phase: "pendiente"; total: number; assigned: number }
+  | { phase: "error"; total: number; assigned: number; message: string };
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type RowState = "lista" | "subiendo" | "subida" | { error: string };
 
 export function BulkImages({
   storeHandle,
   targets,
+  processingBlocked = false,
 }: {
   storeHandle: string;
   targets: BulkTarget[];
+  processingBlocked?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -37,6 +52,7 @@ export function BulkImages({
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState<{ ok: number; failed: number } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [variantPhotos, setVariantPhotos] = useState<VariantPhotos | null>(null);
 
   const matches = useMemo(
     () =>
@@ -54,13 +70,15 @@ export function BulkImages({
   const pending = ready.filter((m) => states.get(m.index) !== "subida");
   const retrying = pending.length > 0 && pending.length < ready.length;
 
-  // Cerrar la pestaña a media subida corta las que faltan: se avisa.
+  // Cerrar la pestaña a media subida (o mientras se asignan las fotos de cada
+  // sabor) corta lo que falta: se avisa.
+  const busy = running || variantPhotos?.phase === "asignando";
   useEffect(() => {
-    if (!running) return;
+    if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [running]);
+  }, [busy]);
 
   function choose(list: FileList | null) {
     const images = Array.from(list ?? []).filter((f) =>
@@ -70,6 +88,7 @@ export function BulkImages({
     setFiles(images.slice(0, MAX_FILES));
     setStates(new Map());
     setFinished(null);
+    setVariantPhotos(null);
   }
 
   async function start() {
@@ -95,6 +114,44 @@ export function BulkImages({
     const failed = outcomes.filter((o) => !o.ok).length;
     setFinished({ ok: ready.length - failed, failed });
     setRunning(false);
+    const pairs = batch.flatMap((m, i) => {
+      const outcome = outcomes[i];
+      return m.variantId && outcome?.ok
+        ? [{ variantId: m.variantId, mediaId: outcome.mediaId }]
+        : [];
+    });
+    if (pairs.length > 0) await assignVariantPhotos(pairs);
+  }
+
+  /** Pide la asignación hasta que todas las fotos de sabor estén listas. */
+  async function assignVariantPhotos(pairs: { variantId: string; mediaId: string }[]) {
+    const total = pairs.length;
+    if (processingBlocked) {
+      setVariantPhotos({ phase: "pendiente", total, assigned: 0 });
+      return;
+    }
+    let left = pairs;
+    let assigned = 0;
+    let failed = 0;
+    setVariantPhotos({ phase: "asignando", total, assigned });
+    for (let attempt = 0; attempt < VARIANT_POLL_TRIES && left.length > 0; attempt++) {
+      if (attempt > 0) await sleep(VARIANT_POLL_MS);
+      const result = await assignVariantPhotosWhenReady(storeHandle, left).catch(() => null);
+      if (!result) continue;
+      assigned += result.assigned.length;
+      if (result.fatal) {
+        setVariantPhotos({ phase: "error", total, assigned, message: result.fatal });
+        return;
+      }
+      failed += result.failed.length;
+      left = left.filter((p) => result.waiting.includes(p.variantId));
+      setVariantPhotos({ phase: "asignando", total, assigned });
+    }
+    setVariantPhotos(
+      left.length > 0
+        ? { phase: "pendiente", total, assigned }
+        : { phase: "listo", total, assigned, failed },
+    );
   }
 
   return (
@@ -170,6 +227,7 @@ export function BulkImages({
                 </Link>
               </p>
             ) : null}
+            {variantPhotos ? <p role="status">{variantPhotosText(variantPhotos)}</p> : null}
           </div>
 
           {pending.length > 0 ? (
@@ -208,6 +266,20 @@ export function BulkImages({
   );
 }
 
+function variantPhotosText(v: VariantPhotos): string {
+  const of = `${v.assigned} de ${v.total}`;
+  if (v.phase === "asignando") return `Asignando la foto de cada sabor o tamaño: ${of}…`;
+  if (v.phase === "error") {
+    return `Foto de sabor o tamaño asignada: ${of}. ${v.message} Las que faltan, elígelas en la ficha del producto, en «Foto de cada presentación».`;
+  }
+  if (v.phase === "listo") {
+    return v.failed > 0
+      ? `Foto de sabor o tamaño asignada: ${of}. ${v.failed} no se pudieron asignar; elígelas en la ficha del producto.`
+      : `Foto de sabor o tamaño asignada: ${of}.`;
+  }
+  return `Foto de sabor o tamaño asignada: ${of}. Las demás siguen optimizándose; cuando estén listas, elígelas en la ficha del producto, en «Foto de cada presentación».`;
+}
+
 function productCell(m: FileMatch) {
   if (m.ambiguous) return <span className="text-danger">SKU repetido en varios productos</span>;
   if (!m.productId) return <span className="text-fg-muted">Sin coincidencia</span>;
@@ -215,7 +287,8 @@ function productCell(m: FileMatch) {
     <>
       {m.productTitle}{" "}
       <span className="text-[13px] text-fg-muted">
-        (por {m.matchedBy === "sku" ? "SKU" : "nombre"})
+        (por {m.matchedBy === "sku" ? "SKU" : "nombre"}
+        {m.variantSku ? `; foto del sabor ${m.variantSku}` : ""})
       </span>
     </>
   );

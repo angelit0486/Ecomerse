@@ -11,6 +11,7 @@ import { validateProduct } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { AppError } from "@/server/errors";
 import { processQueueSoon } from "@/server/jobs/run-now";
+import { imageProcessingBlocked } from "@/server/system/health";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { invalidateStore } from "@/server/storefront/cache";
@@ -438,6 +439,72 @@ export async function bulkProductsAction(
   return { ok: true, message: `${done} ${verb}.` };
 }
 
+/**
+ * Como mucho por clic: cada intento es una llamada a la base. Se recorren
+ * todos (no solo los primeros), así los incompletos no tapan a los completos.
+ */
+const READY_MAX = 300;
+
+/**
+ * Revisión del catálogo (D-PANEL-07): publica los borradores que ya están
+ * completos. La base valida cada uno (catalog_publish_product: precio, fotos,
+ * ficha sanitaria); los incompletos siguen en borrador. Solo borradores nuevos:
+ * los programados se publican en su fecha y los pausados no se tocan.
+ */
+export async function publishReadyDraftsAction(
+  storeHandle: string,
+  _: CatalogActionState,
+): Promise<CatalogActionState> {
+  let done = 0;
+  let pending = 0;
+  let more = false;
+  try {
+    await withStore(storeHandle, async ({ supabase, storeId }) => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id")
+        .eq("store_id", storeId)
+        .eq("status", "draft")
+        .is("deleted_at", null)
+        .is("publish_at", null)
+        // Nunca publicados: uno pausado (borrador con published_at) se queda así.
+        .is("published_at", null)
+        .order("created_at")
+        .order("id")
+        .limit(READY_MAX + 1);
+      if (error) throw error;
+      more = (data ?? []).length > READY_MAX;
+      for (const { id } of (data ?? []).slice(0, READY_MAX)) {
+        try {
+          await applyStatus(supabase, storeId, id as string, "publish");
+          done += 1;
+        } catch (error) {
+          // Solo «le falta algo» deja el producto en borrador; un permiso u otro
+          // fallo detiene la tanda y se informa.
+          if (!(error instanceof AppError && error.code === "validation_failed")) throw error;
+          pending += 1;
+        }
+      }
+    });
+  } catch (error) {
+    const state = failure("catalog.publish_ready", error);
+    revalidatePath(productsPath(storeHandle), "layout");
+    // Lo ya publicado se queda publicado: se dice cuánto alcanzó a hacerse.
+    return done > 0
+      ? { ...state, error: `${state.error} Se publicaron ${done} antes del error.` }
+      : state;
+  }
+  revalidatePath(productsPath(storeHandle), "layout");
+  if (done === 0 && pending === 0) return { ok: true, message: "No hay borradores por publicar." };
+  const published = `${done} ${done === 1 ? "producto publicado" : "productos publicados"}`;
+  const left =
+    pending > 0 ? ` ${pending} siguen en borrador porque les falta algo: abajo ves qué.` : "";
+  return {
+    ok: true,
+    message: `${published}.${left}${more ? ` Quedan más por revisar: vuelve a pulsar «Publicar los completos».` : ""}`,
+  };
+}
+
 // -----------------------------------------------------------------------------
 // Imágenes (§25.3): reservar → PUT directo del navegador → finalizar.
 // -----------------------------------------------------------------------------
@@ -492,8 +559,9 @@ export async function finalizeProductImageUpload(
   } catch (error) {
     return { ok: false, error: failure("media.finalize", error).error };
   }
-  // La optimización (media.process) corre ya, no en la siguiente pasada del cron.
-  processQueueSoon("media.finalize");
+  // La optimización (media.process) corre ya, no en la siguiente pasada del cron;
+  // sin la clave de Storage fallaría y gastaría un intento (D-PANEL-10).
+  if (!imageProcessingBlocked()) processQueueSoon("media.finalize");
   revalidatePath(productsPath(storeHandle), "layout");
   return { ok: true };
 }
@@ -841,6 +909,80 @@ export async function setVariantImageAction(
     ok: true,
     message: mediaId ? "Foto de la presentación guardada." : "Usará la foto del producto.",
   };
+}
+
+const variantPhotosSchema = z
+  .array(z.object({ variantId: uuid, mediaId: uuid }))
+  .min(1)
+  .max(500);
+
+export interface VariantPhotosResult {
+  /** No se puede seguir (sesión vencida, sin permiso…): el navegador deja de pedir. */
+  fatal?: string;
+  /** Presentaciones que ya tienen su foto. */
+  assigned: string[];
+  /** Su foto aún se optimiza: se vuelve a pedir en unos segundos. */
+  waiting: string[];
+  /** Su foto se rechazó o no se pudo asignar. */
+  failed: string[];
+}
+
+/**
+ * Subida en lote (D-PANEL-05): la foto nombrada con el SKU de un sabor queda
+ * como su foto en cuanto está lista. La base solo acepta fotos listas del mismo
+ * producto (catalog_set_variant_image), así que el navegador lo pide de nuevo
+ * mientras se optimizan.
+ */
+export async function assignVariantPhotosWhenReady(
+  storeHandle: string,
+  pairs: { variantId: string; mediaId: string }[],
+): Promise<VariantPhotosResult> {
+  const parsed = variantPhotosSchema.safeParse(pairs);
+  if (!parsed.success) return { assigned: [], waiting: [], failed: pairs.map((p) => p.variantId) };
+  const result: VariantPhotosResult = { assigned: [], waiting: [], failed: [] };
+  try {
+    await withStore(storeHandle, async ({ supabase, storeId }) => {
+      const { data, error } = await supabase
+        .from("media")
+        .select("id, status")
+        .eq("store_id", storeId)
+        .in(
+          "id",
+          parsed.data.map((p) => p.mediaId),
+        );
+      if (error) throw error;
+      const status = new Map((data ?? []).map((m) => [m.id as string, m.status as string]));
+      for (const { variantId, mediaId } of parsed.data) {
+        const state = status.get(mediaId);
+        if (state === "pending") {
+          result.waiting.push(variantId);
+          continue;
+        }
+        if (state !== "ready") {
+          result.failed.push(variantId);
+          continue;
+        }
+        try {
+          await callRpc(supabase, "catalog_set_variant_image", {
+            p_store_id: storeId,
+            p_variant_id: variantId,
+            p_media_id: mediaId,
+          });
+          result.assigned.push(variantId);
+        } catch (error) {
+          reportActionError("catalog.variant_image_bulk", error);
+          result.failed.push(variantId);
+        }
+      }
+    });
+  } catch (error) {
+    return {
+      ...result,
+      fatal: failure("catalog.variant_image_bulk", error).error ?? "No se pudo asignar.",
+    };
+  }
+  if (result.assigned.length > 0) revalidatePath(productsPath(storeHandle), "layout");
+  return result;
 }
 
 // -----------------------------------------------------------------------------

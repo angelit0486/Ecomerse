@@ -92,6 +92,19 @@ export interface FulfillLine {
   pending: number;
 }
 
+/** Sugerencias para escribir menos en el celular (C1); se puede escribir otra. */
+const MX_CARRIERS = [
+  "Estafeta",
+  "DHL",
+  "FedEx",
+  "Paquetexpress",
+  "Redpack",
+  "J&T Express",
+  "99minutos",
+  "Correos de México",
+  "Entrega local",
+] as const;
+
 export function FulfillForm({
   storeHandle,
   orderId,
@@ -135,9 +148,16 @@ export function FulfillForm({
           <input
             name="carrier"
             maxLength={80}
+            list={`carriers-${orderId}`}
+            autoComplete="off"
             defaultValue={state.values?.carrier}
             className={inputClass}
           />
+          <datalist id={`carriers-${orderId}`}>
+            {MX_CARRIERS.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Número de guía (opcional)

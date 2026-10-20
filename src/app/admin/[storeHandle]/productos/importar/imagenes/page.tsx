@@ -6,6 +6,7 @@ import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { listImageTargets } from "@/server/catalog/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { imageProcessingBlocked } from "@/server/system/health";
 
 import { BulkImages } from "./bulk-images";
 
@@ -40,6 +41,14 @@ export default async function BulkImagesPage({ params }: Props) {
         </p>
       </header>
 
+      {imageProcessingBlocked() ? (
+        <p role="status" className="rounded-md border border-warning p-3 text-sm">
+          Puedes subir tus fotos: quedan guardadas. Pero el servidor todavía no tiene configurada la
+          optimización de imágenes, así que no aparecerán en la tienda hasta que se configure (lo
+          ves en Inicio → Estado del sistema).
+        </p>
+      ) : null}
+
       <section
         aria-labelledby="como-nombrar"
         className="space-y-2 rounded-md border border-border p-4 text-sm"
@@ -53,6 +62,10 @@ export default async function BulkImagesPage({ params }: Props) {
           </li>
           <li>
             Más fotos del mismo producto: <code>PRV-001-2.jpg</code>, <code>PRV-001-3.jpg</code>…
+          </li>
+          <li>
+            Foto de un sabor o tamaño: nómbrala con el SKU de esa presentación (
+            <code>PRV-001-CHO.jpg</code>). Va al producto y queda como la foto de ese sabor.
           </li>
           <li>
             O por nombre corto (el handle del CSV): <code>proteina-aislada.jpg</code>.
@@ -72,11 +85,13 @@ export default async function BulkImagesPage({ params }: Props) {
       ) : (
         <BulkImages
           storeHandle={ctx.store.handle}
-          targets={targets.map(({ id, title, slug, skus, image_count }) => ({
+          processingBlocked={imageProcessingBlocked()}
+          targets={targets.map(({ id, title, slug, skus, variants, image_count }) => ({
             id,
             title,
             slug,
             skus,
+            variants,
             imageCount: image_count,
           }))}
         />

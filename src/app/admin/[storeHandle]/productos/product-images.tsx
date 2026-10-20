@@ -20,7 +20,11 @@ export interface ProductImage {
   width: number | null;
   height: number | null;
   rejection_reason: string | null;
+  created_at?: string;
 }
+
+/** Una foto que lleva más que esto en «Procesando» ya no es normal. */
+const SLOW_MS = 10 * 60 * 1000;
 
 /** Presentación del producto (sabor, tamaño) y su foto propia, si tiene. */
 export interface VariantImageChoice {
@@ -40,6 +44,7 @@ export function ProductImages({
   images,
   canEdit,
   variants = [],
+  processingBlocked = false,
 }: {
   storeHandle: string;
   productId: string;
@@ -47,6 +52,8 @@ export function ProductImages({
   canEdit: boolean;
   /** Solo productos con varias presentaciones. */
   variants?: VariantImageChoice[];
+  /** El servidor no puede optimizar fotos (falta configuración): se dice, no se espera. */
+  processingBlocked?: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,10 +63,11 @@ export function ProductImages({
   const processing = images.some((i) => i.status === "pending");
 
   useEffect(() => {
-    if (!processing) return;
+    // Bloqueado por configuración, recargar cada 2.5 s no cambia nada.
+    if (!processing || processingBlocked) return;
     const timer = setInterval(() => router.refresh(), 2500);
     return () => clearInterval(timer);
-  }, [processing, router]);
+  }, [processing, processingBlocked, router]);
 
   async function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -124,6 +132,13 @@ export function ProductImages({
           />
         </div>
       ) : null}
+      {processing && processingBlocked ? (
+        <p role="status" className="rounded-md border border-warning p-3 text-sm">
+          Tus fotos están guardadas y en espera: el servidor todavía no tiene configurada la
+          optimización de imágenes. Se procesarán solas en cuanto se configure (lo ves en Inicio →
+          Estado del sistema).
+        </p>
+      ) : null}
       <div aria-live="polite">
         {uploading ? (
           <p className="text-sm text-fg-muted">
@@ -152,6 +167,7 @@ export function ProductImages({
               index={index}
               count={images.length}
               canEdit={canEdit}
+              processingBlocked={processingBlocked}
             />
           ))}
         </ul>
@@ -251,6 +267,7 @@ function ImageCard({
   index,
   count,
   canEdit,
+  processingBlocked,
 }: {
   storeHandle: string;
   productId: string;
@@ -258,6 +275,7 @@ function ImageCard({
   index: number;
   count: number;
   canEdit: boolean;
+  processingBlocked: boolean;
 }) {
   const first = index === 0;
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
@@ -278,7 +296,7 @@ function ImageCard({
       ) : (
         <div className="flex aspect-square w-full items-center justify-center rounded bg-canvas p-3 text-center text-sm text-fg-muted">
           {image.status === "pending"
-            ? "Procesando…"
+            ? pendingLabel(image, processingBlocked)
             : `Rechazada: ${REJECTION_REASONS[image.rejection_reason ?? ""] ?? "archivo no válido."}`}
         </div>
       )}
@@ -373,4 +391,10 @@ function ImageCard({
       ) : null}
     </li>
   );
+}
+
+function pendingLabel(image: ProductImage, blocked: boolean): string {
+  if (blocked) return "En espera de configuración del servidor";
+  const age = image.created_at ? Date.now() - Date.parse(image.created_at) : 0;
+  return age > SLOW_MS ? "Tarda más de lo normal; recarga en unos minutos" : "Procesando…";
 }

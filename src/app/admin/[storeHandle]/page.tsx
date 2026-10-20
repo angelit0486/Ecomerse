@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { formatMoney } from "@/lib/money/format";
 import { hasPermission } from "@/server/auth/context";
+import { resumeQueue } from "@/server/jobs/run-now";
+import { configIssues } from "@/server/system/health";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -113,6 +115,31 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   }
   const max = kpis ? Math.max(1, ...kpis.series.map((s) => s.sales)) : 1;
 
+  // Estado del sistema (plan del panel, A2): configuración que falta y trabajo en cola.
+  const canManage = hasPermission(ctx, "store.update");
+  const issues = canManage ? configIssues() : [];
+  let waiting: { photos: number; imports: number } | null = null;
+  if (canManage) {
+    const supabase = await createSupabaseServerClient();
+    const [photos, imports] = await Promise.all([
+      supabase
+        .from("media")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ctx.store.id)
+        .eq("status", "pending")
+        .is("deleted_at", null),
+      supabase
+        .from("import_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ctx.store.id)
+        .eq("status", "committing"),
+    ]);
+    waiting = { photos: photos.count ?? 0, imports: imports.count ?? 0 };
+    // Fotos sin clave de Storage: retomar solo gastaría sus intentos (D-PANEL-10).
+    const photosCanRun = !issues.some((i) => i.key === "image_processing");
+    if (waiting.imports > 0 || (photosCanRun && waiting.photos > 0)) resumeQueue("home");
+  }
+
   return (
     <section className="space-y-8">
       <header className="space-y-3">
@@ -133,6 +160,46 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         </dl>
       </header>
 
+      {canManage && waiting ? (
+        <section aria-labelledby="sistema" className="space-y-2">
+          <h2 id="sistema" className="font-semibold">
+            Estado del sistema
+          </h2>
+          {issues.length === 0 && waiting.photos + waiting.imports === 0 ? (
+            <p className="text-sm text-success">Todo funciona: no hay trabajos en espera.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {issues.map((issue) => (
+                <li key={issue.key} className="rounded-md border border-warning p-3">
+                  <p className="font-medium">{issue.title}</p>
+                  <p className="text-fg-muted">{issue.impact}</p>
+                  <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
+                </li>
+              ))}
+              {waiting.photos > 0 ? (
+                <li className="rounded-md border border-border p-3">
+                  {waiting.photos === 1
+                    ? "1 foto en proceso."
+                    : `${waiting.photos} fotos en proceso.`}
+                  {issues.some((i) => i.key === "image_processing")
+                    ? " Esperan a que se configure la optimización de imágenes."
+                    : " Se terminan en unos segundos."}
+                </li>
+              ) : null}
+              {waiting.imports > 0 ? (
+                <li className="rounded-md border border-border p-3">
+                  <Link href={`${base}/productos/importar`} className="underline">
+                    {waiting.imports === 1
+                      ? "1 importación en curso"
+                      : `${waiting.imports} importaciones en curso`}
+                  </Link>
+                </li>
+              ) : null}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       {kpis ? (
         <>
           <section aria-labelledby="pendientes" className="space-y-2">
@@ -142,7 +209,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             <ul className="flex flex-wrap gap-3 text-sm">
               <li className="rounded-md border border-border px-3 py-2">
                 {canOrders ? (
-                  <Link href={`${base}/pedidos?estado=pagados`} className="underline">
+                  <Link href={`${base}/pedidos?estado=por-surtir`} className="underline">
                     {kpis.to_fulfill} por surtir
                   </Link>
                 ) : (
@@ -162,7 +229,13 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 className={`rounded-md border px-3 py-2 ${kpis.needs_attention > 0 ? "border-warning" : "border-border"}`}
               >
                 {kpis.needs_attention > 0 ? "⚠ " : ""}
-                {kpis.needs_attention} necesitan atención
+                {canOrders && kpis.needs_attention > 0 ? (
+                  <Link href={`${base}/pedidos?estado=atencion`} className="underline">
+                    {kpis.needs_attention} necesitan atención
+                  </Link>
+                ) : (
+                  `${kpis.needs_attention} necesitan atención`
+                )}
               </li>
               {pendingReviews ? (
                 <li className="rounded-md border border-border px-3 py-2">

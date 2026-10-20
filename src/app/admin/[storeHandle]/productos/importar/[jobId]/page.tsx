@@ -38,6 +38,26 @@ interface Totals {
   updated?: number;
 }
 
+/** Fecha de hace `h` horas para filtrar (fuera del render: la consulta es por petición). */
+function hoursAgoIso(h: number): string {
+  return new Date(Date.now() - h * 3600 * 1000).toISOString();
+}
+
+/**
+ * Columnas con más errores (plan del panel, B3): con un catálogo de cientos de
+ * filas, corregir por columna es más rápido que fila por fila.
+ */
+function errorsByColumn(rows: { errors: unknown }[]): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const columns = new Set(
+      (row.errors as string[]).map((e) => /^([a-z0-9_]+):/.exec(e)?.[1] ?? "otros"),
+    );
+    for (const column of columns) counts.set(column, (counts.get(column) ?? 0) + 1);
+  }
+  return [...counts].sort((a, b) => b[1] - a[1]);
+}
+
 /** Vista previa (F8-T04b, Gate F8): totales, avisos, errores por fila y confirmación. */
 export default async function ImportJobPage({ params, searchParams }: Props) {
   const { storeHandle, jobId } = await params;
@@ -71,10 +91,32 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
     : { data: [] };
   // La importación confirmada espera en la cola: se retoma al mirarla (D-LOTE-05).
   if (job.status === "committing") resumeQueue("imports.page");
-  const ready = job.status === "validated" && errors === 0;
+  // El mismo archivo ya se importa o se importó hace poco: se avisa antes de
+  // confirmar (antes, confirmar dos veces fallaba con «ya existe ese handle»).
+  const { data: twins } =
+    job.status === "validated"
+      ? await supabase
+          .from("import_jobs")
+          .select("status, committed_at, created_at")
+          .eq("store_id", ctx.store.id)
+          .eq("file_name", job.file_name)
+          .neq("id", job.id)
+          .in("status", ["committing", "completed"])
+          .gte("created_at", hoursAgoIso(24))
+          .order("created_at", { ascending: false })
+          .limit(1)
+      : { data: [] };
+  const twin = twins?.[0] as { status: string; committed_at: string | null } | undefined;
+  const ready = job.status === "validated" && errors === 0 && twin?.status !== "committing";
   const done = job.status === "completed";
   const base = `/admin/${ctx.store.handle}/productos/importar`;
   const ignored = (job.ignored_columns as string[] | null) ?? [];
+  const byColumn = rows && rows.length > 0 ? errorsByColumn(rows) : [];
+  const handleTaken =
+    job.mode === "create_only" &&
+    (rows ?? []).some((r) =>
+      (r.errors as string[]).some((e) => e.startsWith("handle: ya existe un producto")),
+    );
 
   return (
     <section className="space-y-6">
@@ -115,7 +157,15 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         <div role="alert" className="space-y-1 rounded-md border border-danger p-3 text-sm">
           <p>La importación se detuvo y no se cambió nada.</p>
           {job.error ? <p>{importErrorText(job.error, publishIssueMessage)}</p> : null}
-          <p>Corrige el archivo y vuelve a subirlo.</p>
+          {job.error?.includes("ya existe un producto con ese handle") ? (
+            <p>
+              Ese producto ya está en tu catálogo (quizá de una importación anterior). Para
+              actualizarlo, vuelve a subir el archivo eligiendo «Crear los nuevos y actualizar los
+              existentes».
+            </p>
+          ) : (
+            <p>Corrige el archivo y vuelve a subirlo.</p>
+          )}
         </div>
       ) : null}
 
@@ -152,6 +202,24 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         </div>
       </dl>
 
+      {twin?.status === "committing" ? (
+        <p role="status" className="rounded-md border border-warning p-3 text-sm">
+          Este mismo archivo ya se está importando. Espera a que termine en{" "}
+          <Link href={base} className="underline">
+            Importaciones recientes
+          </Link>{" "}
+          antes de confirmarlo otra vez.
+        </p>
+      ) : null}
+      {twin?.status === "completed" && job.status === "validated" ? (
+        <p role="status" className="rounded-md border border-warning p-3 text-sm">
+          Un archivo con este nombre ya se importó
+          {twin.committed_at
+            ? ` el ${new Date(twin.committed_at).toLocaleString("es-MX", { timeZone: ctx.store.timezone, dateStyle: "short", timeStyle: "short" })}`
+            : ""}
+          . Si es el mismo, no lo confirmes de nuevo: los productos ya están en tu catálogo.
+        </p>
+      ) : null}
       {ready ? (
         <form action={commitImport.bind(null, ctx.store.handle, job.id)} className="space-y-2">
           <p className="text-sm">
@@ -175,6 +243,21 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             Corrige el archivo y vuelve a subirlo. La fila 1 es el encabezado.
             {errors > SHOWN_ROWS ? ` Se muestran las primeras ${SHOWN_ROWS}.` : ""}
           </p>
+          {byColumn.length > 1 ? (
+            <p className="text-sm">
+              Por columna:{" "}
+              {byColumn
+                .map(([column, count]) => `${column} (${count} ${count === 1 ? "fila" : "filas"})`)
+                .join(", ")}
+              .
+            </p>
+          ) : null}
+          {handleTaken ? (
+            <p className="rounded-md border border-warning p-3 text-sm">
+              Algunos productos ya están en tu catálogo. Si quieres actualizarlos con este archivo,
+              vuelve a subirlo eligiendo «Crear los nuevos y actualizar los existentes».
+            </p>
+          ) : null}
           <table className="w-full text-left text-sm">
             <thead className="text-[13px] text-fg-muted">
               <tr>

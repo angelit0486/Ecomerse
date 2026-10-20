@@ -3,8 +3,23 @@ import { describe, expect, it } from "vitest";
 import { matchFiles, stem, uploadOrder, type MatchTarget } from "./bulk-match";
 
 const targets: MatchTarget[] = [
-  { id: "p1", title: "Proteína aislada", slug: "proteina-aislada", skus: ["PRV-001", "PRV-002"] },
-  { id: "p2", title: "Creatina", slug: "creatina", skus: ["CRE-300"] },
+  {
+    id: "p1",
+    title: "Proteína aislada",
+    slug: "proteina-aislada",
+    skus: ["PRV-001", "PRV-002"],
+    variants: [
+      { id: "v1", sku: "PRV-001" },
+      { id: "v2", sku: "PRV-002" },
+    ],
+  },
+  {
+    id: "p2",
+    title: "Creatina",
+    slug: "creatina",
+    skus: ["CRE-300"],
+    variants: [{ id: "v3", sku: "CRE-300" }],
+  },
   { id: "p3", title: "Omega 3", slug: "omega-3", skus: [] },
   // El mismo SKU en dos productos: nunca se adivina.
   { id: "p4", title: "Duplicado A", slug: "dup-a", skus: ["DUP-1"] },
@@ -53,6 +68,26 @@ describe("matchFiles", () => {
     const [none, dup] = matchFiles(["foto-random.jpg", "DUP-1.jpg"], targets);
     expect(none).toMatchObject({ productId: null, matchedBy: null, ambiguous: false });
     expect(dup).toMatchObject({ productId: null, ambiguous: true });
+  });
+});
+
+describe("foto de cada presentación", () => {
+  it("el SKU exacto de un sabor de un producto con varios es la foto de ese sabor", () => {
+    expect(matchFiles(["prv-002.jpg"], targets)[0]).toMatchObject({
+      productId: "p1",
+      variantId: "v2",
+      variantSku: "PRV-002",
+    });
+  });
+
+  it("con número de foto, por nombre o con una sola presentación, solo va al producto", () => {
+    const [second, byName, single] = matchFiles(
+      ["PRV-002-2.jpg", "proteina-aislada.jpg", "CRE-300.jpg"],
+      targets,
+    );
+    expect(second).toMatchObject({ productId: "p1", order: 2, variantId: null });
+    expect(byName).toMatchObject({ productId: "p1", variantId: null });
+    expect(single).toMatchObject({ productId: "p2", variantId: null });
   });
 });
 

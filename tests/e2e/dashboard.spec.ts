@@ -59,4 +59,14 @@ test("inicio: ventas, pedidos, ticket promedio y más vendidos del periodo", asy
   await page.getByRole("link", { name: "90 días" }).click();
   await expect(tile("Pedidos pagados")).toHaveText("3");
   await expect(tile("Ventas netas")).toHaveText("$510.00");
+
+  // «Por surtir» lleva a esos pedidos, del más antiguo al más nuevo (C2).
+  await page.getByRole("link", { name: "3 por surtir" }).click();
+  await expect(page.getByRole("link", { name: "Por surtir" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const numbers = page.getByRole("table").getByRole("link");
+  await expect(numbers).toHaveText(["#1001", "#1002", "#1003"]);
+  await expectNoSeriousA11yViolations(page);
 });
