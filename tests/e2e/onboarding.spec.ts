@@ -45,16 +45,16 @@ test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", 
   expect(tz!.timezone).toBe("America/Mazatlan");
 
   // Paso 2b: el contraste insuficiente bloquea guardar.
-  const save = page.getByRole("button", { name: "Guardar marca en borrador" });
+  const save = page.getByRole("button", { name: "Guardar en el borrador" });
   await page.getByLabel("Texto", { exact: true }).fill("#cccccc");
   await expect(page.getByText("El texto no se lee bien sobre el fondo")).toBeVisible();
   await expect(save).toBeDisabled();
 
   await page.getByLabel("Texto", { exact: true }).fill("#0b1320");
-  await page.getByLabel("Color principal (botones)").fill("#0f766e");
+  await page.getByLabel("Color principal (botones y enlaces)").fill("#0f766e");
   await expect(save).toBeEnabled();
   await save.click();
-  await expect(page.getByText("Branding guardado en borrador.")).toBeVisible();
+  await expect(page.getByText("Guardado en el borrador.", { exact: false })).toBeVisible();
 
   // Pasos 3 y 4 (F7-T05): sin pagos ni políticas la tienda no se publica; queda en
   // borrador con vista previa.

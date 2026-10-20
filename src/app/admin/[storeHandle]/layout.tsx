@@ -51,6 +51,7 @@ export default async function StoreLayout({ children, params }: Props) {
     },
     { href: `${base}/ajustes/equipo`, label: "Equipo", show: hasPermission(ctx, "staff.read") },
     { href: `${base}/ajustes/pagos`, label: "Pagos", show: hasPermission(ctx, "payments.manage") },
+    { href: `${base}/ajustes/dominio`, label: "Dominio", show: hasPermission(ctx, "store.update") },
     {
       href: `${base}/ajustes/notificaciones`,
       label: "Notificaciones",

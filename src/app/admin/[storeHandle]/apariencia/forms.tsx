@@ -1,10 +1,16 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 
 import { contrastRatio } from "@/lib/color/contrast";
 import { SOCIAL_NETWORKS, type SocialNetwork } from "@/lib/theme/links";
-import { COLOR_KEYS, contrastIssues, resolvePalette, type Palette } from "@/lib/theme/palette";
+import {
+  buttonTextColor,
+  COLOR_KEYS,
+  contrastIssues,
+  resolvePalette,
+  type Palette,
+} from "@/lib/theme/palette";
 import { THEME_PRESETS, type ThemePreset } from "@/lib/theme/presets";
 import {
   FONT_KEYS,
@@ -88,14 +94,30 @@ function SaveRow({ state, pending }: { state: FormState; pending: boolean }) {
 // -----------------------------------------------------------------------------
 // Marca: colores, tipografía y forma
 // -----------------------------------------------------------------------------
+/** Qué falla con cada color, en palabras de la dueña (antes vivía en el asistente). */
+const CONTRAST_ISSUE: Record<(typeof COLOR_KEYS)[number], string> = {
+  foreground: "El texto no se lee bien sobre el fondo",
+  muted: "El texto secundario no se lee bien sobre el fondo",
+  primary: "Los botones no se distinguen del fondo",
+  accent: "El acento no se distingue del fondo",
+  background: "",
+};
+
+/**
+ * Marca: estilos sugeridos, colores, tipografía y forma, con vista previa en
+ * vivo. Es el único formulario de marca: lo usan Apariencia y el asistente
+ * «Configurar tienda» (misión panel, F2; antes había dos distintos).
+ */
 export function BrandForm({
   storeHandle,
   revision,
   settings,
+  storeName,
 }: {
   storeHandle: string;
   revision: number;
   settings: ThemeSettings;
+  storeName: string;
 }) {
   const [state, action, pending] = useSection(storeHandle, "marca");
   const [palette, setPalette] = useState<Palette>(resolvePalette(settings.colors));
@@ -156,10 +178,7 @@ export function BrandForm({
           <Field
             key={key}
             label={COLOR_LABELS[key]}
-            error={
-              state.fields?.[key] ??
-              (failing.has(key) ? "No tiene contraste suficiente con el fondo." : undefined)
-            }
+            error={state.fields?.[key] ?? (failing.has(key) ? CONTRAST_ISSUE[key] : undefined)}
           >
             {(c) => (
               <Input
@@ -232,13 +251,54 @@ export function BrandForm({
           )}
         </Field>
       </fieldset>
+      <BrandPreview palette={palette} storeName={storeName} />
       {issues.length > 0 ? (
         <p role="alert" className="text-sm text-danger">
           Ajusta los colores marcados: el contraste no es suficiente para leerse bien (WCAG AA).
         </p>
       ) : null}
-      <SaveRow state={state} pending={pending} />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" loading={pending} disabled={issues.length > 0}>
+          Guardar en el borrador
+        </Button>
+        <FormFeedback state={state} />
+      </div>
     </form>
+  );
+}
+
+/**
+ * Vista previa en vivo con los colores elegidos. Los estilos se aplican por CSSOM
+ * tras el montaje (la CSP con nonce bloquea atributos style en el HTML).
+ */
+function BrandPreview({ palette, storeName }: { palette: Palette; storeName: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty("--p-bg", palette.background);
+    el.style.setProperty("--p-fg", palette.foreground);
+    el.style.setProperty("--p-muted", palette.muted);
+    el.style.setProperty("--p-primary", palette.primary);
+    el.style.setProperty("--p-primary-fg", buttonTextColor(palette.primary));
+    el.style.setProperty("--p-accent", palette.accent);
+  }, [palette]);
+  return (
+    <div
+      ref={ref}
+      aria-label="Vista previa de la marca"
+      role="img"
+      className="rounded-md border border-border bg-[var(--p-bg)] p-5"
+    >
+      <p className="text-lg font-semibold text-[var(--p-fg)]">{storeName}</p>
+      <p className="mt-1 text-sm text-[var(--p-muted)]">
+        Así verán tus clientes los textos secundarios.
+      </p>
+      <p className="mt-2 text-sm text-[var(--p-accent)] underline">Un enlace de ejemplo</p>
+      <span className="mt-4 inline-block rounded-md bg-[var(--p-primary)] px-4 py-2 text-sm text-[var(--p-primary-fg)]">
+        Agregar al carrito
+      </span>
+    </div>
   );
 }
 

@@ -1,21 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState } from "react";
 
-import {
-  buttonTextColor,
-  COLOR_KEYS,
-  contrastIssues,
-  type ColorKey,
-  type Palette,
-} from "@/lib/theme/palette";
 import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 
-import { saveBranding, saveStoreProfile, type StepState } from "./actions";
+import { saveStoreProfile, type StepState } from "./actions";
 
 function Feedback({ state, rendered = [] }: { state: StepState; rendered?: readonly string[] }) {
   if (state.ok) {
@@ -106,147 +99,5 @@ export function ProfileForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-const COLOR_LABELS: Record<ColorKey, string> = {
-  primary: "Color principal (botones)",
-  accent: "Color de acento (enlaces y detalles)",
-  background: "Fondo",
-  foreground: "Texto",
-  muted: "Texto secundario",
-};
-
-const ISSUE_TEXT: Record<ColorKey, string> = {
-  foreground: "El texto no se lee bien sobre el fondo",
-  muted: "El texto secundario no se lee bien sobre el fondo",
-  primary: "Los botones no se distinguen del fondo",
-  accent: "El acento no se distingue del fondo",
-  background: "",
-};
-
-export function BrandingForm({
-  storeHandle,
-  storeName,
-  initial,
-  radius,
-  buttonStyle,
-  revision,
-}: {
-  storeHandle: string;
-  storeName: string;
-  initial: Palette;
-  radius: string;
-  buttonStyle: string;
-  revision: number;
-}) {
-  const [palette, setPalette] = useState<Palette>(initial);
-  const [style, setStyle] = useState<"solid" | "outline">(
-    buttonStyle === "outline" ? "outline" : "solid",
-  );
-  const [state, action, pending] = useActionState(saveBranding.bind(null, storeHandle), {});
-  const issues = useMemo(() => contrastIssues(palette, style), [palette, style]);
-  const failing = new Set(issues.map((i) => i.key));
-
-  return (
-    <form action={action} className="grid gap-6 lg:grid-cols-2" noValidate>
-      <input type="hidden" name="revision" value={revision} />
-      <div className="grid gap-4">
-        {COLOR_KEYS.map((key) => (
-          <Field
-            key={key}
-            label={COLOR_LABELS[key]}
-            error={failing.has(key) ? ISSUE_TEXT[key] : undefined}
-          >
-            {(c) => (
-              <Input
-                {...c}
-                name={key}
-                type="color"
-                value={palette[key]}
-                onChange={(e) => setPalette((p) => ({ ...p, [key]: e.target.value.toLowerCase() }))}
-                className="h-10 w-24 p-1"
-              />
-            )}
-          </Field>
-        ))}
-        <Field label="Esquinas de los botones">
-          {(c) => (
-            <Select
-              {...c}
-              name="radius"
-              defaultValue={radius}
-              options={[
-                { value: "none", label: "Rectas" },
-                { value: "sm", label: "Poco redondeadas" },
-                { value: "md", label: "Redondeadas" },
-                { value: "full", label: "Píldora" },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label="Estilo de los botones">
-          {(c) => (
-            <Select
-              {...c}
-              name="button_style"
-              value={style}
-              onValueChange={(v) => setStyle(v === "outline" ? "outline" : "solid")}
-              options={[
-                { value: "solid", label: "Relleno" },
-                { value: "outline", label: "Contorno" },
-              ]}
-            />
-          )}
-        </Field>
-      </div>
-      <div className="space-y-4">
-        <Preview palette={palette} storeName={storeName} />
-        {issues.length > 0 ? (
-          <p role="alert" className="text-sm text-danger">
-            Ajusta los colores marcados: el contraste no es suficiente para leerse bien (WCAG AA).
-          </p>
-        ) : null}
-        <Feedback state={state} />
-        <Button type="submit" disabled={pending || issues.length > 0}>
-          {pending ? "Guardando…" : "Guardar marca en borrador"}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-/**
- * Vista previa con los colores elegidos. Los estilos se aplican por CSSOM tras el
- * montaje (la CSP con nonce bloquea atributos style en el HTML).
- */
-function Preview({ palette, storeName }: { palette: Palette; storeName: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.setProperty("--p-bg", palette.background);
-    el.style.setProperty("--p-fg", palette.foreground);
-    el.style.setProperty("--p-muted", palette.muted);
-    el.style.setProperty("--p-primary", palette.primary);
-    el.style.setProperty("--p-primary-fg", buttonTextColor(palette.primary));
-    el.style.setProperty("--p-accent", palette.accent);
-  }, [palette]);
-  return (
-    <div
-      ref={ref}
-      aria-label="Vista previa de la marca"
-      role="img"
-      className="rounded-md border border-border bg-[var(--p-bg)] p-5"
-    >
-      <p className="text-lg font-semibold text-[var(--p-fg)]">{storeName}</p>
-      <p className="mt-1 text-sm text-[var(--p-muted)]">
-        Así verán tus clientes los textos secundarios.
-      </p>
-      <p className="mt-2 text-sm text-[var(--p-accent)] underline">Un enlace de ejemplo</p>
-      <span className="mt-4 inline-block rounded-md bg-[var(--p-primary)] px-4 py-2 text-sm text-[var(--p-primary-fg)]">
-        Agregar al carrito
-      </span>
-    </div>
   );
 }

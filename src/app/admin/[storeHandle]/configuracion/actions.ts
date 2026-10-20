@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { formValues } from "@/lib/form-values";
-import { COLOR_KEYS } from "@/lib/theme/palette";
+import { hasPermission } from "@/server/auth/context";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
@@ -71,43 +71,6 @@ export async function saveStoreProfile(
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
   return { ok: true, message: "Datos de la tienda guardados." };
-}
-
-export async function saveBranding(
-  storeHandle: string,
-  _: StepState,
-  formData: FormData,
-): Promise<StepState> {
-  const colors: Record<string, string> = {};
-  for (const key of COLOR_KEYS) {
-    const value = String(formData.get(key) ?? "").toLowerCase();
-    if (!/^#[0-9a-f]{6}$/.test(value)) return { error: "Elige colores válidos." };
-    colors[key] = value;
-  }
-  const revision = readRevision(formData);
-  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
-  const radius = String(formData.get("radius") ?? "md");
-  const buttonStyle = String(formData.get("button_style") ?? "solid");
-  try {
-    const ctx = await getStoreContext(storeHandle);
-    const supabase = await createSupabaseServerClient();
-    // Parche por claves: solo colores y forma; lo configurado en Apariencia se conserva.
-    await callRpc(supabase, "appearance_save_theme_draft", {
-      p_store_id: ctx.store.id,
-      p_patch: { colors, shape: { radius, button_style: buttonStyle } },
-      p_expected_revision: revision,
-    });
-    invalidateStore(ctx.store.id);
-  } catch (error) {
-    const result = failure(error);
-    if (result.code === "conflict") return { error: CONFLICT_MESSAGE };
-    if (result.fields?.contrast) {
-      return { error: "El contraste de los colores no es suficiente. Ajusta los marcados." };
-    }
-    return result;
-  }
-  revalidatePath(`/admin/${storeHandle}/configuracion`);
-  return { ok: true, message: "Branding guardado en borrador." };
 }
 
 // -----------------------------------------------------------------------------
@@ -224,19 +187,59 @@ export async function saveManualPayment(
 }
 
 export async function launchStore(storeHandle: string, _: StepState): Promise<StepState> {
+  let brandingNote = "";
   try {
     const ctx = await getStoreContext(storeHandle);
     const supabase = await createSupabaseServerClient();
-    await callRpc(supabase, "stores_launch", { p_store_id: ctx.store.id });
+    const { data: before } = await supabase
+      .from("stores")
+      .select("launched_at")
+      .eq("id", ctx.store.id)
+      .maybeSingle();
+    try {
+      await callRpc(supabase, "stores_launch", { p_store_id: ctx.store.id });
+    } catch (error) {
+      const result = failure(error);
+      if (!result.fields) return { error: result.error };
+      // Se dice qué falta (antes solo «aún hay pendientes»).
+      const { data: checklist } = await supabase.rpc("stores_launch_checklist", {
+        p_store_id: ctx.store.id,
+      });
+      const pending = ((checklist as { issues?: { message: string }[] } | null)?.issues ?? [])
+        .map((i) => i.message)
+        .join("; ");
+      return {
+        error: pending
+          ? `Antes de publicar falta: ${pending}.`
+          : "Aún hay pendientes en la lista. Complétalos y vuelve a intentarlo.",
+      };
+    }
+    // Primera publicación: la marca elegida en este asistente (guardada en el
+    // borrador del tema) sale con la tienda; antes quedaba en borrador (auditoría
+    // del panel, fallo 1). Un relanzamiento tras pausar no toca la apariencia.
+    if (!before?.launched_at && hasPermission(ctx, "appearance.manage")) {
+      const { data: theme } = await supabase
+        .from("store_themes")
+        .select("draft_settings, draft_revision")
+        .eq("store_id", ctx.store.id)
+        .maybeSingle();
+      if (theme?.draft_settings) {
+        try {
+          await callRpc(supabase, "appearance_publish_theme", {
+            p_store_id: ctx.store.id,
+            p_expected_revision: theme.draft_revision,
+          });
+        } catch (error) {
+          failure(error);
+          brandingNote =
+            " Tu marca no se pudo publicar con ella: revísala y publícala en Apariencia.";
+        }
+      }
+    }
     invalidateStore(ctx.store.id);
   } catch (error) {
-    const result = failure(error);
-    return {
-      error: result.fields
-        ? "Aún hay pendientes en la lista. Complétalos y vuelve a intentarlo."
-        : result.error,
-    };
+    return { error: failure(error).error };
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
-  return { ok: true, message: "¡Tu tienda está publicada!" };
+  return { ok: true, message: `¡Tu tienda está publicada!${brandingNote}` };
 }

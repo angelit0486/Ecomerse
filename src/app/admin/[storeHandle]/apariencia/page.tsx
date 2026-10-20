@@ -153,7 +153,12 @@ export default async function AppearancePage({ params, searchParams }: Props) {
               revision={revision}
             />
           </section>
-          <BrandForm storeHandle={ctx.store.handle} revision={revision} settings={settings} />
+          <BrandForm
+            storeHandle={ctx.store.handle}
+            revision={revision}
+            settings={settings}
+            storeName={ctx.store.name}
+          />
         </div>
       ) : null}
       {tab === "encabezado" ? (

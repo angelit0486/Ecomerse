@@ -53,6 +53,13 @@ test("lanzamiento: pendientes visibles → pago manual → políticas → public
   await expect(pending.getByRole("listitem")).toHaveCount(3);
   await expectNoSeriousA11yViolations(page);
 
+  // Marca elegida en el asistente: sale publicada con la tienda (auditoría, fallo 1).
+  await page.getByLabel("Texto", { exact: true }).fill("#0b1320");
+  await page.getByLabel("Color principal (botones y enlaces)").fill("#0f766e");
+  await page.getByRole("button", { name: "Guardar en el borrador" }).click();
+  await expect(page.getByText("Guardado en el borrador.", { exact: false })).toBeVisible();
+  await expect(page.getByText(/de 4 pasos listos/)).toBeVisible();
+
   // Políticas con contenido propio (el comerciante las redacta; aquí, el test).
   await admin`update public.store_pages set body_html = '<p>Texto propio de la tienda.</p>'
                where store_id = ${tenant.storeId} and type in ('policy_privacy', 'policy_terms', 'policy_returns')`;
@@ -64,6 +71,10 @@ test("lanzamiento: pendientes visibles → pago manual → políticas → public
   const [store] = await admin<{ status: string; launched: boolean }[]>`
     select status, launched_at is not null as launched from public.stores where id = ${tenant.storeId}`;
   expect(store).toEqual({ status: "active", launched: true });
+  const [theme] = await admin<{ primary: string | null; draft: unknown }[]>`
+    select settings #>> '{colors,primary}' as primary, draft_settings as draft
+      from public.store_themes where store_id = ${tenant.storeId}`;
+  expect(theme).toEqual({ primary: "#0f766e", draft: null });
   const anonymous = await browser.newPage();
   const response = await anonymous.goto(`http://${tenant.handle}.localhost:3000/`);
   expect(response?.status()).toBe(200);

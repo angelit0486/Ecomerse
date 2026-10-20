@@ -11,6 +11,8 @@
   - **F1-T2 (hecha):** la ficha de un borrador dice qué falta para publicarlo antes de intentarlo.
   - **F1-T3 (hecha): importación en 3 pasos**, valores en español aceptados, errores con el nombre de la columna en español y «sube el archivo corregido» desde la vista previa (E2E `imports`).
   - **F1-T4 (hecha):** porciones sugeridas por contenido neto ya capturado; SEO plegado en el editor completo.
+  - **Fase 1 cerrada:** pgTAP 2047, integración 255, E2E completo con 2 fallos investigados y corregidos (`content.spec`: axe medía a mitad de una transición de color, se estabilizó la medición; `launch.spec`: prueba ya actualizada para la Fase 2 contra el build anterior). Revisión adversarial: 2 correcciones en el alta rápida. Informe `docs/phases/MISION-PANEL-F1.md`.
+  - **Fase 2 (hecha):** la primera publicación de la tienda publica su marca (fallo 1 de la auditoría); el pendiente sanitario lleva a Cumplimiento (fallo 2); el error de publicar enumera lo que falta; barra «N de 4 pasos»; un solo formulario de marca con estilos de un clic y vista previa en vivo (se eliminan `BrandingForm` y `saveBranding`); Ajustes → Dominio con direcciones, estado y guía (conexión automática pendiente de E16).
   - **Pendiente del propietario:** aprobar E15 (alta de tienda por cuenta propia, requiere ADR) y E16 (dominio propio, requiere ADR y credenciales de Vercel). El resto de la lista de la auditoría no toca datos ni contratos.
 
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:

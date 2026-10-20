@@ -142,6 +142,12 @@ test("todas las pantallas del panel cargan sin errores; estado del sistema y avi
   await page.goto(`${imports}/${jobs.failed!}`);
   await expect(page.getByText(/Crear los nuevos y actualizar los existentes/)).toBeVisible();
 
+  // Dominio: la dirección real de la tienda y su estado (misión panel, F2).
+  await page.goto(`/admin/${tenant.handle}/ajustes/dominio`);
+  await expect(
+    page.getByRole("listitem").filter({ hasText: `${tenant.handle}.localhost` }),
+  ).toContainText("Activo");
+
   // Revisión: publicar de una vez los nuevos completos; la base decide (B2).
   await page.goto(`/admin/${tenant.handle}/productos/revision`);
   await expect(page.getByText("Tienes 1 producto nuevo sin publicar.")).toBeVisible();

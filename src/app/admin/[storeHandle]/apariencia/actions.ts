@@ -112,6 +112,8 @@ export async function saveThemeSection(
     return rpcFailure(error);
   }
   revalidatePath(`/admin/${storeHandle}/apariencia`);
+  // El mismo formulario de marca vive en «Configurar tienda» (su paso cuenta como hecho).
+  revalidatePath(`/admin/${storeHandle}/configuracion`);
   return { ok: true, message: "Guardado en el borrador. Revísalo en la vista previa y publícalo." };
 }
 

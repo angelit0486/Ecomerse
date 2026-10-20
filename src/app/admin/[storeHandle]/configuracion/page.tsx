@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { resolvePalette, type Palette } from "@/lib/theme/palette";
+import { ThemeSettingsV1, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { previewUrl } from "@/server/storefront/preview-url";
@@ -9,7 +9,8 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { publicMediaUrl } from "@/server/catalog/queries";
 
-import { BrandingForm, ProfileForm } from "./forms";
+import { BrandForm } from "../apariencia/forms";
+import { ProfileForm } from "./forms";
 import { LaunchButton, ManualPaymentForm } from "./launch-forms";
 import { LogoForm, type LogoCandidate } from "./logo-form";
 
@@ -34,11 +35,6 @@ const TIMEZONES = [
   "Europe/Madrid",
 ];
 
-interface ThemeSettings {
-  colors?: Partial<Palette>;
-  shape?: { radius?: string; button_style?: string };
-}
-
 interface LaunchIssue {
   code: string;
   message: string;
@@ -50,6 +46,7 @@ function issueHref(base: string, code: string): string {
   if (code === "contact") return "#paso-datos";
   if (code === "active_product") return `${base}/productos`;
   if (code === "shipping_zone") return `${base}/envios`;
+  if (code === "compliance_profile") return `${base}/ajustes/cumplimiento`;
   return `${base}/contenido`;
 }
 
@@ -137,7 +134,9 @@ export default async function OnboardingPage({ params }: Props) {
       };
     }
   }
-  const settings = (theme?.draft_settings ?? theme?.settings ?? {}) as ThemeSettings;
+  // Mismo análisis que Apariencia: el formulario de marca es el mismo.
+  const parsedSettings = ThemeSettingsV1.safeParse(theme?.draft_settings ?? theme?.settings ?? {});
+  const settings: ThemeSettings = parsedSettings.success ? parsedSettings.data : {};
   const brandingSaved = Boolean(
     theme?.draft_settings || (theme?.settings as ThemeSettings)?.colors,
   );
@@ -154,12 +153,25 @@ export default async function OnboardingPage({ params }: Props) {
     <section className="space-y-8">
       <header className="space-y-2">
         <h1 className="text-xl font-semibold">Configura tu tienda</h1>
+        <div className="space-y-1">
+          <p className="text-sm font-medium" id="avance-configuracion">
+            {steps.filter((s) => s.done).length} de {steps.length} pasos listos
+          </p>
+          <progress
+            aria-labelledby="avance-configuracion"
+            max={steps.length}
+            value={steps.filter((s) => s.done).length}
+            className="h-2 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-success [&::-webkit-progress-bar]:bg-border [&::-webkit-progress-value]:bg-success"
+          />
+        </div>
         <ol className="grid gap-2 sm:grid-cols-4" aria-label="Pasos de configuración">
           {steps.map((step, i) => (
             <li key={step.title} className="rounded-md border border-border p-3 text-sm">
               <span className="block text-[13px] text-fg-muted">Paso {i + 1}</span>
               <span className="font-medium">{step.title}</span>
-              <span className="block text-[13px]">{step.done ? "Listo" : "Pendiente"}</span>
+              <span className={`block text-[13px] ${step.done ? "text-success" : "text-fg-muted"}`}>
+                {step.done ? "✓ Listo" : "Pendiente"}
+              </span>
             </li>
           ))}
         </ol>
@@ -203,14 +215,16 @@ export default async function OnboardingPage({ params }: Props) {
       {canEditBranding ? (
         <section aria-labelledby="paso-marca" className="space-y-3">
           <h2 id="paso-marca" className="text-base font-semibold">
-            Colores y botones
+            Estilo, colores y botones
           </h2>
-          <BrandingForm
+          <p className="text-sm text-fg-muted">
+            Elige un estilo con un clic y ajústalo. Se publica junto con tu tienda; después lo
+            cambias cuando quieras en Apariencia.
+          </p>
+          <BrandForm
             storeHandle={ctx.store.handle}
             storeName={ctx.store.name}
-            initial={resolvePalette(settings.colors)}
-            radius={settings.shape?.radius ?? "md"}
-            buttonStyle={settings.shape?.button_style ?? "solid"}
+            settings={settings}
             revision={theme?.draft_revision ?? 0}
           />
         </section>
