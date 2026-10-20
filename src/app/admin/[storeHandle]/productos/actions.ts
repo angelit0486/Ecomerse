@@ -159,6 +159,137 @@ export async function saveProduct(
   return { ok: true, message: "Cambios guardados." };
 }
 
+const quickProductSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  price: z.string().trim().min(1),
+  compareAt: z.string().trim().optional(),
+  sku: z.string().trim().max(64).optional(),
+  description: z.string().max(20_000).optional(),
+  brandId: z.uuid().optional(),
+  categoryId: z.uuid().optional(),
+  netContent: z.string().trim().max(100).optional(),
+  servings: z.string().trim().optional(),
+  weightG: z.string().trim().optional(),
+  requiresShipping: z.boolean(),
+  stock: z.string().trim().optional(),
+  stockKey: z.string().regex(/^[0-9a-f-]{36}$/),
+});
+
+export type QuickProductInput = z.infer<typeof quickProductSchema>;
+
+export type QuickProductResult =
+  | { ok: true; productId: string; warning?: string }
+  | { ok: false; error: string; fields?: Record<string, string> };
+
+/** Entero ≥ min de un campo opcional: undefined si está vacío, NaN si no es válido. */
+function optionalInt(value: string | undefined, min: number, max: number): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= min && n <= max ? n : Number.NaN;
+}
+
+/**
+ * Alta rápida (misión panel, Fase 1): un producto de una presentación con lo
+ * esencial. Pasa por el mismo contrato que el editor (productInputSchema →
+ * catalog_upsert_product, que vuelve a validar todo) y las existencias iniciales
+ * por inventory_adjust con su clave de idempotencia (GATE0 §44.10). Las fotos las
+ * sube después el navegador con el camino de siempre (§25.3).
+ */
+export async function createProductQuick(
+  storeHandle: string,
+  input: QuickProductInput,
+): Promise<QuickProductResult> {
+  const parsed = quickProductSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Revisa los datos marcados." };
+  const q = parsed.data;
+  const fields: Record<string, string> = {};
+  const price = parseMoneyToCents(q.price);
+  if (price === null) fields.price = "Escribe un precio como 499 o 499.50.";
+  const compareAt = q.compareAt ? parseMoneyToCents(q.compareAt) : null;
+  if (q.compareAt && compareAt === null) fields.compareAt = "Escribe un precio válido.";
+  else if (compareAt !== null && price !== null && compareAt <= price) {
+    fields.compareAt = "Debe ser mayor que el precio.";
+  }
+  const servings = optionalInt(q.servings, 1, 10_000);
+  if (Number.isNaN(servings)) fields.servings = "Escribe un número entero de porciones.";
+  const weight = optionalInt(q.weightG, 0, 1_000_000);
+  if (Number.isNaN(weight)) fields.weightG = "Escribe el peso en gramos, sin decimales.";
+  const stock = optionalInt(q.stock, 0, 1_000_000);
+  if (Number.isNaN(stock)) fields.stock = "Escribe cuántas piezas tienes (0 o más).";
+  if (Object.keys(fields).length > 0)
+    return { ok: false, error: "Revisa los datos marcados.", fields };
+
+  const product = productInputSchema.safeParse({
+    title: q.title,
+    description_html: q.description?.trim() || null,
+    brand_id: q.brandId ?? null,
+    categories: q.categoryId ? [{ id: q.categoryId, is_primary: true }] : undefined,
+    variants: [
+      {
+        price,
+        compare_at_price: compareAt,
+        sku: q.sku ? q.sku.toUpperCase() : null,
+        net_content: q.netContent || null,
+        servings_per_container: servings ?? null,
+        weight_g: weight ?? null,
+        requires_shipping: q.requiresShipping,
+      },
+    ],
+  });
+  if (!product.success) return { ok: false, error: "Revisa los datos marcados." };
+
+  let productId: string;
+  try {
+    const saved = await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc<{ id: string }>(supabase, "catalog_upsert_product", {
+        p_store_id: storeId,
+        p_product: product.data,
+      }),
+    );
+    productId = saved.id;
+  } catch (error) {
+    const state = failure("catalog.quick_create", error);
+    return {
+      ok: false,
+      error: state.error ?? "No se pudo crear el producto.",
+      fields: state.fields,
+    };
+  }
+
+  let warning: string | undefined;
+  if (stock && stock > 0) {
+    try {
+      await withStore(storeHandle, async ({ supabase, storeId }) => {
+        const { data, error } = await supabase
+          .from("product_variants")
+          .select("id")
+          .eq("store_id", storeId)
+          .eq("product_id", productId)
+          .is("deleted_at", null)
+          .limit(1)
+          .single();
+        if (error) throw error;
+        await callRpc(supabase, "inventory_adjust", {
+          p_store_id: storeId,
+          p_variant_id: data.id,
+          p_type: "adjustment",
+          p_quantity: stock,
+          p_reason: "Existencias iniciales al crear el producto",
+          p_mode: "set",
+          p_idempotency_key: q.stockKey,
+        });
+      });
+    } catch (error) {
+      // El producto ya existe: se avisa en lugar de fallar todo.
+      reportActionError("catalog.quick_create_stock", error);
+      warning =
+        "El producto se creó, pero no pudimos guardar las existencias. Captúralas en la ficha.";
+    }
+  }
+  revalidatePath(productsPath(storeHandle));
+  return { ok: true, productId, ...(warning ? { warning } : {}) };
+}
+
 const STATUS_ACTIONS = ["publish", "draft", "archive", "delete", "restore", "duplicate"] as const;
 type StatusAction = (typeof STATUS_ACTIONS)[number];
 

@@ -59,6 +59,8 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
   await expectNoSeriousA11yViolations(page);
   await page.getByRole("link", { name: "Agregar producto" }).first().click();
   await expect(page.getByRole("heading", { name: "Nuevo producto" })).toBeVisible();
+  // Con varias presentaciones se usa el formulario completo (el alta rápida es de una).
+  await page.getByRole("link", { name: /Formulario completo/ }).click();
 
   await page.getByRole("textbox", { name: "Título", exact: true }).fill("Playera Básica");
   await page
