@@ -98,6 +98,8 @@ test("alta rápida en el celular: sugerencias, borrador, fotos en orden y existe
 
   await page.getByRole("button", { name: "Crear producto" }).click();
   await expect(page).toHaveURL(/\/productos\/[0-9a-f-]{36}\?creado=1/, { timeout: 60_000 });
+  // La ficha dice desde ya qué falta para publicarlo (o que ya se puede).
+  await expect(page.getByText(/Para publicarlo te falta:|ya puedes publicarlo/)).toBeVisible();
 
   const [product] = await admin<
     { id: string; status: string; brand: string; category: string | null }[]

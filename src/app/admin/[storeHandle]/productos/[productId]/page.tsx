@@ -196,6 +196,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
         warnings={issues
           .filter((i) => i.level === "warning")
           .map((i) => publishIssueMessage(i.code))}
+        blockers={[
+          ...new Set(
+            issues.filter((i) => i.level === "error").map((i) => publishIssueMessage(i.code)),
+          ),
+        ]}
       />
 
       {product.status === "draft" &&

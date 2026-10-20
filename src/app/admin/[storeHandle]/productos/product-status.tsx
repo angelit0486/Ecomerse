@@ -14,6 +14,7 @@ export function ProductStatusPanel({
   deleted,
   can,
   warnings,
+  blockers,
 }: {
   storeHandle: string;
   productId: string;
@@ -21,6 +22,8 @@ export function ProductStatusPanel({
   deleted: boolean;
   can: { publish: boolean; delete: boolean; create: boolean };
   warnings: string[];
+  /** Lo que impide publicar hoy (catalog_validate_product), en palabras de la dueña. */
+  blockers: string[];
 }) {
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
     productStatusAction.bind(null, storeHandle, productId),
@@ -51,6 +54,20 @@ export function ProductStatusPanel({
       <h2 id="estado-titulo" className="text-base font-semibold">
         Estado
       </h2>
+      {status !== "active" && !deleted ? (
+        blockers.length > 0 ? (
+          <div className="rounded-md border border-warning p-3 text-sm">
+            <p className="font-medium">Para publicarlo te falta:</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {blockers.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-sm text-success">Tiene todo lo necesario: ya puedes publicarlo.</p>
+        )
+      ) : null}
       <form action={action} className="flex flex-wrap gap-2">
         {deleted ? (
           can.delete ? (
