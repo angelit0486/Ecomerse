@@ -1,6 +1,7 @@
 import { contrastRatio } from "@/lib/color/contrast";
 
 import { buttonTextColor, COLOR_KEYS, resolvePalette, type Palette } from "./palette";
+import { isValidInstant } from "./constants";
 import { FONT_KEYS, type FontKey } from "./schema";
 
 /**
@@ -17,12 +18,42 @@ export interface ResolvedTheme {
   buttonStyle: "solid" | "outline";
   fonts: { heading: FontKey; body: FontKey };
   logoPosition: "left" | "center";
+  /** Tema v2 (ADR-034): sombra de tarjetas y espacio entre bloques. */
+  shadow: "none" | "soft" | "strong";
+  density: "compact" | "comfortable" | "spacious";
   announcement: {
     text: string;
     link: string | null;
     background: string;
     foreground: string;
+    /** Vigencia (ISO con zona); fuera de ella la barra no se muestra. */
+    startsAt: string | null;
+    endsAt: string | null;
   } | null;
+}
+
+const SHADOW: Record<ResolvedTheme["shadow"], string> = {
+  none: "none",
+  soft: "0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.06)",
+  strong: "0 2px 4px rgb(0 0 0 / 0.08), 0 12px 28px rgb(0 0 0 / 0.14)",
+};
+/** Espacio entre bloques de la portada (móvil, escritorio). */
+const DENSITY: Record<ResolvedTheme["density"], [string, string]> = {
+  compact: ["2rem", "2.5rem"],
+  comfortable: ["3rem", "4rem"],
+  spacious: ["4rem", "5.5rem"],
+};
+
+/** ¿La barra de anuncio está vigente en este momento? */
+export function announcementActive(
+  announcement: ResolvedTheme["announcement"],
+  now: Date = new Date(),
+): boolean {
+  if (!announcement) return false;
+  const t = now.getTime();
+  if (announcement.startsAt && Date.parse(announcement.startsAt) > t) return false;
+  if (announcement.endsAt && Date.parse(announcement.endsAt) <= t) return false;
+  return true;
 }
 
 const HEX_RE = /^#[0-9a-f]{6}$/;
@@ -32,13 +63,24 @@ export const DEFAULT_FONT: FontKey = "inter";
 
 type Raw = {
   colors?: Record<string, unknown>;
-  shape?: { radius?: unknown; button_style?: unknown };
+  shape?: { radius?: unknown; button_style?: unknown; shadow?: unknown; density?: unknown };
   typography?: { heading?: unknown; body?: unknown };
   header?: {
     logo_position?: unknown;
-    announcement?: { text?: unknown; link?: unknown; background?: unknown; foreground?: unknown };
+    announcement?: {
+      text?: unknown;
+      link?: unknown;
+      background?: unknown;
+      foreground?: unknown;
+      starts_at?: unknown;
+      ends_at?: unknown;
+    };
   };
 };
+
+function instant(value: unknown): string | null {
+  return typeof value === "string" && isValidInstant(value) ? value : null;
+}
 
 function fontKey(value: unknown): FontKey {
   return typeof value === "string" && FONT_SET.has(value) ? (value as FontKey) : DEFAULT_FONT;
@@ -67,6 +109,11 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
     buttonStyle: s.shape?.button_style === "outline" ? "outline" : "solid",
     fonts: { heading: fontKey(s.typography?.heading), body: fontKey(s.typography?.body) },
     logoPosition: s.header?.logo_position === "center" ? "center" : "left",
+    shadow: s.shape?.shadow === "soft" || s.shape?.shadow === "strong" ? s.shape.shadow : "none",
+    density:
+      s.shape?.density === "compact" || s.shape?.density === "spacious"
+        ? s.shape.density
+        : "comfortable",
     announcement:
       bar && typeof bar.text === "string" && bar.text && barBg && barFg
         ? {
@@ -74,6 +121,8 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
             link: typeof bar.link === "string" ? bar.link : null,
             background: barBg,
             foreground: barFg,
+            startsAt: instant(bar?.starts_at),
+            endsAt: instant(bar?.ends_at),
           }
         : null,
   };
@@ -214,6 +263,9 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-warning:${state.warning}`,
     `--sf-font-heading:var(--font-${theme.fonts.heading})`,
     `--sf-font-body:var(--font-${theme.fonts.body})`,
+    `--sf-shadow-card:${SHADOW[theme.shadow]}`,
+    `--sf-section-gap:${DENSITY[theme.density][0]}`,
+    `--sf-section-gap-lg:${DENSITY[theme.density][1]}`,
   ];
   if (theme.announcement) {
     declarations.push(

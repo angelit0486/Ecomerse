@@ -58,6 +58,9 @@ export function buildContentSecurityPolicy({
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],
     ["form-action", ["'self'"]],
+    // Bloque de video (ADR-034): el reproductor se crea solo al tocarlo y solo
+    // desde estos dos hosts fijos; la tienda nunca guarda una URL de video.
+    ["frame-src", ["https://www.youtube-nocookie.com", "https://player.vimeo.com"]],
     ["frame-ancestors", ["'none'"]],
     ...(isDev ? [] : ([["upgrade-insecure-requests", []]] as Array<[string, string[]]>)),
   ];

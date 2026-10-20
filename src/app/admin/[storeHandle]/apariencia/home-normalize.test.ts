@@ -70,4 +70,70 @@ describe("secciones del editor de portada", () => {
       [ID.replace(/1$/, "2")]: ["Imagen: Elige una opción."],
     });
   });
+
+  it("bloques v2: renglones por tipo, enlace de video a código y sin opciones vacías (ADR-034)", () => {
+    const [faq, benefits, video, hero] = normalizeSections([
+      {
+        id: ID,
+        type: "faq",
+        enabled: true,
+        visibility: "all",
+        starts_at: "",
+        ends_at: "",
+        props: {
+          title: " Preguntas ",
+          items: [{ question: " ¿Envían? ", answer: " Sí.\r\n\r\n\r\nEn 2 días ", quote: "x" }],
+        },
+      },
+      {
+        id: ID.replace(/1$/, "2"),
+        type: "benefits",
+        enabled: true,
+        props: { title: "", items: [{ icon: "truck", title: " Envío ", text: "" }] },
+      },
+      {
+        id: ID.replace(/1$/, "3"),
+        type: "video",
+        enabled: true,
+        props: {
+          provider: "youtube",
+          video_id: " https://vimeo.com/76979871 ",
+          title: "Así se hace",
+          caption: "",
+        },
+      },
+      {
+        id: ID.replace(/1$/, "4"),
+        type: "hero",
+        enabled: true,
+        visibility: "mobile",
+        ends_at: "2026-11-17T06:00:00.000Z",
+        props: { heading: "Buen Fin", align: "center" },
+      },
+    ]) as Record<string, unknown>[];
+    expect(faq).toEqual({
+      id: ID,
+      type: "faq",
+      enabled: true,
+      props: { title: "Preguntas", items: [{ question: "¿Envían?", answer: "Sí.\n\nEn 2 días" }] },
+    });
+    expect(benefits!.props).toEqual({ items: [{ icon: "truck", title: "Envío" }] });
+    expect(video!.props).toEqual({ provider: "vimeo", video_id: "76979871", title: "Así se hace" });
+    expect(hero).toMatchObject({ visibility: "mobile", ends_at: "2026-11-17T06:00:00.000Z" });
+    expect(sectionIssues([faq, benefits, video, hero])).toBeNull();
+  });
+
+  it("la vigencia al revés se marca en su sección", () => {
+    const issues = sectionIssues([
+      {
+        id: ID,
+        type: "hero",
+        enabled: true,
+        starts_at: "2026-11-17T06:00:00.000Z",
+        ends_at: "2026-11-13T06:00:00.000Z",
+        props: { heading: "a", align: "center" },
+      },
+    ]);
+    expect(issues).toEqual({ [ID]: ["Mostrar hasta: El fin debe ser después del inicio."] });
+  });
 });

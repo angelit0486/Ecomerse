@@ -76,3 +76,36 @@ export function buttonTextColor(primary: string): "#ffffff" | "#000000" {
     ? "#ffffff"
     : "#000000";
 }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex(rgb: [number, number, number]): string {
+  return `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Corrección sugerida (ADR-034 §1): el color más parecido al elegido que llega
+ * al contraste pedido contra el fondo. Se mezcla poco a poco hacia negro o
+ * blanco (el que contrasta con el fondo) y se devuelve el primer paso que
+ * cumple, así el tono se conserva lo más posible. Si el color ya cumple, igual.
+ */
+export function suggestContrastFix(color: string, background: string, required: number): string {
+  if (contrastRatio(color, background) >= required) return color;
+  const target: [number, number, number] =
+    contrastRatio("#000000", background) >= contrastRatio("#ffffff", background)
+      ? [0, 0, 0]
+      : [255, 255, 255];
+  const from = hexToRgb(color);
+  for (let step = 1; step <= 100; step++) {
+    const t = step / 100;
+    const mixed = rgbToHex([
+      from[0] + (target[0] - from[0]) * t,
+      from[1] + (target[1] - from[1]) * t,
+      from[2] + (target[2] - from[2]) * t,
+    ]);
+    if (contrastRatio(mixed, background) >= required) return mixed;
+  }
+  return rgbToHex(target);
+}

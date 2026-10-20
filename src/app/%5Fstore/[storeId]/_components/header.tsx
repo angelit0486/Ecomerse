@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { SocialNetwork } from "@/lib/theme/links";
-import type { ResolvedTheme } from "@/lib/theme/resolve-theme";
+import { announcementActive, type ResolvedTheme } from "@/lib/theme/resolve-theme";
 import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
 import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
@@ -12,7 +12,8 @@ import { ThemeLink } from "./theme-link";
 
 /** Barra de anuncio (§20.2): colores validados con contraste ≥ 4.5:1 al guardar. */
 export function AnnouncementBar({ announcement }: { announcement: ResolvedTheme["announcement"] }) {
-  if (!announcement) return null;
+  // Vigencia del anuncio (ADR-034): el layout es dinámico, se evalúa en cada request.
+  if (!announcement || !announcementActive(announcement)) return null;
   return (
     // Región con nombre: ningún contenido queda fuera de un landmark (axe `region`).
     <aside
@@ -141,10 +142,31 @@ export function StoreHeader({
 export function QuickLinks({
   menu,
   discovery = [],
+  custom,
 }: {
   menu: MenuEntry[];
   discovery?: { label: string; href: string }[];
+  /** Accesos elegidos por la tienda (tema v2): reemplazan a los automáticos. */
+  custom?: { label: string; link: string }[];
 }) {
+  if (custom && custom.length > 0) {
+    return (
+      <nav aria-label="Accesos rápidos" className="border-b border-[var(--sf-border)] sm:hidden">
+        <ul className="flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]">
+          {custom.map((link) => (
+            <li key={`${link.label}:${link.link}`} className="shrink-0">
+              <ThemeLink
+                href={link.link}
+                className="inline-flex h-11 items-center whitespace-nowrap px-2.5 text-sm font-semibold"
+              >
+                {link.label}
+              </ThemeLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    );
+  }
   const offers = discovery.find((d) => d.href === "/ofertas");
   const leaves = menu.flatMap((m) => (m.children.length > 0 ? m.children : [m]));
   const links = [

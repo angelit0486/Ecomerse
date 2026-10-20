@@ -9,6 +9,7 @@ import {
   COLOR_KEYS,
   contrastIssues,
   resolvePalette,
+  suggestContrastFix,
   type Palette,
 } from "@/lib/theme/palette";
 import { THEME_PRESETS, type ThemePreset } from "@/lib/theme/presets";
@@ -26,6 +27,7 @@ import { Select } from "@/ui/primitives/select";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
+import { SeoPreview } from "../_shared/seo-preview";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { discardThemeDraft, publishTheme, saveThemeSection } from "./actions";
@@ -113,11 +115,14 @@ export function BrandForm({
   revision,
   settings,
   storeName,
+  faviconCandidates = [],
 }: {
   storeHandle: string;
   revision: number;
   settings: ThemeSettings;
   storeName: string;
+  /** Imágenes de marca cuadradas ya procesadas (ADR-034); sin ellas, solo el monograma. */
+  faviconCandidates?: { id: string; url: string }[];
 }) {
   const [state, action, pending] = useSection(storeHandle, "marca");
   const [palette, setPalette] = useState<Palette>(resolvePalette(settings.colors));
@@ -125,6 +130,9 @@ export function BrandForm({
   const [body, setBody] = useState<FontKey>(settings.typography?.body ?? "inter");
   const [radius, setRadius] = useState(settings.shape?.radius ?? "md");
   const [style, setStyle] = useState<"solid" | "outline">(settings.shape?.button_style ?? "solid");
+  const [shadow, setShadow] = useState(settings.shape?.shadow ?? "none");
+  const [density, setDensity] = useState(settings.shape?.density ?? "comfortable");
+  const [favicon, setFavicon] = useState(settings.favicon_media_id ?? "");
   const issues = useMemo(() => contrastIssues(palette, style), [palette, style]);
   const failing = new Set(issues.map((i) => i.key));
   const fontOptions = FONT_KEYS.map((k) => ({ value: k, label: FONT_LABELS[k] }));
@@ -174,24 +182,43 @@ export function BrandForm({
       </fieldset>
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-2 text-sm font-semibold">Colores</legend>
-        {COLOR_KEYS.map((key) => (
-          <Field
-            key={key}
-            label={COLOR_LABELS[key]}
-            error={state.fields?.[key] ?? (failing.has(key) ? CONTRAST_ISSUE[key] : undefined)}
-          >
-            {(c) => (
-              <Input
-                {...c}
-                name={key}
-                type="color"
-                value={palette[key]}
-                onChange={(e) => setPalette((p) => ({ ...p, [key]: e.target.value.toLowerCase() }))}
-                className="h-10 w-24 p-1"
-              />
-            )}
-          </Field>
-        ))}
+        {COLOR_KEYS.map((key) => {
+          const issue = issues.find((i) => i.key === key);
+          const fix = issue
+            ? suggestContrastFix(palette[key], palette.background, issue.required)
+            : null;
+          return (
+            <div key={key} className="space-y-2">
+              <Field
+                label={COLOR_LABELS[key]}
+                error={state.fields?.[key] ?? (failing.has(key) ? CONTRAST_ISSUE[key] : undefined)}
+              >
+                {(c) => (
+                  <Input
+                    {...c}
+                    name={key}
+                    type="color"
+                    value={palette[key]}
+                    onChange={(e) =>
+                      setPalette((p) => ({ ...p, [key]: e.target.value.toLowerCase() }))
+                    }
+                    className="h-10 w-24 p-1"
+                  />
+                )}
+              </Field>
+              {fix ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPalette((p) => ({ ...p, [key]: fix }))}
+                >
+                  Usar {fix}, el más parecido que sí se lee
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
       </fieldset>
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-2 text-sm font-semibold">Tipografía</legend>
@@ -250,6 +277,84 @@ export function BrandForm({
             />
           )}
         </Field>
+      </fieldset>
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-2 text-sm font-semibold">Estilo de la tienda</legend>
+        <Field label="Sombras de las tarjetas" error={state.fields?.shadow}>
+          {(c) => (
+            <Select
+              {...c}
+              name="shadow"
+              value={shadow}
+              onValueChange={(v) => setShadow(v as typeof shadow)}
+              options={[
+                { value: "none", label: "Sin sombra (planas)" },
+                { value: "soft", label: "Suave" },
+                { value: "strong", label: "Marcada" },
+              ]}
+            />
+          )}
+        </Field>
+        <Field
+          label="Espacio entre bloques"
+          hint="Cuánto aire hay entre los bloques de la portada."
+          error={state.fields?.density}
+        >
+          {(c) => (
+            <Select
+              {...c}
+              name="density"
+              value={density}
+              onValueChange={(v) => setDensity(v as typeof density)}
+              options={[
+                { value: "compact", label: "Compacto" },
+                { value: "comfortable", label: "Normal" },
+                { value: "spacious", label: "Amplio" },
+              ]}
+            />
+          )}
+        </Field>
+      </fieldset>
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-semibold">Ícono de la pestaña (favicon)</legend>
+        <p className="text-[13px] text-fg-muted">
+          Sin elegir, se usa la inicial de tu tienda con tu color principal. Para usar una imagen,
+          súbela arriba como logo (cuadrada, de al menos 48 × 48) y elígela aquí.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          <label className="flex min-h-11 items-center gap-2 rounded-md border border-border p-2 text-sm">
+            <input
+              type="radio"
+              name="favicon_media_id"
+              value=""
+              checked={favicon === ""}
+              onChange={() => setFavicon("")}
+            />
+            Inicial
+          </label>
+          {faviconCandidates.map((f, i) => (
+            <label
+              key={f.id}
+              className="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
+            >
+              <input
+                type="radio"
+                name="favicon_media_id"
+                value={f.id}
+                checked={favicon === f.id}
+                onChange={() => setFavicon(f.id)}
+                aria-label={`Imagen cuadrada ${i + 1}`}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element -- imagen ya re-codificada */}
+              <img src={f.url} alt="" className="h-8 w-8 rounded object-cover" />
+            </label>
+          ))}
+        </div>
+        {state.fields?.favicon_media_id ? (
+          <p role="alert" className="text-sm text-danger">
+            Esa imagen ya no está disponible o no es cuadrada. Elige otra.
+          </p>
+        ) : null}
       </fieldset>
       <BrandPreview palette={palette} storeName={storeName} />
       {issues.length > 0 ? (
@@ -329,6 +434,7 @@ export function HeaderFooterForm({
   );
   const barRatio = contrastRatio(fg, bg);
   const barLow = text.trim() !== "" && barRatio < 4.5;
+  const quick = settings.header?.quick_links ?? [];
 
   return (
     <form action={action} onSubmit={submitKeepingState(action)} className="space-y-6" noValidate>
@@ -410,6 +516,53 @@ export function HeaderFooterForm({
             )}
           </Field>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <LocalDateTime
+            name="announcement_starts_at"
+            label="Mostrar la barra desde (opcional)"
+            initial={bar?.starts_at}
+            error={state.fields?.announcement_starts_at}
+          />
+          <LocalDateTime
+            name="announcement_ends_at"
+            label="Mostrar la barra hasta (opcional)"
+            initial={bar?.ends_at}
+            error={state.fields?.announcement_ends_at}
+          />
+        </div>
+        <fieldset className="space-y-2">
+          <legend className="text-[13px] font-medium">
+            Accesos rápidos en el celular (opcional)
+          </legend>
+          <p className="text-[13px] text-fg-muted">
+            Hasta 4 botones bajo el encabezado del celular. Sin llenar, se arman solos con tus
+            ofertas, lo más vendido y tu menú.
+          </p>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-2">
+              <Field label={`Acceso ${i + 1}: nombre`} error={state.fields?.[`quick_label_${i}`]}>
+                {(c) => (
+                  <Input
+                    {...c}
+                    name={`quick_label_${i}`}
+                    defaultValue={quick[i]?.label ?? ""}
+                    maxLength={20}
+                  />
+                )}
+              </Field>
+              <Field label={`Acceso ${i + 1}: enlace`}>
+                {(c) => (
+                  <Input
+                    {...c}
+                    name={`quick_link_${i}`}
+                    defaultValue={quick[i]?.link ?? ""}
+                    placeholder="/categoria/proteinas"
+                  />
+                )}
+              </Field>
+            </div>
+          ))}
+        </fieldset>
         {menusHref ? (
           <p className="text-sm">
             El menú principal y el del pie se editan en{" "}
@@ -466,6 +619,163 @@ export function HeaderFooterForm({
             ))}
           </div>
         </fieldset>
+      </fieldset>
+      <SaveRow state={state} pending={pending} />
+    </form>
+  );
+}
+
+/**
+ * Fecha y hora en la hora del dispositivo; se envía como instante ISO (con zona)
+ * en un campo oculto, que es lo que guarda el tema (ADR-034).
+ */
+function LocalDateTime({
+  name,
+  label,
+  initial,
+  error,
+}: {
+  name: string;
+  label: string;
+  initial?: string;
+  error?: string;
+}) {
+  const toLocal = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const [value, setValue] = useState(toLocal(initial));
+  const iso =
+    value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toISOString() : "";
+  return (
+    <Field label={label} hint="Hora de este dispositivo." error={error}>
+      {(c) => (
+        <>
+          <Input
+            {...c}
+            type="datetime-local"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+          <input type="hidden" name={name} value={iso} />
+        </>
+      )}
+    </Field>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Ficha de producto y listados (tema v2, ADR-034)
+// -----------------------------------------------------------------------------
+function Toggle({
+  name,
+  label,
+  hint,
+  initial,
+}: {
+  name: string;
+  label: string;
+  hint?: string;
+  initial: boolean;
+}) {
+  const [on, setOn] = useState(initial);
+  return (
+    <label className="flex min-h-11 items-start gap-3 text-sm md:min-h-0">
+      <input
+        type="checkbox"
+        name={name}
+        value="1"
+        checked={on}
+        onChange={(e) => setOn(e.target.checked)}
+        className="mt-1"
+      />
+      <span>
+        {label}
+        {hint ? <span className="block text-[13px] text-fg-muted">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
+
+export function PresentationForm({
+  storeHandle,
+  revision,
+  settings,
+}: {
+  storeHandle: string;
+  revision: number;
+  settings: ThemeSettings;
+}) {
+  const [state, action, pending] = useSection(storeHandle, "presentacion");
+  const page = settings.product_page ?? {};
+  const listing = settings.listing ?? {};
+  const [gallery, setGallery] = useState(page.gallery ?? "thumbnails");
+  const [columns, setColumns] = useState(String(listing.columns_mobile ?? 2));
+  return (
+    <form action={action} onSubmit={submitKeepingState(action)} className="space-y-6" noValidate>
+      <input type="hidden" name="revision" value={revision} />
+      <p role="note" className="rounded-md border border-border bg-canvas p-3 text-sm">
+        Estas opciones cambian cómo se ve tu tienda, no lo que dice: el precio, el contenido neto,
+        las leyendas sanitarias y las políticas siempre se muestran.
+      </p>
+      <fieldset className="space-y-3">
+        <legend className="mb-2 text-sm font-semibold">Ficha de producto</legend>
+        <Field label="Fotos adicionales">
+          {(c) => (
+            <Select
+              {...c}
+              name="gallery"
+              value={gallery}
+              onValueChange={(v) => setGallery(v === "dots" ? "dots" : "thumbnails")}
+              options={[
+                { value: "thumbnails", label: "Miniaturas bajo la foto" },
+                { value: "dots", label: "Puntos (más limpio)" },
+              ]}
+            />
+          )}
+        </Field>
+        <Toggle
+          name="show_price_per_serving"
+          label="Mostrar el precio por porción"
+          hint="Cuando el producto tiene porciones capturadas."
+          initial={page.show_price_per_serving !== false}
+        />
+        <Toggle
+          name="show_related"
+          label="Mostrar productos relacionados"
+          initial={page.show_related !== false}
+        />
+        <Toggle
+          name="sticky_buy_bar"
+          label="Barra fija «Comprar ahora» en el celular"
+          hint="Aparece cuando el botón de compra queda fuera de la pantalla."
+          initial={page.sticky_buy_bar !== false}
+        />
+      </fieldset>
+      <fieldset className="space-y-3">
+        <legend className="mb-2 text-sm font-semibold">Listados de productos</legend>
+        <Field label="Productos por renglón en el celular">
+          {(c) => (
+            <Select
+              {...c}
+              name="columns_mobile"
+              value={columns}
+              onValueChange={setColumns}
+              options={[
+                { value: "2", label: "Dos (ver más productos)" },
+                { value: "1", label: "Uno (fotos más grandes)" },
+              ]}
+            />
+          )}
+        </Field>
+        <Toggle
+          name="show_brand"
+          label="Mostrar la marca en cada tarjeta"
+          initial={listing.show_brand !== false}
+        />
       </fieldset>
       <SaveRow state={state} pending={pending} />
     </form>
@@ -603,12 +913,15 @@ export function SeoForm({
   settings,
   storeName,
   images,
+  storeUrl,
 }: {
   storeHandle: string;
   revision: number;
   settings: ThemeSettings;
   storeName: string;
   images: ImageOption[];
+  /** Dirección principal de la tienda, para la vista previa de buscadores. */
+  storeUrl: string;
 }) {
   const [state, action, pending] = useSection(storeHandle, "seo");
   const [title, setTitle] = useState(settings.seo?.title ?? "");
@@ -695,6 +1008,12 @@ export function SeoForm({
           ))}
         </div>
       </fieldset>
+      <SeoPreview
+        title={title.trim() || storeName}
+        description={description.trim()}
+        url={storeUrl}
+        imageUrl={images.find((i) => i.id === image)?.url ?? null}
+      />
       <SaveRow state={state} pending={pending} />
     </form>
   );

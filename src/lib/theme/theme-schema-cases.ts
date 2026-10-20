@@ -1,5 +1,5 @@
 /**
- * Casos compartidos del Theme schema v1 (F9-DESIGN §2.2): el unit de Zod y la
+ * Casos compartidos del Theme schema v2 (ADR-034; F9-DESIGN §2.2): el unit de Zod y la
  * prueba de paridad con la base (`tests/integration/theme-schema-parity.test.ts`)
  * corren exactamente estos. Uno por regla, en el borde válido y justo afuera.
  */
@@ -235,6 +235,145 @@ export const SETTINGS_CASES: ReadonlyArray<SchemaCase> = [
   { name: "WhatsApp sin +", value: { contact: { whatsapp: "5512345678" } }, valid: false },
   { name: "WhatsApp corto", value: { contact: { whatsapp: "+5212345" } }, valid: false },
   { name: "dirección de 301", value: { contact: { address: "a".repeat(301) } }, valid: false },
+  // Tema v2 (ADR-034)
+  { name: "v2 favicon", value: { favicon_media_id: id(5) }, valid: true },
+  { name: "v2 favicon no uuid", value: { favicon_media_id: "logo.png" }, valid: false },
+  {
+    name: "v2 sombra y densidad",
+    value: { shape: { shadow: "soft", density: "spacious" } },
+    valid: true,
+  },
+  { name: "v2 sombra no válida", value: { shape: { shadow: "huge" } }, valid: false },
+  { name: "v2 densidad no válida", value: { shape: { density: "tight" } }, valid: false },
+  {
+    name: "v2 anuncio con vigencia",
+    value: {
+      header: {
+        announcement: {
+          ...bar,
+          starts_at: "2026-11-01T00:00:00-06:00",
+          ends_at: "2026-11-30T23:59:00Z",
+        },
+      },
+    },
+    valid: true,
+  },
+  {
+    name: "v2 anuncio con fracción de segundo",
+    value: { header: { announcement: { ...bar, starts_at: "2026-11-01T08:30:00.123456+00:00" } } },
+    valid: true,
+  },
+  {
+    name: "v2 anuncio termina antes de empezar",
+    value: {
+      header: {
+        announcement: { ...bar, starts_at: "2026-11-30T00:00Z", ends_at: "2026-11-01T00:00Z" },
+      },
+    },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio que empieza y termina igual",
+    value: {
+      header: {
+        announcement: { ...bar, starts_at: "2026-11-01T00:00Z", ends_at: "2026-11-01T00:00Z" },
+      },
+    },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio: 10:00 en CDMX es después de 15:30 UTC",
+    value: {
+      header: {
+        announcement: {
+          ...bar,
+          starts_at: "2026-11-01T10:00:00-06:00",
+          ends_at: "2026-11-01T15:30:00Z",
+        },
+      },
+    },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio con 30 de febrero",
+    value: { header: { announcement: { ...bar, starts_at: "2026-02-30T00:00Z" } } },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio con 29 de febrero bisiesto",
+    value: { header: { announcement: { ...bar, starts_at: "2028-02-29T00:00Z" } } },
+    valid: true,
+  },
+  {
+    name: "v2 anuncio sin zona",
+    value: { header: { announcement: { ...bar, starts_at: "2026-11-01T00:00:00" } } },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio solo fecha",
+    value: { header: { announcement: { ...bar, ends_at: "2026-11-01" } } },
+    valid: false,
+  },
+  {
+    name: "v2 anuncio con hora 24",
+    value: { header: { announcement: { ...bar, ends_at: "2026-11-01T24:00Z" } } },
+    valid: false,
+  },
+  {
+    name: "v2 4 accesos rápidos",
+    value: {
+      header: {
+        quick_links: [
+          { label: "Proteínas", link: "/categoria/proteinas" },
+          { label: "Ofertas", link: "/ofertas" },
+          { label: "Marcas", link: "/marcas" },
+          { label: "Ayuda", link: "/paginas/contacto" },
+        ],
+      },
+    },
+    valid: true,
+  },
+  {
+    name: "v2 5 accesos rápidos",
+    value: {
+      header: {
+        quick_links: Array.from({ length: 5 }, (_, i) => ({ label: `L${i}`, link: "/" })),
+      },
+    },
+    valid: false,
+  },
+  {
+    name: "v2 acceso rápido de 21",
+    value: { header: { quick_links: [{ label: "a".repeat(21), link: "/" }] } },
+    valid: false,
+  },
+  {
+    name: "v2 acceso rápido con javascript",
+    value: { header: { quick_links: [{ label: "x", link: "javascript:alert(1)" }] } },
+    valid: false,
+  },
+  {
+    name: "v2 ficha y listado",
+    value: {
+      product_page: {
+        gallery: "dots",
+        show_price_per_serving: false,
+        show_related: true,
+        sticky_buy_bar: true,
+      },
+      listing: { columns_mobile: 1, show_brand: false },
+    },
+    valid: true,
+  },
+  {
+    name: "v2 ficha con opción desconocida",
+    value: { product_page: { hide_legal: true } },
+    valid: false,
+  },
+  { name: "v2 listado de 3 columnas", value: { listing: { columns_mobile: 3 } }, valid: false },
+  { name: "v2 listado con texto", value: { listing: { columns_mobile: "2" } }, valid: false },
+  { name: "v2 listado 1.5", value: { listing: { columns_mobile: 1.5 } }, valid: false },
+  { name: "v2 marca no booleana", value: { listing: { show_brand: "sí" } }, valid: false },
 ];
 
 const sec = (n: number, type: string, props: unknown, enabled = true) => ({
@@ -292,7 +431,7 @@ export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
     value: [sec(1, "hero", { heading: "a", align: "center", style: "color:red" })],
     valid: false,
   },
-  { name: "tipo desconocido", value: [sec(1, "video", { url: "https://x.com" })], valid: false },
+  { name: "tipo desconocido", value: [sec(1, "iframe", { url: "https://x.com" })], valid: false },
   {
     name: "id no uuid",
     value: [{ id: "1", type: "hero", enabled: true, props: { heading: "a", align: "center" } }],
@@ -472,13 +611,233 @@ export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
     valid: true,
   },
   {
-    name: "12 secciones",
-    value: Array.from({ length: 12 }, (_, i) => sec(i + 1, "rich_text", { html: "<p>x</p>" })),
+    name: "20 bloques",
+    value: Array.from({ length: 20 }, (_, i) => sec(i + 1, "rich_text", { html: "<p>x</p>" })),
     valid: true,
   },
   {
-    name: "13 secciones",
-    value: Array.from({ length: 13 }, (_, i) => sec(i + 1, "rich_text", { html: "<p>x</p>" })),
+    name: "21 bloques",
+    value: Array.from({ length: 21 }, (_, i) => sec(i + 1, "rich_text", { html: "<p>x</p>" })),
+    valid: false,
+  },
+  // Bloques v2 (ADR-034)
+  {
+    name: "v2 preguntas frecuentes",
+    value: [
+      sec(1, "faq", {
+        title: "Preguntas",
+        items: [{ question: "¿Envían a todo México?", answer: "Sí.\nEn 2 a 5 días." }],
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 13 preguntas",
+    value: [
+      sec(1, "faq", {
+        title: "Preguntas",
+        items: Array.from({ length: 13 }, () => ({ question: "q", answer: "a" })),
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 pregunta de 151",
+    value: [sec(1, "faq", { title: "P", items: [{ question: "a".repeat(151), answer: "a" }] })],
+    valid: false,
+  },
+  {
+    name: "v2 beneficios",
+    value: [
+      sec(1, "benefits", {
+        items: [
+          { icon: "truck", title: "Envío gratis", text: "Desde $999" },
+          { icon: "lab", title: "Probado" },
+        ],
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 beneficio con ícono propio",
+    value: [sec(1, "benefits", { items: [{ icon: "<svg>", title: "x" }] })],
+    valid: false,
+  },
+  {
+    name: "v2 7 beneficios",
+    value: [
+      sec(1, "benefits", {
+        items: Array.from({ length: 7 }, () => ({ icon: "star", title: "x" })),
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 objetivos",
+    value: [sec(1, "goals", { title: "Tu objetivo", value_ids: [id(30), id(31)] })],
+    valid: true,
+  },
+  {
+    name: "v2 objetivos vacíos",
+    value: [sec(1, "goals", { title: "Tu objetivo", value_ids: [] })],
+    valid: false,
+  },
+  {
+    name: "v2 objetivo repetido",
+    value: [sec(1, "goals", { title: "Tu objetivo", value_ids: [id(30), id(30)] })],
+    valid: false,
+  },
+  {
+    name: "v2 opiniones",
+    value: [sec(1, "reviews", { title: "Lo que dicen", limit: 3 })],
+    valid: true,
+  },
+  {
+    name: "v2 opiniones con texto propio",
+    value: [sec(1, "reviews", { title: "x", limit: 3, items: [{ quote: "Excelente" }] })],
+    valid: false,
+  },
+  { name: "v2 2 opiniones", value: [sec(1, "reviews", { title: "x", limit: 2 })], valid: false },
+  {
+    name: "v2 video de YouTube",
+    value: [
+      sec(1, "video", { provider: "youtube", video_id: "dQw4w9WgXcQ", title: "Cómo se usa" }),
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 video de Vimeo",
+    value: [
+      sec(1, "video", {
+        provider: "vimeo",
+        video_id: "76979871",
+        title: "Fábrica",
+        caption: "Así se hace",
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 video con URL en vez de código",
+    value: [
+      sec(1, "video", {
+        provider: "youtube",
+        video_id: "https://youtu.be/dQw4w9WgXcQ",
+        title: "x",
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 video de Vimeo con letras",
+    value: [sec(1, "video", { provider: "vimeo", video_id: "abc12345", title: "x" })],
+    valid: false,
+  },
+  {
+    name: "v2 video de otro sitio",
+    value: [sec(1, "video", { provider: "tiktok", video_id: "123456789", title: "x" })],
+    valid: false,
+  },
+  {
+    name: "v2 video sin título",
+    value: [sec(1, "video", { provider: "youtube", video_id: "dQw4w9WgXcQ" })],
+    valid: false,
+  },
+  {
+    name: "v2 contacto",
+    value: [sec(1, "contact_map", { title: "Visítanos", show_whatsapp: true })],
+    valid: true,
+  },
+  {
+    name: "v2 contacto con mapa incrustado",
+    value: [
+      sec(1, "contact_map", {
+        title: "x",
+        show_whatsapp: false,
+        embed: "https://maps.google.com",
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 productos elegidos a mano en carrusel",
+    value: [
+      sec(1, "featured_products", {
+        title: "Favoritos",
+        source: { type: "manual", product_ids: [id(40), id(41)] },
+        limit: 4,
+        show_view_all: false,
+        layout: "carousel",
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 13 productos elegidos",
+    value: [
+      products(1, 8, {
+        type: "manual",
+        product_ids: Array.from({ length: 13 }, (_, i) => id(100 + i)),
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 producto elegido repetido",
+    value: [products(1, 8, { type: "manual", product_ids: [id(40), id(40)] })],
+    valid: false,
+  },
+  {
+    name: "v2 elegidos sin productos",
+    value: [products(1, 8, { type: "manual", product_ids: [] })],
+    valid: false,
+  },
+  {
+    name: "v2 diseño no válido",
+    value: [sec(1, "category_grid", { title: "Categorías", layout: "masonry" })],
+    valid: false,
+  },
+  {
+    name: "v2 categorías en carrusel",
+    value: [sec(1, "category_grid", { title: "Categorías", layout: "carousel" })],
+    valid: true,
+  },
+  {
+    name: "v2 solo en el celular y con vigencia",
+    value: [
+      {
+        ...sec(1, "hero", { heading: "Buen Fin", align: "center" }),
+        visibility: "mobile",
+        starts_at: "2026-11-13T00:00:00-06:00",
+        ends_at: "2026-11-17T23:59:59-06:00",
+      },
+    ],
+    valid: true,
+  },
+  {
+    name: "v2 visibilidad no válida",
+    value: [{ ...sec(1, "hero", { heading: "a", align: "center" }), visibility: "tablet" }],
+    valid: false,
+  },
+  {
+    name: "v2 bloque que termina antes de empezar",
+    value: [
+      {
+        ...sec(1, "hero", { heading: "a", align: "center" }),
+        starts_at: "2026-11-17T00:00Z",
+        ends_at: "2026-11-13T00:00Z",
+      },
+    ],
+    valid: false,
+  },
+  {
+    name: "v2 bloque con fecha inválida",
+    value: [{ ...sec(1, "hero", { heading: "a", align: "center" }), ends_at: "2026-13-01T00:00Z" }],
+    valid: false,
+  },
+  {
+    name: "v2 bloque con clave desconocida",
+    value: [{ ...sec(1, "hero", { heading: "a", align: "center" }), css: "color:red" }],
     valid: false,
   },
 ];

@@ -92,3 +92,73 @@ describe("parche de cada pestaña", () => {
     });
   });
 });
+
+describe("tema v2 en el panel (ADR-034)", () => {
+  const ID = "00000000-0000-4000-8000-000000000005";
+
+  it("marca: sombra, densidad y favicon; lo de siempre no se guarda", () => {
+    const { get, getAll } = form({ shadow: "soft", density: "comfortable", favicon_media_id: ID });
+    const patch = sectionPatch("marca", get, getAll);
+    expect(patch.shape).toEqual({ shadow: "soft" });
+    expect(patch.favicon_media_id).toBe(ID);
+    expect(sectionPatch("marca", form({}).get, form({}).getAll).favicon_media_id).toBeNull();
+  });
+
+  it("encabezado: anuncio con fechas y accesos rápidos; renglones vacíos fuera", () => {
+    const { get, getAll } = form({
+      announcement_text: "Buen Fin",
+      announcement_background: "#111827",
+      announcement_foreground: "#ffffff",
+      announcement_starts_at: "2026-11-13T06:00:00.000Z",
+      announcement_ends_at: "",
+      quick_label_0: " Ofertas ",
+      quick_link_0: "/ofertas",
+      quick_label_2: "Proteínas",
+      quick_link_2: "/categoria/proteinas",
+    });
+    const patch = sectionPatch("encabezado", get, getAll);
+    expect(patch.header).toEqual({
+      announcement: {
+        text: "Buen Fin",
+        background: "#111827",
+        foreground: "#ffffff",
+        starts_at: "2026-11-13T06:00:00.000Z",
+      },
+      quick_links: [
+        { label: "Ofertas", link: "/ofertas" },
+        { label: "Proteínas", link: "/categoria/proteinas" },
+      ],
+    });
+    expect(validatePatch(patch)).toEqual({ ok: true, patch });
+  });
+
+  it("un acceso rápido sin nombre se marca en su campo", () => {
+    const { get, getAll } = form({ quick_link_1: "/ofertas" });
+    expect(validatePatch(sectionPatch("encabezado", get, getAll))).toEqual({
+      ok: false,
+      fields: { quick_label_0: "Escribe este campo." },
+    });
+  });
+
+  it("ficha y listados: solo se guarda lo que cambia respecto a la tienda por omisión", () => {
+    const defaults = form({
+      show_price_per_serving: "1",
+      show_related: "1",
+      sticky_buy_bar: "1",
+      show_brand: "1",
+      columns_mobile: "2",
+      gallery: "thumbnails",
+    });
+    const plain = sectionPatch("presentacion", defaults.get, defaults.getAll);
+    expect(plain).toEqual({ product_page: null, listing: null });
+    const custom = form({ gallery: "dots", show_related: "1", columns_mobile: "1" });
+    expect(sectionPatch("presentacion", custom.get, custom.getAll)).toEqual({
+      product_page: {
+        gallery: "dots",
+        show_price_per_serving: false,
+        sticky_buy_bar: false,
+      },
+      listing: { columns_mobile: 1, show_brand: false },
+    });
+  });
+});

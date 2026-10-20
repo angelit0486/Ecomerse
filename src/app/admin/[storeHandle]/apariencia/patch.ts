@@ -1,6 +1,6 @@
 import { COLOR_KEYS } from "@/lib/theme/palette";
 import { SOCIAL_NETWORKS } from "@/lib/theme/links";
-import { PAYMENT_METHODS, ThemeSettingsV1, type ThemeSettings } from "@/lib/theme/schema";
+import { PAYMENT_METHODS, ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 
 /**
  * Formulario de Apariencia → parche del tema (F9-DESIGN §7, §13 C2). Cada
@@ -8,15 +8,22 @@ import { PAYMENT_METHODS, ThemeSettingsV1, type ThemeSettings } from "@/lib/them
  * clave vacía va como `null` (la base la quita). Puro: lo usa la acción y lo
  * prueban los unit.
  */
-export const THEME_SECTIONS = ["marca", "encabezado", "redes", "seo"] as const;
+export const THEME_SECTIONS = ["marca", "encabezado", "redes", "seo", "presentacion"] as const;
 export type ThemeSection = (typeof THEME_SECTIONS)[number];
 
 export const SECTION_KEYS: Record<ThemeSection, readonly (keyof ThemeSettings)[]> = {
-  marca: ["colors", "typography", "shape"],
+  marca: ["colors", "typography", "shape", "favicon_media_id"],
   encabezado: ["header", "footer"],
   redes: ["social", "contact"],
   seo: ["seo"],
+  presentacion: ["product_page", "listing"],
 };
+
+/** Casilla «sí/no» que solo se guarda cuando difiere de lo que hace la tienda por omisión. */
+function flag(get: Get, name: string, fallback: boolean): boolean | undefined {
+  const on = get(name) === "1";
+  return on === fallback ? undefined : on;
+}
 
 type Get = (name: string) => string;
 
@@ -78,10 +85,20 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
     patch.shape = compact({
       radius: get("radius") || undefined,
       button_style: get("button_style") || undefined,
+      shadow: get("shadow") && get("shadow") !== "none" ? get("shadow") : undefined,
+      density: get("density") && get("density") !== "comfortable" ? get("density") : undefined,
     });
+    patch.favicon_media_id = get("favicon_media_id") || null;
   } else if (section === "encabezado") {
     const text = line(get("announcement_text"));
     const link = normalizeLink(get("announcement_link"));
+    const startsAt = get("announcement_starts_at").trim();
+    const endsAt = get("announcement_ends_at").trim();
+    const quickLinks = [0, 1, 2, 3].flatMap((i) => {
+      const label = line(get(`quick_label_${i}`));
+      const href = normalizeLink(get(`quick_link_${i}`));
+      return label || href ? [{ label, link: href }] : [];
+    });
     patch.header = compact({
       logo_position: get("logo_position") || undefined,
       announcement: text
@@ -90,8 +107,11 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
             ...(link ? { link } : {}),
             background: get("announcement_background").trim().toLowerCase(),
             foreground: get("announcement_foreground").trim().toLowerCase(),
+            ...(startsAt ? { starts_at: startsAt } : {}),
+            ...(endsAt ? { ends_at: endsAt } : {}),
           }
         : undefined,
+      quick_links: quickLinks.length ? quickLinks : undefined,
     });
     const payments = getAll("payment_methods").filter((m) =>
       (PAYMENT_METHODS as readonly string[]).includes(m),
@@ -111,6 +131,17 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
       address: multiline(get("address")) || undefined,
       hours: multiline(get("hours")) || undefined,
     });
+  } else if (section === "presentacion") {
+    patch.product_page = compact({
+      gallery: get("gallery") === "dots" ? "dots" : undefined,
+      show_price_per_serving: flag(get, "show_price_per_serving", true),
+      show_related: flag(get, "show_related", true),
+      sticky_buy_bar: flag(get, "sticky_buy_bar", true),
+    });
+    patch.listing = compact({
+      columns_mobile: get("columns_mobile") === "1" ? 1 : undefined,
+      show_brand: flag(get, "show_brand", true),
+    });
   } else {
     patch.seo = compact({
       title: line(get("seo_title")) || undefined,
@@ -128,6 +159,12 @@ const FIELD_FOR_PATH: Record<string, string> = {
   "header.announcement.link": "announcement_link",
   "header.announcement.background": "announcement_background",
   "header.announcement.foreground": "announcement_foreground",
+  "header.announcement.starts_at": "announcement_starts_at",
+  "header.announcement.ends_at": "announcement_ends_at",
+  "header.quick_links": "quick_links",
+  favicon_media_id: "favicon_media_id",
+  "shape.shadow": "shadow",
+  "shape.density": "density",
   "footer.legal_text": "legal_text",
   "footer.payment_methods": "payment_methods",
   "typography.heading": "heading_font",
@@ -148,13 +185,15 @@ export type PatchResult =
 /** Valida el parche de la pestaña con el esquema v1 (los null no se validan: quitan la clave). */
 export function validatePatch(patch: Record<string, unknown>): PatchResult {
   const present = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null));
-  const parsed = ThemeSettingsV1.safeParse(present);
+  const parsed = ThemeSettingsV2.safeParse(present);
   if (parsed.success) return { ok: true, patch };
   const fields: Record<string, string> = {};
   for (const issue of parsed.error.issues) {
     const path = issue.path.join(".");
     let field = FIELD_FOR_PATH[path];
     if (!field && path.startsWith("colors.")) field = path.slice("colors.".length);
+    if (!field && path.startsWith("header.quick_links."))
+      field = `quick_label_${String(issue.path[2])}`;
     if (!field && path.startsWith("social.")) {
       const index = Number(issue.path[1]);
       const entry = (present.social as { network: string }[] | undefined)?.[index];

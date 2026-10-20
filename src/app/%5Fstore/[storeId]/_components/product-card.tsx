@@ -34,7 +34,7 @@ export function ProductGrid({
    * En móvil, una fila que se desplaza en horizontal (portada, revisión M9): sin
    * tarjetas huérfanas cuando el número de productos es impar.
    */
-  carousel?: boolean;
+  carousel?: boolean | "always";
 }) {
   const now = new Date();
   // Siempre 4 columnas en escritorio: con 3 productos, tarjetas gigantes se ven peor que un hueco.
@@ -42,15 +42,23 @@ export function ProductGrid({
   return (
     <ul
       className={
-        carousel
-          ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
-          : `grid grid-cols-2 gap-3 sm:gap-4 ${desktop}`
+        carousel === "always"
+          ? "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:gap-4"
+          : carousel
+            ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 ${desktop}`
+            : `sf-grid grid grid-cols-2 gap-3 sm:gap-4 ${desktop}`
       }
     >
       {products.map((product, index) => (
         <li
           key={product.id}
-          className={carousel ? "w-[46%] shrink-0 snap-start sm:w-auto" : undefined}
+          className={
+            carousel === "always"
+              ? "w-[46%] shrink-0 snap-start sm:w-[30%] lg:w-[23%]"
+              : carousel
+                ? "w-[46%] shrink-0 snap-start sm:w-auto"
+                : undefined
+          }
         >
           <ProductCard
             product={product}
@@ -113,7 +121,7 @@ function ProductCard({
   return (
     // `relative`: los textos sr-only (absolutos) quedan dentro de la tarjeta y del
     // carrusel; sin él escapaban al viewport y abrían scroll horizontal en móvil.
-    <article className="group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 sm:p-3">
+    <article className="group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
       <Link
         href={href}
         className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"
@@ -152,7 +160,9 @@ function ProductCard({
           )}
         </div>
         {product.brand ? (
-          <p className="mt-2.5 truncate text-xs text-[var(--sf-muted)]">{product.brand}</p>
+          <p className="sf-card-brand mt-2.5 truncate text-xs text-[var(--sf-muted)]">
+            {product.brand}
+          </p>
         ) : null}
         <h3
           className={`sf-text-font line-clamp-2 text-[0.9375rem] font-semibold leading-snug decoration-1 underline-offset-4 group-hover:underline ${product.brand ? "mt-0.5" : "mt-2.5"}`}

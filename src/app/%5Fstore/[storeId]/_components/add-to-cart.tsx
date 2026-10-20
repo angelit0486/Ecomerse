@@ -18,10 +18,13 @@ export function AddToCart({
   available,
   title,
   price,
+  stickyBar = true,
 }: {
   storeId: string;
   variantId: string | null;
   available: boolean;
+  /** Tema v2 (ADR-034): la tienda puede apagar la barra fija del celular. */
+  stickyBar?: boolean;
   /** Para la barra fija de móvil: nombre del producto y precio ya formateado. */
   title?: string;
   price?: string | null;
@@ -47,7 +50,7 @@ export function AddToCart({
     return () => observer.disconnect();
   }, [available]);
 
-  const showBar = available && buttonsOffscreen && Boolean(variantId);
+  const showBar = stickyBar && available && buttonsOffscreen && Boolean(variantId);
   // El pie no queda tapado por la barra: se reserva su alto mientras se ve.
   useEffect(() => {
     document.documentElement.classList.toggle("sf-buybar", showBar);

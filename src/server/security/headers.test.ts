@@ -15,6 +15,8 @@ describe("cabeceras de seguridad", () => {
     expect(csp).toContain("style-src 'self' 'nonce-abc'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
+    // ADR-034: solo los reproductores de YouTube (sin cookies) y Vimeo.
+    expect(csp).toContain("frame-src https://www.youtube-nocookie.com https://player.vimeo.com;");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");

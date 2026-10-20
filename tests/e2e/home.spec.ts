@@ -72,16 +72,16 @@ test("armar la portada por secciones, vista previa y publicar", async ({ page, b
   ).toBeVisible();
 
   // Hero.
-  await page.getByLabel("Nueva sección").selectOption({ label: "Portada principal" });
-  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await page.getByLabel("Nuevo bloque").selectOption({ label: "Portada principal" });
+  await page.getByRole("button", { name: "Agregar bloque" }).click();
   const hero = page.getByRole("listitem").filter({ hasText: "1. Portada principal" });
   await hero.getByLabel("Título", { exact: true }).fill("Suplementos para cada objetivo");
   await hero.getByLabel("Texto del botón (opcional)").fill("Ver productos");
   await hero.getByLabel("Enlace del botón").fill("/productos");
 
   // Comprar por objetivo.
-  await page.getByLabel("Nueva sección").selectOption({ label: "Productos destacados" });
-  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await page.getByLabel("Nuevo bloque").selectOption({ label: "Productos destacados" });
+  await page.getByRole("button", { name: "Agregar bloque" }).click();
   const products = page.getByRole("listitem").filter({ hasText: "2. Productos destacados" });
   await products.getByLabel("Título", { exact: true }).fill("Para tu energía");
   await products
@@ -92,8 +92,8 @@ test("armar la portada por secciones, vista previa y publicar", async ({ page, b
     .selectOption({ label: "Objetivo: Energía" });
 
   // Una sección incompleta se marca y no se guarda nada.
-  await page.getByLabel("Nueva sección").selectOption({ label: "Imagen con texto" });
-  await page.getByRole("button", { name: "Agregar sección" }).click();
+  await page.getByLabel("Nuevo bloque").selectOption({ label: "Imagen con texto" });
+  await page.getByRole("button", { name: "Agregar bloque" }).click();
   await page.getByRole("button", { name: "Guardar portada en el borrador" }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Imagen: Elige una opción." }),

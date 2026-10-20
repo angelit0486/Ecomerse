@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ThemeSettingsV1, type ThemeSettings } from "@/lib/theme/schema";
+import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { previewUrl } from "@/server/storefront/preview-url";
@@ -135,7 +135,7 @@ export default async function OnboardingPage({ params }: Props) {
     }
   }
   // Mismo análisis que Apariencia: el formulario de marca es el mismo.
-  const parsedSettings = ThemeSettingsV1.safeParse(theme?.draft_settings ?? theme?.settings ?? {});
+  const parsedSettings = ThemeSettingsV2.safeParse(theme?.draft_settings ?? theme?.settings ?? {});
   const settings: ThemeSettings = parsedSettings.success ? parsedSettings.data : {};
   const brandingSaved = Boolean(
     theme?.draft_settings || (theme?.settings as ThemeSettings)?.colors,

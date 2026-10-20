@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
-import { ThemeSettingsV1 } from "@/lib/theme/schema";
+import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart } from "@/server/storefront/cart";
 import { getDiscoverySummary, getMenus } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
@@ -40,6 +40,11 @@ const BASE_CSS = [
 // texto (revisión de conversión, B1). `.sf-text-font` la excluye siempre.
 const HEADING_CSS =
   ".sf-root :is(h1,:is(h2,h3,h4):is([class*=text-xl],[class*=text-2xl],[class*=text-3xl],[class*=text-4xl],[class*=text-5xl])):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
+
+// Opciones de listado del tema v2 (ADR-034), como atributos de la raíz: una
+// columna en el celular y tarjetas sin marca. Reglas fijas, sin valores de la tienda.
+const LISTING_CSS =
+  "@media (max-width:639px){.sf-root[data-cols='1'] .sf-grid{grid-template-columns:minmax(0,1fr)}}.sf-root[data-brand='off'] .sf-card-brand{display:none}";
 
 /**
  * Favicon, ícono de Apple y manifiesto de la tienda (§20.2, D-F9-06). La
@@ -78,15 +83,19 @@ export default async function StoreLayout({ children, params }: Props) {
   const theme = resolveTheme(store.theme?.settings);
   // Se vuelve a validar al mostrar (F9-DESIGN §13 H2): un valor fuera del esquema
   // no llega a la página.
-  const parsed = ThemeSettingsV1.safeParse(store.theme?.settings ?? {});
+  const parsed = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
   const fonts = fontVariableClasses([theme.fonts.heading, theme.fonts.body]);
 
   return (
     <div
       className={`sf-root relative ${fonts} flex min-h-dvh flex-col bg-[var(--sf-bg)] text-[var(--sf-fg)]`}
+      data-cols={settings.listing?.columns_mobile === 1 ? "1" : undefined}
+      data-brand={settings.listing?.show_brand === false ? "off" : undefined}
     >
-      <style nonce={nonce}>{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}`}</style>
+      <style
+        nonce={nonce}
+      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}`}</style>
       {preview ? (
         <div
           role="status"
@@ -119,7 +128,11 @@ export default async function StoreLayout({ children, params }: Props) {
         logoPosition={theme.logoPosition}
         whatsapp={settings.contact?.whatsapp}
       />
-      <QuickLinks menu={menus.main} discovery={discoveryLinks} />
+      <QuickLinks
+        menu={menus.main}
+        discovery={discoveryLinks}
+        custom={settings.header?.quick_links}
+      />
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>

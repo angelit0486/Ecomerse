@@ -7,6 +7,7 @@ import { ImageResponse } from "next/og";
 import { monogramInitial, monogramSvg } from "@/lib/theme/monogram";
 import { resolveTheme } from "@/lib/theme/resolve-theme";
 
+import { mediaUrl } from "./catalog";
 import { storefrontForRoute } from "./context";
 import type { StorePublic } from "./store-public";
 
@@ -29,9 +30,20 @@ function colors(store: StorePublic) {
   return { bg: theme.palette.primary, fg: theme.buttonText };
 }
 
+/** Con favicon propio (ADR-034), los íconos llevan a esa imagen ya re-codificada. */
+function faviconRedirect(store: StorePublic, preview: boolean): Response | null {
+  if (!store.favicon) return null;
+  return new Response(null, {
+    status: 302,
+    headers: { location: mediaUrl(store.favicon.path), ...cacheHeaders(preview) },
+  });
+}
+
 export async function svgIcon(request: Request, { params }: Params): Promise<Response> {
   const resolved = await storefrontForRoute((await params).storeId, request.headers);
   if (!resolved) return new Response("Not found", { status: 404 });
+  const custom = faviconRedirect(resolved.store, resolved.preview);
+  if (custom) return custom;
   const { bg, fg } = colors(resolved.store);
   return new Response(monogramSvg(resolved.store.name, bg, fg), {
     headers: {
@@ -50,6 +62,8 @@ export async function pngIcon(
 ): Promise<Response> {
   const resolved = await storefrontForRoute((await params).storeId, request.headers);
   if (!resolved) return new Response("Not found", { status: 404 });
+  const custom = faviconRedirect(resolved.store, resolved.preview);
+  if (custom) return custom;
   const { bg, fg } = colors(resolved.store);
   const image = new ImageResponse(
     <div
@@ -104,5 +118,6 @@ export async function manifest(request: Request, { params }: Params): Promise<Re
 export function iconVersion(store: StorePublic): string {
   const published = store.theme?.published_at;
   const theme = published ? String(Math.floor(Date.parse(published) / 1000)) : "0";
-  return `${theme}-${createHash("sha256").update(store.name).digest("hex").slice(0, 8)}`;
+  const key = `${store.name}|${store.favicon?.path ?? ""}`;
+  return `${theme}-${createHash("sha256").update(key).digest("hex").slice(0, 8)}`;
 }

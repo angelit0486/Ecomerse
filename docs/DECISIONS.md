@@ -776,7 +776,7 @@ Cambia un contrato crítico (§25, T-08), por eso necesita tu aprobación antes 
 
 Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda real desde el panel sin tocar código. El tema v1 es un contrato crítico (GATE0 §43, «StoreConfiguration / Theme schema v1»), igual que el cálculo del carrito. Lo que lo cambia va en los ADR de abajo y **no se empieza sin aprobación**. Lo que no lo cambia (auditoría, correcciones, rol de diseño, redirecciones, campos de categoría que ya existen en la base, manejo de errores) se hace sin esperar.
 
-### ADR-034 — Estudio de diseño: tema v2, bloques, páginas por bloques, versiones y plantillas por giro · **propuesta: requiere aprobación del propietario**
+### ADR-034 — Estudio de diseño: tema v2, bloques, páginas por bloques, versiones y plantillas por giro · **aprobado por el propietario el 2026-10-20 (completo, con video)**
 
 **Contexto.** El tema v1 (§20.2) es un objeto estricto validado igual en Zod y en SQL (`app.theme_settings_valid`, `app.home_sections_valid`, pruebas de paridad). Tiene 5 colores, 2 fuentes de una lista de 10, esquinas y estilo de botón, encabezado con un anuncio sin vigencia, pie, redes, SEO y contacto. La portada admite hasta 12 secciones de 8 tipos y es la única página por bloques. No hay favicon propio, historial de versiones ni plantillas.
 
@@ -831,7 +831,39 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
 
 **Riesgo.** Medio: amplía la superficie de contenido de la tienda. Se mitiga con el mismo validador doble, texto plano y reproductores que cargan solo al tocarlos.
 
-### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **propuesta: requiere aprobación del propietario**
+**Implementación, tramo 1 (2026-10-20): tema v2, bloques, tienda y editor.**
+
+- **Migración `20261020000200_theme_v2.sql`:**
+  - validadores v2 (`app.theme_settings_valid`, `app.home_section_props_valid` y `app.home_sections_valid`), aditivos;
+  - `app.theme_instant_valid` y `app.theme_schedule_valid`, que validan la fecha en el calendario y que el inicio vaya antes del fin, respetando la zona;
+  - referencias: favicon de marca, cuadrado y de al menos 48 px; productos elegidos y objetivos de la misma tienda;
+  - `home_section_text` también revisa preguntas, beneficios y el pie del video;
+  - `home_resolve` aplica la vigencia, pasa la visibilidad, maneja los elegidos a mano (sin agotados, en su orden) y las opiniones publicadas, y conserva la regla de no repetir productos;
+  - `store_public_json` incluye el favicon;
+  - `theme_version` pasa a 2.
+- **Pruebas:**
+  - 56 casos nuevos de paridad Zod ↔ SQL (316 de integración);
+  - pgTAP `82_theme_v2` (22), con aislamiento entre tiendas en productos, objetivos y favicon.
+- **Tienda:**
+  - componentes de los bloques nuevos;
+  - visibilidad por CSS (corte en 640 px);
+  - video con carga al tocar: CSP `frame-src` solo para `www.youtube-nocookie.com` y `player.vimeo.com`;
+  - anuncio con vigencia, sombras, densidad, accesos rápidos propios y favicon (los íconos redirigen a la imagen);
+  - presentación de la ficha (galería de puntos, precio por porción, relacionados, barra fija) y de los listados (una columna, sin marca). El contenido neto se muestra siempre.
+- **Panel:**
+  - formularios de los bloques nuevos;
+  - «Dónde y cuándo se ve»;
+  - arrastrar para ordenar (con teclado siguen ↑ y ↓) y duplicar;
+  - esquema de la portada por celular y computadora;
+  - el enlace de YouTube o Vimeo se pega y se guarda solo el código;
+  - pestaña «Ficha y listados»;
+  - sombras, densidad y favicon en Marca;
+  - corrección de color sugerida cuando falta contraste;
+  - fechas del anuncio y accesos rápidos en Encabezado;
+  - vista previa de Google y de redes en SEO.
+- **E2E `studio`:** celular y computadora, el video sin peticiones externas hasta tocarlo, y axe.
+
+### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Esquema.** `collections`, con dos modos:
 
@@ -844,13 +876,15 @@ Lleva FK compuestas y RLS `products.update`.
 
 **Por qué necesita aprobación.** Usa una ruta y un contrato de una fase futura (§44.23).
 
-### ADR-036 — Cupones por producto o categoría y descuentos automáticos · **propuesta: requiere aprobación del propietario**
+### ADR-036 — Cupones por producto o categoría y descuentos automáticos · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Qué cambia.** `app.calculate_cart` y sus casos dorados: el contrato del checkout (§43) y la regla de no confiar en el cliente.
 
 **Alcance.** Cupón limitado a productos, categorías o marcas; descuento automático sin código; prioridad y no combinación.
 
 **Recomendación.** Dejarlo para después del lanzamiento. Los cupones actuales y las ofertas con fecha (ADR-030) cubren el arranque.
+
+**E15 y E16 (2026-10-20).** El propietario aprobó **E16** (dominio propio con verificación; su ADR va en esta sección cuando se implemente) y no aprobó E15 (alta de tienda por cuenta propia): las tiendas las sigue creando la plataforma, con plantilla.
 
 ### Decisiones sin ADR (no tocan contratos críticos)
 

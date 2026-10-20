@@ -5,6 +5,7 @@ import { contrastRatio } from "@/lib/color/contrast";
 
 import { THEME_PRESETS } from "./presets";
 import {
+  announcementActive,
   footerColors,
   linkColor,
   resolveTheme,
@@ -40,7 +41,7 @@ describe("resolveTheme", () => {
         background: "url(javascript:alert(1))",
         muted: "#12345",
       },
-      shape: { radius: "1px;}*{x:y" },
+      shape: { radius: "1px;}*{x:y", shadow: "0 0 0 red;}*{x:y", density: "9rem" },
     });
     expect(theme.palette).toEqual(DEFAULT_COLORS);
     const css = themeCss(theme);
@@ -48,8 +49,43 @@ describe("resolveTheme", () => {
     expect(
       css
         .split(";")
-        .every((d) => /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px|var\(--font-[a-z-]+\))$/.test(d)),
+        .every((d) =>
+          /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px|\d+(\.\d+)?rem|none|var\(--font-[a-z-]+\))$/.test(d),
+        ),
     ).toBe(true);
+  });
+
+  it("sombra y densidad solo de su lista (tema v2, ADR-034)", () => {
+    const soft = themeCss(resolveTheme({ shape: { shadow: "soft", density: "spacious" } }));
+    expect(soft).toContain("--sf-shadow-card:0 1px 2px rgb(0 0 0 / 0.06)");
+    expect(soft).toContain("--sf-section-gap:4rem");
+    const plain = themeCss(resolveTheme({}));
+    expect(plain).toContain("--sf-shadow-card:none");
+    expect(plain).toContain("--sf-section-gap:3rem;--sf-section-gap-lg:4rem");
+  });
+
+  it("anuncio con vigencia: se muestra solo entre sus fechas", () => {
+    const theme = resolveTheme({
+      header: {
+        announcement: {
+          text: "Buen Fin",
+          background: "#111827",
+          foreground: "#ffffff",
+          starts_at: "2026-11-13T00:00:00-06:00",
+          ends_at: "2026-11-17T23:59:59-06:00",
+        },
+      },
+    });
+    expect(announcementActive(theme.announcement, new Date("2026-11-12T23:00:00-06:00"))).toBe(
+      false,
+    );
+    expect(announcementActive(theme.announcement, new Date("2026-11-14T12:00:00-06:00"))).toBe(
+      true,
+    );
+    expect(announcementActive(theme.announcement, new Date("2026-11-18T00:00:00-06:00"))).toBe(
+      false,
+    );
+    expect(announcementActive(null)).toBe(false);
   });
 
   it("fuentes solo de la lista curada; cualquier otra cae en la de por defecto", () => {
@@ -79,6 +115,8 @@ describe("resolveTheme", () => {
       link: null,
       background: "#111827",
       foreground: "#ffffff",
+      startsAt: null,
+      endsAt: null,
     });
     expect(themeCss(ok)).toContain("--sf-announce-bg:#111827");
     const bad = resolveTheme({

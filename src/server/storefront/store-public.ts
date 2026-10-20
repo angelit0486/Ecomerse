@@ -50,6 +50,11 @@ const storePublicSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Favicon propio (ADR-034): imagen de marca cuadrada; sin él, el monograma.
+  favicon: z
+    .object({ path: z.string(), width: z.number().nullable(), height: z.number().nullable() })
+    .nullable()
+    .optional(),
   // Logo publicado (F3-T06): ruta en store-media, ya re-codificado por el worker.
   logo: z
     .object({ path: z.string(), width: z.number().nullable(), height: z.number().nullable() })

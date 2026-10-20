@@ -34,8 +34,11 @@ export function VariantSelector({
   options,
   variants,
   unpublished = false,
+  stickyBar = true,
 }: {
   storeId: string;
+  /** Tema v2 (ADR-034): barra fija de compra en el celular. */
+  stickyBar?: boolean;
   title?: string;
   options: { name: string; values: string[] }[];
   variants: SelectorVariant[];
@@ -143,6 +146,7 @@ export function VariantSelector({
           available={Boolean(selected?.available)}
           title={title}
           price={selected?.price ?? null}
+          stickyBar={stickyBar}
         />
       )}
     </div>

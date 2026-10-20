@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidLink, isValidSocialUrl, type SocialNetwork } from "./links";
 import { themeContrastIssues } from "./palette";
-import { HomeSectionsV1, ThemeSettingsV1 } from "./schema";
+import { HomeSectionsV2, ThemeSettingsV2 } from "./schema";
 import { LINK_CASES, SECTIONS_CASES, SETTINGS_CASES, SOCIAL_CASES } from "./theme-schema-cases";
 
 describe("enlaces de la tienda", () => {
@@ -18,17 +18,17 @@ describe("enlaces de la tienda", () => {
   );
 });
 
-describe("Theme schema v1", () => {
+describe("Theme schema v2", () => {
   it.each(SETTINGS_CASES.map((c) => [c.name, c] as const))("tema: %s", (_, c) => {
-    expect(ThemeSettingsV1.safeParse(c.value).success).toBe(c.valid);
+    expect(ThemeSettingsV2.safeParse(c.value).success).toBe(c.valid);
   });
 
   it.each(SECTIONS_CASES.map((c) => [c.name, c] as const))("portada: %s", (_, c) => {
-    expect(HomeSectionsV1.safeParse(c.value).success).toBe(c.valid);
+    expect(HomeSectionsV2.safeParse(c.value).success).toBe(c.valid);
   });
 
   it("los errores llegan en español y en el campo", () => {
-    const result = ThemeSettingsV1.safeParse({ seo: { title: "a".repeat(71) } });
+    const result = ThemeSettingsV2.safeParse({ seo: { title: "a".repeat(71) } });
     expect(result.success).toBe(false);
     expect(result.error!.issues[0]!.path).toEqual(["seo", "title"]);
     expect(result.error!.issues[0]!.message).toBe("Máximo 70 caracteres.");

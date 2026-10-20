@@ -22,7 +22,7 @@ import {
 import { getStorefront } from "@/server/storefront/context";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
-import { ThemeSettingsV1, type PaymentMethod } from "@/lib/theme/schema";
+import { ThemeSettingsV2, type PaymentMethod } from "@/lib/theme/schema";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { Badges } from "../../_components/badges";
@@ -221,7 +221,7 @@ export default async function ProductPage({ params }: Props) {
     getShippingPromo(store.id),
     getProductReviews(store.id, product.id),
   ]);
-  const parsed = ThemeSettingsV1.safeParse(store.theme?.settings ?? {});
+  const parsed = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
   const payments = settings.footer?.payment_methods ?? [];
   const whatsapp = settings.contact?.whatsapp;
@@ -243,12 +243,18 @@ export default async function ProductPage({ params }: Props) {
   // porción es el precio: no se muestra.
   const singleServings =
     single?.servings_per_container ?? regulatory?.data.servings_per_container ?? null;
+  // Presentación de la ficha (tema v2, ADR-034). El contenido neto se muestra
+  // siempre; la tienda solo decide si agrega el precio por porción.
+  const pageOptions = settings.product_page ?? {};
+  const showPerServing = pageOptions.show_price_per_serving !== false;
   const perServing =
-    single && (singleServings ?? 0) > 1 ? pricePerServing(single.price, singleServings) : null;
+    showPerServing && single && (singleServings ?? 0) > 1
+      ? pricePerServing(single.price, singleServings)
+      : null;
   /** «2 kg · $15.15 por porción (66 porciones)» de una presentación; null sin datos. */
   const servingLine = (v: (typeof product.variants)[number]): string | null => {
     const per =
-      (v.servings_per_container ?? 0) > 1
+      showPerServing && (v.servings_per_container ?? 0) > 1
         ? pricePerServing(v.price, v.servings_per_container)
         : null;
     const parts = [
@@ -280,7 +286,11 @@ export default async function ProductPage({ params }: Props) {
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         {/* En escritorio la galería acompaña al bajar por la información (pulido visual). */}
         <section aria-label="Imágenes" className="md:sticky md:top-36 md:self-start">
-          <ProductGallery images={gallery} title={product.title} />
+          <ProductGallery
+            images={gallery}
+            title={product.title}
+            dots={pageOptions.gallery === "dots"}
+          />
         </section>
         <section aria-labelledby="sf-producto" className="space-y-5">
           <header className="space-y-2">
@@ -352,6 +362,8 @@ export default async function ProductPage({ params }: Props) {
                     {single.net_content ? `${single.net_content} · ` : ""}
                     {money(perServing, store)} por porción ({singleServings} porciones)
                   </p>
+                ) : single.net_content ? (
+                  <p className="text-sm text-[var(--sf-muted)]">{single.net_content}</p>
                 ) : null}
                 <p className="text-sm">
                   {availabilityText(single.availability, single.ships_in_days)}
@@ -366,6 +378,7 @@ export default async function ProductPage({ params }: Props) {
                   available={single.availability !== "out_of_stock"}
                   title={product.title}
                   price={money(single.price, store)}
+                  stickyBar={pageOptions.sticky_buy_bar !== false}
                 />
               )}
             </div>
@@ -374,6 +387,7 @@ export default async function ProductPage({ params }: Props) {
               storeId={store.id}
               title={product.title}
               unpublished={product.unpublished}
+              stickyBar={pageOptions.sticky_buy_bar !== false}
               options={product.options}
               variants={product.variants.map((v) => ({
                 id: v.id,
@@ -421,7 +435,7 @@ export default async function ProductPage({ params }: Props) {
           text="Aquí irán las opiniones verificadas de compradores reales. Solo tú ves este espacio en la vista previa; tus clientes no lo ven."
         />
       ) : null}
-      {related.length > 0 ? (
+      {related.length > 0 && pageOptions.show_related !== false ? (
         <section aria-labelledby="sf-relacionados" className="space-y-4">
           <SectionHeading id="sf-relacionados" title="Más para tu objetivo" />
           <ProductGrid products={related} store={store} carousel />

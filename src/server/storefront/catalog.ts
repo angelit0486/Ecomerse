@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { GOAL_KEY, hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
+import type { BenefitIcon, VideoProvider, Visibility } from "@/lib/theme/constants";
 import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb, type TransactionSql } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
@@ -663,10 +664,9 @@ export const getMenus = cache(
   },
 );
 
-/** Una sección de la portada ya resuelta por la base (app.home_resolve, F9-T02). */
-export type HomeSectionData =
+/** Una sección de la portada ya resuelta por la base (app.home_resolve, F9-T02 y ADR-034). */
+type SectionBody =
   | {
-      id: string;
       type: "hero";
       heading: string;
       subheading?: string | null;
@@ -675,25 +675,24 @@ export type HomeSectionData =
       image: ImageRef | null;
     }
   | {
-      id: string;
       type: "featured_products";
       title: string;
       show_view_all: boolean;
+      layout?: "grid" | "carousel";
       source:
-        | { type: "newest" | "best_selling" }
+        | { type: "newest" | "best_selling" | "manual" }
         | { type: "category"; path: string }
         | { type: "brand"; slug: string }
         | { type: "attribute_value"; attribute: string; value: string };
       items: ProductCard[];
     }
   | {
-      id: string;
       type: "category_grid";
       title: string;
+      layout?: "grid" | "carousel";
       categories: { name: string; path: string; image: ImageRef | null }[];
     }
   | {
-      id: string;
       type: "promo_banner";
       heading?: string;
       text?: string;
@@ -701,7 +700,6 @@ export type HomeSectionData =
       image: ImageRef;
     }
   | {
-      id: string;
       type: "image_with_text";
       heading: string;
       body: string;
@@ -710,18 +708,39 @@ export type HomeSectionData =
       image: ImageRef;
     }
   | {
-      id: string;
       type: "brand_logos";
       title: string;
       brands: { name: string; slug: string; logo: Omit<ImageRef, "alt"> }[];
     }
   | {
-      id: string;
       type: "testimonials";
       title: string;
       items: { quote: string; author: string; detail?: string }[];
     }
-  | { id: string; type: "rich_text"; heading?: string; html: string };
+  | { type: "rich_text"; heading?: string; html: string }
+  | { type: "faq"; title: string; items: { question: string; answer: string }[] }
+  | {
+      type: "benefits";
+      title?: string;
+      items: { icon: BenefitIcon; title: string; text?: string }[];
+    }
+  | { type: "goals"; title: string; goals: { label: string; attribute: string; value: string }[] }
+  | {
+      type: "reviews";
+      title: string;
+      reviews: {
+        rating: number;
+        title: string | null;
+        body: string;
+        author_name: string;
+        created_at: string;
+        product: { title: string; slug: string };
+      }[];
+    }
+  | { type: "video"; provider: VideoProvider; video_id: string; title: string; caption?: string }
+  | { type: "contact_map"; title: string; show_whatsapp: boolean };
+
+export type HomeSectionData = SectionBody & { id: string; visibility?: Visibility };
 
 /**
  * Portada: secciones publicadas (o del borrador en la vista previa) o, si la

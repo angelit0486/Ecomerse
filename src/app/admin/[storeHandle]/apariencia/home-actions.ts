@@ -31,6 +31,7 @@ const REFERENCE_MESSAGES: Record<string, string> = {
   source: "Lo que elegiste para mostrar productos ya no existe o no se puede filtrar.",
   category_ids: "Alguna categoría ya no existe o está oculta.",
   brand_ids: "Alguna marca ya no existe o no tiene logo.",
+  value_ids: "Algún objetivo ya no existe o ya no se usa como filtro.",
 };
 
 export async function saveHomeDraft(

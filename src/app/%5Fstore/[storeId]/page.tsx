@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
-import { ThemeSettingsV1 } from "@/lib/theme/schema";
+import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import {
   getGoalCovers,
   getHome,
@@ -44,7 +44,7 @@ export default async function StoreHomePage({ params }: Props) {
     listFacets(store.id, {}),
     getShippingPromo(store.id),
   ]);
-  const parsed = ThemeSettingsV1.safeParse(store.theme?.settings ?? {});
+  const parsed = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
   const trust = (
     <TrustBar
@@ -104,6 +104,7 @@ export default async function StoreHomePage({ params }: Props) {
           storeName={store.name}
           goals={goals}
           trust={trust}
+          contact={settings.contact ?? {}}
         />
       ) : (
         <TemplateHome
@@ -133,7 +134,7 @@ function TemplateHome({
   featured: NonNullable<Awaited<ReturnType<typeof getHome>>["featured"]>;
 }) {
   return (
-    <div className="space-y-12 sm:space-y-16">
+    <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
       <div className="space-y-8">
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{store.name}</h1>
         <GoalTiles goals={goals} />

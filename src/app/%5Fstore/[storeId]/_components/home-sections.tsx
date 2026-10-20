@@ -5,6 +5,14 @@ import { getCategoryCovers, mediaUrl, type HomeSectionData } from "@/server/stor
 import { SafeHtml } from "@/ui/safe-html";
 
 import { GoalTiles, type GoalTile } from "./goal-chips";
+import {
+  BenefitsBlock,
+  ContactBlock,
+  FaqBlock,
+  GoalsBlock,
+  ReviewsBlock,
+  VideoBlock,
+} from "./home-blocks";
 import { ProductGrid } from "./rated-product-grid";
 import { ThemeLink } from "./theme-link";
 
@@ -68,8 +76,11 @@ export function ViewAll({ href, title }: { href: string; title: string }) {
 
 export function viewAllHref(
   source: Extract<HomeSectionData, { type: "featured_products" }>["source"],
-) {
+): string | null {
   switch (source.type) {
+    case "manual":
+      // Elegidos a mano: no hay un listado con exactamente esos productos.
+      return null;
     case "newest":
       return "/productos?orden=newest";
     case "best_selling":
@@ -204,13 +215,28 @@ async function CategoryCircles({
   );
 }
 
+/** Visibilidad por dispositivo (ADR-034): se oculta con CSS, el corte es `sm` (640 px). */
+function VisibleOn({
+  visibility,
+  children,
+}: {
+  visibility: HomeSectionData["visibility"];
+  children: ReactNode;
+}) {
+  if (!visibility || visibility === "all") return children;
+  return <div className={visibility === "mobile" ? "sm:hidden" : "max-sm:hidden"}>{children}</div>;
+}
+
 export function HomeSections({
   sections,
   store,
   storeName,
   goals = [],
   trust = null,
+  contact = {},
 }: {
+  /** Contacto del tema, para el bloque «Contacto y ubicación». */
+  contact?: { address?: string; hours?: string; whatsapp?: string };
   /** Franja de confianza con datos reales de la tienda, bajo los objetivos. */
   trust?: ReactNode;
   sections: HomeSectionData[];
@@ -223,7 +249,7 @@ export function HomeSections({
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
   return (
-    <div className="space-y-12 sm:space-y-16">
+    <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
       {heroFirst ? null : (
         <div className="space-y-8">
@@ -232,201 +258,219 @@ export function HomeSections({
           {trust}
         </div>
       )}
-      {sections.map((section, index) => {
-        const headingId = `sf-seccion-${index}`;
-        switch (section.type) {
-          case "hero":
-            return index === 0 ? (
-              <div key={section.id} className="space-y-12 sm:space-y-16">
-                <Hero section={section} headingLevel={1} />
-                <GoalTiles goals={goals} />
-                {trust}
-              </div>
-            ) : (
-              <Hero key={section.id} section={section} headingLevel={2} />
-            );
-          case "featured_products": {
-            const eager = index === eagerIndex ? 4 : 0;
-            return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <SectionHeading
-                  id={headingId}
-                  title={section.title}
-                  action={
-                    section.show_view_all ? (
-                      <ViewAll href={viewAllHref(section.source)} title={section.title} />
-                    ) : null
-                  }
-                />
-                <ProductGrid products={section.items} store={store} eager={eager} carousel />
-              </section>
-            );
-          }
-          case "category_grid":
-            return (
-              <CategoryCircles
-                key={section.id}
-                section={section}
-                store={store}
-                headingId={headingId}
-              />
-            );
-          case "promo_banner":
-            return (
-              <section
-                key={section.id}
-                aria-label={section.heading ?? "Promoción"}
-                className="relative isolate overflow-hidden rounded-[var(--sf-radius-panel)]"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
-                <img
-                  src={mediaUrl(section.image.path)}
-                  alt={section.image.alt ?? ""}
-                  width={section.image.width ?? 1600}
-                  height={section.image.height ?? 500}
-                  loading="lazy"
-                  decoding="async"
-                  className={
-                    section.heading || section.text
-                      ? "absolute inset-0 -z-10 h-full w-full object-cover"
-                      : "h-auto w-full"
-                  }
-                />
-                {section.heading || section.text ? (
-                  <>
-                    {/* Velo fijo: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
-                    <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
-                    <div className="flex flex-col items-start gap-3 px-6 py-12 text-white sm:px-12 [&_:focus-visible]:outline-white">
-                      {section.heading ? (
-                        <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-                          {section.heading}
-                        </h2>
-                      ) : null}
-                      {section.text ? <p className="max-w-xl">{section.text}</p> : null}
-                      {section.cta ? (
-                        <ThemeLink href={section.cta.link} className={BUTTON}>
-                          {section.cta.label}
-                        </ThemeLink>
-                      ) : null}
-                    </div>
-                  </>
-                ) : section.cta ? (
-                  <div className="p-4">
-                    <ThemeLink href={section.cta.link} className={BUTTON}>
-                      {section.cta.label}
-                    </ThemeLink>
-                  </div>
-                ) : null}
-              </section>
-            );
-          case "image_with_text":
-            // Tarjeta de guía (rediseño A+B): borde marcado, texto y foto lado a lado.
-            return (
-              <section
-                key={section.id}
-                aria-labelledby={headingId}
-                className="grid items-center gap-5 overflow-hidden rounded-[var(--sf-radius-panel)] border-2 border-[var(--sf-fg)] p-5 sm:grid-cols-2 sm:gap-10 sm:p-8"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
-                <img
-                  src={mediaUrl(section.image.path)}
-                  alt={section.image.alt ?? ""}
-                  width={section.image.width ?? 800}
-                  height={section.image.height ?? 600}
-                  loading="lazy"
-                  decoding="async"
-                  className={`w-full rounded-[var(--sf-radius-card)] object-cover ${section.image_position === "right" ? "sm:order-last" : ""}`}
-                />
-                <div className="space-y-3">
-                  <h2
-                    id={headingId}
-                    className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
-                  >
-                    {section.heading}
-                  </h2>
-                  <Paragraphs text={section.body} className="text-[var(--sf-muted)]" />
+      {sections.map((section, index) => (
+        <VisibleOn key={section.id} visibility={section.visibility}>
+          {renderSection(section, index)}
+        </VisibleOn>
+      ))}
+    </div>
+  );
+
+  function renderSection(section: HomeSectionData, index: number): ReactNode {
+    const headingId = `sf-seccion-${index}`;
+    switch (section.type) {
+      case "hero":
+        return index === 0 ? (
+          <div
+            key={section.id}
+            className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
+          >
+            <Hero section={section} headingLevel={1} />
+            <GoalTiles goals={goals} />
+            {trust}
+          </div>
+        ) : (
+          <Hero key={section.id} section={section} headingLevel={2} />
+        );
+      case "featured_products": {
+        const eager = index === eagerIndex ? 4 : 0;
+        const href = section.show_view_all ? viewAllHref(section.source) : null;
+        return (
+          <section key={section.id} aria-labelledby={headingId} className="space-y-4">
+            <SectionHeading
+              id={headingId}
+              title={section.title}
+              action={href ? <ViewAll href={href} title={section.title} /> : null}
+            />
+            <ProductGrid
+              products={section.items}
+              store={store}
+              eager={eager}
+              carousel={section.layout === "carousel" ? "always" : true}
+            />
+          </section>
+        );
+      }
+      case "category_grid":
+        return (
+          <CategoryCircles key={section.id} section={section} store={store} headingId={headingId} />
+        );
+      case "promo_banner":
+        return (
+          <section
+            key={section.id}
+            aria-label={section.heading ?? "Promoción"}
+            className="relative isolate overflow-hidden rounded-[var(--sf-radius-panel)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
+            <img
+              src={mediaUrl(section.image.path)}
+              alt={section.image.alt ?? ""}
+              width={section.image.width ?? 1600}
+              height={section.image.height ?? 500}
+              loading="lazy"
+              decoding="async"
+              className={
+                section.heading || section.text
+                  ? "absolute inset-0 -z-10 h-full w-full object-cover"
+                  : "h-auto w-full"
+              }
+            />
+            {section.heading || section.text ? (
+              <>
+                {/* Velo fijo: el texto blanco siempre se lee (F9-DESIGN §13 M5). */}
+                <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
+                <div className="flex flex-col items-start gap-3 px-6 py-12 text-white sm:px-12 [&_:focus-visible]:outline-white">
+                  {section.heading ? (
+                    <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
+                      {section.heading}
+                    </h2>
+                  ) : null}
+                  {section.text ? <p className="max-w-xl">{section.text}</p> : null}
                   {section.cta ? (
-                    <ThemeLink
-                      href={section.cta.link}
-                      className="inline-flex min-h-11 items-center font-bold text-[var(--sf-link)] underline underline-offset-4"
-                    >
+                    <ThemeLink href={section.cta.link} className={BUTTON}>
                       {section.cta.label}
                     </ThemeLink>
                   ) : null}
                 </div>
-              </section>
-            );
-          case "brand_logos":
-            return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <SectionHeading id={headingId} title={section.title} />
-                <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-                  {section.brands.map((brand) => (
-                    <li key={brand.slug}>
-                      <Link
-                        href={`/marca/${encodeURIComponent(brand.slug)}`}
-                        className="flex h-20 items-center justify-center rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-primary)]"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado */}
-                        <img
-                          src={mediaUrl(brand.logo.path)}
-                          alt={brand.name}
-                          width={brand.logo.width ?? 160}
-                          height={brand.logo.height ?? 64}
-                          loading="lazy"
-                          decoding="async"
-                          className="max-h-12 w-auto object-contain"
-                        />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          case "testimonials":
-            return (
-              <section key={section.id} aria-labelledby={headingId} className="space-y-4">
-                <SectionHeading id={headingId} title={section.title} />
-                <ul className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-                  {section.items.map((item, i) => (
-                    <li key={i}>
-                      <figure className="flex h-full flex-col gap-4 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-5">
-                        <blockquote className="text-base leading-relaxed">
-                          <Paragraphs text={item.quote} />
-                        </blockquote>
-                        <figcaption className="mt-auto text-sm">
-                          <span className="font-bold">{item.author}</span>
-                          {item.detail ? <span className="block">{item.detail}</span> : null}
-                        </figcaption>
-                      </figure>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          case "rich_text":
-            return (
-              <section
-                key={section.id}
-                aria-labelledby={section.heading ? headingId : undefined}
-                aria-label={section.heading ? undefined : "Información"}
-                className="max-w-3xl space-y-3"
+              </>
+            ) : section.cta ? (
+              <div className="p-4">
+                <ThemeLink href={section.cta.link} className={BUTTON}>
+                  {section.cta.label}
+                </ThemeLink>
+              </div>
+            ) : null}
+          </section>
+        );
+      case "image_with_text":
+        // Tarjeta de guía (rediseño A+B): borde marcado, texto y foto lado a lado.
+        return (
+          <section
+            key={section.id}
+            aria-labelledby={headingId}
+            className="grid items-center gap-5 overflow-hidden rounded-[var(--sf-radius-panel)] border-2 border-[var(--sf-fg)] p-5 sm:grid-cols-2 sm:gap-10 sm:p-8"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
+            <img
+              src={mediaUrl(section.image.path)}
+              alt={section.image.alt ?? ""}
+              width={section.image.width ?? 800}
+              height={section.image.height ?? 600}
+              loading="lazy"
+              decoding="async"
+              className={`w-full rounded-[var(--sf-radius-card)] object-cover ${section.image_position === "right" ? "sm:order-last" : ""}`}
+            />
+            <div className="space-y-3">
+              <h2
+                id={headingId}
+                className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
               >
-                {section.heading ? (
-                  <h2
-                    id={headingId}
-                    className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                {section.heading}
+              </h2>
+              <Paragraphs text={section.body} className="text-[var(--sf-muted)]" />
+              {section.cta ? (
+                <ThemeLink
+                  href={section.cta.link}
+                  className="inline-flex min-h-11 items-center font-bold text-[var(--sf-link)] underline underline-offset-4"
+                >
+                  {section.cta.label}
+                </ThemeLink>
+              ) : null}
+            </div>
+          </section>
+        );
+      case "brand_logos":
+        return (
+          <section key={section.id} aria-labelledby={headingId} className="space-y-4">
+            <SectionHeading id={headingId} title={section.title} />
+            <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+              {section.brands.map((brand) => (
+                <li key={brand.slug}>
+                  <Link
+                    href={`/marca/${encodeURIComponent(brand.slug)}`}
+                    className="flex h-20 items-center justify-center rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-primary)]"
                   >
-                    {section.heading}
-                  </h2>
-                ) : null}
-                <SafeHtml html={section.html} className="sf-prose" />
-              </section>
-            );
-          default:
-            return null;
-        }
-      })}
-    </div>
-  );
+                    {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado */}
+                    <img
+                      src={mediaUrl(brand.logo.path)}
+                      alt={brand.name}
+                      width={brand.logo.width ?? 160}
+                      height={brand.logo.height ?? 64}
+                      loading="lazy"
+                      decoding="async"
+                      className="max-h-12 w-auto object-contain"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      case "testimonials":
+        return (
+          <section key={section.id} aria-labelledby={headingId} className="space-y-4">
+            <SectionHeading id={headingId} title={section.title} />
+            <ul className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+              {section.items.map((item, i) => (
+                <li key={i}>
+                  <figure className="flex h-full flex-col gap-4 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-5">
+                    <blockquote className="text-base leading-relaxed">
+                      <Paragraphs text={item.quote} />
+                    </blockquote>
+                    <figcaption className="mt-auto text-sm">
+                      <span className="font-bold">{item.author}</span>
+                      {item.detail ? <span className="block">{item.detail}</span> : null}
+                    </figcaption>
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      case "rich_text":
+        return (
+          <section
+            key={section.id}
+            aria-labelledby={section.heading ? headingId : undefined}
+            aria-label={section.heading ? undefined : "Información"}
+            className="max-w-3xl space-y-3"
+          >
+            {section.heading ? (
+              <h2
+                id={headingId}
+                className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+              >
+                {section.heading}
+              </h2>
+            ) : null}
+            <SafeHtml html={section.html} className="sf-prose" />
+          </section>
+        );
+      case "faq":
+        return <FaqBlock section={section} headingId={headingId} />;
+      case "benefits":
+        return <BenefitsBlock section={section} headingId={headingId} />;
+      case "goals":
+        return <GoalsBlock section={section} headingId={headingId} />;
+      case "reviews":
+        return <ReviewsBlock section={section} headingId={headingId} />;
+      case "video":
+        return <VideoBlock section={section} headingId={headingId} />;
+      case "contact_map":
+        return <ContactBlock section={section} headingId={headingId} contact={contact} />;
+      default:
+        return null;
+    }
+  }
 }

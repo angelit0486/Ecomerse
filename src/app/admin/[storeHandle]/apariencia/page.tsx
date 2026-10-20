@@ -2,14 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ThemeSettingsV1, type ThemeSettings } from "@/lib/theme/schema";
+import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { publicMediaUrl } from "@/server/catalog/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { LogoForm, type LogoCandidate } from "../configuracion/logo-form";
-import { BrandForm, HeaderFooterForm, PublishBar, SeoForm, SocialContactForm } from "./forms";
+import {
+  BrandForm,
+  HeaderFooterForm,
+  PresentationForm,
+  PublishBar,
+  SeoForm,
+  SocialContactForm,
+} from "./forms";
 import { HomeEditor, type HomeEditorOptions } from "./home-editor";
 
 export const metadata: Metadata = { title: "Apariencia" };
@@ -25,6 +32,7 @@ const TABS = [
   { key: "redes", label: "Redes y contacto" },
   { key: "seo", label: "SEO" },
   { key: "portada", label: "Portada" },
+  { key: "presentacion", label: "Ficha y listados" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -43,7 +51,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const base = `/admin/${ctx.store.handle}`;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: theme }, { data: store }, { data: media }] = await Promise.all([
+  const [{ data: theme }, { data: store }, { data: media }, { data: domain }] = await Promise.all([
     supabase
       .from("store_themes")
       .select(
@@ -54,17 +62,25 @@ export default async function AppearancePage({ params, searchParams }: Props) {
     supabase.from("stores").select("contact_email, contact_phone").eq("id", ctx.store.id).single(),
     supabase
       .from("media")
-      .select("id, owner_type, status, storage_path, alt_text")
+      .select("id, owner_type, status, storage_path, alt_text, width, height")
       .eq("store_id", ctx.store.id)
       .in("owner_type", ["store_branding", "banner"])
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(40),
+    supabase
+      .from("store_domains")
+      .select("hostname")
+      .eq("store_id", ctx.store.id)
+      .eq("status", "active")
+      .order("is_primary", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const hasDraft = Boolean(theme?.draft_settings);
   const revision = theme?.draft_revision ?? 0;
-  const parsed = ThemeSettingsV1.safeParse(
+  const parsed = ThemeSettingsV2.safeParse(
     (hasDraft ? theme?.draft_settings : theme?.settings) ?? {},
   );
   const settings: ThemeSettings = parsed.success ? parsed.data : {};
@@ -74,7 +90,20 @@ export default async function AppearancePage({ params, searchParams }: Props) {
     status: LogoCandidate["status"];
     storage_path: string;
     alt_text: string | null;
+    width: number | null;
+    height: number | null;
   }[];
+  // Favicon (ADR-034): imágenes de marca cuadradas ya procesadas.
+  const faviconCandidates = rows
+    .filter(
+      (m) =>
+        m.owner_type === "store_branding" &&
+        m.status === "ready" &&
+        m.width !== null &&
+        m.width === m.height &&
+        m.width >= 48,
+    )
+    .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path) }));
   const logos = rows
     .filter((m) => m.owner_type === "store_branding")
     .slice(0, 10)
@@ -99,8 +128,8 @@ export default async function AppearancePage({ params, searchParams }: Props) {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold">Apariencia</h1>
         <p className="text-sm text-fg-muted">
-          Marca, encabezado, pie, redes y SEO de tu tienda. Los cambios se guardan en un borrador
-          que solo tú ves hasta que lo publicas.
+          Marca, encabezado, pie, redes, SEO, portada y presentación de tu tienda. Los cambios se
+          guardan en un borrador que solo tú ves hasta que lo publicas.
         </p>
       </header>
 
@@ -158,6 +187,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
             revision={revision}
             settings={settings}
             storeName={ctx.store.name}
+            faviconCandidates={faviconCandidates}
           />
         </div>
       ) : null}
@@ -192,6 +222,14 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           options={homeOptions}
         />
       ) : null}
+      {tab === "presentacion" ? (
+        <PresentationForm
+          key={formKey}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          settings={settings}
+        />
+      ) : null}
       {tab === "seo" ? (
         <SeoForm
           key={formKey}
@@ -200,6 +238,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           settings={settings}
           storeName={ctx.store.name}
           images={images}
+          storeUrl={domain?.hostname ? `https://${domain.hostname}` : `https://${ctx.store.handle}`}
         />
       ) : null}
     </section>
@@ -218,27 +257,38 @@ async function loadHomeOptions(
   }[],
 ): Promise<HomeEditorOptions> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: categories }, { data: brands }, { data: attributes }] = await Promise.all([
-    supabase
-      .from("categories")
-      .select("id, name, depth")
-      .eq("store_id", storeId)
-      .eq("is_visible", true)
-      .is("deleted_at", null)
-      .order("path"),
-    supabase
-      .from("brands")
-      .select("id, name, logo_media_id")
-      .eq("store_id", storeId)
-      .is("deleted_at", null)
-      .order("name"),
-    supabase
-      .from("attributes")
-      .select("name, is_filterable, attribute_values(id, label, position)")
-      .eq("store_id", storeId)
-      .eq("is_filterable", true)
-      .order("position"),
-  ]);
+  const [{ data: categories }, { data: brands }, { data: attributes }, { data: products }] =
+    await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, name, depth")
+        .eq("store_id", storeId)
+        .eq("is_visible", true)
+        .is("deleted_at", null)
+        .order("path"),
+      supabase
+        .from("brands")
+        .select("id, name, logo_media_id")
+        .eq("store_id", storeId)
+        .is("deleted_at", null)
+        .order("name"),
+      supabase
+        .from("attributes")
+        .select("name, is_filterable, attribute_values(id, label, position)")
+        .eq("store_id", storeId)
+        .eq("is_filterable", true)
+        .order("position"),
+      // Para «Productos elegidos a mano»: los publicados y los borradores (se
+      // muestran solo cuando se publican), los más recientes primero.
+      supabase
+        .from("products")
+        .select("id, title, status")
+        .eq("store_id", storeId)
+        .is("deleted_at", null)
+        .neq("status", "archived")
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]);
   return {
     banners: media
       .filter((m) => m.owner_type === "banner" && m.status === "ready")
@@ -257,5 +307,9 @@ async function loadHomeOptions(
         .sort((x, y) => x.position - y.position)
         .map((v) => ({ id: v.id, label: `${a.name}: ${v.label}` })),
     ),
+    products: (products ?? []).map((p) => ({
+      id: p.id,
+      title: p.status === "active" ? p.title : `${p.title} (borrador)`,
+    })),
   };
 }

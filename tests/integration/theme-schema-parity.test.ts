@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { isValidLink, isValidSocialUrl, type SocialNetwork } from "@/lib/theme/links";
 import { themeContrastIssues } from "@/lib/theme/palette";
-import { HomeSectionsV1, ThemeSettingsV1 } from "@/lib/theme/schema";
+import { HomeSectionsV2, ThemeSettingsV2 } from "@/lib/theme/schema";
 import {
   LINK_CASES,
   SECTIONS_CASES,
@@ -12,7 +12,7 @@ import {
 } from "@/lib/theme/theme-schema-cases";
 
 /**
- * F9-DESIGN §2.2: cada regla del Theme schema v1 vive en Zod y en SQL. Los dos
+ * F9-DESIGN §2.2: cada regla del Theme schema v2 vive en Zod y en SQL. Los dos
  * deben dar el mismo veredicto en cada caso compartido, y ese veredicto debe ser
  * el esperado.
  */
@@ -22,7 +22,7 @@ afterAll(async () => {
   await admin.end();
 });
 
-describe("paridad Zod ↔ SQL del Theme schema v1", () => {
+describe("paridad Zod ↔ SQL del Theme schema v2", () => {
   it.each(LINK_CASES.map((c) => [c.value.slice(0, 60), c] as const))("enlace %s", async (_, c) => {
     const [row] = await admin<
       { ok: boolean }[]
@@ -45,13 +45,13 @@ describe("paridad Zod ↔ SQL del Theme schema v1", () => {
   it.each(SETTINGS_CASES.map((c) => [c.name, c] as const))("tema: %s", async (_, c) => {
     const [row] = await admin<{ ok: boolean }[]>`
       select app.theme_settings_valid(${admin.json(c.value as postgres.JSONValue)}) as ok`;
-    expect([ThemeSettingsV1.safeParse(c.value).success, row!.ok]).toEqual([c.valid, c.valid]);
+    expect([ThemeSettingsV2.safeParse(c.value).success, row!.ok]).toEqual([c.valid, c.valid]);
   });
 
   it.each(SECTIONS_CASES.map((c) => [c.name, c] as const))("portada: %s", async (_, c) => {
     const [row] = await admin<{ ok: boolean }[]>`
       select app.home_sections_valid(${admin.json(c.value as postgres.JSONValue)}) as ok`;
-    expect([HomeSectionsV1.safeParse(c.value).success, row!.ok]).toEqual([c.valid, c.valid]);
+    expect([HomeSectionsV2.safeParse(c.value).success, row!.ok]).toEqual([c.valid, c.valid]);
   });
 });
 

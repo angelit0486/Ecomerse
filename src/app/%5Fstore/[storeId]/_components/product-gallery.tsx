@@ -21,7 +21,16 @@ export interface GalleryImage {
 const ARROW =
   "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] text-lg shadow-sm hover:bg-[var(--sf-surface)]";
 
-export function ProductGallery({ images, title }: { images: GalleryImage[]; title: string }) {
+export function ProductGallery({
+  images,
+  title,
+  dots = false,
+}: {
+  images: GalleryImage[];
+  title: string;
+  /** Tema v2 (ADR-034): puntos en lugar de miniaturas bajo la imagen. */
+  dots?: boolean;
+}) {
   const [index, setIndex] = useState(0);
   // Imagen de la variante elegida que no está en la galería (revisión de conversión, M5).
   const [extra, setExtra] = useState<string | null>(null);
@@ -98,7 +107,31 @@ export function ProductGallery({ images, title }: { images: GalleryImage[]; titl
           </>
         ) : null}
       </div>
-      {many ? (
+      {many && dots ? (
+        <ul className="flex justify-center gap-1" aria-label={`Imágenes de ${title}`}>
+          {images.map((image, i) => (
+            <li key={image.src}>
+              <button
+                type="button"
+                onClick={() => {
+                  setExtra(null);
+                  setIndex(i);
+                }}
+                aria-label={`Ver imagen ${i + 1} de ${images.length}`}
+                aria-pressed={!extra && i === index}
+                className="flex h-11 w-11 items-center justify-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block h-2.5 w-2.5 rounded-full ${
+                    !extra && i === index ? "bg-[var(--sf-fg)]" : "bg-[var(--sf-border-strong)]"
+                  }`}
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : many ? (
         <ul className="grid grid-cols-5 gap-2" aria-label={`Imágenes de ${title}`}>
           {images.map((image, i) => (
             <li key={image.src}>
