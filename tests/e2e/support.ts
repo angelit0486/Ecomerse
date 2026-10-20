@@ -185,6 +185,22 @@ export async function expectNoSeriousA11yViolations(page: Page) {
     const { join } = await import("node:path");
     axeSource = await readFile(join(process.cwd(), "node_modules/axe-core/axe.min.js"), "utf8");
   }
+  // Se mide el estado en reposo: tras un clic el puntero queda sobre el botón y su
+  // transición de color (150 ms) puede estar a medias; axe tomaría colores
+  // intermedios como falta de contraste. Se aleja el puntero y se esperan las
+  // animaciones en curso (no se omite ninguna regla).
+  await page.mouse.move(0, 0);
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => undefined)),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]),
+  );
   await page.evaluate(axeSource);
   const violations = await page.evaluate(async () => {
     const axe = (

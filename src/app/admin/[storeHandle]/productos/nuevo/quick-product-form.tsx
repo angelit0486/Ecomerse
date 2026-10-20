@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import {
   suggestBrand,
@@ -117,7 +117,12 @@ export function QuickProductForm({
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [dismissedDraft, setDismissedDraft] = useState(false);
-  const stockKey = useRef<string>("");
+  // Las vistas previas (blob:) se liberan al salir de la pantalla.
+  const photosRef = useRef(photos);
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+  useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
   const savedDraft = useSyncExternalStore(
     noSubscribe,
     () => readDraft(draftKey),
@@ -183,7 +188,8 @@ export function QuickProductForm({
     if (busy) return;
     setError(null);
     setFields({});
-    stockKey.current ||= crypto.randomUUID();
+    // Cada intento crea un producto distinto: su ajuste de existencias lleva su propia clave.
+    const stockKey = crypto.randomUUID();
     setPhase("creating");
     const input: QuickProductInput = {
       title: draft.title,
@@ -198,7 +204,7 @@ export function QuickProductForm({
       weightG: draft.weightG || undefined,
       requiresShipping: draft.requiresShipping,
       stock: canStock ? draft.stock || undefined : undefined,
-      stockKey: stockKey.current,
+      stockKey,
     };
     const result = await createProductQuick(storeHandle, input).catch(() => null);
     if (!result || !result.ok) {
