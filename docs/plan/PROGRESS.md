@@ -5,6 +5,10 @@
 
 ## Ahora
 
+- **Misión panel (2026-10-20):** llevar el panel al nivel de Shopify/Tiendanube para una dueña sin conocimientos técnicos, desde el celular. Fases 0–4.
+  - **Fase 0 (hecha): auditoría** en `docs/plan/AUDITORIA-PANEL.md`. Línea base en verde sobre `a715b48`: verify 672, pgTAP 2047, integración 255, E2E 68/68. Lighthouse móvil: panel 91–99 en 8 pantallas clave; tienda 96. Hallazgos graves: la marca de «Configurar tienda» no se publica al lanzar, el pendiente «perfil sanitario» lleva a Contenido, falta `<main>` (axe moderado en 126 pantallas), 1 campo sin etiqueta en Apariencia → SEO, 439 objetivos táctiles < 44 px y desborde de 3–22 px en la ficha a 375 px.
+  - **Pendiente del propietario:** aprobar E15 (alta de tienda por cuenta propia, requiere ADR) y E16 (dominio propio, requiere ADR y credenciales de Vercel). El resto de la lista de la auditoría no toca datos ni contratos.
+
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:
   - **Fase 1 (`2940220`):** E2E 56/56 en dos corridas, verify y db:test en verde. Directorio de marcas.
   - **Fase 5, Mercado Pago (ADR-028; `964c1ba` y `fda2ecd`):** Checkout Pro, webhook firmado, reconciliación y reembolsos. La revisión adversarial encontró dos fallos y están corregidos: el `x-request-id` que sobrescribía el proxy y el bloqueo ante cobros simultáneos. **No verificado con Mercado Pago real:** faltan credenciales de prueba (runbook `docs/runbooks/mercadopago.md`).
