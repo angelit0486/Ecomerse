@@ -47,7 +47,7 @@ export function Select({
         aria-describedby={ariaDescribedBy}
         aria-label={ariaLabel}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-[var(--radius-control)] border border-control",
+          "flex h-11 w-full items-center md:h-9 justify-between rounded-[var(--radius-control)] border border-control",
           "bg-surface px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2",
           "focus-visible:outline-focus aria-[invalid=true]:border-danger disabled:opacity-50",
         )}

@@ -1,58 +1,118 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 
 export interface AdminNavItem {
   href: string;
   label: string;
 }
 
+export interface AdminNavGroup {
+  /** Sin título: el grupo principal (Inicio, Configurar tienda). */
+  title?: string;
+  items: AdminNavItem[];
+}
+
 /**
- * Navegación del panel. En móvil, una fila desplazable (la dueña trabaja desde el
- * celular: 16 secciones en lista empujaban el contenido media pantalla hacia
- * abajo); en escritorio, la columna lateral. Marca la sección actual.
+ * Navegación del panel, agrupada (misión panel, F4; antes 17 entradas sueltas).
+ * En escritorio, columna lateral por grupos. En el celular, los accesos de todos
+ * los días (Inicio, Pedidos, Productos) a la vista y «Menú» con el resto. Marca
+ * la sección actual.
  */
-export function AdminNav({ items, base }: { items: AdminNavItem[]; base: string }) {
+export function AdminNav({
+  groups,
+  base,
+  primary,
+}: {
+  groups: AdminNavGroup[];
+  base: string;
+  /** Rutas que se ven siempre en el celular. */
+  primary: string[];
+}) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const all = groups.flatMap((g) => g.items);
   // La sección actual es la de prefijo más largo (Inicio solo en la raíz exacta).
-  const current = items
+  const current = all
     .filter((i) => (i.href === base ? pathname === base : pathname.startsWith(i.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
-  // En móvil la fila se desplaza: la sección actual queda a la vista (sin mover la página).
-  const listRef = useRef<HTMLUListElement>(null);
-  useEffect(() => {
-    const list = listRef.current;
-    const active = list?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!list || !active || list.scrollWidth <= list.clientWidth) return;
-    list.scrollLeft = active.offsetLeft - (list.clientWidth - active.offsetWidth) / 2;
-  }, [current]);
+  const quick = all.filter((i) => primary.includes(i.href));
+
+  const link = (item: AdminNavItem, pill: boolean) => {
+    const active = item.href === current;
+    return (
+      <Link
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        // Al elegir una sección el menú del celular se cierra.
+        onClick={() => setOpen(false)}
+        className={`flex min-h-11 items-center gap-2 whitespace-nowrap text-sm ${
+          pill ? "rounded-full px-3.5" : "rounded-md px-3 md:min-h-9"
+        } ${
+          active
+            ? "bg-fg font-medium text-canvas"
+            : pill
+              ? "border border-border hover:bg-canvas"
+              : "hover:bg-canvas"
+        }`}
+      >
+        {item.label}
+        <PendingMark />
+      </Link>
+    );
+  };
+
   return (
     <nav aria-label="Secciones de la tienda">
-      <ul
-        ref={listRef}
-        className="relative -mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-col md:gap-0.5 md:overflow-visible md:px-0 md:pb-0"
+      {/* Celular: lo de todos los días y «Menú». */}
+      <div className="flex flex-wrap items-center gap-1 md:hidden">
+        {quick.map((item) => (
+          <span key={item.href}>{link(item, true)}</span>
+        ))}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="menu-secciones"
+          onClick={() => setOpen((o) => !o)}
+          className="flex min-h-11 items-center rounded-full border border-border px-3.5 text-sm font-medium"
+        >
+          {open ? "Cerrar menú" : "Menú"}
+        </button>
+      </div>
+      <div
+        id="menu-secciones"
+        className={`${open ? "mt-3 block" : "hidden"} space-y-3 md:mt-0 md:block`}
       >
-        {items.map((item) => {
-          const active = item.href === current;
-          return (
-            <li key={item.href} className="shrink-0">
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-h-10 items-center whitespace-nowrap rounded-full px-3.5 text-sm md:min-h-9 md:rounded-md md:px-3 ${
-                  active
-                    ? "bg-fg font-medium text-canvas"
-                    : "border border-border hover:bg-canvas md:border-transparent"
-                }`}
-              >
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+        {groups.map((group, i) => (
+          <div key={group.title ?? i}>
+            {group.title ? (
+              <p className="px-3 pb-1 text-[13px] font-semibold text-fg-muted">{group.title}</p>
+            ) : null}
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.href}>{link(item, false)}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </nav>
   );
+}
+
+/**
+ * Mientras llega la sección elegida, un indicador junto a su nombre. Sustituye a
+ * un esqueleto de página: `loading.tsx` bajaba el Lighthouse de la ficha de 96 a
+ * 89–94 (el título se pintaba en streaming) y la carga inicial no lo necesita.
+ */
+function PendingMark() {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span
+      aria-hidden="true"
+      className="size-3 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
+    />
+  ) : null;
 }

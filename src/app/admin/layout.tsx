@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             Contraseña
           </Link>
           <form action="/salir" method="post">
-            <Button type="submit" variant="ghost" className="h-11">
+            <Button type="submit" variant="ghost">
               Salir
             </Button>
           </form>

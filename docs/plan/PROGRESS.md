@@ -16,7 +16,8 @@
   - **Fase 2 cerrada:** pgTAP 2047, integración 255, E2E 68 en verde sobre su build; revisión adversarial con 1 corrección (relanzamiento tras pausar). Informe `docs/phases/MISION-PANEL-F2.md`.
   - **Fase 3 (hecha):** Inicio con lo de hoy primero y acciones rápidas; surtir varios pedidos a la vez; búsqueda global («/»); avisos dentro del panel; `<main>` en todo el panel.
   - **Fase 3 cerrada:** verify 681, pgTAP 2047, integración 255, E2E 70/70 sobre su build; revisión adversarial con 2 correcciones (texto honesto del aviso al cliente al surtir y un localizador ambiguo). Informe `docs/phases/MISION-PANEL-F3.md`.
-  - **Fase 4 (en curso):** menú agrupado, controles de 44 px en el celular, «Más del catálogo», esqueletos de carga, código muerto, ficha a 375 px, Lighthouse.
+  - **Fase 4 (en curso):**
+    - **F4-T1 (hecha): navegación y toque.** Menú en 5 grupos (antes 17 entradas sueltas); en el celular, Inicio, Pedidos y Productos a la vista y «Menú» con el resto; indicador de carga en la sección elegida. Botones, campos y selectores de 44 px en el celular (36 px en escritorio). Productos: 2 acciones a la vista y «Más del catálogo» con las otras 7.
   - **Pendiente del propietario:** aprobar E15 (alta de tienda por cuenta propia, requiere ADR) y E16 (dominio propio, requiere ADR y credenciales de Vercel). El resto de la lista de la auditoría no toca datos ni contratos.
 
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:

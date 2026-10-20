@@ -20,8 +20,8 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-[13px]",
-  md: "h-9 px-4 text-sm",
+  sm: "h-11 px-3 text-[13px] md:h-8",
+  md: "h-11 px-4 text-sm md:h-9",
 };
 
 export function Button({

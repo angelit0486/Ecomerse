@@ -275,7 +275,6 @@ export function QuickProductForm({
           <Button
             type="button"
             variant="secondary"
-            className="h-11"
             onClick={() => {
               try {
                 const restored = {
@@ -299,7 +298,6 @@ export function QuickProductForm({
           <Button
             type="button"
             variant="ghost"
-            className="h-11"
             onClick={() => {
               writeDraft(draftKey, null);
               setDismissedDraft(true);
@@ -649,7 +647,7 @@ export function QuickProductForm({
             {error}
           </p>
         ) : null}
-        <Button type="submit" loading={busy} className="h-11 w-full px-6 sm:w-auto">
+        <Button type="submit" loading={busy} className="w-full px-6 sm:w-auto md:h-11">
           {phase === "creating"
             ? "Creando…"
             : phase === "uploading"

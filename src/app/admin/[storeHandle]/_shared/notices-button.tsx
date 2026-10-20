@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Skeleton } from "@/ui/primitives/skeleton";
+
 import { panelNotices, type PanelNotice } from "./notice-actions";
 
 /**
@@ -80,7 +82,11 @@ export function NoticesButton({ storeHandle }: { storeHandle: string }) {
           className="absolute right-0 top-12 z-30 w-72 rounded-md border border-border bg-surface p-2 shadow-lg"
         >
           {notices === null ? (
-            <p className="px-2 py-2 text-sm text-fg-muted">Revisando…</p>
+            <div className="space-y-2 p-2">
+              <p className="sr-only">Revisando…</p>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
           ) : total === 0 ? (
             <p className="px-2 py-2 text-sm">No hay nada pendiente. Todo al día.</p>
           ) : (

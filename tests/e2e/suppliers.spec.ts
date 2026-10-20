@@ -49,6 +49,7 @@ test("alta de proveedor, disponibilidad vendible y agotado al quedarse sin pieza
 
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/productos`);
+  await page.getByText("Más del catálogo").click();
   await page.getByRole("link", { name: "Proveedores" }).click();
   await page.getByLabel("Nombre del proveedor").fill("Distribuidora Norte");
   await page.getByLabel("Plazo de despacho mínimo (días)").fill("2");

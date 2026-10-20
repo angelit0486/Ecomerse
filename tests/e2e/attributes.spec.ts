@@ -75,6 +75,7 @@ test.beforeAll(async () => {
 test("la dueña define atributos y los asigna en el producto", async ({ page }) => {
   ownerSecret = await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/productos`);
+  await page.getByText("Más del catálogo").click();
   await page.getByRole("link", { name: "Atributos" }).click();
   await expect(page.getByRole("heading", { name: "Atributos", level: 1 })).toBeVisible();
 

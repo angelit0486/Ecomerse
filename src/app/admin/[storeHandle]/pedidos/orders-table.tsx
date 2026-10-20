@@ -78,13 +78,13 @@ export function OrdersTable({
                 Se marcan como enviadas todas sus unidades, sin número de guía. Si el correo de tu
                 tienda está configurado, cada cliente recibe el aviso de envío.
               </span>
-              <Button type="button" className="h-11" loading={pending} onClick={fulfill}>
+              <Button type="button" loading={pending} onClick={fulfill}>
                 Sí, surtir {selected.size}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                className="h-11"
+
                 disabled={pending}
                 onClick={() => setConfirming(false)}
               >
@@ -92,7 +92,7 @@ export function OrdersTable({
               </Button>
             </>
           ) : (
-            <Button type="button" className="h-11" onClick={() => setConfirming(true)}>
+            <Button type="button" onClick={() => setConfirming(true)}>
               Surtir los elegidos
             </Button>
           )}

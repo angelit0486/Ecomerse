@@ -107,13 +107,13 @@ export default async function ImportPage({ params, searchParams }: Props) {
             catálogo y edítalo: así cambias precios o existencias de muchos a la vez.
           </p>
           <p className="flex flex-wrap gap-2">
-            <a href={`${base}/plantilla`} className={`${linkButton} h-11 border border-control`}>
+            <a href={`${base}/plantilla`} className={`${linkButton} md:h-11 border border-control`}>
               Descargar plantilla
             </a>
             {hasPermission(ctx, "exports.run") ? (
               <Link
                 href={`/admin/${ctx.store.handle}/ajustes/exportar`}
-                className={`${linkButton} h-11 border border-control`}
+                className={`${linkButton} md:h-11 border border-control`}
               >
                 Exportar mis productos para editarlos
               </Link>
@@ -174,7 +174,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
                 id="mode"
                 name="mode"
                 defaultValue="upsert"
-                className={`${nativeControl} block h-11 w-full sm:w-auto`}
+                className={`${nativeControl} block md:h-11 w-full sm:w-auto`}
               >
                 <option value="upsert">Crear los nuevos y actualizar los existentes</option>
                 <option value="create_only">Solo crear productos nuevos</option>
@@ -187,7 +187,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
             </div>
             <button
               type="submit"
-              className={`${linkButton} h-11 bg-accent text-accent-fg hover:bg-accent-hover`}
+              className={`${linkButton} md:h-11 bg-accent text-accent-fg hover:bg-accent-hover`}
             >
               Validar archivo
             </button>

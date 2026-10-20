@@ -146,6 +146,19 @@ export default async function ProductsPage({ params, searchParams }: Props) {
         })
       : {};
 
+  const moreLinks = [
+    hasPermission(ctx, "categories.manage") && { href: `${base}/categorias`, label: "Categorías" },
+    hasPermission(ctx, "brands.manage") && { href: `${base}/marcas`, label: "Marcas" },
+    hasPermission(ctx, "categories.manage") && { href: `${base}/atributos`, label: "Atributos" },
+    { href: `${base}/revision`, label: "Revisión" },
+    { href: `${base}/opiniones`, label: "Opiniones" },
+    { href: `${base}/ofertas`, label: "Ofertas" },
+    hasPermission(ctx, "products.cost.read") && {
+      href: `${base}/proveedores`,
+      label: "Proveedores",
+    },
+  ].filter((l): l is { href: string; label: string } => Boolean(l));
+
   return (
     <section className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -153,41 +166,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
           <h1 className="text-xl font-semibold">Productos</h1>
           <p className="text-sm text-fg-muted">Lo que vendes en {ctx.store.name}.</p>
         </div>
-        <nav aria-label="Catálogo" className="flex flex-wrap gap-2">
-          {hasPermission(ctx, "categories.manage") ? (
-            <Link href={`${base}/categorias`} className={`${linkButton} border border-control`}>
-              Categorías
-            </Link>
-          ) : null}
-          {hasPermission(ctx, "brands.manage") ? (
-            <Link href={`${base}/marcas`} className={`${linkButton} border border-control`}>
-              Marcas
-            </Link>
-          ) : null}
-          {hasPermission(ctx, "categories.manage") ? (
-            <Link href={`${base}/atributos`} className={`${linkButton} border border-control`}>
-              Atributos
-            </Link>
-          ) : null}
-          <Link href={`${base}/revision`} className={`${linkButton} border border-control`}>
-            Revisión
-          </Link>
-          <Link href={`${base}/opiniones`} className={`${linkButton} border border-control`}>
-            Opiniones
-          </Link>
-          <Link href={`${base}/ofertas`} className={`${linkButton} border border-control`}>
-            Ofertas
-          </Link>
-          {hasPermission(ctx, "products.cost.read") ? (
-            <Link href={`${base}/proveedores`} className={`${linkButton} border border-control`}>
-              Proveedores
-            </Link>
-          ) : null}
-          {hasPermission(ctx, "imports.run") ? (
-            <Link href={`${base}/importar`} className={`${linkButton} border border-control`}>
-              Importar
-            </Link>
-          ) : null}
+        <nav aria-label="Catálogo" className="flex flex-wrap items-start gap-2">
           {canCreate ? (
             <Link
               href={`${base}/nuevo`}
@@ -196,6 +175,31 @@ export default async function ProductsPage({ params, searchParams }: Props) {
               Agregar producto
             </Link>
           ) : null}
+          {hasPermission(ctx, "imports.run") ? (
+            <Link href={`${base}/importar`} className={`${linkButton} border border-control`}>
+              Importar
+            </Link>
+          ) : null}
+          {/* Lo de todos los días a la vista; el resto, en «Más» (misión panel, F4 E9). */}
+          <details className="relative">
+            <summary
+              className={`${linkButton} cursor-pointer list-none border border-control [&::-webkit-details-marker]:hidden`}
+            >
+              Más del catálogo
+            </summary>
+            <ul className="mt-1 w-56 rounded-md border border-border bg-surface p-1 shadow-lg sm:absolute sm:right-0 sm:z-20">
+              {moreLinks.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="flex min-h-11 items-center rounded px-3 text-sm hover:bg-canvas"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
         </nav>
       </header>
 
