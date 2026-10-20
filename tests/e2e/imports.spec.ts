@@ -41,8 +41,12 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   });
   await page.getByRole("button", { name: "Validar archivo" }).click();
   await expect(page.getByRole("heading", { name: "malo.csv" })).toBeVisible();
-  await expect(page.getByText("price: escribe un importe como 199.50")).toBeVisible();
-  await expect(page.getByText("categories: no existe la categoría No existe")).toBeVisible();
+  await expect(
+    page.getByText("Precio (columna price): escribe un importe como 199.50"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Categorías (columna categories): no existe la categoría No existe"),
+  ).toBeVisible();
   await expect(page.getByRole("cell", { name: "3", exact: true })).toBeVisible();
   await expect(
     page.getByText("Se ignoraron columnas que no son de la plantilla: store_id."),
@@ -75,13 +79,13 @@ test("importar productos: errores por fila, confirmación y producto en el catá
     ),
     line({ 0: "taza-roja", 7: "Tamaño", 8: "Grande", 15: "199,00" }, ";"),
   ].join("\r\n");
-  await page.goto(`/admin/${tenant.handle}/productos/importar`);
-  await page.getByLabel(/Archivo CSV/).setInputFiles({
+  // «Corregir y reintentar» desde la misma vista previa, con el mismo modo.
+  await page.getByLabel("Corrige el archivo y súbelo aquí de nuevo").setInputFiles({
     name: "bueno.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(good),
   });
-  await page.getByRole("button", { name: "Validar archivo" }).click();
+  await page.getByRole("button", { name: "Validar el archivo corregido" }).click();
   await expect(page.getByRole("heading", { name: "bueno.csv" })).toBeVisible();
   await page.getByRole("button", { name: "Confirmar importación" }).click();
   // La confirmación la aplica el worker (job import.commit); la página se actualiza sola.

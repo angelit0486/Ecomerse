@@ -133,7 +133,9 @@ test("todas las pantallas del panel cargan sin errores; estado del sistema y avi
   await expect(page.getByRole("button", { name: "Confirmar importación" })).toBeVisible();
 
   await page.goto(`${imports}/${jobs.withErrors!}`);
-  await expect(page.getByText("Por columna: handle (1 fila), price (1 fila).")).toBeVisible();
+  await expect(
+    page.getByText("Por columna: Nombre corto (1 fila), Precio (1 fila)."),
+  ).toBeVisible();
   await expect(page.getByText(/Algunos productos ya están en tu catálogo/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirmar importación" })).toHaveCount(0);
 

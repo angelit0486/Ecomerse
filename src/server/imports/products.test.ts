@@ -107,6 +107,30 @@ describe("planProductImport", () => {
     });
   });
 
+  it("acepta los valores en español además de los de la plantilla", () => {
+    const plan = planProductImport(H, [
+      row({
+        handle: "taza",
+        title: "Taza",
+        price: "10",
+        status: "Borrador",
+        inventory_policy: "Seguir vendiendo",
+      }),
+      row({
+        handle: "vaso",
+        title: "Vaso",
+        price: "10",
+        status: "activo",
+        requires_shipping: "No",
+      }),
+    ]);
+    expect(plan[0]!.errors).toEqual([]);
+    expect(plan[0]!.normalized).toMatchObject({ status: "draft" });
+    expect(plan[0]!.normalized!.variants[0]).toMatchObject({ inventory_policy: "continue" });
+    expect(plan[1]!.normalized).toMatchObject({ status: "active" });
+    expect(plan[1]!.normalized!.variants[0]).toMatchObject({ requires_shipping: false });
+  });
+
   it("asigna cada error a su fila (numerada como en la hoja: la 1 es el encabezado)", () => {
     const plan = planProductImport(H, [
       row({ handle: "taza", title: "Taza", price: "abc", sku: "T-1" }),
@@ -117,7 +141,7 @@ describe("planProductImport", () => {
     expect(plan[0]!.errors).toContain("price: escribe un importe como 199.50");
     expect(plan[1]!.errors).toEqual([
       "sku: repetido (también en la fila 2)",
-      "inventory_policy: usa deny, continue",
+      "inventory_policy: usa detener, continuar",
     ]);
     expect(plan[2]!.errors).toEqual(["handle: es obligatorio"]);
     expect(plan[3]!.errors).toEqual([
@@ -260,7 +284,7 @@ describe("ficha sanitaria y atributos (R-T05)", () => {
       row({ handle: "a", regulatory_ingredients: "Algo", attributes: "Objetivo:Energía" }, RH),
     ]);
     expect(a!.errors).toEqual([
-      "regulatory_category: indica dietary_supplement o none para guardar la ficha",
+      "regulatory_category: indica suplemento o ninguno para guardar la ficha",
       "attributes: «Objetivo:Energía»: usa clave:valor|valor con las claves del atributo.",
     ]);
     const [b] = planProductImport(RH, [

@@ -12,7 +12,7 @@ import { commitImport } from "../actions";
 import { AutoRefresh } from "../auto-refresh";
 import { CommitButton } from "../commit-button";
 import { publishIssueMessage } from "../../messages";
-import { importErrorText, JOB_STATUS, MODE } from "../labels";
+import { COLUMN_LABELS, friendlyRowError, importErrorText, JOB_STATUS, MODE } from "../labels";
 
 export const metadata: Metadata = { title: "Vista previa de la importación" };
 
@@ -229,6 +229,38 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         </form>
       ) : null}
 
+      {(errors > 0 && job.status === "validated") || job.status === "failed" ? (
+        <form
+          method="post"
+          action={`${base}/subir`}
+          encType="multipart/form-data"
+          className="space-y-2 rounded-md border border-border p-4"
+        >
+          <input type="hidden" name="mode" value={job.mode} />
+          <label htmlFor="archivo-corregido" className="block text-sm font-medium">
+            Corrige el archivo y súbelo aquí de nuevo
+          </label>
+          <p className="text-[13px] text-fg-muted">
+            Se valida otra vez con el mismo modo ({MODE[job.mode] ?? job.mode}). No se cambia nada
+            hasta que confirmes.
+          </p>
+          <input
+            id="archivo-corregido"
+            name="file"
+            type="file"
+            accept=".csv,text/csv"
+            required
+            className="block min-h-11 text-sm"
+          />
+          <button
+            type="submit"
+            className="inline-flex h-11 items-center rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"
+          >
+            Validar el archivo corregido
+          </button>
+        </form>
+      ) : null}
+
       {rows && rows.length > 0 ? (
         <section aria-labelledby="errores" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -247,7 +279,10 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             <p className="text-sm">
               Por columna:{" "}
               {byColumn
-                .map(([column, count]) => `${column} (${count} ${count === 1 ? "fila" : "filas"})`)
+                .map(
+                  ([column, count]) =>
+                    `${COLUMN_LABELS[column] ?? column} (${count} ${count === 1 ? "fila" : "filas"})`,
+                )
                 .join(", ")}
               .
             </p>
@@ -276,7 +311,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
                   <td className="py-2">
                     <ul className="space-y-0.5">
                       {(r.errors as string[]).map((e, i) => (
-                        <li key={i}>{e}</li>
+                        <li key={i}>{friendlyRowError(e)}</li>
                       ))}
                     </ul>
                   </td>

@@ -198,8 +198,48 @@ function bool(v: string, field: string, errors: string[]): boolean | undefined {
   const t = v.toLowerCase();
   if (["true", "sí", "si", "1", "yes"].includes(t)) return true;
   if (["false", "no", "0"].includes(t)) return false;
-  errors.push(`${field}: usa true o false`);
+  errors.push(`${field}: usa sí o no`);
   return undefined;
+}
+
+/**
+ * Valores en español que acepta el archivo además de los de la plantilla
+ * (misión panel, F1): quien llena el CSV en Excel no tiene que saber inglés.
+ */
+const SPANISH_VALUES: Record<string, string> = {
+  borrador: "draft",
+  activo: "active",
+  activa: "active",
+  publicado: "active",
+  publicada: "active",
+  archivado: "archived",
+  archivada: "archived",
+  inactivo: "inactive",
+  inactiva: "inactive",
+  detener: "deny",
+  "no vender": "deny",
+  continuar: "continue",
+  "seguir vendiendo": "continue",
+  suplemento: "dietary_supplement",
+  "suplemento alimenticio": "dietary_supplement",
+  ninguno: "none",
+  ninguna: "none",
+  "no regulado": "none",
+};
+
+/** Texto en español de cada valor aceptado, para los mensajes de error. */
+const SPANISH_LABEL: Record<string, string> = {
+  draft: "borrador",
+  active: "activo",
+  archived: "archivado",
+  inactive: "inactivo",
+  deny: "detener",
+  continue: "continuar",
+};
+
+function canonical(v: string): string {
+  const t = v.trim().toLowerCase().replace(/\s+/g, " ");
+  return SPANISH_VALUES[t] ?? t;
 }
 
 function oneOf<T extends string>(
@@ -208,9 +248,9 @@ function oneOf<T extends string>(
   field: string,
   errors: string[],
 ): T | undefined {
-  const t = v.toLowerCase();
+  const t = canonical(v);
   if ((allowed as readonly string[]).includes(t)) return t as T;
-  errors.push(`${field}: usa ${allowed.join(", ")}`);
+  errors.push(`${field}: usa ${allowed.map((a) => SPANISH_LABEL[a] ?? a).join(", ")}`);
   return undefined;
 }
 
@@ -464,12 +504,12 @@ function planRegulatory(
   normalized: PlannedProduct,
   errors: string[],
 ) {
-  const category = f("regulatory_category").toLowerCase();
+  const category = canonical(f("regulatory_category"));
   const present = REGULATORY_FIELD_COLUMNS.filter((c) => has(c));
   const filled = present.filter((c) => f(c));
   if (!category) {
     if (filled.length > 0) {
-      errors.push("regulatory_category: indica dietary_supplement o none para guardar la ficha");
+      errors.push("regulatory_category: indica suplemento o ninguno para guardar la ficha");
     }
     return;
   }
@@ -481,7 +521,7 @@ function planRegulatory(
     return;
   }
   if (!(REGULATED_CATEGORIES as readonly string[]).includes(category)) {
-    errors.push("regulatory_category: usa dietary_supplement o none");
+    errors.push("regulatory_category: usa suplemento o ninguno");
     return;
   }
   const data: Record<string, unknown> = {};

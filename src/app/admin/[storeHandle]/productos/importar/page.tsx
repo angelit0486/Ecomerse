@@ -99,58 +99,109 @@ export default async function ImportPage({ params, searchParams }: Props) {
         ) : null}
       </header>
 
-      {error ? (
-        <p role="alert" className="rounded-md border border-danger p-3 text-sm">
-          {error}
-          {detail ? ` (${detail})` : ""}.
-        </p>
-      ) : null}
-
-      <form
-        method="post"
-        action={`${base}/subir`}
-        encType="multipart/form-data"
-        className="space-y-4 rounded-md border border-border p-4"
-      >
-        <div className="space-y-1">
-          <label htmlFor="file" className="text-sm font-medium">
-            Archivo CSV (UTF-8, hasta 4 MB y 5 000 filas)
-          </label>
-          <input
-            id="file"
-            name="file"
-            type="file"
-            accept=".csv,text/csv"
-            required
-            className="block text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="mode" className="text-sm font-medium">
-            Qué hacer
-          </label>
-          <select id="mode" name="mode" defaultValue="upsert" className={`${nativeControl} block`}>
-            <option value="upsert">Crear los nuevos y actualizar los existentes</option>
-            <option value="create_only">Solo crear productos nuevos</option>
-            <option value="update_existing">Solo actualizar productos existentes</option>
-          </select>
-          <p className="text-[13px] text-fg-muted">
-            Un producto existente se reconoce por su handle y cada variante por su SKU o por sus
-            opciones. Importar nunca borra productos ni variantes.
+      <ol className="space-y-4">
+        <li className="space-y-2 rounded-md border border-border p-4">
+          <h2 className="font-semibold">1. Descarga la plantilla</h2>
+          <p className="text-sm text-fg-muted">
+            Es una hoja con las columnas que entiende la tienda. Si ya tienes productos, exporta tu
+            catálogo y edítalo: así cambias precios o existencias de muchos a la vez.
           </p>
-        </div>
-        <button
-          type="submit"
-          className={`${linkButton} bg-accent text-accent-fg hover:bg-accent-hover`}
-        >
-          Validar archivo
-        </button>
-      </form>
+          <p className="flex flex-wrap gap-2">
+            <a href={`${base}/plantilla`} className={`${linkButton} h-11 border border-control`}>
+              Descargar plantilla
+            </a>
+            {hasPermission(ctx, "exports.run") ? (
+              <Link
+                href={`/admin/${ctx.store.handle}/ajustes/exportar`}
+                className={`${linkButton} h-11 border border-control`}
+              >
+                Exportar mis productos para editarlos
+              </Link>
+            ) : null}
+          </p>
+        </li>
+        <li className="space-y-2 rounded-md border border-border p-4">
+          <h2 className="font-semibold">2. Llénala en Excel o Google Sheets</h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            <li>
+              Una fila por producto. Si tiene sabores o tallas, una fila por cada uno con el mismo{" "}
+              <strong>nombre corto</strong> (columna <code>handle</code>, por ejemplo{" "}
+              <code>proteina-whey-2lb</code>).
+            </li>
+            <li>
+              Para crear un producto llena al menos <code>handle</code>, <code>title</code> (nombre)
+              y <code>price</code> (precio, como <code>499.50</code>).
+            </li>
+            <li>
+              Puedes escribir en español: <code>activo</code> o <code>borrador</code> en el estado,{" "}
+              <code>sí</code> o <code>no</code>, y <code>suplemento</code> en el tipo regulado.
+            </li>
+            <li>Guárdala como «CSV UTF-8 (delimitado por comas)».</li>
+          </ul>
+        </li>
+        <li className="space-y-3 rounded-md border border-border p-4">
+          <h2 className="font-semibold">3. Súbela y revisa la vista previa</h2>
+          {error ? (
+            <p role="alert" className="rounded-md border border-danger p-3 text-sm">
+              {error}
+              {detail ? ` (${detail})` : ""}.
+            </p>
+          ) : null}
+          <form
+            method="post"
+            action={`${base}/subir`}
+            encType="multipart/form-data"
+            className="space-y-4"
+          >
+            <div className="space-y-1">
+              <label htmlFor="file" className="text-sm font-medium">
+                Archivo CSV (UTF-8, hasta 4 MB y 5 000 filas)
+              </label>
+              <input
+                id="file"
+                name="file"
+                type="file"
+                accept=".csv,text/csv"
+                required
+                className="block min-h-11 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="mode" className="text-sm font-medium">
+                Qué hacer
+              </label>
+              <select
+                id="mode"
+                name="mode"
+                defaultValue="upsert"
+                className={`${nativeControl} block h-11 w-full sm:w-auto`}
+              >
+                <option value="upsert">Crear los nuevos y actualizar los existentes</option>
+                <option value="create_only">Solo crear productos nuevos</option>
+                <option value="update_existing">Solo actualizar productos existentes</option>
+              </select>
+              <p className="text-[13px] text-fg-muted">
+                Un producto existente se reconoce por su nombre corto y cada presentación por su SKU
+                o sus opciones. Importar nunca borra productos.
+              </p>
+            </div>
+            <button
+              type="submit"
+              className={`${linkButton} h-11 bg-accent text-accent-fg hover:bg-accent-hover`}
+            >
+              Validar archivo
+            </button>
+            <p className="text-[13px] text-fg-muted">
+              Verás los errores por fila antes de que cambie nada en tu catálogo.
+            </p>
+          </form>
+        </li>
+      </ol>
 
-      <section aria-labelledby="ayuda" className="space-y-2 text-sm">
-        <h2 id="ayuda" className="font-semibold">
-          Cómo armar el archivo
-        </h2>
+      <details id="ayuda" className="rounded-md border border-border p-4 text-sm">
+        <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+          Qué va en cada columna (detalle)
+        </summary>
         <ul className="list-disc space-y-1 pl-5 text-fg-muted">
           <li>
             Solo <code>handle</code> es obligatorio. Las filas con el mismo handle son variantes del
@@ -203,20 +254,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
             Las columnas que no son de la plantilla se ignoran y se avisan en la vista previa.
           </li>
         </ul>
-        <p className="flex flex-wrap gap-2">
-          <a href={`${base}/plantilla`} className={`${linkButton} border border-control`}>
-            Descargar plantilla
-          </a>
-          {hasPermission(ctx, "exports.run") ? (
-            <Link
-              href={`/admin/${ctx.store.handle}/ajustes/exportar`}
-              className={`${linkButton} border border-control`}
-            >
-              Exportar mis productos para editarlos
-            </Link>
-          ) : null}
-        </p>
-      </section>
+      </details>
 
       {jobs && jobs.length > 0 ? (
         <section aria-labelledby="recientes" className="space-y-2">
