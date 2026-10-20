@@ -273,7 +273,7 @@ begin
       select coalesce(max(m.position) + 1, 0) into v_pos
         from public.media m where m.product_id = v_row.entity_id;
       v_id := app.uuid_v7();
-      -- Tipo provisional: el worker fija el real (y la extensión) al descargar.
+      -- Tipo provisional: el worker fija el real al descargar (la ruta no cambia).
       insert into public.media (id, store_id, owner_type, product_id, status, storage_path, mime_type,
                                 position, created_by, source_url)
       values (v_id, v_job.store_id, 'product', v_row.entity_id, 'pending',
