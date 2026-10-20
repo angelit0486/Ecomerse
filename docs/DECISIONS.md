@@ -693,3 +693,55 @@ Pedido del propietario: «que una dueña sin conocimientos técnicos monte y ope
   - **44 px también en los controles escritos a mano:** 17 selectores, campos y botones con `h-9`, y las pestañas `<summary>`.
   - **Casillas:** 24 px en el celular (`[data-panel]`); es el mínimo de WCAG 2.5.8.
   - **Regiones de búsqueda** con nombre propio.
+
+## 24. Catálogos grandes con fotos (2026-10-20)
+
+- **D-CAT-01 — Archivos de Shopify y Tiendanube se importan tal cual.**
+  - **Cómo funciona:** al subir el CSV, `src/lib/imports/platforms.ts` reconoce el formato por sus encabezados y lo traduce, fila por fila, a las columnas de PRUVA. Después pasa por el mismo `planProductImport` y la misma validación en la base. El formato propio no cambia.
+  - **Se traduce:** nombre, descripción, marca, etiquetas, hasta 3 opciones, SKU, código de barras, precio, precio anterior, costo, existencias, política sin existencias, envío, peso, medidas, estado y SEO.
+    - **Shopify:** las filas que solo traen una foto extra se descartan. «Default Title» es un producto sin opciones. Existencias negativas pasan a 0. Sin «Status», «Published» decide el estado.
+    - **Tiendanube:** si «Precio promocional» es menor, es el precio de venta y «Precio» queda como precio anterior. kg pasa a g y cm a mm. «Mostrar en tienda» decide el estado. «Stock» vacío no toca las existencias.
+  - **No se traducen:** las categorías (en PRUVA deben existir antes, así que cada fila daría error; se asignan en bloque). Tampoco las URLs de fotos (T-08); se cuentan y se avisan.
+  - **Codificación:** si el archivo no es UTF-8 se lee como Windows-1252, que es como guarda Excel en México.
+  - **Sin migración ni dependencias nuevas.** Si hay más de 50 columnas ignoradas, se guardan las primeras 50, que es el tope de la base.
+- **D-CAT-02 — Una carpeta por producto.** En Productos → Importar → Imágenes se puede elegir o arrastrar una carpeta completa.
+  - Si el nombre de la foto no dice a qué producto va, decide la carpeta que la contiene: SKU, nombre corto o nombre del producto, sin distinguir mayúsculas ni acentos.
+  - El orden es el natural de los nombres de archivo (2 antes que 10). El nombre del archivo manda sobre la carpeta.
+  - Por carpeta nunca se asigna la foto de un sabor; eso sigue requiriendo el SKU exacto (D-PANEL-05).
+  - El nombre del producto también vale en el nombre del archivo. Dos productos con el mismo nombre no se adivinan.
+  - Hasta 2 000 fotos por tanda (antes 500); la tabla muestra las primeras 300. La subida conserva sus límites (4 a la vez, espera si hay muchas en proceso: D-LOTE-03).
+- **D-CAT-03 — Del CSV a las fotos.**
+  - Al terminar una importación, el panel ofrece «Subir las fotos de todos los productos».
+  - Si el archivo vino de otra plataforma, la vista previa dice qué se tradujo y cuántos productos traían fotos como enlace.
+
+### ADR-033 — Traer las fotos desde los enlaces del archivo · **propuesto, pendiente de aprobación**
+
+**Contexto.**
+
+- Las tiendas que vienen de Shopify (y de otras plataformas) tienen sus fotos publicadas en internet, y su CSV trae el enlace de cada una («Image Src», «Variant Image»).
+- Hoy hay que descargarlas a la computadora y subirlas por carpeta.
+- GATE0 (amenaza T-08, SSRF) prohíbe en el MVP que el servidor descargue URLs de imágenes al importar. Lo deja para después con estos controles: DNS validado, bloqueo de rangos privados y de metadatos, solo `https`, límite de tiempo y de tamaño.
+
+**Propuesta.**
+
+1. **Tarea nueva en la cola** (`media.fetch_remote`), creada al confirmar una importación con columnas de imagen. Cada foto se reserva como un `media` pendiente del producto, igual que una subida.
+2. **El worker descarga** con estos controles:
+   - solo `https` y solo el puerto 443;
+   - resuelve el DNS y rechaza IPs privadas, de loopback, link-local, de metadatos (169.254.169.254) y de la red de la plataforma;
+   - conecta a la IP ya validada, para que el DNS no pueda cambiarse entre la validación y la conexión;
+   - sin redirecciones a otros hosts y como mucho 3 saltos;
+   - 10 s de tiempo y 15 MB como máximo;
+   - el tipo se valida por el contenido, no por la cabecera.
+3. **Después, el mismo camino de siempre:** el original va al bucket privado `store-uploads` y el worker actual lo recodifica, valida y publica. Ningún byte remoto queda servible sin pasar por ese worker.
+4. **Límites.** Hasta 10 fotos por producto y 5 000 por importación, contra la cuota `storage_mb`. Los errores se muestran por fila («la foto 2 no se pudo descargar: no es una imagen»).
+
+**Requiere:**
+
+- una migración (tipo de job, columna de URL de origen en las filas de importación y RPC de reserva);
+- pgTAP;
+- pruebas de denegación de IPs privadas y de redirecciones (T-08);
+- E2E con un servidor de imágenes local.
+
+Cambia un contrato crítico (§25, T-08), por eso necesita tu aprobación antes de escribir código.
+
+**Alternativa sin ADR (lo implementado hoy):** descargar las fotos una vez a la computadora y subirlas por carpeta (D-CAT-02).

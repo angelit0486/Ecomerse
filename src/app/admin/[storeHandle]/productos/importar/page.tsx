@@ -94,10 +94,24 @@ export default async function ImportPage({ params, searchParams }: Props) {
             <Link href={`${base}/imagenes`} className="underline">
               Sube sus fotos en lote
             </Link>{" "}
-            (se asignan por SKU o nombre del archivo).
+            (se asignan por SKU, nombre o carpeta).
           </p>
         ) : null}
       </header>
+
+      <section
+        aria-labelledby="otra-plataforma"
+        className="space-y-1 rounded-md border border-accent p-4 text-sm"
+      >
+        <h2 id="otra-plataforma" className="font-semibold">
+          ¿Ya vendes en Shopify o Tiendanube?
+        </h2>
+        <p>
+          No llenes la plantilla: exporta tus productos desde allá y sube ese mismo archivo en el
+          paso 3. Lo pasamos al formato de PRUVA (presentaciones, precios, existencias, marca, peso
+          y SEO). Después sube todas las fotos de una vez, con una carpeta por producto.
+        </p>
+      </section>
 
       <ol className="space-y-4">
         <li className="space-y-2 rounded-md border border-border p-4">
@@ -155,7 +169,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
           >
             <div className="space-y-1">
               <label htmlFor="file" className="text-sm font-medium">
-                Archivo CSV (UTF-8, hasta 4 MB y 5 000 filas)
+                Archivo CSV de PRUVA, Shopify o Tiendanube (hasta 4 MB y 5 000 filas)
               </label>
               <input
                 id="file"

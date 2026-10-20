@@ -36,8 +36,9 @@ export default async function BulkImagesPage({ params }: Props) {
         </p>
         <h1 className="text-xl font-semibold">Subir imágenes en lote</h1>
         <p className="text-sm text-fg-muted">
-          Elige todas las fotos a la vez. Cada una va al producto cuyo SKU o nombre corto coincide
-          con el nombre del archivo. Verás la asignación antes de subir nada.
+          Elige todas las fotos o la carpeta completa de tu catálogo. Cada foto va al producto cuyo
+          SKU o nombre coincide con el del archivo o el de su carpeta. Verás la asignación antes de
+          subir nada.
         </p>
       </header>
 
@@ -54,8 +55,15 @@ export default async function BulkImagesPage({ params }: Props) {
         className="space-y-2 rounded-md border border-border p-4 text-sm"
       >
         <h2 id="como-nombrar" className="font-semibold">
-          Cómo nombrar las fotos
+          Cómo ordenar las fotos
         </h2>
+        <p>
+          <strong>Lo más rápido para muchos productos:</strong> una carpeta por producto, con el SKU
+          o el nombre del producto (<code>PRV-001/</code> o <code>Proteína aislada/</code>). Las
+          fotos de adentro pueden llamarse como sea; se suben en el orden de sus nombres (la primera
+          es la principal). Luego elige la carpeta que las contiene todas.
+        </p>
+        <p>O nombra cada foto:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
             Por SKU: <code>PRV-001.jpg</code> es la foto principal del producto con ese SKU.
@@ -68,7 +76,8 @@ export default async function BulkImagesPage({ params }: Props) {
             <code>PRV-001-CHO.jpg</code>). Va al producto y queda como la foto de ese sabor.
           </li>
           <li>
-            O por nombre corto (el handle del CSV): <code>proteina-aislada.jpg</code>.
+            O por nombre del producto o nombre corto (el handle del CSV):{" "}
+            <code>Proteína aislada.jpg</code> o <code>proteina-aislada.jpg</code>.
           </li>
           <li>Las fotos se agregan a las que ya tiene el producto; no se borra ninguna.</li>
         </ul>

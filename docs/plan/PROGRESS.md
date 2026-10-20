@@ -22,6 +22,13 @@
     - **F4-T3 (hecha): 44 px en todo el panel y JS de Apariencia.** Los controles escritos a mano también miden 44 px en el celular; casillas de 24 px; Zod fuera del navegador (Apariencia 278 → 186 KB). Recorrido de 132 pantallas a 375 px contra `a715b48`: desborde en 4 → 0 pantallas, axe crítico 1 → 0, moderado 2 → 0, objetivos < 44 px 5169 → 943.
   - **Pendiente del propietario:** aprobar E15 (alta de tienda por cuenta propia, requiere ADR) y E16 (dominio propio, requiere ADR y credenciales de Vercel). El resto de la lista de la auditoría no toca datos ni contratos.
 
+- **Catálogos grandes con fotos (2026-10-20, `DECISIONS.md` §24):**
+  - **Importación desde otras plataformas:** el CSV exportado de Shopify o Tiendanube se sube tal cual; si no es UTF-8 se lee como Latin-1 (D-CAT-01).
+  - **Fotos por carpeta:** una carpeta por producto, nombrada con su SKU o nombre, y sin renombrar las fotos; hasta 2 000 por tanda (D-CAT-02).
+  - **Del CSV a las fotos:** al terminar una importación, el panel lleva a subir las fotos (D-CAT-03).
+  - **Pruebas:** unitarias `platforms` (12) y `bulk-match` (16); E2E `bulk-images` (carpeta real) e `imports` (Shopify en Latin-1).
+  - **Pendiente del propietario:** aprobar el ADR-033 para traer las fotos desde los enlaces del archivo.
+
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:
   - **Fase 1 (`2940220`):** E2E 56/56 en dos corridas, verify y db:test en verde. Directorio de marcas.
   - **Fase 5, Mercado Pago (ADR-028; `964c1ba` y `fda2ecd`):** Checkout Pro, webhook firmado, reconciliación y reembolsos. La revisión adversarial encontró dos fallos y están corregidos: el `x-request-id` que sobrescribía el proxy y el bloqueo ante cobros simultáneos. **No verificado con Mercado Pago real:** faltan credenciales de prueba (runbook `docs/runbooks/mercadopago.md`).

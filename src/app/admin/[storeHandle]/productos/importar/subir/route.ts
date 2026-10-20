@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { CsvParseError, parseCsv } from "@/lib/csv-parse";
+import { translatePlatformCsv } from "@/lib/imports/platforms";
 import { reportActionError } from "@/server/actions/report";
 import { hasPermission } from "@/server/auth/context";
 import { callRpc } from "@/server/db/rpc";
@@ -65,11 +66,15 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (!(file instanceof File) || file.size === 0) return back("archivo");
   if (file.size > MAX_IMPORT_BYTES) return back("grande");
 
+  const bytes = await file.arrayBuffer();
   let text: string;
   try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    return back("codificacion");
+    // Excel en México guarda «CSV» en Windows-1252 (Latin-1): ñ y acentos se
+    // leen bien con esa tabla. Un archivo binario sigue sin pasar el lector CSV.
+    text = new TextDecoder("windows-1252").decode(bytes);
+    if (text.includes("\u0000")) return back("codificacion");
   }
   let parsed: ReturnType<typeof parseCsv>;
   try {
@@ -78,12 +83,15 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (error instanceof CsvParseError) return back("formato", `${error.line}:${error.code}`);
     throw error;
   }
-  const headers = checkHeaders(parsed.headers);
+  // Archivos exportados de Shopify o Tiendanube se traducen a las columnas de
+  // PRUVA antes de validar; el formato propio pasa igual.
+  const source = translatePlatformCsv(parsed.headers, parsed.rows, parsed.rowNumbers);
+  const headers = checkHeaders(source.headers);
   if (!headers.ok) {
     return back("columnas", [...headers.missing, ...headers.duplicated].join(","));
   }
-  if (parsed.rows.length === 0) return back("vacio");
-  if (parsed.rows.length > MAX_IMPORT_ROWS) return back("filas");
+  if (source.rows.length === 0) return back("vacio");
+  if (source.rows.length > MAX_IMPORT_ROWS) return back("filas");
 
   let jobId: string;
   try {
@@ -93,8 +101,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       p_mode: mode,
       p_file_name: file.name.slice(0, 200) || "archivo.csv",
       p_columns: headers.columns,
-      p_ignored: headers.ignored,
-      p_rows: planProductImport(parsed.headers, parsed.rows, parsed.rowNumbers),
+      // La base guarda hasta 50 columnas ignoradas, solo para informar.
+      p_ignored: [...new Set([...source.ignored, ...headers.ignored])]
+        .slice(0, 50)
+        .map((h) => h.slice(0, 100)),
+      p_rows: planProductImport(source.headers, source.rows, source.rowNumbers),
     });
   } catch (error) {
     const e = reportActionError("imports", error);
@@ -103,5 +114,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (e.fields?.columns) return back("columnas");
     return back("permiso");
   }
-  return NextResponse.redirect(new URL(`${base}/${jobId}`, serverEnv().APP_URL), 303);
+  const done = new URL(`${base}/${jobId}`, serverEnv().APP_URL);
+  if (source.platform !== "pruva") {
+    done.searchParams.set("origen", source.platform);
+    if (source.productsWithImageUrl > 0) {
+      done.searchParams.set("con_foto", String(source.productsWithImageUrl));
+    }
+  }
+  return NextResponse.redirect(done, 303);
 }

@@ -102,3 +102,63 @@ describe("uploadOrder", () => {
     expect(order).toEqual(["PRV-001.jpg", "PRV-001-2.jpg", "PRV-001-3.jpg", "creatina.jpg"]);
   });
 });
+
+describe("matchFiles · carpeta por producto y nombre del producto", () => {
+  it("una foto sin nombre útil va al producto de su carpeta, en orden natural", () => {
+    const m = matchFiles(
+      [
+        "Tienda/PRV-001/IMG_10.jpg",
+        "Tienda/PRV-001/IMG_2.jpg",
+        "Tienda/Proteína aislada/lado.jpg",
+        "Tienda/Creatina/frente.jpg",
+      ],
+      targets,
+    );
+    expect(m.map((x) => [x.productId, x.matchedVia, x.order])).toEqual([
+      ["p1", "carpeta", 2],
+      ["p1", "carpeta", 1],
+      ["p1", "carpeta", 1],
+      ["p2", "carpeta", 1],
+    ]);
+  });
+
+  it("el nombre del archivo manda sobre la carpeta", () => {
+    expect(matchFiles(["Creatina/PRV-002.jpg"], targets)[0]).toMatchObject({
+      productId: "p1",
+      matchedVia: "archivo",
+      variantId: "v2",
+    });
+  });
+
+  it("por carpeta nunca es la foto de un sabor", () => {
+    expect(matchFiles(["PRV-002/frente.jpg"], targets)[0]).toMatchObject({
+      productId: "p1",
+      variantId: null,
+    });
+  });
+
+  it("empareja por el nombre del producto sin distinguir acentos", () => {
+    expect(matchFiles(["Proteína Aislada.jpg", "omega 3.png"], targets)).toMatchObject([
+      { productId: "p1", matchedBy: "nombre" },
+      { productId: "p3", matchedBy: "nombre" },
+    ]);
+  });
+
+  it("dos productos con el mismo nombre no se adivinan", () => {
+    const twins: MatchTarget[] = [
+      { id: "a", title: "Multivitamínico", slug: "multi-a", skus: [] },
+      { id: "b", title: "Multivitaminico", slug: "multi-b", skus: [] },
+    ];
+    expect(matchFiles(["Multivitaminico/1.jpg"], twins)[0]).toMatchObject({
+      productId: null,
+      ambiguous: true,
+    });
+  });
+
+  it("una carpeta que no es de ningún producto no asigna nada", () => {
+    expect(matchFiles(["Varios/IMG_1.jpg"], targets)[0]).toMatchObject({
+      productId: null,
+      matchedVia: null,
+    });
+  });
+});

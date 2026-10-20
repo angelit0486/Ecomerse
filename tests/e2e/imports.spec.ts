@@ -2,7 +2,15 @@ import { expect, test } from "@playwright/test";
 
 import { readFile } from "node:fs/promises";
 
-import { admin, createAuthUser, createTenant, loginNewStaff, runJobs, uniq } from "./support";
+import {
+  admin,
+  createAuthUser,
+  createTenant,
+  expectNoSeriousA11yViolations,
+  loginNewStaff,
+  runJobs,
+  uniq,
+} from "./support";
 
 /** F8-T04b: importación CSV → vista previa con errores por fila → confirmación todo o nada. */
 const run = uniq();
@@ -112,4 +120,75 @@ test("importar productos: errores por fila, confirmación y producto en el catá
     multipart: { mode: "upsert" },
   });
   expect(forged.status()).toBe(403);
+});
+
+test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia e importa", async ({
+  page,
+}) => {
+  // Tienda y usuaria propias: un segundo inicio de sesión pediría el código 2FA.
+  const email = `importar-shopify-${run}@example.test`;
+  const shop = await createTenant(`is${run}`, await createAuthUser(email));
+  const handle = `whey-${run}`;
+  const shopify = [
+    "Handle,Title,Body (HTML),Vendor,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Qty,Variant Inventory Policy,Variant Price,Variant Compare At Price,Variant Requires Shipping,Image Src,Image Position,Status",
+    `${handle},Proteína Whey,<p>Suero de leche</p>,Atlas,Proteínas,"proteína, whey",TRUE,Sabor,Vainilla,SH-V-${run},907,5,deny,899.00,999.00,TRUE,https://cdn.shopify.com/a.jpg,1,active`,
+    `${handle},,,,,,,,Chocolate,SH-C-${run},907,-1,deny,899.00,,TRUE,,,`,
+    `${handle},,,,,,,,,,,,,,,,https://cdn.shopify.com/b.jpg,2,`,
+  ].join("\n");
+
+  await loginNewStaff(page, email);
+  await page.goto(`/admin/${shop.handle}/productos/importar`);
+  await expect(
+    page.getByRole("heading", { name: "¿Ya vendes en Shopify o Tiendanube?" }),
+  ).toBeVisible();
+  await page.getByLabel(/Archivo CSV/).setInputFiles({
+    name: "products_export.csv",
+    mimeType: "text/csv",
+    // Excel guarda en Windows-1252: «í» es un solo byte.
+    buffer: Buffer.from(shopify, "latin1"),
+  });
+  await page.getByRole("button", { name: "Validar archivo" }).click();
+  await expect(page.getByRole("heading", { name: "products_export.csv" })).toBeVisible();
+  await expect(page.getByText(/Leímos tu archivo de Shopify/)).toBeVisible();
+  await expect(page.getByText(/1 producto trae su foto como enlace/)).toBeVisible();
+  await expect(
+    page.getByText(/Se ignoraron columnas que no son de la plantilla: type, image position/i),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+
+  await page.getByRole("button", { name: "Confirmar importación" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Importando…" })).toBeVisible();
+  await expect(async () => {
+    await runJobs();
+    await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
+  await expect(
+    page.getByRole("link", { name: "Subir las fotos de todos los productos" }),
+  ).toBeVisible();
+
+  const variants = await admin<
+    { title: string; sku: string; price: string; compare: string | null; on_hand: number }[]
+  >`
+    select p.title, v.sku, v.price::text, v.compare_at_price::text as compare, l.on_hand
+      from public.products p
+      join public.product_variants v on v.product_id = p.id
+      join public.inventory_levels l on l.variant_id = v.id
+     where p.store_id = ${shop.storeId} and p.slug = ${handle}
+     order by v.sku desc`;
+  expect(variants).toEqual([
+    {
+      title: "Proteína Whey",
+      sku: `SH-V-${run}`.toUpperCase(),
+      price: "89900",
+      compare: "99900",
+      on_hand: 5,
+    },
+    {
+      title: "Proteína Whey",
+      sku: `SH-C-${run}`.toUpperCase(),
+      price: "89900",
+      compare: null,
+      on_hand: 0,
+    },
+  ]);
 });

@@ -20,8 +20,13 @@ export interface BulkTarget {
   imageCount: number;
 }
 
-/** Más fotos por tanda harían eterna la vista previa en un celular. */
-const MAX_FILES = 500;
+/**
+ * Un catálogo completo cabe en una tanda; la subida va de 4 en 4 y espera si la
+ * tienda tiene muchas fotos en proceso (D-LOTE-03).
+ */
+const MAX_FILES = 2000;
+/** Filas de la tabla de asignación: más harían lenta la pantalla en un celular. */
+const SHOWN_ROWS = 300;
 /** La foto de cada sabor se asigna cuando termina de optimizarse (segundos). */
 const VARIANT_POLL_MS = 3_000;
 const VARIANT_POLL_TRIES = 60;
@@ -46,7 +51,9 @@ export function BulkImages({
   processingBlocked?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<File[]>([]);
+  const folderRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<PickedFile[]>([]);
+  const [reading, setReading] = useState(false);
   const [tooMany, setTooMany] = useState(false);
   const [states, setStates] = useState<Map<number, RowState>>(new Map());
   const [running, setRunning] = useState(false);
@@ -57,7 +64,7 @@ export function BulkImages({
   const matches = useMemo(
     () =>
       matchFiles(
-        files.map((f) => f.name),
+        files.map((f) => f.path),
         targets,
       ),
     [files, targets],
@@ -80,9 +87,9 @@ export function BulkImages({
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy]);
 
-  function choose(list: FileList | null) {
-    const images = Array.from(list ?? []).filter((f) =>
-      (ALLOWED_IMAGE_MIME as readonly string[]).includes(f.type),
+  function choose(picked: PickedFile[]) {
+    const images = picked.filter((f) =>
+      (ALLOWED_IMAGE_MIME as readonly string[]).includes(f.file.type),
     );
     setTooMany(images.length > MAX_FILES);
     setFiles(images.slice(0, MAX_FILES));
@@ -103,7 +110,7 @@ export function BulkImages({
     });
     const outcomes = await uploadProductImages(
       storeHandle,
-      batch.map((m) => ({ productId: m.productId!, file: files[m.index]! })),
+      batch.map((m) => ({ productId: m.productId!, file: files[m.index]!.file })),
       (position, outcome: UploadOutcome) => {
         const row = batch[position]!.index;
         setStates((prev) =>
@@ -166,7 +173,12 @@ export function BulkImages({
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          if (!running) choose(e.dataTransfer.files);
+          if (running) return;
+          // Carpetas arrastradas: se recorren para conservar la ruta de cada foto.
+          setReading(true);
+          void filesFromDrop(e.dataTransfer)
+            .then(choose)
+            .finally(() => setReading(false));
         }}
         className={`space-y-1 rounded-md border p-4 ${dragging ? "border-2 border-dashed border-accent bg-surface" : "border-border"}`}
       >
@@ -174,8 +186,8 @@ export function BulkImages({
           Fotos (JPG, PNG, WebP o AVIF; hasta {MAX_FILES} por tanda)
         </label>
         <p id="bulk-images-hint" className="text-[13px] text-fg-muted">
-          Elígelas aquí o arrástralas a este recuadro. Las aligeramos en tu dispositivo antes de
-          subirlas, así suben mucho más rápido.
+          Elígelas aquí o arrástralas a este recuadro (también una carpeta completa). Las aligeramos
+          en tu dispositivo antes de subirlas, así suben mucho más rápido.
         </p>
         <input
           ref={inputRef}
@@ -185,13 +197,42 @@ export function BulkImages({
           multiple
           disabled={running}
           aria-describedby="bulk-images-hint"
-          onChange={(e) => choose(e.target.files)}
-          className="block text-sm"
+          onChange={(e) => choose(fromInput(e.target.files))}
+          className="block min-h-11 text-sm"
         />
+        <div className="pt-2">
+          <input
+            ref={folderRef}
+            id="bulk-folder-input"
+            type="file"
+            multiple
+            disabled={running}
+            // Lo abre el botón de abajo; fuera del orden de tabulación para no repetirlo.
+            aria-label="Carpeta de fotos"
+            tabIndex={-1}
+            // Elegir una carpeta completa (con una subcarpeta por producto).
+            {...{ webkitdirectory: "" }}
+            onChange={(e) => choose(fromInput(e.target.files))}
+            className="sr-only"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={running}
+            onClick={() => folderRef.current?.click()}
+          >
+            Elegir una carpeta completa
+          </Button>
+        </div>
+        {reading ? (
+          <p role="status" className="text-sm text-fg-muted">
+            Leyendo la carpeta…
+          </p>
+        ) : null}
         {tooMany ? (
           <p role="alert" className="text-sm text-danger">
             Elegiste más de {MAX_FILES} fotos: tomamos las primeras {MAX_FILES}. Sube el resto en
-            otra tanda.
+            otra tanda (elige solo las carpetas que faltan).
           </p>
         ) : null}
       </div>
@@ -250,7 +291,7 @@ export function BulkImages({
               </TR>
             </THead>
             <TBody>
-              {[...ready, ...unmatched].map((m) => (
+              {[...ready, ...unmatched].slice(0, SHOWN_ROWS).map((m) => (
                 <TR key={m.index}>
                   <TD className="break-all">{m.name}</TD>
                   <TD>{productCell(m)}</TD>
@@ -260,6 +301,11 @@ export function BulkImages({
               ))}
             </TBody>
           </Table>
+          {ready.length + unmatched.length > SHOWN_ROWS ? (
+            <p className="text-[13px] text-fg-muted">
+              Se muestran las primeras {SHOWN_ROWS} fotos; se suben todas las que tienen producto.
+            </p>
+          ) : null}
         </>
       ) : null}
     </div>
@@ -281,13 +327,20 @@ function variantPhotosText(v: VariantPhotos): string {
 }
 
 function productCell(m: FileMatch) {
-  if (m.ambiguous) return <span className="text-danger">SKU repetido en varios productos</span>;
+  if (m.ambiguous) {
+    return (
+      <span className="text-danger">
+        {m.matchedBy === "sku" ? "SKU repetido" : "Nombre repetido"} en varios productos
+      </span>
+    );
+  }
   if (!m.productId) return <span className="text-fg-muted">Sin coincidencia</span>;
   return (
     <>
       {m.productTitle}{" "}
       <span className="text-[13px] text-fg-muted">
-        (por {m.matchedBy === "sku" ? "SKU" : "nombre"}
+        (por {m.matchedVia === "carpeta" ? "carpeta, " : ""}
+        {m.matchedBy === "sku" ? "SKU" : "nombre"}
         {m.variantSku ? `; foto del sabor ${m.variantSku}` : ""})
       </span>
     </>
@@ -306,4 +359,47 @@ function stateCell(m: FileMatch, state: RowState | undefined) {
   if (state === "subiendo") return "Subiendo…";
   if (state === "subida") return <span className="text-success">Subida</span>;
   return <span className="text-danger">{state.error}</span>;
+}
+
+interface PickedFile {
+  file: File;
+  /** Ruta relativa dentro de la carpeta elegida, o solo el nombre. */
+  path: string;
+}
+
+function fromInput(list: FileList | null): PickedFile[] {
+  return Array.from(list ?? []).map((file) => ({
+    file,
+    path: file.webkitRelativePath || file.name,
+  }));
+}
+
+/** Archivos y carpetas arrastrados, con su ruta (recorre las subcarpetas). */
+async function filesFromDrop(data: DataTransfer): Promise<PickedFile[]> {
+  const entries = Array.from(data.items)
+    .map((item) => item.webkitGetAsEntry?.())
+    .filter((e): e is FileSystemEntry => Boolean(e));
+  if (entries.length === 0) return fromInput(data.files);
+  const out: PickedFile[] = [];
+  async function walk(entry: FileSystemEntry, prefix: string): Promise<void> {
+    if (out.length > MAX_FILES) return;
+    if (entry.isFile) {
+      const file = await new Promise<File>((resolve, reject) =>
+        (entry as FileSystemFileEntry).file(resolve, reject),
+      );
+      out.push({ file, path: `${prefix}${file.name}` });
+      return;
+    }
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    // readEntries entrega por bloques (100 en Chrome): se lee hasta vaciar.
+    for (;;) {
+      const batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+        reader.readEntries(resolve, reject),
+      );
+      if (batch.length === 0) break;
+      for (const child of batch) await walk(child, `${prefix}${entry.name}/`);
+    }
+  }
+  for (const entry of entries) await walk(entry, "");
+  return out;
 }

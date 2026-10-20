@@ -58,12 +58,20 @@ function errorsByColumn(rows: { errors: unknown }[]): [string, number][] {
   return [...counts].sort((a, b) => b[1] - a[1]);
 }
 
+const PLATFORM_NAMES: Record<string, string> = { shopify: "Shopify", tiendanube: "Tiendanube" };
+
 /** Vista previa (F8-T04b, Gate F8): totales, avisos, errores por fila y confirmación. */
 export default async function ImportJobPage({ params, searchParams }: Props) {
   const { storeHandle, jobId } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "imports.run") || !z.uuid().safeParse(jobId).success) notFound();
   const sp = await searchParams;
+  // Archivo de otra plataforma traducido al subirlo (ver lib/imports/platforms).
+  const origin =
+    typeof sp.origen === "string" && Object.hasOwn(PLATFORM_NAMES, sp.origen)
+      ? PLATFORM_NAMES[sp.origen]
+      : undefined;
+  const withPhotoUrl = typeof sp.con_foto === "string" ? Number(sp.con_foto) : 0;
   const notice =
     typeof sp.aviso === "string" && Object.hasOwn(NOTICES, sp.aviso)
       ? NOTICES[sp.aviso]
@@ -145,12 +153,37 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
           <AutoRefresh />
         </p>
       ) : null}
+      {origin && job.status === "validated" ? (
+        <div role="status" className="space-y-1 rounded-md border border-border p-3 text-sm">
+          <p>
+            Leímos tu archivo de {origin} y lo pasamos al formato de PRUVA: nombre, descripción,
+            marca, etiquetas, presentaciones, precios, existencias, peso y SEO. Las categorías no se
+            copian: asígnalas después en bloque desde Productos.
+          </p>
+          {Number.isInteger(withPhotoUrl) && withPhotoUrl > 0 ? (
+            <p>
+              {withPhotoUrl === 1
+                ? "1 producto trae su foto como enlace: no la descargamos de internet."
+                : `${withPhotoUrl} productos traen sus fotos como enlaces: no las descargamos de internet.`}{" "}
+              Cuando termine la importación, sube todas las fotos de una vez desde tu computadora.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {done ? (
         <p role="status" className="rounded-md border border-success p-3 text-sm">
           Importación terminada.{" "}
           <Link href={`/admin/${ctx.store.handle}/productos`} className="underline">
             Ver productos
           </Link>
+          {hasPermission(ctx, "products.update") ? (
+            <>
+              {" · "}
+              <Link href={`${base}/imagenes`} className="font-medium underline">
+                Subir las fotos de todos los productos
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
       {job.status === "failed" ? (

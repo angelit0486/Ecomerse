@@ -1,3 +1,7 @@
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
 
@@ -179,4 +183,65 @@ test("fotos en lote por SKU y nombre, y varias a la vez en la ficha, sin esperar
   const rows = await admin<{ count: number }[]>`
     select count(*)::int as count from public.media where product_id = ${ids.creatina!} and status = 'ready'`;
   expect(rows[0]!.count).toBe(6);
+});
+
+test("carpeta por producto: las fotos van al producto de su carpeta, sin renombrarlas", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  // Una carpeta de catálogo como la de una tienda real: subcarpetas por SKU o nombre.
+  const root = join(await mkdtemp(join(tmpdir(), "catalogo-")), "Catalogo");
+  for (const [folder, file, color] of [
+    [`PRV-${run}`, "IMG_2041.jpg", "#123456"],
+    ["Ganador de peso", "frente.jpg", "#654321"],
+    ["Ganador de peso", "lado.jpg", "#345612"],
+    ["Varios", "logo.jpg", "#000000"],
+  ] as const) {
+    await mkdir(join(root, folder), { recursive: true });
+    await writeFile(join(root, folder, file), await photo(color, 800));
+  }
+  const before = await admin<{ product_id: string; n: number }[]>`
+    select product_id, count(*)::int as n from public.media
+     where store_id = ${tenant.storeId} and deleted_at is null group by product_id`;
+  const count = (id: string) => before.find((r) => r.product_id === id)?.n ?? 0;
+
+  // Otra persona del equipo (un segundo inicio de sesión de la dueña pediría el código 2FA).
+  const helperEmail = `lote-carpeta-${run}@example.test`;
+  const helperId = await createAuthUser(helperEmail);
+  await admin`insert into public.organization_members (organization_id, user_id, role)
+              values (${tenant.orgId}, ${helperId}, 'org_member')`;
+  await admin`insert into public.store_members (store_id, user_id, role_id)
+              select ${tenant.storeId}, ${helperId}, r.id from public.roles r
+               where r.key = 'store_admin' and r.organization_id is null`;
+  await loginNewStaff(page, helperEmail);
+  await page.goto(`/admin/${tenant.handle}/productos/importar/imagenes`);
+  await page.locator("#bulk-folder-input").setInputFiles(root);
+
+  await expect(page.getByText(/3\s+fotos para\s+2\s+productos/)).toBeVisible();
+  await expect(page.getByRole("row", { name: /IMG_2041\.jpg.*por carpeta, SKU/ })).toBeVisible();
+  await expect(
+    page.getByRole("row", { name: /lado\.jpg.*Ganador de peso.*por carpeta/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("row", { name: /logo\.jpg.*Sin coincidencia/ })).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+
+  await page.getByRole("button", { name: "Subir 3 fotos" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "3 fotos subidas" })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect
+    .poll(
+      async () => {
+        const rows = await admin<{ product_id: string; n: number }[]>`
+          select product_id, count(*)::int as n from public.media
+           where store_id = ${tenant.storeId} and deleted_at is null group by product_id`;
+        const now = (id: string) => rows.find((r) => r.product_id === id)?.n ?? 0;
+        return [
+          now(ids["proteina-aislada"]!) - count(ids["proteina-aislada"]!),
+          now(ids.ganador!) - count(ids.ganador!),
+        ];
+      },
+      { timeout: 30_000 },
+    )
+    .toEqual([1, 2]);
 });
