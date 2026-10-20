@@ -9,6 +9,8 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
+import { OrdersTable } from "./orders-table";
+
 export const metadata: Metadata = { title: "Pedidos" };
 
 type Props = {
@@ -133,41 +135,19 @@ export default async function OrdersPage({ params, searchParams }: Props) {
           <EmptyState title="Sin pedidos" description="Los pedidos de tu tienda aparecerán aquí." />
         )
       ) : (
-        <div role="region" aria-label="Pedidos" tabIndex={0} className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <caption className="sr-only">Pedidos de la tienda</caption>
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th scope="col" className="py-2 pr-3 font-medium">
-                  Pedido
-                </th>
-                <th scope="col" className="py-2 pr-3 font-medium">
-                  Fecha
-                </th>
-                <th scope="col" className="py-2 pr-3 font-medium">
-                  Estado
-                </th>
-                <th scope="col" className="py-2 text-right font-medium">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((o) => (
-                <tr key={o.id} className="border-b border-border">
-                  <td className="py-2 pr-3">
-                    <Link href={`${base}/${o.id}`} className="underline">
-                      {o.display_number}
-                    </Link>
-                  </td>
-                  <td className="py-2 pr-3 tabular-nums">{when.format(new Date(o.placed_at))}</td>
-                  <td className="py-2 pr-3">{visibleStatus(o)}</td>
-                  <td className="py-2 text-right">{formatMoney(o.total, o.currency)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OrdersTable
+          storeHandle={ctx.store.handle}
+          // Surtir en bloque solo en «Por surtir» y con permiso de surtir.
+          selectable={filter === "por-surtir" && hasPermission(ctx, "orders.fulfill")}
+          rows={rows.map((o) => ({
+            id: o.id,
+            number: o.display_number,
+            href: `${base}/${o.id}`,
+            placedAt: when.format(new Date(o.placed_at)),
+            status: visibleStatus(o),
+            total: formatMoney(o.total, o.currency),
+          }))}
+        />
       )}
       {next ? (
         <Link

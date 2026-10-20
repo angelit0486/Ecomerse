@@ -142,6 +142,14 @@ test("todas las pantallas del panel cargan sin errores; estado del sistema y avi
   await page.goto(`${imports}/${jobs.failed!}`);
   await expect(page.getByText(/Crear los nuevos y actualizar los existentes/)).toBeVisible();
 
+  // Búsqueda global: «/» la enfoca desde cualquier pantalla y lleva al producto (F3).
+  await page.goto(`/admin/${tenant.handle}/pedidos`);
+  await page.keyboard.press("/");
+  await expect(page.getByLabel("Buscar productos, pedidos o clientes")).toBeFocused();
+  await page.keyboard.type("recorrido");
+  await page.getByRole("link", { name: /Proteína de recorrido/ }).click();
+  await expect(page.getByRole("heading", { name: "Proteína de recorrido" })).toBeVisible();
+
   // Dominio: la dirección real de la tienda y su estado (misión panel, F2).
   await page.goto(`/admin/${tenant.handle}/ajustes/dominio`);
   await expect(

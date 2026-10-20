@@ -20,7 +20,14 @@ test("onboarding: datos, marca con contraste, pagos pendientes y vista previa", 
 }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
-  await page.getByRole("link", { name: "Configurar tienda" }).click();
+  // Inicio: la tienda en borrador lo dice arriba y lleva a terminarla (misión panel, F3).
+  await expect(page.getByText("Tu tienda aún no está publicada.")).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Acciones rápidas" }).getByRole("link", {
+      name: "Agregar producto",
+    }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Terminar de configurar" }).click();
   await expect(page.getByRole("heading", { name: "Configura tu tienda" })).toBeVisible();
 
   // Paso 2a: datos de la tienda (con validación del servidor).

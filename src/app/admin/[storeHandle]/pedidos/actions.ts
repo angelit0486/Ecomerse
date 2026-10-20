@@ -156,6 +156,101 @@ export async function fulfillOrder(
   done(storeHandle, orderId, "envio");
 }
 
+const MAX_BULK_ORDERS = 50;
+
+/**
+ * Surtir varios pedidos a la vez (misión panel, F3): todas sus unidades
+ * pendientes, sin guía (por ejemplo, entrega local o una recolección de la
+ * paquetería). Cada pedido pasa por orders_fulfill con su propia clave derivada
+ * de la del clic: repetir el clic no surte dos veces (§16.4). Lo que la base
+ * rechaza (sin pagar, cancelado) se cuenta y no detiene a los demás.
+ */
+export async function bulkFulfillOrders(
+  storeHandle: string,
+  orderIds: string[],
+  batchKey: string,
+): Promise<FormState> {
+  const ids = [...new Set(orderIds)];
+  if (ids.length === 0) return { error: "Selecciona al menos un pedido." };
+  if (ids.length > MAX_BULK_ORDERS || !ids.every((id) => uuid.safeParse(id).success)) {
+    return { error: `Selecciona hasta ${MAX_BULK_ORDERS} pedidos.` };
+  }
+  if (!uuid.safeParse(batchKey).success)
+    return { error: "Recarga la página e inténtalo de nuevo." };
+  let done = 0;
+  let skipped = 0;
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    const [items, shipped] = await Promise.all([
+      supabase
+        .from("order_items")
+        .select("id, order_id, quantity, cancelled_quantity")
+        .eq("store_id", storeId)
+        .in("order_id", ids),
+      supabase
+        .from("shipment_items")
+        .select("order_item_id, quantity, shipments!inner(order_id)")
+        .eq("store_id", storeId)
+        .in("shipments.order_id", ids),
+    ]);
+    if (items.error) throw items.error;
+    if (shipped.error) throw shipped.error;
+    const shippedByItem = new Map<string, number>();
+    for (const s of shipped.data ?? []) {
+      const id = s.order_item_id as string;
+      shippedByItem.set(id, (shippedByItem.get(id) ?? 0) + (s.quantity as number));
+    }
+    for (const orderId of ids) {
+      const pending = (items.data ?? [])
+        .filter((i) => i.order_id === orderId)
+        .map((i) => ({
+          order_item_id: i.id as string,
+          quantity:
+            (i.quantity as number) -
+            (shippedByItem.get(i.id as string) ?? 0) -
+            ((i.cancelled_quantity as number | null) ?? 0),
+        }))
+        .filter((i) => i.quantity > 0);
+      if (pending.length === 0) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await callRpc(supabase, "orders_fulfill", {
+          p_store_id: storeId,
+          p_order_id: orderId,
+          p_items: pending,
+          p_carrier: null,
+          p_tracking_number: null,
+          p_tracking_url: null,
+          p_idempotency_key: `${batchKey}_${orderId}`,
+        });
+        done += 1;
+      } catch (error) {
+        const e = reportActionError("orders.bulk_fulfill", error);
+        // Un permiso u otro fallo inesperado detiene la tanda; lo del pedido, no.
+        if (e.code !== "conflict" && e.code !== "validation_failed") throw error;
+        skipped += 1;
+      }
+    }
+  } catch (error) {
+    const state = failure(error);
+    revalidatePath(`/admin/${storeHandle}/pedidos`);
+    return done > 0
+      ? { ...state, error: `${state.error} Se surtieron ${done} antes del error.` }
+      : state;
+  }
+  revalidatePath(`/admin/${storeHandle}/pedidos`, "layout");
+  const surtidos = done === 1 ? "1 pedido surtido" : `${done} pedidos surtidos`;
+  return {
+    ok: true,
+    message:
+      skipped > 0
+        ? `${surtidos}. ${skipped} no se pudieron surtir (sin pagar, cancelados o ya enviados).`
+        : `${surtidos}. Tus clientes reciben el aviso de envío.`,
+  };
+}
+
 export async function markDelivered(
   storeHandle: string,
   orderId: string,

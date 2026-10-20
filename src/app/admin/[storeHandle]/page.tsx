@@ -140,65 +140,123 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
     if (waiting.imports > 0 || (photosCanRun && waiting.photos > 0)) resumeQueue("home");
   }
 
+  // Tienda sin publicar: cuántos pendientes le faltan (misión panel, F3).
+  let launchPending: number | null = null;
+  if (ctx.store.status === "draft" && canManage) {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id });
+    launchPending = ((data as { issues?: unknown[] } | null)?.issues ?? []).length;
+  }
+  const quickActions = [
+    {
+      href: `${base}/productos/nuevo`,
+      label: "Agregar producto",
+      show: hasPermission(ctx, "products.create"),
+    },
+    {
+      href: `${base}/pedidos?estado=por-surtir`,
+      label: "Pedidos por surtir",
+      show: canOrders,
+    },
+    {
+      href: `${base}/productos/importar`,
+      label: "Importar productos",
+      show: hasPermission(ctx, "imports.run"),
+    },
+    {
+      href: `${base}/apariencia`,
+      label: "Cambiar diseño",
+      show: hasPermission(ctx, "appearance.manage"),
+    },
+  ].filter((a) => a.show);
+
+  // Estado del sistema: arriba si hay algo que atender, al final si todo funciona.
+  const healthy = !waiting || (issues.length === 0 && waiting.photos + waiting.imports === 0);
+  const systemState =
+    canManage && waiting ? (
+      <section aria-labelledby="sistema" className="space-y-2">
+        <h2 id="sistema" className="font-semibold">
+          Estado del sistema
+        </h2>
+        {issues.length === 0 && waiting.photos + waiting.imports === 0 ? (
+          <p className="text-sm text-success">Todo funciona: no hay trabajos en espera.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {issues.map((issue) => (
+              <li key={issue.key} className="rounded-md border border-warning p-3">
+                <p className="font-medium">{issue.title}</p>
+                <p className="text-fg-muted">{issue.impact}</p>
+                <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
+              </li>
+            ))}
+            {waiting.photos > 0 ? (
+              <li className="rounded-md border border-border p-3">
+                {waiting.photos === 1
+                  ? "1 foto en proceso."
+                  : `${waiting.photos} fotos en proceso.`}
+                {issues.some((i) => i.key === "image_processing")
+                  ? " Esperan a que se configure la optimización de imágenes."
+                  : " Se terminan en unos segundos."}
+              </li>
+            ) : null}
+            {waiting.imports > 0 ? (
+              <li className="rounded-md border border-border p-3">
+                <Link href={`${base}/productos/importar`} className="underline">
+                  {waiting.imports === 1
+                    ? "1 importación en curso"
+                    : `${waiting.imports} importaciones en curso`}
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        )}
+      </section>
+    ) : null;
+
   return (
     <section className="space-y-8">
       <header className="space-y-3">
         <h1 className="text-xl font-semibold">{ctx.store.name}</h1>
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-md border border-border p-4">
-            <dt className="text-[13px] text-fg-muted">Estado</dt>
-            <dd className="mt-1 font-medium">{STATUS[ctx.store.status] ?? ctx.store.status}</dd>
+        <p className="text-[13px] text-fg-muted">
+          {STATUS[ctx.store.status] ?? ctx.store.status} · Tu acceso:{" "}
+          {ctx.supportGrantId
+            ? "Soporte (solo lectura)"
+            : (ROLE[ctx.orgRole ?? ""] ?? "Equipo de la tienda")}
+        </p>
+        {launchPending !== null ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent p-4">
+            <p className="text-sm">
+              <strong>Tu tienda aún no está publicada.</strong>{" "}
+              {launchPending === 0
+                ? "Ya tiene todo lo necesario."
+                : launchPending === 1
+                  ? "Le falta 1 paso."
+                  : `Le faltan ${launchPending} pasos.`}
+            </p>
+            <Link
+              href={`${base}/configuracion`}
+              className="inline-flex h-11 items-center rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"
+            >
+              {launchPending === 0 ? "Publicar mi tienda" : "Terminar de configurar"}
+            </Link>
           </div>
-          <div className="rounded-md border border-border p-4">
-            <dt className="text-[13px] text-fg-muted">Tu acceso</dt>
-            <dd className="mt-1 font-medium">
-              {ctx.supportGrantId
-                ? "Soporte (solo lectura)"
-                : (ROLE[ctx.orgRole ?? ""] ?? "Equipo de la tienda")}
-            </dd>
-          </div>
-        </dl>
+        ) : null}
+        {quickActions.length > 0 ? (
+          <nav aria-label="Acciones rápidas" className="flex flex-wrap gap-2">
+            {quickActions.map((a) => (
+              <Link
+                key={a.href}
+                href={a.href}
+                className="inline-flex h-11 items-center rounded-[var(--radius-control)] border border-control px-4 text-sm font-medium hover:bg-canvas"
+              >
+                {a.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </header>
 
-      {canManage && waiting ? (
-        <section aria-labelledby="sistema" className="space-y-2">
-          <h2 id="sistema" className="font-semibold">
-            Estado del sistema
-          </h2>
-          {issues.length === 0 && waiting.photos + waiting.imports === 0 ? (
-            <p className="text-sm text-success">Todo funciona: no hay trabajos en espera.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {issues.map((issue) => (
-                <li key={issue.key} className="rounded-md border border-warning p-3">
-                  <p className="font-medium">{issue.title}</p>
-                  <p className="text-fg-muted">{issue.impact}</p>
-                  <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
-                </li>
-              ))}
-              {waiting.photos > 0 ? (
-                <li className="rounded-md border border-border p-3">
-                  {waiting.photos === 1
-                    ? "1 foto en proceso."
-                    : `${waiting.photos} fotos en proceso.`}
-                  {issues.some((i) => i.key === "image_processing")
-                    ? " Esperan a que se configure la optimización de imágenes."
-                    : " Se terminan en unos segundos."}
-                </li>
-              ) : null}
-              {waiting.imports > 0 ? (
-                <li className="rounded-md border border-border p-3">
-                  <Link href={`${base}/productos/importar`} className="underline">
-                    {waiting.imports === 1
-                      ? "1 importación en curso"
-                      : `${waiting.imports} importaciones en curso`}
-                  </Link>
-                </li>
-              ) : null}
-            </ul>
-          )}
-        </section>
-      ) : null}
+      {systemState && !healthy ? systemState : null}
 
       {kpis ? (
         <>
@@ -401,6 +459,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
           </div>
         </>
       ) : null}
+      {systemState && healthy ? systemState : null}
     </section>
   );
 }

@@ -60,9 +60,19 @@ test("inicio: ventas, pedidos, ticket promedio y más vendidos del periodo", asy
   await expect(tile("Pedidos pagados")).toHaveText("3");
   await expect(tile("Ventas netas")).toHaveText("$510.00");
 
+  // Avisos del panel: lo que requiere acción, desde cualquier pantalla (F3).
+  await page.getByRole("button", { name: /^Avisos/ }).click();
+  await expect(
+    page.getByRole("list", { name: "Avisos del panel" }).getByRole("link", {
+      name: "3 pedidos por surtir",
+    }),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await page.keyboard.press("Escape");
+
   // «Por surtir» lleva a esos pedidos, del más antiguo al más nuevo (C2).
   await page.getByRole("link", { name: "3 por surtir" }).click();
-  await expect(page.getByRole("link", { name: "Por surtir" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Por surtir", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   );

@@ -116,3 +116,30 @@ test("cancelar un pedido pagado: confirma, libera existencias y reembolsa todo",
     select status, payment_status from public.orders where id = ${orderId}`;
   expect(o).toEqual({ status: "cancelled", payment_status: "refunded" });
 });
+
+test("surtir varios pedidos a la vez desde «Por surtir» (misión panel, F3)", async ({ page }) => {
+  const first = await paidOrder(1);
+  const second = await paidOrder(2);
+  const untouched = await paidOrder(1);
+  const [n1, n2] = await admin<{ display_number: string }[]>`
+    select display_number from public.orders where id in (${first}, ${second}) order by placed_at`;
+  await loginNewStaff(page, ownerEmail);
+  await page.goto(`/admin/${tenant.handle}/pedidos?estado=por-surtir`);
+  await page.getByLabel(`Elegir el pedido ${n1!.display_number}`).check();
+  await page.getByLabel(`Elegir el pedido ${n2!.display_number}`).check();
+  await page.getByRole("button", { name: "Surtir los elegidos" }).click();
+  // Confirmación explícita: avisa que no lleva guía y que el cliente recibe el aviso.
+  await expect(page.getByText(/sin número de guía/)).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await page.getByRole("button", { name: "Sí, surtir 2" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "2 pedidos surtidos" })).toBeVisible();
+
+  const rows = await admin<{ id: string; fulfillment_status: string }[]>`
+    select id, fulfillment_status from public.orders where id in (${first}, ${second}, ${untouched})`;
+  const status = Object.fromEntries(rows.map((r) => [r.id, r.fulfillment_status]));
+  expect(status[first]).toBe("fulfilled");
+  expect(status[second]).toBe("fulfilled");
+  expect(status[untouched]).toBe("unfulfilled");
+  // El pendiente sigue en la lista; los surtidos ya no.
+  await expect(page.getByLabel(`Elegir el pedido ${n1!.display_number}`)).toHaveCount(0);
+});

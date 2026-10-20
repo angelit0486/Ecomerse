@@ -7,6 +7,8 @@ import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { AdminNav } from "./_shared/admin-nav";
+import { GlobalSearch } from "./_shared/global-search";
+import { NoticesButton } from "./_shared/notices-button";
 
 type Props = { children: ReactNode; params: Promise<{ storeHandle: string }> };
 
@@ -98,6 +100,10 @@ export default async function StoreLayout({ children, params }: Props) {
         <AdminNav items={nav.map(({ href, label }) => ({ href, label }))} base={base} />
       </aside>
       <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex items-start gap-2">
+          <GlobalSearch storeHandle={ctx.store.handle} />
+          <NoticesButton storeHandle={ctx.store.handle} />
+        </div>
         {ctx.supportGrantId ? (
           <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
             Acceso de soporte: solo lectura y con tiempo limitado. Todo lo que abres queda
