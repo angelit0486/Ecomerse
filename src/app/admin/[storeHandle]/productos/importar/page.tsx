@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { resumeQueue } from "@/server/jobs/run-now";
 import { ALL_IMPORT_HEADERS } from "@/server/imports/products";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -71,6 +72,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
     .eq("store_id", ctx.store.id)
     .order("created_at", { ascending: false })
     .limit(10);
+  // Importaciones confirmadas que esperan en la cola: se retoman al mirar la lista (D-LOTE-05).
+  if (jobs?.some((j) => j.status === "committing")) resumeQueue("imports.list");
 
   return (
     <section className="space-y-6">

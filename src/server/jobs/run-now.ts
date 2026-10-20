@@ -47,3 +47,19 @@ export function processQueueSoon(reason: string): void {
     }
   });
 }
+
+const RESUME_EVERY_MS = 10_000;
+let lastResume = 0;
+
+/**
+ * Para pantallas que esperan trabajo en cola (importación «Importando», foto
+ * «Procesando»): retoma la cola si lleva parada, como mucho una vez cada 10 s
+ * por instancia. Así lo encolado antes de este cambio, o cuyo arranque
+ * inmediato se perdió, termina sin depender del cron.
+ */
+export function resumeQueue(reason: string): void {
+  const now = Date.now();
+  if (now - lastResume < RESUME_EVERY_MS) return;
+  lastResume = now;
+  processQueueSoon(reason);
+}

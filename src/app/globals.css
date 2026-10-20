@@ -127,3 +127,20 @@ html:has(.sf-root) {
     bottom: 5.5rem;
   }
 }
+
+/*
+ * Select nativo oculto de Radix Select (formularios sin JS): Radix lo oculta con
+ * un atributo style que la CSP con nonce bloquea en el HTML del servidor
+ * (GATE0 §44.13). Hasta hidratar se vería; la misma regla en la hoja lo evita.
+ */
+select[aria-hidden="true"][tabindex="-1"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

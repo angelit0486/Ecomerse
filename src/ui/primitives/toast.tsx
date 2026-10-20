@@ -1,7 +1,14 @@
 "use client";
 
 import { Toast as T } from "radix-ui";
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -17,10 +24,20 @@ interface ToastItem {
   tone: Tone;
 }
 
+const noSubscribe = () => () => {};
+
 const ToastContext = createContext<((toast: Omit<ToastItem, "id">) => void) | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  // Radix pinta la región con style="pointer-events:none"; renderizada en el
+  // servidor, la CSP con nonce la bloquea (GATE0 §44.13). Los avisos solo nacen
+  // de acciones en el navegador, así que basta montarla en el cliente.
+  const mounted = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
   const show = useCallback((toast: Omit<ToastItem, "id">) => {
     setItems((current) => [...current, { ...toast, id: Date.now() + Math.random() }]);
   }, []);
@@ -52,10 +69,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </T.Close>
           </T.Root>
         ))}
-        <T.Viewport
-          label="Notificaciones ({hotkey})"
-          className="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100%-2rem)] flex-col gap-2"
-        />
+        {mounted ? (
+          <T.Viewport
+            label="Notificaciones ({hotkey})"
+            className="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100%-2rem)] flex-col gap-2"
+          />
+        ) : null}
       </T.Provider>
     </ToastContext.Provider>
   );

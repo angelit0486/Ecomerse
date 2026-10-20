@@ -255,10 +255,11 @@ test("listado, acciones en bloque y fotos de cada presentación", async ({ page 
   expect(copyId).not.toBe(wheyId);
   const photos = await admin<{ alt_text: string; status: string }[]>`
     select alt_text, status from public.media where product_id = ${copyId} order by position`;
-  expect(photos).toEqual([
-    { alt_text: "Chocolate", status: "pending" },
-    { alt_text: "Frente", status: "pending" },
-  ]);
+  // La copia se procesa en cuanto se abre la ficha (cola inmediata, D-LOTE-05); aquí
+  // las fotos de origen son filas sin archivo, así que el job las rechaza. Lo que se
+  // comprueba es que la copia trae las dos fotos, en orden y con su job.
+  expect(photos.map((p) => p.alt_text)).toEqual(["Chocolate", "Frente"]);
+  expect(photos.every((p) => p.status === "pending" || p.status === "rejected")).toBe(true);
   const [jobs] = await admin<{ n: string }[]>`
     select count(*) as n from system.jobs j
      where j.type = 'media.copy' and (j.payload ->> 'media_id')::uuid in

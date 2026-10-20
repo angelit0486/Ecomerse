@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { resumeQueue } from "@/server/jobs/run-now";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { commitImport } from "../actions";
@@ -68,6 +69,8 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         .order("row_number")
         .limit(SHOWN_ROWS)
     : { data: [] };
+  // La importación confirmada espera en la cola: se retoma al mirarla (D-LOTE-05).
+  if (job.status === "committing") resumeQueue("imports.page");
   const ready = job.status === "validated" && errors === 0;
   const done = job.status === "completed";
   const base = `/admin/${ctx.store.handle}/productos/importar`;
