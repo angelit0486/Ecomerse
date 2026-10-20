@@ -657,7 +657,7 @@ function BannerUpload({ storeHandle }: { storeHandle: string }) {
             ref={inputRef}
             type="file"
             accept={ALLOWED_IMAGE_MIME.join(",")}
-            className="text-sm"
+            className="block min-h-11 text-sm"
           />
         </div>
         <TextField

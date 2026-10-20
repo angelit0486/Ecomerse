@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { AppError } from "@/server/errors";
 
-import { toAppError } from "./errors";
+import { SCHEMA_OUTDATED_MESSAGE, toAppError } from "./errors";
 
 describe("toAppError", () => {
   it.each([
@@ -55,6 +55,14 @@ describe("toAppError", () => {
     expect(toAppError({ code: "23505", message: "duplicate key value" }).code).toBe("conflict");
     expect(toAppError({ code: "23514", message: "violates check" }).code).toBe("validation_failed");
     expect(toAppError({ code: "PGRST301", message: "JWT expired" }).code).toBe("unauthenticated");
+  });
+
+  it("función o columna que falta: base sin actualizar, con mensaje accionable (D-EST-04)", () => {
+    for (const code of ["42883", "42703", "42P01", "PGRST202", "PGRST204", "PGRST205"]) {
+      const e = toAppError({ code, message: "function app.x() does not exist" });
+      expect(e.code, code).toBe("internal");
+      expect(e.message, code).toBe(SCHEMA_OUTDATED_MESSAGE);
+    }
   });
 
   it("errores arbitrarios → internal; AppError pasa tal cual", () => {

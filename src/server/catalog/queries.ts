@@ -125,6 +125,7 @@ export interface CategoryRow {
   depth: number;
   position: number;
   is_visible: boolean;
+  description: string | null;
 }
 
 export async function listCategories(
@@ -133,7 +134,7 @@ export async function listCategories(
 ): Promise<CategoryRow[]> {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, parent_id, name, slug, path, depth, position, is_visible")
+    .select("id, parent_id, name, slug, path, depth, position, is_visible, description")
     .eq("store_id", storeId)
     .is("deleted_at", null)
     .order("path");

@@ -36,6 +36,22 @@ const BUSINESS_ALIASES: Record<string, { code: ErrorCode; message: string }> = {
 
 const AUTH_CODES = new Set<ErrorCode>(["unauthenticated", "mfa_required", "forbidden"]);
 
+/**
+ * Función, columna o tabla que el código espera y la base no tiene: falta aplicar
+ * una migración (D-EST-04). Sigue siendo `internal` (los códigos son estables,
+ * §43), pero con un mensaje que dice qué hacer en vez de «error inesperado».
+ */
+const SCHEMA_OUTDATED_CODES = new Set([
+  "42883",
+  "42703",
+  "42P01",
+  "PGRST202",
+  "PGRST204",
+  "PGRST205",
+]);
+export const SCHEMA_OUTDATED_MESSAGE =
+  "La base de datos de la tienda no está actualizada. Avísale al equipo técnico para que aplique la última actualización; tus datos no se perdieron.";
+
 function isErrorCode(value: string): value is ErrorCode {
   return Object.hasOwn(ERROR_STATUS, value);
 }
@@ -79,6 +95,10 @@ export function toAppError(error: unknown): AppError {
   if (code === "23505") return new AppError("conflict", undefined, { cause: error });
   if (code === "23514" || code === "22023" || code === "22P02") {
     return new AppError("validation_failed", undefined, { cause: error });
+  }
+
+  if (SCHEMA_OUTDATED_CODES.has(code)) {
+    return new AppError("internal", SCHEMA_OUTDATED_MESSAGE, { cause: error });
   }
 
   return new AppError("internal", undefined, { cause: error });

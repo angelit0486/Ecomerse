@@ -23,7 +23,7 @@ test.beforeAll(async () => {
   await admin`insert into public.categories (store_id, name, slug) values (${tenant.storeId}, 'CREATINA', 'creatina-pura')`;
 });
 
-test("crear las categorías sugeridas que faltan", async ({ page }) => {
+test("crear las categorías sugeridas que faltan y describir una", async ({ page }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/productos/categorias`);
   const suggested = page.getByRole("region", { name: "¿Vendes suplementos? Estructura sugerida" });
@@ -52,4 +52,17 @@ test("crear las categorías sugeridas que faltan", async ({ page }) => {
     "ganadores-de-masa",
     "accesorios-deportivos",
   ]);
+
+  // La descripción se escribe en el panel (D-EST-03); la tienda ya la muestra.
+  await page.goto(`/admin/${tenant.handle}/productos/categorias`);
+  const row = page.getByRole("listitem").filter({ has: page.getByLabel("Nombre de CREATINA") });
+  await row.getByText("Descripción en la tienda").click();
+  await row.getByLabel("Descripción de CREATINA").fill("Monohidratada, sin sabor y con sabor.");
+  await row.getByRole("button", { name: "Guardar" }).click();
+  await expect(row.getByText("Categoría «CREATINA» actualizada.")).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+
+  const [cat] = await admin<{ description: string | null }[]>`
+    select description from public.categories where store_id = ${tenant.storeId} and slug = 'creatina-pura'`;
+  expect(cat?.description).toBe("Monohidratada, sin sabor y con sabor.");
 });

@@ -1132,6 +1132,16 @@ export async function saveCategory(
   if ((id && !uuid.safeParse(id).success) || (parentId && !uuid.safeParse(parentId).success)) {
     return { error: "Categoría no válida." };
   }
+  // Solo el formulario de edición manda la descripción; sin el campo se conserva.
+  const description = formData.has("description")
+    ? String(formData.get("description") ?? "").trim()
+    : undefined;
+  if (description !== undefined && [...description].length > 2000) {
+    return {
+      error: "Revisa los datos marcados.",
+      fields: { description: "Máximo 2000 caracteres." },
+    };
+  }
   try {
     await withStore(storeHandle, ({ supabase, storeId }) =>
       callRpc(supabase, "catalog_upsert_category", {
@@ -1142,6 +1152,7 @@ export async function saveCategory(
           parent_id: parentId || null,
           is_visible: formData.getAll("is_visible").includes("1"),
           slug: String(formData.get("slug") ?? "").trim() || undefined,
+          ...(description !== undefined ? { description } : {}),
         },
       }),
     );

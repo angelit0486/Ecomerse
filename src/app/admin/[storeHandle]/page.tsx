@@ -318,7 +318,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                     key={key}
                     href={`${base}?rango=${key}`}
                     aria-current={key === rangeKey ? "page" : undefined}
-                    className={`rounded-md border px-3 py-1 ${key === rangeKey ? "border-fg font-medium" : "border-border"}`}
+                    className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1 md:min-h-0 ${key === rangeKey ? "border-fg font-medium" : "border-border"}`}
                   >
                     {r.label}
                   </Link>

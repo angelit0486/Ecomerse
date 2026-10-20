@@ -121,7 +121,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
               key={key}
               href={`${base}?estado=${key}`}
               aria-current={key === filter ? "page" : undefined}
-              className={key === filter ? "font-semibold underline" : "underline"}
+              className={`inline-flex min-h-11 items-center md:min-h-0 ${key === filter ? "font-semibold underline" : "underline"}`}
             >
               {label}
             </Link>

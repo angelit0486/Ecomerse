@@ -128,7 +128,7 @@ export function ProductImages({
             aria-describedby="product-images-hint"
             disabled={uploading}
             onChange={(e) => void upload(e.target.files)}
-            className="block text-sm"
+            className="block min-h-11 text-sm"
           />
         </div>
       ) : null}

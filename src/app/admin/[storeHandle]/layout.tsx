@@ -128,7 +128,7 @@ export default async function StoreLayout({ children, params }: Props) {
     <div className="flex flex-col gap-5 md:flex-row md:gap-8">
       <aside className="md:w-56 md:shrink-0">
         <details className="mb-3 rounded-md border border-border md:mb-4">
-          <summary className="flex min-h-10 cursor-pointer items-center px-3 text-sm font-medium">
+          <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-medium md:min-h-10">
             {ctx.store.name}
           </summary>
           <ul className="border-t border-border py-1" aria-label="Cambiar de tienda">
@@ -137,7 +137,7 @@ export default async function StoreLayout({ children, params }: Props) {
                 <Link
                   href={`/admin/${s.handle}`}
                   aria-current={s.handle === ctx.store.handle ? "page" : undefined}
-                  className="block px-3 py-1.5 text-sm hover:bg-canvas"
+                  className="flex min-h-11 items-center px-3 py-1.5 text-sm hover:bg-canvas md:min-h-0"
                 >
                   {s.name}
                 </Link>

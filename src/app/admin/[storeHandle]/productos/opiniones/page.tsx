@@ -83,7 +83,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
             key={t.key}
             href={`${base}/productos/opiniones?estado=${t.param}`}
             aria-current={t.key === tab.key ? "page" : undefined}
-            className={`rounded-md border px-3 py-1.5 ${t.key === tab.key ? "border-fg font-medium" : "border-border"}`}
+            className={`inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 md:min-h-0 ${t.key === tab.key ? "border-fg font-medium" : "border-border"}`}
           >
             {t.label} ({list.counts[t.key] ?? 0})
           </Link>

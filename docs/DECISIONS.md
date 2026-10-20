@@ -771,3 +771,92 @@ Cambia un contrato crítico (§25, T-08), por eso necesita tu aprobación antes 
   - integración `remote-images` (5: tipo real con cabecera engañosa, bloqueada, SVG, reintento y borrada);
   - E2E `imports`: Shopify con 2 fotos reservadas.
 - **Despliegue:** la migración debe aplicarse en staging **antes** de publicar el código, porque el job `import.commit` llama a la función nueva.
+
+## 25. Estudio de tiendas: diseñar y operar una tienda nueva desde el panel (2026-10-20)
+
+Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda real desde el panel sin tocar código. El tema v1 es un contrato crítico (GATE0 §43, «StoreConfiguration / Theme schema v1»), igual que el cálculo del carrito. Lo que lo cambia va en los ADR de abajo y **no se empieza sin aprobación**. Lo que no lo cambia (auditoría, correcciones, rol de diseño, redirecciones, campos de categoría que ya existen en la base, manejo de errores) se hace sin esperar.
+
+### ADR-034 — Estudio de diseño: tema v2, bloques, páginas por bloques, versiones y plantillas por giro · **propuesta: requiere aprobación del propietario**
+
+**Contexto.** El tema v1 (§20.2) es un objeto estricto validado igual en Zod y en SQL (`app.theme_settings_valid`, `app.home_sections_valid`, pruebas de paridad). Tiene 5 colores, 2 fuentes de una lista de 10, esquinas y estilo de botón, encabezado con un anuncio sin vigencia, pie, redes, SEO y contacto. La portada admite hasta 12 secciones de 8 tipos y es la única página por bloques. No hay favicon propio, historial de versiones ni plantillas.
+
+**Propuesta.**
+
+1. **Tema v2, solo aditivo.** Todo documento v1 es un v2 válido. El migrador v1 → v2 es la identidad: función pura con pruebas. `store_themes.theme_version` pasa a 2 en el primer guardado. Campos nuevos:
+   - `favicon_media_id`: imagen cuadrada (§20.2 ya lo prevé). Sin ella, sigue el monograma.
+   - `shape.shadow` ∈ {none, soft, strong} y `shape.density` ∈ {compact, comfortable, spacious}.
+   - `header.announcement.starts_at` / `ends_at`: se evalúan al mostrar, en la zona horaria de la tienda.
+   - `header.quick_links`: ≤ 4 accesos rápidos en el celular, con enlaces validados como hoy.
+   - `product_page` y `listing`: opciones de presentación (galería, precio por porción visible, relacionados, barra fija de compra, columnas en el celular).
+     - Ninguna opción oculta precios, leyendas sanitarias ni textos obligatorios.
+     - El precio sigue saliendo del servidor.
+   - La lista de fuentes sigue en ≤ 10 autoalojadas (§20.2).
+   - El contraste sigue bloqueando la publicación. El panel además sugiere el color corregido más cercano que cumple 4.5:1.
+2. **Bloques nuevos.** Todos son de texto plano salvo `rich_text`, que pasa por SafeHtml. Ninguno admite HTML, CSS ni JS propio.
+   - `faq`: ≤ 12 preguntas y respuestas.
+   - `benefits`: ≤ 6 de {ícono de una lista fija, título, texto}. Cubre «beneficios», «confianza» y «envíos».
+   - `goals`: chips de valores de atributo, como los objetivos.
+   - `reviews`: opiniones **verificadas y aprobadas** (ADR-029). `testimonials` se queda como texto escrito por la tienda y se rotula así en el editor.
+   - `video`: solo un id de YouTube o Vimeo validado por expresión regular. Se muestra como imagen y carga el reproductor (`youtube-nocookie.com` / `player.vimeo.com`) **solo al tocarlo**. Requiere añadir esos dos hosts a `frame-src` en la CSP.
+   - `contact_map`: dirección y horario del contacto, con un enlace a Google Maps. No hay mapa incrustado.
+   - `newsletter`: **se pospone**. Guardar correos de compradores es PII con consentimiento (LFPDPPP) y necesita su propia tabla. Mientras tanto, el bloque `contact_map` ofrece el botón de WhatsApp.
+   - `featured_products` gana `source: manual` (≤ 12 productos elegidos) y `layout ∈ {grid, carousel}`. `category_grid` gana `layout`.
+   - **Comunes a todo bloque:** `visibility ∈ {all, mobile, desktop}` y `starts_at`/`ends_at` opcionales (banners programados). El tope pasa de 12 a 20 bloques.
+3. **Páginas por bloques.** `store_pages` gana `sections` y `draft_sections`, validadas por la misma función de bloques. La página se publica con un clic y se puede descartar el borrador. Las políticas siguen con su HTML seguro y su revisión. Cada página tiene SEO propio con imagen social.
+4. **Historial de versiones.**
+   - Tabla `store_theme_versions` (store_id, número, settings, home_sections, logo, favicon, quién publicó, cuándo), con RLS `appearance.manage` y las reglas de §44.2.
+   - `appearance_publish_theme` guarda una versión en la misma transacción. Se conservan las últimas 30.
+   - «Restaurar» copia la versión al **borrador**, no publica directamente.
+   - La auditoría sigue registrando cada publicación.
+5. **Plantillas por giro:** suplementos, ropa, belleza, abarrotes y genérica.
+   - Son definiciones en código (tema, portada, menús, categorías, políticas como PENDIENTE DE REVISIÓN y productos de ejemplo).
+   - Se aplican con una RPC (`store_apply_template`) solo si la tienda está en borrador y no tiene pedidos.
+   - Los productos de ejemplo llevan «Ejemplo» en el nombre y la etiqueta `ejemplo`.
+   - **La lista de lanzamiento bloquea la publicación mientras existan.**
+   - En suplementos nacen en borrador (el perfil sanitario está pendiente).
+   - La plantilla se elige en la consola de plataforma al crear la tienda o en el primer paso de «Configurar tienda». No requiere E15.
+6. **Exportar e importar tema, y duplicar tienda.**
+   - La exportación es un JSON v2 sin ids de imágenes.
+   - Al importarlo entra al borrador con las mismas validaciones.
+   - «Duplicar como plantilla» entre tiendas de la misma organización copia tema, portada, páginas y menús. Las imágenes se copian por un job al prefijo de la tienda nueva, porque las FK compuestas impiden compartirlas.
+
+**Migración y pruebas.**
+
+- Migraciones _expand_ (las funciones aceptan v1 y v2) → código.
+- No hay fase _contract_: v1 sigue siendo válido.
+- Casos de paridad Zod ↔ SQL por cada bloque y campo nuevo.
+- pgTAP de aislamiento entre tiendas en `store_theme_versions` y `store_pages.sections`.
+- E2E del editor a 375 y 1280 px con axe.
+- Pruebas de CSP (`frame-src`).
+
+**Riesgo.** Medio: amplía la superficie de contenido de la tienda. Se mitiga con el mismo validador doble, texto plano y reproductores que cargan solo al tocarlos.
+
+### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **propuesta: requiere aprobación del propietario**
+
+**Esquema.** `collections`, con dos modos:
+
+- `manual`: productos ordenados a mano.
+- `rules`: etiqueta, marca, categoría, rango de precio, atributo o «en oferta».
+
+Lleva FK compuestas y RLS `products.update`.
+
+**Tienda.** `storefront.get_collection` y la ruta `/coleccion/[slug]` con paginación por cursor. El tipo de enlace `collection`, que la base ya acepta, se vuelve utilizable en menús y bloques.
+
+**Por qué necesita aprobación.** Usa una ruta y un contrato de una fase futura (§44.23).
+
+### ADR-036 — Cupones por producto o categoría y descuentos automáticos · **propuesta: requiere aprobación del propietario**
+
+**Qué cambia.** `app.calculate_cart` y sus casos dorados: el contrato del checkout (§43) y la regla de no confiar en el cliente.
+
+**Alcance.** Cupón limitado a productos, categorías o marcas; descuento automático sin código; prioridad y no combinación.
+
+**Recomendación.** Dejarlo para después del lanzamiento. Los cupones actuales y las ofertas con fecha (ADR-030) cubren el arranque.
+
+### Decisiones sin ADR (no tocan contratos críticos)
+
+| ID       | Decisión                                                                                                                                                                                                                     |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-EST-01 | Rol de sistema **Diseño** (`designer`): `appearance.manage`, `content.manage` y `seo.manage`, más lectura de productos para la vista previa. Es una fila nueva en `roles`; el modelo de permisos no cambia.                  |
+| D-EST-02 | **Redirecciones 301** por tienda (`store_redirects`: ruta de origen → ruta interna). Siguen todas las reglas de §44.2. Se consultan solo cuando una ruta de la tienda no existe, nunca antes de resolver la tienda por host. |
+| D-EST-03 | Categorías con descripción, imagen y SEO. Las columnas ya existen; faltaba el formulario.                                                                                                                                    |
+| D-EST-04 | Verificación de la versión del esquema al arrancar: el panel compara la última migración aplicada con la que espera el código y avisa con un mensaje claro en vez de fallar en una pantalla.                                 |

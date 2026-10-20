@@ -130,7 +130,7 @@ export function LogoForm({
           aria-describedby="logo-hint"
           disabled={uploading}
           onChange={(e) => void upload(e.target.files?.[0])}
-          className="block text-sm"
+          className="block min-h-11 text-sm"
         />
       </div>
 

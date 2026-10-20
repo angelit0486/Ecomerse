@@ -126,7 +126,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
               <Link
                 href={`${base}/apariencia?seccion=${t.key}`}
                 aria-current={t.key === tab ? "page" : undefined}
-                className={`inline-block border-b-2 px-3 py-2 text-sm ${
+                className={`inline-flex min-h-11 items-center border-b-2 px-3 py-2 text-sm md:min-h-0 ${
                   t.key === tab
                     ? "border-accent font-semibold text-fg"
                     : "border-transparent text-fg-muted hover:text-fg"

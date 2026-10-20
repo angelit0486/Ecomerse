@@ -241,12 +241,18 @@ export default async function OnboardingPage({ params }: Props) {
           {paymentsDone
             ? "Tu tienda ya tiene un método de pago activo."
             : "Activa al menos un método de pago para poder publicar."}{" "}
-          Con transferencia, tú confirmas cada pago desde Pedidos. Para cobrar con tarjeta, conecta
-          Stripe en{" "}
-          <a className="underline" href={`/admin/${ctx.store.handle}/ajustes/pagos`}>
-            Ajustes → Pagos
-          </a>
-          .
+          Con transferencia, tú confirmas cada pago desde Pedidos.{" "}
+          {canManagePayments ? (
+            <>
+              Para cobrar con tarjeta, conecta Mercado Pago o Stripe en{" "}
+              <a className="underline" href={`/admin/${ctx.store.handle}/ajustes/pagos`}>
+                Ajustes → Pagos
+              </a>
+              .
+            </>
+          ) : (
+            "Los métodos de pago los activa quien administra la tienda."
+          )}
         </p>
         {canManagePayments ? (
           <ManualPaymentForm

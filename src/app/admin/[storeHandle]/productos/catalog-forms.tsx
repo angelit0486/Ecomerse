@@ -60,6 +60,7 @@ export function CategoryForm({
     parent_id: string | null;
     slug: string;
     is_visible: boolean;
+    description?: string | null;
   };
 }) {
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
@@ -120,6 +121,30 @@ export function CategoryForm({
       >
         {category ? "Guardar" : "Crear categoría"}
       </Button>
+      {category ? (
+        <details className="sm:col-span-4">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm underline md:min-h-0">
+            Descripción en la tienda
+          </summary>
+          <Field
+            label={`Descripción de ${category.name}`}
+            id={`${prefix}-description`}
+            hint="Se muestra arriba de los productos de la categoría y en Google. Texto simple, hasta 2000 caracteres."
+            error={state.fields?.description}
+          >
+            {(c) => (
+              <textarea
+                {...c}
+                name="description"
+                rows={3}
+                maxLength={2000}
+                defaultValue={category.description ?? ""}
+                className={nativeControl}
+              />
+            )}
+          </Field>
+        </details>
+      ) : null}
       <div className="sm:col-span-4">
         <Feedback state={state} />
         {state.error && state.fields ? (
