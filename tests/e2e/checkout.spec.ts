@@ -165,7 +165,7 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
 test("panel: el pedido pagado, envíos, impuestos y descuentos", async ({ page }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
-  await page.getByRole("link", { name: "Pedidos" }).click();
+  await page.getByRole("link", { name: "Pedidos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Pedidos", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "#1001" }).click();
   await expect(page.getByRole("heading", { name: "Pedido #1001" })).toBeVisible();

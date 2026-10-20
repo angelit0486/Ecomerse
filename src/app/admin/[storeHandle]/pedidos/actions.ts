@@ -247,7 +247,7 @@ export async function bulkFulfillOrders(
     message:
       skipped > 0
         ? `${surtidos}. ${skipped} no se pudieron surtir (sin pagar, cancelados o ya enviados).`
-        : `${surtidos}. Tus clientes reciben el aviso de envío.`,
+        : `${surtidos}.`,
   };
 }
 

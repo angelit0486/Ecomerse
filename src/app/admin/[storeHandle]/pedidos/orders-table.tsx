@@ -75,8 +75,8 @@ export function OrdersTable({
           {confirming ? (
             <>
               <span className="text-fg-muted">
-                Se marcan como enviados todas sus unidades, sin número de guía, y cada cliente
-                recibe el aviso.
+                Se marcan como enviadas todas sus unidades, sin número de guía. Si el correo de tu
+                tienda está configurado, cada cliente recibe el aviso de envío.
               </span>
               <Button type="button" className="h-11" loading={pending} onClick={fulfill}>
                 Sí, surtir {selected.size}
