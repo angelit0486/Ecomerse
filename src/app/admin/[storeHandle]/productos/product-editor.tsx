@@ -610,39 +610,50 @@ export function ProductEditor({
         </div>
       </fieldset>
 
-      <fieldset className="grid max-w-2xl gap-4">
-        <legend className="mb-2 text-base font-semibold">Buscadores (SEO)</legend>
-        <Field
-          label="Título para buscadores"
-          hint="Máximo 70 caracteres."
-          error={fieldError("seo_title")}
-        >
-          {(c) => (
-            <Input
-              {...c}
-              value={seoTitle}
-              maxLength={70}
-              onChange={(e) => setSeoTitle(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field
-          label="Descripción para buscadores"
-          hint="Máximo 320 caracteres."
-          error={fieldError("seo_description")}
-        >
-          {(c) => (
-            <textarea
-              {...c}
-              rows={3}
-              maxLength={320}
-              value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
-              className="rounded-[var(--radius-control)] border border-control bg-surface p-3 text-sm"
-            />
-          )}
-        </Field>
-      </fieldset>
+      {/* Plegado (misión panel, F1): opcional; se abre si ya tiene datos o un error. */}
+      <details
+        open={Boolean(
+          seoTitle || seoDescription || fieldError("seo_title") || fieldError("seo_description"),
+        )}
+        className="max-w-2xl rounded-md border border-border p-4"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center text-base font-semibold">
+          Cómo aparece en Google (opcional)
+        </summary>
+        <fieldset className="mt-3 grid gap-4">
+          <legend className="sr-only">Buscadores (SEO)</legend>
+          <Field
+            label="Título para buscadores"
+            hint="Máximo 70 caracteres."
+            error={fieldError("seo_title")}
+          >
+            {(c) => (
+              <Input
+                {...c}
+                value={seoTitle}
+                maxLength={70}
+                onChange={(e) => setSeoTitle(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label="Descripción para buscadores"
+            hint="Máximo 320 caracteres."
+            error={fieldError("seo_description")}
+          >
+            {(c) => (
+              <textarea
+                {...c}
+                rows={3}
+                maxLength={320}
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                className="rounded-[var(--radius-control)] border border-control bg-surface p-3 text-sm"
+              />
+            )}
+          </Field>
+        </fieldset>
+      </details>
 
       <div className="flex gap-3">
         <Button type="submit" loading={pending}>

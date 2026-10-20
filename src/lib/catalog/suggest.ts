@@ -79,3 +79,25 @@ export function suggestCategory<T extends { id: string; name: string; depth?: nu
   }
   return best?.category ?? null;
 }
+
+/**
+ * Porciones más comunes para cada contenido neto ya capturado en la tienda
+ * («907 g» → 30), para proponerlas al dar de alta otra presentación igual.
+ */
+export function servingsByContent(
+  rows: readonly { net_content: string | null; servings_per_container: number | null }[],
+): Record<string, number> {
+  const counts = new Map<string, Map<number, number>>();
+  for (const { net_content, servings_per_container } of rows) {
+    if (!net_content || !servings_per_container) continue;
+    const key = net_content.trim().toLowerCase();
+    const byServings = counts.get(key) ?? new Map<number, number>();
+    byServings.set(servings_per_container, (byServings.get(servings_per_container) ?? 0) + 1);
+    counts.set(key, byServings);
+  }
+  const result: Record<string, number> = {};
+  for (const [key, byServings] of counts) {
+    result[key] = [...byServings].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]![0];
+  }
+  return result;
+}

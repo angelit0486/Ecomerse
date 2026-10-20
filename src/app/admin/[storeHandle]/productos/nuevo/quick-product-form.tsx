@@ -89,6 +89,7 @@ export function QuickProductForm({
   brands,
   categories,
   netContents,
+  servingsHint,
   defaultTemplate,
   canStock,
   canReadCost,
@@ -98,6 +99,8 @@ export function QuickProductForm({
   categories: Option[];
   /** Contenidos netos ya capturados en la tienda, para sugerirlos. */
   netContents: string[];
+  /** Porciones más comunes por contenido neto ya capturado (en minúsculas). */
+  servingsHint: Record<string, number>;
   defaultTemplate: ProductTemplate;
   canStock: boolean;
   canReadCost: boolean;
@@ -532,7 +535,12 @@ export function QuickProductForm({
                       list="contenidos-tienda"
                       value={draft.netContent}
                       maxLength={100}
-                      onChange={(e) => update("netContent", e.target.value)}
+                      onChange={(e) => {
+                        update("netContent", e.target.value);
+                        // Mismo contenido que otro producto: se proponen sus porciones.
+                        const hint = servingsHint[e.target.value.trim().toLowerCase()];
+                        if (hint && !draft.servings) update("servings", String(hint));
+                      }}
                     />
                     <datalist id="contenidos-tienda">
                       {netContents.map((n) => (

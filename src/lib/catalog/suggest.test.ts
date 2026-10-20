@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { suggestBrand, suggestCategory, words } from "./suggest";
+import { servingsByContent, suggestBrand, suggestCategory, words } from "./suggest";
 
 const brands = [
   { id: "b1", name: "Optimum Nutrition" },
@@ -47,5 +47,20 @@ describe("suggestCategory", () => {
   it("singular y plural cuentan igual; sin coincidencias no sugiere", () => {
     expect(suggestCategory("Proteínas veganas", categories)?.id).toBe("c1");
     expect(suggestCategory("Shaker 600 ml", categories)).toBeNull();
+  });
+});
+
+describe("servingsByContent", () => {
+  it("toma las porciones más comunes por contenido, sin distinguir mayúsculas", () => {
+    expect(
+      servingsByContent([
+        { net_content: "907 g", servings_per_container: 30 },
+        { net_content: "907 G", servings_per_container: 30 },
+        { net_content: "907 g", servings_per_container: 28 },
+        { net_content: "60 cápsulas", servings_per_container: 60 },
+        { net_content: "2 kg", servings_per_container: null },
+        { net_content: null, servings_per_container: 10 },
+      ]),
+    ).toEqual({ "907 g": 30, "60 cápsulas": 60 });
   });
 });

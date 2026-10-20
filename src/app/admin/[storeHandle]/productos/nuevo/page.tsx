@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import type { ProductTemplate } from "@/lib/catalog/suggest";
+import { servingsByContent, type ProductTemplate } from "@/lib/catalog/suggest";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { listBrands, listCategories } from "@/server/catalog/queries";
@@ -37,15 +37,17 @@ export default async function NewProductPage({ params, searchParams }: Props) {
       ? Promise.resolve({ data: [] })
       : supabase
           .from("product_variants")
-          .select("net_content")
+          .select("net_content, servings_per_container")
           .eq("store_id", ctx.store.id)
           .is("deleted_at", null)
           .not("net_content", "is", null)
           .limit(500),
   ]);
-  const netContents = [
-    ...new Set(((contents.data ?? []) as { net_content: string }[]).map((r) => r.net_content)),
-  ]
+  const contentRows = (contents.data ?? []) as {
+    net_content: string;
+    servings_per_container: number | null;
+  }[];
+  const netContents = [...new Set(contentRows.map((r) => r.net_content))]
     .sort((a, b) => a.localeCompare(b, "es"))
     .slice(0, 50);
   // Si la tienda ya captura contenido neto, lo más probable es que venda suplementos.
@@ -90,6 +92,7 @@ export default async function NewProductPage({ params, searchParams }: Props) {
           brands={brands}
           categories={categories.map((c) => ({ id: c.id, name: c.name, depth: c.depth }))}
           netContents={netContents}
+          servingsHint={servingsByContent(contentRows)}
           defaultTemplate={defaultTemplate}
           canStock={hasPermission(ctx, "inventory.adjust")}
           canReadCost={hasPermission(ctx, "products.cost.read")}

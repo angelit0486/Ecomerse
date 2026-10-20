@@ -10,6 +10,7 @@
   - **F1-T1 (hecha): alta rápida.** «Agregar producto» pide nombre, precio, existencias y fotos (varias a la vez, con orden); lo demás plegado; marca y categoría sugeridas por el nombre; borrador en el dispositivo; lista de lo que falta para publicar. Editor completo en `?completo=1`. Clics del primer producto con foto: 6 → 4, campos visibles: ~14 → 3 + fotos. E2E `quick-product` (375 px, axe).
   - **F1-T2 (hecha):** la ficha de un borrador dice qué falta para publicarlo antes de intentarlo.
   - **F1-T3 (hecha): importación en 3 pasos**, valores en español aceptados, errores con el nombre de la columna en español y «sube el archivo corregido» desde la vista previa (E2E `imports`).
+  - **F1-T4 (hecha):** porciones sugeridas por contenido neto ya capturado; SEO plegado en el editor completo.
   - **Pendiente del propietario:** aprobar E15 (alta de tienda por cuenta propia, requiere ADR) y E16 (dominio propio, requiere ADR y credenciales de Vercel). El resto de la lista de la auditoría no toca datos ni contratos.
 
 - **Misión de recuperación (2026-10-17):** el propietario pidió una auditoría de solo lectura, autorizó la Fase 1 y después delegó las decisiones hacia una meta fijada en `DECISIONS.md` §17: la tienda de suplementos más moderna, organizada y completa de México. Hecho y subido:

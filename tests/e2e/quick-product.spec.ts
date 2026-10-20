@@ -130,4 +130,9 @@ test("alta rápida en el celular: sugerencias, borrador, fotos en orden y existe
   expect(media).toHaveLength(2);
   await page.goto(`${base}/nuevo`);
   await expect(page.getByRole("button", { name: "Recuperarlo" })).toHaveCount(0);
+  // El segundo producto ya parte de «Suplemento» y propone las porciones del mismo contenido.
+  await expect(page.getByRole("radio", { name: "Suplemento" })).toBeChecked();
+  await page.getByText(/Más datos \(opcional\)/).click();
+  await page.getByRole("combobox", { name: "Contenido neto" }).fill("907 g");
+  await expect(page.getByRole("textbox", { name: "Porciones por envase" })).toHaveValue("30");
 });
