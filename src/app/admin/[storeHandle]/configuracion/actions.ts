@@ -217,7 +217,9 @@ export async function launchStore(storeHandle: string, _: StepState): Promise<St
     // Primera publicación: la marca elegida en este asistente (guardada en el
     // borrador del tema) sale con la tienda; antes quedaba en borrador (auditoría
     // del panel, fallo 1). Un relanzamiento tras pausar no toca la apariencia.
-    if (!before?.launched_at && hasPermission(ctx, "appearance.manage")) {
+    // Solo con la lectura confirmada: si fallara, no se publica la marca (un
+    // relanzamiento tras pausar no debe tocar la apariencia).
+    if (before && !before.launched_at && hasPermission(ctx, "appearance.manage")) {
       const { data: theme } = await supabase
         .from("store_themes")
         .select("draft_settings, draft_revision")
