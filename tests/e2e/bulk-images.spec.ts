@@ -84,6 +84,8 @@ test("fotos en lote por SKU y nombre, y varias a la vez en la ficha, sin esperar
   await expect(page.getByRole("status").filter({ hasText: "3 fotos subidas" })).toBeVisible({
     timeout: 60_000,
   });
+  // Lo ya subido no se puede volver a mandar: no hay botón que duplique fotos.
+  await expect(page.getByRole("button", { name: /^(Subir|Reintentar)/ })).toHaveCount(0);
 
   // La pasada inmediata puede seguir optimizando cuando termina la subida: se
   // espera a que las tres estén listas (runJobs() es el respaldo idempotente).

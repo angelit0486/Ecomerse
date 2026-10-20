@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { matchFiles, uploadOrder, type FileMatch } from "@/lib/media/bulk-match";
 import { ALLOWED_IMAGE_MIME } from "@/lib/media/constants";
@@ -36,6 +36,7 @@ export function BulkImages({
   const [states, setStates] = useState<Map<number, RowState>>(new Map());
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState<{ ok: number; failed: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const matches = useMemo(
     () =>
@@ -49,6 +50,17 @@ export function BulkImages({
   const unmatched = matches.filter((m) => !m.productId);
   const productCount = new Set(ready.map((m) => m.productId)).size;
   const done = [...states.values()].filter((s) => s === "subida" || typeof s === "object").length;
+  // Solo lo que falta: una foto ya subida nunca se vuelve a mandar (no se duplica).
+  const pending = ready.filter((m) => states.get(m.index) !== "subida");
+  const retrying = pending.length > 0 && pending.length < ready.length;
+
+  // Cerrar la pestaña a media subida corta las que faltan: se avisa.
+  useEffect(() => {
+    if (!running) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [running]);
 
   function choose(list: FileList | null) {
     const images = Array.from(list ?? []).filter((f) =>
@@ -61,34 +73,52 @@ export function BulkImages({
   }
 
   async function start() {
-    if (ready.length === 0) return;
+    const batch = pending;
+    if (batch.length === 0) return;
     setRunning(true);
     setFinished(null);
-    setStates(new Map(ready.map((m) => [m.index, "subiendo" as RowState])));
+    setStates((prev) => {
+      const next = new Map(prev);
+      for (const m of batch) next.set(m.index, "subiendo");
+      return next;
+    });
     const outcomes = await uploadProductImages(
       storeHandle,
-      ready.map((m) => ({ productId: m.productId!, file: files[m.index]! })),
+      batch.map((m) => ({ productId: m.productId!, file: files[m.index]! })),
       (position, outcome: UploadOutcome) => {
-        const row = ready[position]!.index;
+        const row = batch[position]!.index;
         setStates((prev) =>
           new Map(prev).set(row, outcome.ok ? "subida" : { error: outcome.error }),
         );
       },
     );
-    const ok = outcomes.filter((o) => o.ok).length;
-    setFinished({ ok, failed: outcomes.length - ok });
+    const failed = outcomes.filter((o) => !o.ok).length;
+    setFinished({ ok: ready.length - failed, failed });
     setRunning(false);
-    if (inputRef.current) inputRef.current.value = "";
   }
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1 rounded-md border border-border p-4">
+      <div
+        onDragOver={(e) => {
+          if (running) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          if (!running) choose(e.dataTransfer.files);
+        }}
+        className={`space-y-1 rounded-md border p-4 ${dragging ? "border-2 border-dashed border-accent bg-surface" : "border-border"}`}
+      >
         <label htmlFor="bulk-images-input" className="text-sm font-medium">
           Fotos (JPG, PNG, WebP o AVIF; hasta {MAX_FILES} por tanda)
         </label>
         <p id="bulk-images-hint" className="text-[13px] text-fg-muted">
-          Las aligeramos en tu dispositivo antes de subirlas, así suben mucho más rápido.
+          Elígelas aquí o arrástralas a este recuadro. Las aligeramos en tu dispositivo antes de
+          subirlas, así suben mucho más rápido.
         </p>
         <input
           ref={inputRef}
@@ -131,8 +161,10 @@ export function BulkImages({
             {finished ? (
               <p role="status" className={finished.failed ? "text-danger" : "text-success"}>
                 {finished.ok} {finished.ok === 1 ? "foto subida" : "fotos subidas"}
-                {finished.failed ? `, ${finished.failed} con error (revisa la tabla)` : ""}. Las
-                estamos optimizando; en unos segundos aparecen en cada producto.{" "}
+                {finished.failed
+                  ? `, ${finished.failed} con error (revisa la tabla y reintenta)`
+                  : ""}
+                . Las estamos optimizando; en unos segundos aparecen en cada producto.{" "}
                 <Link href={`/admin/${storeHandle}/productos`} className="underline">
                   Ver productos
                 </Link>
@@ -140,15 +172,15 @@ export function BulkImages({
             ) : null}
           </div>
 
-          <Button
-            type="button"
-            onClick={() => void start()}
-            disabled={running || ready.length === 0}
-          >
-            {running
-              ? "Subiendo…"
-              : `Subir ${ready.length} ${ready.length === 1 ? "foto" : "fotos"}`}
-          </Button>
+          {pending.length > 0 ? (
+            <Button type="button" onClick={() => void start()} disabled={running}>
+              {running
+                ? "Subiendo…"
+                : retrying
+                  ? `Reintentar ${pending.length} con error`
+                  : `Subir ${pending.length} ${pending.length === 1 ? "foto" : "fotos"}`}
+            </Button>
+          ) : null}
 
           <Table caption="Asignación de fotos a productos">
             <THead>
