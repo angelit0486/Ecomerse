@@ -22,7 +22,7 @@ export default async function AdminHomePage() {
     callRpc<string | null>(supabase, "access_platform_role"),
   ]);
   const consoleLink = platformRole ? (
-    <Link href="/platform" className="text-sm underline">
+    <Link href="/platform" className="inline-flex min-h-11 items-center text-sm underline">
       Ir a la consola de plataforma
     </Link>
   ) : null;

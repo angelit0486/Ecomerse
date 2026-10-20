@@ -35,7 +35,10 @@ export default async function SupplierPage({ params }: Props) {
   return (
     <section className="space-y-6">
       <header>
-        <Link href={`${base}/productos/proveedores`} className="text-sm underline">
+        <Link
+          href={`${base}/productos/proveedores`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Proveedores
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{supplier.name}</h1>
@@ -57,7 +60,7 @@ export default async function SupplierPage({ params }: Props) {
         ) : null}
         {canStock ? (
           <details className="rounded-md border border-border p-4">
-            <summary className="cursor-pointer text-sm font-medium">
+            <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-sm font-medium">
               Cargar la lista del proveedor (CSV)
             </summary>
             <div className="mt-3">

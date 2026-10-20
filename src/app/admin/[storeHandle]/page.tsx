@@ -378,7 +378,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 })}
               </svg>
               <details className="text-sm">
-                <summary className="cursor-pointer text-[13px] text-fg-muted">
+                <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-[13px] text-fg-muted">
                   Ver como tabla
                 </summary>
                 <table className="mt-2 w-full max-w-md text-left">

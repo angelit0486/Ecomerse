@@ -114,7 +114,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
       {page.next_cursor ? (
         <Link
           href={`${base}?${new URLSearchParams({ ...(area ? { area } : {}), antes: page.next_cursor })}`}
-          className="text-sm underline"
+          className="inline-flex min-h-11 items-center text-sm underline"
         >
           Anteriores
         </Link>

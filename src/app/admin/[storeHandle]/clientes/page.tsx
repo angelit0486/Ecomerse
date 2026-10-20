@@ -66,6 +66,7 @@ export default async function CustomersPage({ params, searchParams }: Props) {
         <form
           action={searchCustomers.bind(null, ctx.store.handle)}
           role="search"
+          aria-label="Buscar clientes"
           className="flex max-w-md gap-2"
         >
           <label htmlFor="q" className="sr-only">
@@ -76,9 +77,12 @@ export default async function CustomersPage({ params, searchParams }: Props) {
             name="q"
             defaultValue={q}
             placeholder="Buscar por email o nombre"
-            className="h-9 flex-1 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm"
+            className="h-11 md:h-9 flex-1 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm"
           />
-          <button type="submit" className="h-9 rounded-md border border-control px-3 text-sm">
+          <button
+            type="submit"
+            className="h-11 md:h-9 rounded-md border border-control px-3 text-sm"
+          >
             Buscar
           </button>
         </form>
@@ -125,7 +129,7 @@ export default async function CustomersPage({ params, searchParams }: Props) {
       {page.next_cursor ? (
         <Link
           href={`${base}?${new URLSearchParams({ despues: page.next_cursor })}`}
-          className="text-sm underline"
+          className="inline-flex min-h-11 items-center text-sm underline"
         >
           Siguientes
         </Link>

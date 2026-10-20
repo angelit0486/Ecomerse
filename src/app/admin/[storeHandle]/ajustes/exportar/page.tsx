@@ -83,7 +83,10 @@ export default async function ExportPage({ params, searchParams }: Props) {
               <p className="text-sm text-fg-muted">{e.hint}</p>
             </div>
             <form method="post" action={`${base}/${e.key}`}>
-              <button type="submit" className="h-9 rounded-md border border-control px-3 text-sm">
+              <button
+                type="submit"
+                className="h-11 md:h-9 rounded-md border border-control px-3 text-sm"
+              >
                 Descargar {e.label.toLowerCase()}
               </button>
             </form>

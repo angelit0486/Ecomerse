@@ -15,7 +15,7 @@ import type { ConsoleState } from "../actions";
 import { retireComplianceRule, saveComplianceRule, setComplianceProfileStatus } from "./actions";
 
 const native =
-  "h-9 w-full rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg aria-[invalid=true]:border-danger";
+  "h-11 md:h-9 w-full rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg aria-[invalid=true]:border-danger";
 const area =
   "w-full rounded-[var(--radius-control)] border border-control bg-surface px-3 py-2 text-sm text-fg aria-[invalid=true]:border-danger";
 

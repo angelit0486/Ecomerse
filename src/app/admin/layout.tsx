@@ -26,7 +26,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
       </header>
       {/* Landmark principal (auditoría del panel: faltaba en 126 pantallas). */}
-      <main className="mx-auto max-w-6xl px-4 py-5 md:py-8">{children}</main>
+      <main data-panel className="mx-auto max-w-6xl px-4 py-5 md:py-8">
+        {children}
+      </main>
     </div>
   );
 }

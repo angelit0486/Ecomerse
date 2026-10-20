@@ -17,8 +17,8 @@ import {
   PAYMENT_METHODS,
   type FontKey,
   type PaymentMethod,
-  type ThemeSettings,
-} from "@/lib/theme/schema";
+} from "@/lib/theme/constants";
+import type { ThemeSettings } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
@@ -748,7 +748,7 @@ export function PublishBar({
           href={previewAction}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-9 items-center rounded-[var(--radius-control)] border border-control bg-surface px-4 text-sm font-medium text-fg hover:bg-canvas"
+          className="inline-flex h-11 md:h-9 items-center rounded-[var(--radius-control)] border border-control bg-surface px-4 text-sm font-medium text-fg hover:bg-canvas"
         >
           Vista previa<span className="sr-only"> (se abre en otra pestaña)</span>
         </a>

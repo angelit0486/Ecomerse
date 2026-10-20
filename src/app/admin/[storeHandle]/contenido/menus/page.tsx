@@ -98,7 +98,10 @@ export default async function MenusPage({ params }: Props) {
   return (
     <section className="space-y-6">
       <header>
-        <Link href={`/admin/${ctx.store.handle}/contenido`} className="text-sm underline">
+        <Link
+          href={`/admin/${ctx.store.handle}/contenido`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Contenido
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Menús</h1>

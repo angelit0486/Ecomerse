@@ -70,7 +70,10 @@ export default async function InventoryHistoryPage({ params }: Props) {
   return (
     <section className="space-y-5">
       <header>
-        <Link href={`/admin/${ctx.store.handle}/inventario`} className="text-sm underline">
+        <Link
+          href={`/admin/${ctx.store.handle}/inventario`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Inventario
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Historial: {label}</h1>

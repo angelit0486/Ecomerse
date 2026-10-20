@@ -213,7 +213,7 @@ export function RateForm({
           />
         )}
       </Field>
-      <label className="flex h-9 items-center gap-2 text-sm">
+      <label className="flex h-11 md:h-9 items-center gap-2 text-sm">
         <input type="hidden" name="is_active" value="0" />
         <input
           type="checkbox"

@@ -311,7 +311,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             ))}
           </select>
         </div>
-        <label className="flex h-9 items-center gap-2 text-sm">
+        <label className="flex h-11 md:h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="eliminados" value="1" defaultChecked={deleted} />
           Ver eliminados
         </label>
@@ -321,7 +321,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
         {filtersActive ? (
           <Link
             href={sort === "recientes" ? base : `${base}?${new URLSearchParams(sortQuery)}`}
-            className="text-sm underline"
+            className="inline-flex min-h-11 items-center text-sm underline"
           >
             Quitar filtros
           </Link>

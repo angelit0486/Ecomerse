@@ -267,7 +267,10 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             <h2 id="errores" className="font-semibold">
               Errores por fila
             </h2>
-            <a href={`${base}/${job.id}/errores`} className="text-sm underline">
+            <a
+              href={`${base}/${job.id}/errores`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
               Descargar las filas con error (CSV)
             </a>
           </div>

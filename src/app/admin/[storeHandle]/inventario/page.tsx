@@ -105,16 +105,16 @@ export default async function InventoryPage({ params, searchParams }: Props) {
             type="search"
             defaultValue={query}
             placeholder="Producto o SKU"
-            className="h-9 w-64 rounded-[var(--radius-control)] border border-control bg-surface px-3 text-sm"
+            className="h-11 md:h-9 w-64 rounded-[var(--radius-control)] border border-control bg-surface px-3 text-sm"
           />
         </div>
-        <label className="flex h-9 items-center gap-2 text-sm">
+        <label className="flex h-11 md:h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="bajo" value="1" defaultChecked={lowStock} />
           Solo stock bajo
         </label>
         <button
           type="submit"
-          className="inline-flex h-9 items-center rounded-[var(--radius-control)] border border-control px-4 text-sm font-medium"
+          className="inline-flex h-11 md:h-9 items-center rounded-[var(--radius-control)] border border-control px-4 text-sm font-medium"
         >
           Filtrar
         </button>
@@ -151,7 +151,10 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                       <span className="ml-2 text-sm font-normal text-fg-muted">{row.sku}</span>
                     ) : null}
                   </h2>
-                  <Link href={`${base}/${row.variant_id}`} className="text-sm underline">
+                  <Link
+                    href={`${base}/${row.variant_id}`}
+                    className="inline-flex min-h-11 items-center text-sm underline"
+                  >
                     Historial de {label}
                   </Link>
                 </div>
@@ -197,7 +200,7 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                 ) : null}
                 {canAdjust && row.track_inventory ? (
                   <details>
-                    <summary className="cursor-pointer text-sm font-medium">
+                    <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-sm font-medium">
                       Ajustar existencias o aviso
                     </summary>
                     <div className="mt-3 space-y-4">

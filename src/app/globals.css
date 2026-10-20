@@ -144,3 +144,16 @@ select[aria-hidden="true"][tabindex="-1"] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+
+/*
+ * Casillas y radios del panel en el celular: 24 px, el mínimo de WCAG 2.5.8.
+ * Las que van dentro de una etiqueta de 44 px se tocan por la etiqueta
+ * (misión panel, F4).
+ */
+@media (max-width: 767px) {
+  [data-panel] input[type="checkbox"],
+  [data-panel] input[type="radio"] {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}

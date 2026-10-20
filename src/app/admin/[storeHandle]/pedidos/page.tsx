@@ -107,7 +107,10 @@ export default async function OrdersPage({ params, searchParams }: Props) {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-xl font-semibold">Pedidos</h1>
           {(dispatches.count ?? 0) > 0 ? (
-            <Link href={`${base}/despachos`} className="text-sm underline">
+            <Link
+              href={`${base}/despachos`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
               Despachos de proveedores por atender ({dispatches.count})
             </Link>
           ) : null}
@@ -152,7 +155,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
       {next ? (
         <Link
           href={`${base}?estado=${filter}&antes=${encodeURIComponent(next)}`}
-          className="text-sm underline"
+          className="inline-flex min-h-11 items-center text-sm underline"
         >
           {oldestFirst ? "Más pedidos" : "Pedidos anteriores"}
         </Link>

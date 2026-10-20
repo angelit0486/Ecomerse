@@ -43,7 +43,10 @@ export default async function ContentPage({ params, searchParams }: Props) {
 
       {canMenus ? (
         <p>
-          <Link href={`${base}/menus`} className="text-sm underline">
+          <Link
+            href={`${base}/menus`}
+            className="inline-flex min-h-11 items-center text-sm underline"
+          >
             Editar menús de la tienda
           </Link>
         </p>

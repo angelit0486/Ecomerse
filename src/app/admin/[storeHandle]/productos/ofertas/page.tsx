@@ -32,7 +32,7 @@ export default async function SalesPage({ params }: Props) {
   return (
     <section className="space-y-5">
       <header>
-        <Link href={base} className="text-sm underline">
+        <Link href={base} className="inline-flex min-h-11 items-center text-sm underline">
           ← Productos
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Ofertas con fechas</h1>

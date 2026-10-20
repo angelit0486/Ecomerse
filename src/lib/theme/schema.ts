@@ -21,36 +21,24 @@ z.config({ jitless: true });
  * `char_length` (§13 M2).
  */
 
-export const FONT_KEYS = [
-  "inter",
-  "dm-sans",
-  "manrope",
-  "work-sans",
-  "lora",
-  "oswald",
-  "barlow-condensed",
-  "montserrat",
-  "playfair-display",
-  "space-grotesk",
-] as const;
-export type FontKey = (typeof FONT_KEYS)[number];
-
-export const PAYMENT_METHODS = [
-  "visa",
-  "mastercard",
-  "amex",
-  "oxxo",
-  "spei",
-  "paypal",
-  "mercado_pago",
-  "cash_on_delivery",
-] as const;
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
-
-export const MAX_SECTIONS = 12;
-/** Con hasta 12 productos cada una, la portada nunca pasa de 48 (F9-DESIGN §13 M3). */
-export const MAX_PRODUCT_SECTIONS = 4;
-export const MAX_RICH_TEXT_BYTES = 20_000;
+// Constantes sin Zod en `constants.ts`: los formularios del panel las usan en el
+// navegador y no deben arrastrar el esquema (misión panel, F4).
+export {
+  FONT_KEYS,
+  MAX_PRODUCT_SECTIONS,
+  MAX_RICH_TEXT_BYTES,
+  MAX_SECTIONS,
+  PAYMENT_METHODS,
+  type FontKey,
+  type PaymentMethod,
+} from "./constants";
+import {
+  FONT_KEYS,
+  MAX_PRODUCT_SECTIONS,
+  MAX_RICH_TEXT_BYTES,
+  MAX_SECTIONS,
+  PAYMENT_METHODS,
+} from "./constants";
 
 const CONTROL_RE = /[\u0000-\u001f\u007f]/;
 const CONTROL_EXCEPT_NEWLINE_RE = /[\u0000-\u0009\u000b-\u001f\u007f]/;

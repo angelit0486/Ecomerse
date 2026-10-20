@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useActionState, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
-import { MAX_PRODUCT_SECTIONS, MAX_SECTIONS, type HomeSectionType } from "@/lib/theme/schema";
+import { MAX_PRODUCT_SECTIONS, MAX_SECTIONS } from "@/lib/theme/constants";
+import type { HomeSectionType } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
 
 import { FormFeedback } from "../_shared/form-feedback";

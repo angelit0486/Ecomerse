@@ -14,7 +14,7 @@ import { FormFeedback } from "../../_shared/form-feedback";
 import { setSupplierOrderStatus } from "./actions";
 
 const inputClass =
-  "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
+  "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
 
 export interface SupplierOrderFormData {
   id: string;

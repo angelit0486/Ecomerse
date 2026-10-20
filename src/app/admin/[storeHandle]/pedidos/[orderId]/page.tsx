@@ -238,7 +238,10 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <header>
-        <Link href={`/admin/${ctx.store.handle}/pedidos`} className="text-sm underline">
+        <Link
+          href={`/admin/${ctx.store.handle}/pedidos`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Pedidos
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Pedido {order.display_number as string}</h1>

@@ -61,7 +61,7 @@ export function GlobalSearch({ storeHandle }: { storeHandle: string }) {
   const open = !short;
 
   return (
-    <div role="search" className="relative w-full md:max-w-sm">
+    <div role="search" aria-label="Buscar en el panel" className="relative w-full md:max-w-sm">
       <label htmlFor="busqueda-panel" className="sr-only">
         Buscar productos, pedidos o clientes
       </label>

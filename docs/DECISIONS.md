@@ -687,3 +687,9 @@ Pedido del propietario: «que una dueña sin conocimientos técnicos monte y ope
 - **D-F4-02 — 44 px en el celular.** `Button`, `Input`, `Select`, `linkButton` y `nativeControl` miden 44 px bajo 768 px y conservan 32 o 36 px en escritorio (`md:`). Las clases se concatenan sin fusionar (`cn`), así que quien antes forzaba `h-11` ahora pide `md:h-11` solo si también lo quiere en escritorio.
 - **D-F4-03 — Sin esqueleto de página.** Se probó un `loading.tsx` para todo el panel. Con él, Lighthouse de la ficha bajó de 96–98 a 89–94: el título llega en streaming y cuenta como pintado tarde. Se sustituye por un indicador de carga en la entrada del menú elegida (`useLinkStatus`), que da la misma señal al navegar sin tocar la carga inicial. `Skeleton` se usa en «Avisos».
 - **D-F4-04 — Lo que no se hizo.** No se paginaron Proveedores ni Descuentos: con los volúmenes de una tienda (decenas) no cambia nada medible, y un tope sin paginación escondería datos. De los 5 `Feedback` locales (E4), el de Contenido era idéntico y ahora usa `FormFeedback`. Los otros 4 se quedan porque hacen algo distinto: Configurar tienda y Catálogo ocultan el error general cuando ya se ve junto al campo; Ofertas lo une con los errores de campo; Inventario usa texto más pequeño dentro de tablas.
+- **D-F4-05 — Rendimiento sin quitar funciones.**
+  - **La ficha** hace todas sus lecturas en una sola ronda: antes eran tres.
+  - **Constantes del tema** (`FONT_KEYS`, `PAYMENT_METHODS`, `MAX_*`) pasan a `src/lib/theme/constants.ts`, sin Zod, y `schema.ts` las reexporta. Los formularios de Apariencia y Configurar tienda ya no cargan el esquema en el navegador: 278 → 186 KB de JS.
+  - **44 px también en los controles escritos a mano:** 17 selectores, campos y botones con `h-9`, y las pestañas `<summary>`.
+  - **Casillas:** 24 px en el celular (`[data-panel]`); es el mínimo de WCAG 2.5.8.
+  - **Regiones de búsqueda** con nombre propio.

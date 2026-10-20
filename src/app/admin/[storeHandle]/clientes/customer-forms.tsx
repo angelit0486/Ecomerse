@@ -9,7 +9,7 @@ import { FormFeedback } from "../_shared/form-feedback";
 import { anonymizeCustomer, updateCustomer } from "./actions";
 
 const inputClass =
-  "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
+  "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
 
 export function CustomerForm({
   storeHandle,

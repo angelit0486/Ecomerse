@@ -8,7 +8,7 @@ import { saveMenu, type ContentActionState } from "../actions";
 import { filterHref, LINK_TYPE_LABELS } from "../labels";
 
 const control =
-  "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
+  "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
 
 export interface MenuDraft {
   key: string;

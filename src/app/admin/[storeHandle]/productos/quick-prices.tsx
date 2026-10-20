@@ -41,7 +41,7 @@ export function QuickPrices({
 
   return (
     <details className="mt-1 text-sm">
-      <summary className="cursor-pointer text-[13px] text-fg-muted underline underline-offset-2">
+      <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-[13px] text-fg-muted underline underline-offset-2">
         Cambiar precios
         <span className="sr-only"> de {productTitle}</span>
       </summary>

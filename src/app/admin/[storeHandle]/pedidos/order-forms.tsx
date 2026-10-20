@@ -35,7 +35,7 @@ export function ConfirmPaymentForm({
         <input
           name="note"
           maxLength={200}
-          className="h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm"
+          className="h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm"
         />
       </label>
       <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ export function StaffNoteForm({
 }
 
 const inputClass =
-  "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
+  "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
 
 export interface FulfillLine {
   id: string;

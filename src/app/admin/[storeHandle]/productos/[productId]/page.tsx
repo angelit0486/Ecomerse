@@ -151,7 +151,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
   return (
     <section className="space-y-6">
       <header>
-        <Link href={`/admin/${ctx.store.handle}/productos`} className="text-sm underline">
+        <Link
+          href={`/admin/${ctx.store.handle}/productos`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Productos
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{product.title}</h1>

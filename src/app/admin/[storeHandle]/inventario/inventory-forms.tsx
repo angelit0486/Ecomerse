@@ -9,7 +9,7 @@ import { Input } from "@/ui/primitives/input";
 import { adjustInventory, setLowStockThreshold, type InventoryActionState } from "./actions";
 
 const control =
-  "h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
+  "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
 
 function Feedback({ state }: { state: InventoryActionState }) {
   if (state.ok) {

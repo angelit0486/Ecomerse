@@ -59,7 +59,10 @@ export default async function CustomerPage({ params }: Props) {
   return (
     <section className="space-y-6">
       <header>
-        <Link href={`/admin/${ctx.store.handle}/clientes`} className="text-sm underline">
+        <Link
+          href={`/admin/${ctx.store.handle}/clientes`}
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           ← Clientes
         </Link>
         <h1 className="mt-2 text-xl font-semibold">
