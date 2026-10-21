@@ -86,7 +86,12 @@ test("plantilla «En blanco»: borrador sin bloques, sin ejemplos y sin categor�
   await expect(
     page.getByText("Plantilla «En blanco» aplicada al borrador. Revísala en la vista previa."),
   ).toBeVisible();
-  await expect(page.getByText(/productos? de ejemplo/)).toHaveCount(0);
+  await expect(page.getByText(/^Tu tienda tiene .* de ejemplo/)).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("list", { name: "Pendientes para publicar" })
+      .getByText("Quita los productos de ejemplo"),
+  ).toHaveCount(0);
 
   const [state] = await admin<{ sections: number; products: number; regulated: number }[]>`
     select jsonb_array_length(t.draft_home_sections)::int as sections,
