@@ -863,6 +863,16 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
   - vista previa de Google y de redes en SEO.
 - **E2E `studio`:** celular y computadora, el video sin peticiones externas hasta tocarlo, y axe.
 
+**Implementación, tramo 2 (2026-10-21): historial de versiones.**
+
+- **Migración `20261020000300_theme_versions.sql`:**
+  - tabla `store_theme_versions`: `store_id NOT NULL`, RLS forzado (lectura con `appearance.manage`), solo agrega (`forbid_mutation` en UPDATE) y `UNIQUE (store_id, number)`;
+  - `appearance_publish_theme` guarda la versión en la misma transacción y poda a 30;
+  - `appearance_restore_theme_version` copia la versión al borrador. Revalida las referencias y, si el logo ya no existe, lo omite y lo avisa. Pasa por la revisión del borrador (conflicto, no pisa) y queda en la auditoría.
+- **Decisión:** la versión guarda el id del logo **sin FK**, como la auditoría, para no impedir la purga de imágenes; al restaurar se vuelve a validar todo.
+- **Panel:** pestaña «Historial» con «Restaurar la versión N al borrador».
+- **Pruebas:** pgTAP `83_theme_versions` (16, con aislamiento entre tiendas y rol sin permiso); E2E `studio` (quitar, publicar, restaurar y volver a publicar).
+
 ### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Esquema.** `collections`, con dos modos:

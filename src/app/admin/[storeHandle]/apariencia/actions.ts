@@ -164,3 +164,42 @@ export async function discardThemeDraft(
   const tab = /^[a-z]{1,20}$/.test(section) ? section : "marca";
   redirect(`/admin/${storeHandle}/apariencia?seccion=${tab}&descartado=${revision + 1}`);
 }
+
+/**
+ * Historial (ADR-034 §4): copia una versión publicada al borrador. No publica:
+ * la dueña la revisa en la vista previa y publica como siempre.
+ */
+export async function restoreThemeVersion(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const versionId = String(formData.get("version_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/.test(versionId)) return { error: "Versión no válida." };
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
+  let result: { version: number; logo_missing: boolean };
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    result = await callRpc(supabase, "appearance_restore_theme_version", {
+      p_store_id: storeId,
+      p_version_id: versionId,
+      p_expected_revision: revision,
+    });
+  } catch (error) {
+    const e = themeRpcError(error);
+    if (e.detail === "references") {
+      return {
+        error:
+          "Esa versión usa imágenes, productos o categorías que ya no existen. Restaura otra o arma el diseño de nuevo.",
+      };
+    }
+    if (e.code === "not_found") return { error: "Esa versión ya no está en el historial." };
+    return rpcFailure(error);
+  }
+  revalidatePath(`/admin/${storeHandle}/apariencia`);
+  return {
+    ok: true,
+    message: `Versión ${result.version} copiada al borrador${result.logo_missing ? " (su logo ya no existe: elige uno en Marca)" : ""}. Revísala en la vista previa y publícala.`,
+  };
+}

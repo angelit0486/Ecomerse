@@ -156,5 +156,32 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await expect(wide.getByText("Envío gratis desde $999")).toBeVisible();
   await expect(wide.getByRole("heading", { name: "Preguntas frecuentes" })).toBeHidden();
   await expectNoSeriousA11yViolations(wide);
+
+  // Historial (ADR-034 §4): se quita el video, se publica, y se vuelve a la versión anterior.
+  await page.goto(`/admin/${tenant.handle}/apariencia?seccion=portada`);
+  await page.getByRole("button", { name: "Editar Video" }).click();
+  await page.getByRole("button", { name: "Eliminar Video" }).click();
+  await page.getByRole("button", { name: "Guardar portada en el borrador" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Portada guardada en el borrador" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Publicar" }).click();
+  await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
+  await wide.goto(store());
+  await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toHaveCount(0);
+
+  await page.goto(`/admin/${tenant.handle}/apariencia?seccion=historial`);
+  const versions = page.getByRole("list", { name: "Versiones publicadas" });
+  await expect(versions.getByText("Versión 2 (publicada ahora)")).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await page.getByRole("button", { name: "Restaurar la versión 1 al borrador" }).click();
+  await expect(page.getByText(/Versión 1 copiada al borrador/)).toBeVisible();
+  // Restaurar no publica: la tienda sigue sin el video hasta publicar.
+  await wide.reload();
+  await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Publicar" }).click();
+  await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
+  await wide.reload();
+  await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toBeVisible();
   await desktop.close();
 });

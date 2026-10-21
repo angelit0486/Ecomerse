@@ -17,6 +17,7 @@ import {
   SeoForm,
   SocialContactForm,
 } from "./forms";
+import { ThemeHistory, type ThemeVersionRow } from "./history";
 import { HomeEditor, type HomeEditorOptions } from "./home-editor";
 
 export const metadata: Metadata = { title: "Apariencia" };
@@ -33,6 +34,7 @@ const TABS = [
   { key: "seo", label: "SEO" },
   { key: "portada", label: "Portada" },
   { key: "presentacion", label: "Ficha y listados" },
+  { key: "historial", label: "Historial" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -118,6 +120,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
     .filter((m) => m.status === "ready")
     .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text }));
   const homeOptions = tab === "portada" ? await loadHomeOptions(ctx.store.id, rows) : null;
+  const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
     []) as Parameters<typeof HomeEditor>[0]["initial"];
   // Tras descartar, los formularios se montan de nuevo con lo publicado.
@@ -222,6 +225,15 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           options={homeOptions}
         />
       ) : null}
+      {tab === "historial" ? (
+        <ThemeHistory
+          key={formKey}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          versions={versions}
+          hasDraft={hasDraft}
+        />
+      ) : null}
       {tab === "presentacion" ? (
         <PresentationForm
           key={formKey}
@@ -312,4 +324,35 @@ async function loadHomeOptions(
       title: p.status === "active" ? p.title : `${p.title} (borrador)`,
     })),
   };
+}
+
+/** Versiones publicadas (ADR-034 §4), con un resumen legible de cada una. */
+async function loadVersions(storeId: string): Promise<ThemeVersionRow[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("store_theme_versions")
+    .select("id, number, published_at, home_sections, settings")
+    .eq("store_id", storeId)
+    .order("number", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  return (data ?? []).map((v) => {
+    const sections = Array.isArray(v.home_sections) ? (v.home_sections as { type: string }[]) : [];
+    const hero = sections.find((s) => s.type === "hero") as
+      { props?: { heading?: string } } | undefined;
+    const colors = (v.settings as { colors?: { primary?: string } } | null)?.colors;
+    const parts = [
+      sections.length === 0
+        ? "portada de la plantilla"
+        : `${sections.length} ${sections.length === 1 ? "bloque" : "bloques"} en la portada`,
+      hero?.props?.heading ? `«${hero.props.heading}»` : null,
+      colors?.primary ? `color principal ${colors.primary}` : null,
+    ].filter(Boolean);
+    return {
+      id: v.id as string,
+      number: v.number as number,
+      publishedAt: v.published_at as string,
+      summary: parts.join(" · "),
+    };
+  });
 }
