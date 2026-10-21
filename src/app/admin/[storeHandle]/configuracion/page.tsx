@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { STORE_TEMPLATES } from "@/lib/templates/store-templates";
 import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
@@ -13,6 +14,7 @@ import { BrandForm } from "../apariencia/forms";
 import { ProfileForm } from "./forms";
 import { LaunchButton, ManualPaymentForm } from "./launch-forms";
 import { LogoForm, type LogoCandidate } from "./logo-form";
+import { SamplesNotice, TemplateForm } from "./template-form";
 
 export const metadata: Metadata = { title: "Configura tu tienda" };
 
@@ -47,6 +49,7 @@ function issueHref(base: string, code: string): string {
   if (code === "active_product") return `${base}/productos`;
   if (code === "shipping_zone") return `${base}/envios`;
   if (code === "compliance_profile") return `${base}/ajustes/cumplimiento`;
+  if (code === "sample_products") return "#paso-plantilla";
   return `${base}/contenido`;
 }
 
@@ -56,6 +59,10 @@ export default async function OnboardingPage({ params }: Props) {
   const canEditProfile = hasPermission(ctx, "store.update");
   const canEditBranding = hasPermission(ctx, "appearance.manage");
   const canManagePayments = hasPermission(ctx, "payments.manage");
+  const canApplyTemplate =
+    canEditBranding &&
+    hasPermission(ctx, "categories.manage") &&
+    hasPermission(ctx, "products.create");
   if (!canEditProfile && !canEditBranding) notFound();
 
   const supabase = await createSupabaseServerClient();
@@ -86,19 +93,27 @@ export default async function OnboardingPage({ params }: Props) {
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
-  const [{ data: checklist, error: checklistError }, { data: manual }] = await Promise.all([
-    supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
-    hasPermission(ctx, "payments.read")
-      ? supabase
-          .from("payment_accounts")
-          .select("display_name, status, public_config")
-          .eq("store_id", ctx.store.id)
-          .eq("provider", "manual")
-          .order("created_at")
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: checklist, error: checklistError }, { data: manual }, { count: sampleCount }] =
+    await Promise.all([
+      supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
+      hasPermission(ctx, "payments.read")
+        ? supabase
+            .from("payment_accounts")
+            .select("display_name, status, public_config")
+            .eq("store_id", ctx.store.id)
+            .eq("provider", "manual")
+            .order("created_at")
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      // Productos de ejemplo de la plantilla (ADR-034 §5): bloquean el lanzamiento.
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ctx.store.id)
+        .contains("tags", ["ejemplo"])
+        .is("deleted_at", null),
+    ]);
   if (checklistError) throw checklistError;
   const launch = checklist as { status: string; issues: LaunchIssue[] };
   const issues = launch.issues;
@@ -176,6 +191,36 @@ export default async function OnboardingPage({ params }: Props) {
           ))}
         </ol>
       </header>
+
+      {(canApplyTemplate && launch.status === "draft") || (sampleCount ?? 0) > 0 ? (
+        <section aria-labelledby="paso-plantilla" className="space-y-3">
+          <h2 id="paso-plantilla" className="text-base font-semibold">
+            Plantilla por giro
+          </h2>
+          <SamplesNotice
+            storeHandle={ctx.store.handle}
+            count={sampleCount ?? 0}
+            canDelete={hasPermission(ctx, "products.delete")}
+          />
+          {canApplyTemplate && launch.status === "draft" ? (
+            <TemplateForm
+              storeHandle={ctx.store.handle}
+              revision={theme?.draft_revision ?? 0}
+              templates={STORE_TEMPLATES.map(({ key, name, description, colors }) => ({
+                key,
+                name,
+                description,
+                colors: {
+                  primary: colors.primary!,
+                  accent: colors.accent!,
+                  background: colors.background!,
+                  foreground: colors.foreground!,
+                },
+              }))}
+            />
+          ) : null}
+        </section>
+      ) : null}
 
       {canEditProfile && store ? (
         <section aria-labelledby="paso-datos" className="space-y-3">

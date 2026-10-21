@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { formValues } from "@/lib/form-values";
+import { findTemplate, templatePayload } from "@/lib/templates/store-templates";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
@@ -244,4 +245,72 @@ export async function launchStore(storeHandle: string, _: StepState): Promise<St
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
   return { ok: true, message: `¡Tu tienda está publicada!${brandingNote}` };
+}
+
+// -----------------------------------------------------------------------------
+// Plantillas por giro (ADR-034 §5): estilo, portada, categorías y productos de
+// ejemplo en una transacción. La plantilla sale del código; el formulario solo
+// manda su clave.
+// -----------------------------------------------------------------------------
+export async function applyStoreTemplate(
+  storeHandle: string,
+  _: StepState,
+  formData: FormData,
+): Promise<StepState> {
+  const template = findTemplate(String(formData.get("template") ?? ""));
+  if (!template) return { error: "Elige una plantilla." };
+  let result: { products: number; skipped: number };
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    result = await callRpc<{ products: number; skipped: number }>(
+      supabase,
+      "store_apply_template",
+      {
+        p_store_id: ctx.store.id,
+        p_template: templatePayload(template),
+        p_expected_revision: readRevision(formData),
+      },
+    );
+    invalidateStore(ctx.store.id);
+  } catch (error) {
+    const failed = failure(error);
+    if (failed.code === "conflict") return { error: CONFLICT_MESSAGE };
+    if (failed.fields?.launched) {
+      return { error: "Tu tienda ya está publicada: las plantillas se aplican antes de publicar." };
+    }
+    if (failed.fields?.contrast) {
+      return { error: "Los colores de la plantilla no tienen buen contraste. Avísanos." };
+    }
+    return { error: failed.error };
+  }
+  revalidatePath(`/admin/${storeHandle}`, "layout");
+  const products =
+    result.products === 1 ? "1 producto de ejemplo" : `${result.products} productos de ejemplo`;
+  return {
+    ok: true,
+    message: `Plantilla «${template.name}» aplicada al borrador con ${products}. Revísala en la vista previa.`,
+  };
+}
+
+export async function removeSampleProducts(storeHandle: string, _: StepState): Promise<StepState> {
+  let removed: number;
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    removed = await callRpc<number>(supabase, "store_remove_sample_products", {
+      p_store_id: ctx.store.id,
+    });
+    invalidateStore(ctx.store.id);
+  } catch (error) {
+    return { error: failure(error).error };
+  }
+  revalidatePath(`/admin/${storeHandle}`, "layout");
+  return {
+    ok: true,
+    message:
+      removed === 1
+        ? "Se quitó 1 producto de ejemplo."
+        : `Se quitaron ${removed} productos de ejemplo.`,
+  };
 }

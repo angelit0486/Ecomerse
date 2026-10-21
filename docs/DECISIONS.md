@@ -890,6 +890,19 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
 - **Panel (Contenido → página):** editor de bloques (el mismo de la portada), «Publicar bloques» y «Descartar», imagen al compartir y vista previa de Google y de redes.
 - **Pruebas:** pgTAP `84_page_blocks` (16) y E2E `studio`, con una página armada solo con bloques.
 
+**Implementación, tramo 4 (2026-10-21): plantillas de tienda por giro.**
+
+- **Plantillas en código** (`src/lib/templates/store-templates.ts`): suplementos, ropa, belleza, abarrotes y genérica. Cada una trae estilo (colores AA, tipografía, forma, densidad y listados), portada, categorías y productos de ejemplo. Sin imágenes: cada tienda sube las suyas. Sin testimonios inventados (solo el bloque de opiniones verificadas). Los textos no prometen efectos y piden ser reemplazados.
+- **Migración `20261021000200_store_templates.sql`:**
+  - `store_apply_template` aplica todo en una transacción con las RPC de siempre (mismas validaciones de tema, contraste, referencias y permisos: apariencia, categorías y alta de productos);
+  - solo antes del primer lanzamiento (`launched_at` nulo);
+  - la base marca los ejemplos: «Ejemplo · » en el título, etiqueta `ejemplo`, en borrador (solo en la vista previa privada, nunca se compran), sin SKU ni inventario. La descripción llega como texto plano y la base la envuelve en un párrafo;
+  - volver a aplicar reutiliza categorías por slug y omite los productos que ya existen;
+  - `store_remove_sample_products` los borra lógicamente con `catalog_soft_delete_product`;
+  - `app.validate_store_for_launch` agrega el pendiente `sample_products` mientras quede alguno.
+- **Decisión:** la plantilla se elige en «Configura tu tienda» (no hace falta E15). El formulario solo manda la clave; el servidor arma el contenido.
+- **Pruebas:** unit (esquema, contraste, límites, textos sin promesas), pgTAP `85_store_templates` (19, con aislamiento, rol sin permiso y tienda publicada) y E2E `store-templates` (axe).
+
 ### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Esquema.** `collections`, con dos modos:

@@ -1,0 +1,64 @@
+import { expect, test } from "@playwright/test";
+
+import {
+  admin,
+  createAuthUser,
+  createTenant,
+  expectNoSeriousA11yViolations,
+  loginNewStaff,
+  uniq,
+} from "./support";
+
+/**
+ * ADR-034 §5: plantilla por giro en «Configura tu tienda». Deja estilo, portada,
+ * categorías y productos de ejemplo en borrador; los ejemplos bloquean el
+ * lanzamiento hasta quitarlos.
+ */
+const run = uniq();
+const ownerEmail = `plantilla-${run}@example.test`;
+let tenant: Awaited<ReturnType<typeof createTenant>>;
+
+test.beforeAll(async () => {
+  tenant = await createTenant(`t${run}`, await createAuthUser(ownerEmail));
+});
+
+test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos", async ({
+  page,
+}) => {
+  await loginNewStaff(page, ownerEmail);
+  await page.goto(`/admin/${tenant.handle}/configuracion`);
+  const section = page.getByRole("region", { name: "Plantilla por giro" });
+  await expect(section.getByRole("radio")).toHaveCount(5);
+  await expectNoSeriousA11yViolations(page);
+
+  await section.getByRole("radio", { name: /^Ropa/ }).check();
+  await section.getByRole("button", { name: "Aplicar plantilla" }).click();
+  await expect(
+    page.getByText("Plantilla «Ropa» aplicada al borrador con 4 productos de ejemplo."),
+  ).toBeVisible();
+  await expect(page.getByText("Tu tienda tiene 4 productos de ejemplo")).toBeVisible();
+  const pending = page.getByRole("list", { name: "Pendientes para publicar" });
+  await expect(pending.getByText("Quita los productos de ejemplo")).toBeVisible();
+
+  const [theme] = await admin<{ primary: string; heading: string; sections: number }[]>`
+    select draft_settings #>> '{colors,primary}' as primary,
+           draft_settings #>> '{typography,heading}' as heading,
+           jsonb_array_length(draft_home_sections) as sections
+      from public.store_themes where store_id = ${tenant.storeId}`;
+  expect(theme).toEqual({ primary: "#2b2d42", heading: "playfair-display", sections: 5 });
+  const products = await admin<{ title: string; status: string }[]>`
+    select title, status from public.products
+     where store_id = ${tenant.storeId} and deleted_at is null order by title`;
+  expect(products.map((p) => p.status)).toEqual(["draft", "draft", "draft", "draft"]);
+  expect(products.every((p) => p.title.startsWith("Ejemplo · "))).toBe(true);
+
+  // Los ejemplos se ven en el catálogo del panel, marcados en el título.
+  await page.goto(`/admin/${tenant.handle}/productos`);
+  await expect(page.getByText("Ejemplo · Gorra de gabardina").first()).toBeVisible();
+
+  await page.goto(`/admin/${tenant.handle}/configuracion`);
+  await page.getByRole("button", { name: "Quitar los 4 productos de ejemplo" }).click();
+  await expect(page.getByText("Se quitaron 4 productos de ejemplo.")).toBeVisible();
+  await expect(pending.getByText("Quita los productos de ejemplo")).toHaveCount(0);
+  await expectNoSeriousA11yViolations(page);
+});
