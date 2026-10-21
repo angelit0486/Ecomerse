@@ -18,22 +18,27 @@ export function SeoPreview({
   description,
   url,
   imageUrl,
+  headingLevel = 3,
 }: {
   title: string;
   description: string;
   url: string;
   imageUrl: string | null;
+  /** Nivel del título según dónde se muestre, para no saltar niveles (axe heading-order). */
+  headingLevel?: 2 | 3;
 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <section aria-labelledby="vista-buscadores" className="space-y-3">
-      <h3 id="vista-buscadores" className="text-sm font-semibold">
+      <Heading id="vista-buscadores" className="text-sm font-semibold">
         Así se vería
-      </h3>
-      <div className="grid gap-4 md:grid-cols-2">
+      </Heading>
+      {/* min-w-0: sin él, la URL de una sola línea ensancha la columna en el celular. */}
+      <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
         <figure className="space-y-1 rounded-md border border-border p-4">
           <figcaption className="text-[12px] text-fg-muted">En Google</figcaption>
           <p className="truncate text-[13px] text-fg-muted">{url}</p>
-          <p className="text-lg leading-snug text-[#1a0dab]">{cut(title, 60)}</p>
+          <p className="break-words text-lg leading-snug text-[#1a0dab]">{cut(title, 60)}</p>
           <p className="text-sm text-fg-muted">
             {description
               ? cut(description, 155)
@@ -54,7 +59,7 @@ export function SeoPreview({
             <p className="text-[12px] uppercase text-fg-muted">
               {url.replace(/^https?:\/\//, "").split("/")[0]}
             </p>
-            <p className="font-semibold leading-snug">{cut(title, 70)}</p>
+            <p className="break-words font-semibold leading-snug">{cut(title, 70)}</p>
             {description ? <p className="text-sm text-fg-muted">{cut(description, 110)}</p> : null}
           </div>
         </figure>

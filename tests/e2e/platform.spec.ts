@@ -45,6 +45,19 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.getByRole("link", { name: "Ir a la consola de plataforma" }).click();
   await expect(page.getByRole("heading", { name: "Organizaciones" })).toBeVisible();
 
+  // Pulido (D-2): en el celular la consola cabe en 375 px y sus enlaces miden 44 px.
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  const consoleNav = page.getByRole("navigation", { name: "Consola de plataforma" });
+  for (const name of ["Organizaciones", "Soporte", "Cumplimiento"]) {
+    const box = (await consoleNav.getByRole("link", { name }).boundingBox())!;
+    expect(box.height, name).toBeGreaterThanOrEqual(44);
+  }
+  const create = page.getByRole("link", { name: "Crear organización y tienda" });
+  expect((await create.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await page.setViewportSize(viewport);
+
   // Alta asistida → invitación al dueño.
   await page.getByRole("link", { name: "Crear organización y tienda" }).click();
   await page.getByLabel("Nombre de la organización").fill(`Nueva ${run}`);

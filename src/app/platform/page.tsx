@@ -45,7 +45,10 @@ export default async function OrganizationsPage({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-xl font-semibold">Organizaciones</h1>
         {manage ? (
-          <Link href="/platform/organizaciones/nueva" className="text-sm underline">
+          <Link
+            href="/platform/organizaciones/nueva"
+            className="inline-flex min-h-11 items-center text-sm underline sm:min-h-9"
+          >
             Crear organización y tienda
           </Link>
         ) : null}

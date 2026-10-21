@@ -193,6 +193,7 @@ export function PageEditorForm({
             description={seoDescription.trim()}
             url={pageUrl}
             imageUrl={images.find((i) => i.id === seoImage)?.url ?? null}
+            headingLevel={2}
           />
         ) : null}
         {canEdit ? (

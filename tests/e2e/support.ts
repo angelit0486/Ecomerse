@@ -178,8 +178,14 @@ export async function readInvitationLink(email: string): Promise<string> {
 // -----------------------------------------------------------------------------
 let axeSource: string | null = null;
 
-/** Falla si axe encuentra violaciones serias o críticas en la página actual. */
-export async function expectNoSeriousA11yViolations(page: Page) {
+/**
+ * Falla si axe encuentra violaciones serias o críticas en la página actual. Con
+ * `includeModerate`, también las moderadas (orden de títulos, regiones).
+ */
+export async function expectNoSeriousA11yViolations(
+  page: Page,
+  { includeModerate = false }: { includeModerate?: boolean } = {},
+) {
   if (!axeSource) {
     const { readFile } = await import("node:fs/promises");
     const { join } = await import("node:path");
@@ -202,7 +208,8 @@ export async function expectNoSeriousA11yViolations(page: Page) {
     ]),
   );
   await page.evaluate(axeSource);
-  const violations = await page.evaluate(async () => {
+  const impacts = includeModerate ? ["moderate", "serious", "critical"] : ["serious", "critical"];
+  const violations = await page.evaluate(async (impacts) => {
     const axe = (
       window as unknown as {
         axe: {
@@ -217,8 +224,8 @@ export async function expectNoSeriousA11yViolations(page: Page) {
     ).axe;
     const result = await axe.run(document, { resultTypes: ["violations"] });
     return result.violations
-      .filter((v) => v.impact === "serious" || v.impact === "critical")
+      .filter((v) => impacts.includes(v.impact))
       .map((v) => `${v.id}: ${JSON.stringify(v.nodes.map((n) => n.target))}`);
-  });
+  }, impacts);
   expect(violations, "violaciones de accesibilidad").toEqual([]);
 }

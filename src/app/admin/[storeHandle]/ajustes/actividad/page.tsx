@@ -80,7 +80,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
             key={key || "todo"}
             href={key ? `${base}?area=${key}` : base}
             aria-current={key === area ? "page" : undefined}
-            className={`rounded-md border px-3 py-1 ${key === area ? "border-fg font-medium" : "border-border"}`}
+            className={`inline-flex min-h-11 items-center rounded-md border px-3 sm:min-h-9 ${key === area ? "border-fg font-medium" : "border-border"}`}
           >
             {label}
           </Link>

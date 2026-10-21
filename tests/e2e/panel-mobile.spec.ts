@@ -12,7 +12,9 @@ import {
 /**
  * Misión panel, Fase 4: el panel en el celular. Menú agrupado con «Menú», «Más del
  * catálogo», controles de 44 px, la ficha sin desplazamiento lateral a 375 px y
- * la imagen sin descripción con nombre en Apariencia → SEO.
+ * la imagen sin descripción con nombre en Apariencia → SEO. Pulido (D-1): el
+ * editor de una página cabe en 375 px con su vista previa de Google y sus
+ * títulos van en orden.
  */
 const run = uniq();
 const ownerEmail = `movil-${run}@example.test`;
@@ -83,4 +85,12 @@ test("el panel en el celular: menú, catálogo, ficha y SEO", async ({ page }) =
   await page.goto(`/admin/${tenant.handle}/apariencia?seccion=seo`);
   await expect(page.getByRole("radio", { name: "Imagen sin descripción" })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
+
+  // Editor de una página: la URL larga de la vista previa no ensancha la pantalla.
+  const [policy] = await admin<{ id: string }[]>`
+    select id from public.store_pages where store_id = ${tenant.storeId} and type = 'policy_privacy'`;
+  await page.goto(`/admin/${tenant.handle}/contenido/paginas/${policy!.id}`);
+  await expect(page.getByRole("heading", { name: "Así se vería" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await expectNoSeriousA11yViolations(page, { includeModerate: true });
 });
