@@ -82,7 +82,15 @@ export default async function OrganizationsPage({
               <TD>{o.store_count}</TD>
               <TD>{STATUS[o.status]}</TD>
               {manage ? (
-                <TD>
+                <TD className="space-y-1">
+                  {o.status === "active" ? (
+                    <Link
+                      href={`/platform/organizaciones/${o.id}/tienda-nueva`}
+                      className="inline-flex min-h-11 items-center text-sm underline sm:min-h-9"
+                    >
+                      Agregar tienda
+                    </Link>
+                  ) : null}
                   {o.status === "active" ? (
                     <StatusButton
                       organizationId={o.id}

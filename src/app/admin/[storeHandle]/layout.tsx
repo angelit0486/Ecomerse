@@ -6,6 +6,7 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { STORE_STATUS_SHORT } from "../_shared/store-status";
 import { AdminNav } from "./_shared/admin-nav";
 import { GlobalSearch } from "./_shared/global-search";
 import { NoticesButton } from "./_shared/notices-button";
@@ -16,6 +17,7 @@ interface MyStore {
   store_id: string;
   name: string;
   handle: string;
+  status: string;
 }
 
 export default async function StoreLayout({ children, params }: Props) {
@@ -128,8 +130,13 @@ export default async function StoreLayout({ children, params }: Props) {
     <div className="flex flex-col gap-5 md:flex-row md:gap-8">
       <aside className="md:w-56 md:shrink-0">
         <details className="mb-3 rounded-md border border-border md:mb-4">
-          <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-medium md:min-h-10">
+          <summary className="flex min-h-11 cursor-pointer flex-col justify-center px-3 py-1 text-sm font-medium md:min-h-10">
             {ctx.store.name}
+            {stores.length > 1 ? (
+              <span className="text-[12px] font-normal text-fg-muted">
+                Cambiar de tienda ({stores.length})
+              </span>
+            ) : null}
           </summary>
           <ul className="border-t border-border py-1" aria-label="Cambiar de tienda">
             {stores.map((s) => (
@@ -137,12 +144,23 @@ export default async function StoreLayout({ children, params }: Props) {
                 <Link
                   href={`/admin/${s.handle}`}
                   aria-current={s.handle === ctx.store.handle ? "page" : undefined}
-                  className="flex min-h-11 items-center px-3 py-1.5 text-sm hover:bg-canvas md:min-h-0"
+                  className="flex min-h-11 items-center justify-between gap-2 px-3 py-1.5 text-sm hover:bg-canvas aria-[current=page]:font-semibold md:min-h-0"
                 >
-                  {s.name}
+                  <span>{s.name}</span>
+                  <span className="text-[12px] font-normal text-fg-muted">
+                    {STORE_STATUS_SHORT[s.status] ?? s.status}
+                  </span>
                 </Link>
               </li>
             ))}
+            <li className="border-t border-border">
+              <Link
+                href="/admin"
+                className="flex min-h-11 items-center px-3 py-1.5 text-[13px] underline md:min-h-0"
+              >
+                Todas mis tiendas
+              </Link>
+            </li>
           </ul>
         </details>
         <AdminNav

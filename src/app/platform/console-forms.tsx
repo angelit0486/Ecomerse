@@ -10,6 +10,7 @@ import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 
 import {
+  addStore,
   createTenant,
   grantSupport,
   revokeSupport,
@@ -121,6 +122,30 @@ export function CreateTenantForm({ plans }: { plans: { value: string; label: str
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Creando…" : "Crear organización y tienda"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function AddStoreForm({ organizationId }: { organizationId: string }) {
+  const [state, action, pending] = useSafeActionState(addStore.bind(null, organizationId), {});
+  return (
+    <form action={action} className="grid max-w-lg gap-4" noValidate>
+      <Field label="Nombre de la tienda" required>
+        {(c) => <Input {...c} name="store_name" defaultValue={state.values?.store_name} />}
+      </Field>
+      <Field
+        label="Dirección de la tienda (handle)"
+        hint="Minúsculas, números y guiones. Será su subdominio mientras no tenga dominio propio."
+        required
+      >
+        {(c) => <Input {...c} name="store_handle" defaultValue={state.values?.store_handle} />}
+      </Field>
+      <Feedback state={state} rendered={[]} />
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Creando…" : "Agregar tienda"}
         </Button>
       </div>
     </form>

@@ -98,6 +98,36 @@ export async function createTenant(_: ConsoleState, formData: FormData): Promise
   );
 }
 
+const STORE_KEYS = ["store_name", "store_handle"];
+
+/** Otra tienda en una organización existente; la plataforma la crea (E15 no aprobada). */
+export async function addStore(
+  organizationId: string,
+  _: ConsoleState,
+  formData: FormData,
+): Promise<ConsoleState> {
+  return keepValues(
+    formData,
+    STORE_KEYS,
+    attempt(
+      async () => {
+        const supabase = await createSupabaseServerClient();
+        const result = await callRpc<{ hostname: string }>(supabase, "platform_add_store", {
+          p_org_id: organizationId,
+          p_store_name: text(formData, "store_name"),
+          p_store_handle: text(formData, "store_handle"),
+        });
+        return `Tienda creada en ${result.hostname}. La dueña ya la ve en su selector de tiendas; ahí elige una plantilla en «Configura tu tienda» o copia el diseño de otra de sus tiendas en Apariencia.`;
+      },
+      "/platform",
+      {
+        conflictMessage: "Ya existe una tienda con esa dirección. Elige otra.",
+        fieldText: { organization_status: "La organización no está activa." },
+      },
+    ),
+  );
+}
+
 export async function setOrganizationStatus(
   organizationId: string,
   status: "active" | "suspended",

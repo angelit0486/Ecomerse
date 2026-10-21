@@ -964,3 +964,30 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
 | D-EST-02 | **Redirecciones 301** por tienda (`store_redirects`: ruta de origen → ruta interna). Siguen todas las reglas de §44.2. Se consultan solo cuando una ruta de la tienda no existe, nunca antes de resolver la tienda por host. |
 | D-EST-03 | Categorías con descripción, imagen y SEO. Las columnas ya existen; faltaba el formulario.                                                                                                                                    |
 | D-EST-04 | Verificación de la versión del esquema al arrancar: el panel compara la última migración aplicada con la que espera el código y avisa con un mensaje claro en vez de fallar en una pantalla.                                 |
+
+## 26. Pulido: varias tiendas en el mismo panel (2026-10-21)
+
+**Pedido del propietario:** administrar dos o más tiendas de suplementos desde el mismo panel.
+
+- **D-PUL-01, implementado.** La plataforma agrega otra tienda a una organización existente con `platform_add_store` (migración `20261022000100`), desde Consola → Organizaciones → «Agregar tienda». Solo pueden hacerlo `platform_owner` y `platform_admin`.
+  - La tienda nace en borrador, con subdominio de la plataforma activo y principal, contador de pedidos, tema por defecto y auditoría.
+  - El límite lo pone `max_stores` del plan, con el trigger de `stores` que ya existía.
+  - La dueña y las administradoras la administran por su rol de organización. Otra organización no la ve: pgTAP `90_platform_add_store` y E2E `multi-store`.
+  - No cambia ningún contrato. GATE0 §2 ya define ORGANIZATION → STORE ×N con `max_stores`, y respeta la decisión sobre E15: las tiendas las crea la plataforma.
+- **Panel.**
+  - El selector muestra cuántas tiendas hay («Cambiar de tienda (2)»), el estado de cada una y el enlace «Todas mis tiendas».
+  - «Tus tiendas» lista cada tienda con su estado.
+  - Si quien entra es de la plataforma, también ve «Agregar otra tienda a …»; si no, ve cómo pedirla.
+- **Diseño de la tienda nueva.**
+  - En «Configura tu tienda» se elige la plantilla «Suplementos», o en Apariencia se copia el diseño publicado de otra tienda de la misma organización (ADR-034 T7).
+  - En ambos casos el contenido va al borrador.
+  - La categoría regulada (suplemento alimenticio) se declara en Ajustes → Cumplimiento, como en la primera tienda.
+
+### ADR-038 (propuesto) — Que la dueña cree otra tienda desde su panel
+
+- **Contexto.** El contrato ya define el permiso de organización `org.stores.create`, que tienen `org_owner` y `org_admin`, pero ninguna función lo usa. Hoy solo la plataforma agrega tiendas (D-PUL-01).
+- **Propuesta.**
+  - «Nueva tienda» en «Tus tiendas» para quien tenga `org.stores.create`, dentro de su propia organización y con el mismo límite `max_stores` del plan.
+  - Es distinto de E15, que es el registro público de organizaciones nuevas: aquí no se crea ninguna organización ni cuenta.
+- **Riesgos.** Más tiendas facturables sin intervención de la plataforma, y nombres de dirección reservados por error. Se mitigan con el límite del plan, la auditoría y la tienda en borrador.
+- **Estado.** **Pendiente de aprobación del propietario.** Sin aprobación no se implementa.
