@@ -4,7 +4,7 @@ import { cache } from "react";
 
 import { gatewayDb, type TransactionSql } from "@/server/db/role-clients";
 
-import type { HomeData } from "./catalog";
+import type { HomeData, PageDetail } from "./catalog";
 import { parseStorePublic, type StorePublic, UUID_RE } from "./store-public";
 
 /**
@@ -48,3 +48,18 @@ export const getHomePreview = cache(async (storeId: string): Promise<HomeData> =
   );
   return rows[0]?.home ?? { sections: null, featured: [], categories: [] };
 });
+
+/** Página con su borrador de bloques (ADR-034 §3); también si aún no se publica. */
+export const getPagePreview = cache(
+  async (storeId: string, slug: string): Promise<PageDetail | null> => {
+    if (!UUID_RE.test(storeId) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length > 120) {
+      return null;
+    }
+    const rows = await previewCatalogRead(
+      storeId,
+      (db) => db<{ page: PageDetail | null }[]>`
+        select storefront.get_page(${storeId}::uuid, ${slug}) as page`,
+    );
+    return rows[0]?.page ?? null;
+  },
+);

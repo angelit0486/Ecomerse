@@ -1225,11 +1225,18 @@ export function HomeEditor({
   revision,
   initial,
   options,
+  save,
+  saveLabel = "Guardar portada en el borrador",
+  emptyText = "Sin secciones, la portada muestra la plantilla del tema: el nombre de tu tienda, las categorías principales y las novedades.",
 }: {
   storeHandle: string;
   revision: number;
   initial: EditorSection[];
   options: HomeEditorOptions;
+  /** Otra acción de guardado (los bloques de una página, ADR-034 §3). */
+  save?: (state: HomeFormState, formData: FormData) => Promise<HomeFormState>;
+  saveLabel?: string;
+  emptyText?: string;
 }) {
   const [sections, setSections] = useState<EditorSection[]>(
     initial.map((s) => ({ ...s, props: { ...DEFAULTS[s.type], ...s.props } })),
@@ -1239,7 +1246,7 @@ export function HomeEditor({
   const [dragging, setDragging] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [state, action, pending] = useActionState<HomeFormState, FormData>(
-    saveHomeDraft.bind(null, storeHandle),
+    save ?? saveHomeDraft.bind(null, storeHandle),
     {},
   );
   const productSections = sections.filter((s) => s.type === "featured_products").length;
@@ -1312,8 +1319,7 @@ export function HomeEditor({
         <input type="hidden" name="sections" value={JSON.stringify(sections)} />
         {sections.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
-            Sin secciones, la portada muestra la plantilla del tema: el nombre de tu tienda, las
-            categorías principales y las novedades.
+            {emptyText}
           </p>
         ) : null}
         <ol className="space-y-3" aria-label="Bloques de la portada">
@@ -1479,7 +1485,7 @@ export function HomeEditor({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" loading={pending}>
-            Guardar portada en el borrador
+            {saveLabel}
           </Button>
           <FormFeedback state={state} />
         </div>

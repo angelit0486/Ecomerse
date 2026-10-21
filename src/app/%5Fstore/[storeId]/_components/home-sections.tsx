@@ -234,7 +234,10 @@ export function HomeSections({
   goals = [],
   trust = null,
   contact = {},
+  asPage = false,
 }: {
+  /** En una página de contenido (ADR-034 §3): el h1 es el título de la página. */
+  asPage?: boolean;
   /** Contacto del tema, para el bloque «Contacto y ubicación». */
   contact?: { address?: string; hours?: string; whatsapp?: string };
   /** Franja de confianza con datos reales de la tienda, bajo los objetivos. */
@@ -245,13 +248,13 @@ export function HomeSections({
   /** Objetivos con productos: bloques de color bajo el hero (o bajo el título, sin hero). */
   goals?: GoalTile[];
 }) {
-  const heroFirst = sections[0]?.type === "hero";
+  const heroFirst = !asPage && sections[0]?.type === "hero";
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
   return (
     <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
-      {heroFirst ? null : (
+      {heroFirst || asPage ? null : (
         <div className="space-y-8">
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{storeName}</h1>
           <GoalTiles goals={goals} />
@@ -270,7 +273,7 @@ export function HomeSections({
     const headingId = `sf-seccion-${index}`;
     switch (section.type) {
       case "hero":
-        return index === 0 ? (
+        return index === 0 && !asPage ? (
           <div
             key={section.id}
             className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"

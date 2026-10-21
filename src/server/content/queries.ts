@@ -13,6 +13,9 @@ export interface PageRow {
   seo_title: string | null;
   seo_description: string | null;
   updated_at: string;
+  seo_image_media_id?: string | null;
+  sections?: unknown[];
+  draft_sections?: unknown[] | null;
 }
 
 export async function listPages(supabase: SupabaseClient, storeId: string): Promise<PageRow[]> {
@@ -37,7 +40,7 @@ export async function getPage(
   const { data, error } = await supabase
     .from("store_pages")
     .select(
-      "id, type, slug, title, body_html, is_published, seo_title, seo_description, updated_at",
+      "id, type, slug, title, body_html, is_published, seo_title, seo_description, updated_at, seo_image_media_id, sections, draft_sections",
     )
     .eq("store_id", storeId)
     .eq("id", pageId)

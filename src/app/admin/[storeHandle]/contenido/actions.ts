@@ -10,6 +10,10 @@ import { callRpc } from "@/server/db/rpc";
 import { sanitizeMerchantHtml } from "@/server/security/sanitize";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { themeRpcError } from "@/server/theme/errors";
+
+import type { HomeFormState } from "../apariencia/home-actions";
+import { normalizeSections, sectionIssues } from "../apariencia/home-normalize";
 
 /**
  * Editor de páginas y menús (F5-T06). La tienda sale de la URL; permisos y
@@ -32,6 +36,7 @@ const MESSAGES: Record<string, string> = {
   items: "Revisa el menú: máximo 50 enlaces, dos niveles y un texto en cada uno.",
   target_id: "Uno de los destinos ya no existe. Elige otro.",
   page: "Revisa los datos de la página.",
+  seo_image_media_id: "Esa imagen ya no está disponible. Elige otra.",
 };
 
 function failure(error: unknown): ContentActionState {
@@ -69,7 +74,7 @@ export async function savePage(
   _: ContentActionState,
   formData: FormData,
 ): Promise<ContentActionState> {
-  const keys = ["title", "slug", "body_html", "seo_title", "seo_description"];
+  const keys = ["title", "slug", "body_html", "seo_title", "seo_description", "seo_image_media_id"];
   const values = Object.fromEntries(keys.map((k) => [k, String(formData.get(k) ?? "")]));
   if (pageId && !uuid.safeParse(pageId).success) return { error: "Página no válida." };
   let saved: { id: string };
@@ -84,6 +89,10 @@ export async function savePage(
           body_html: sanitizeMerchantHtml(values.body_html),
           seo_title: values.seo_title?.slice(0, 70),
           seo_description: values.seo_description?.slice(0, 320),
+          // Solo el formulario que tiene el campo lo manda (la base conserva lo demás).
+          ...(formData.has("seo_image_media_id")
+            ? { seo_image_media_id: values.seo_image_media_id || null }
+            : {}),
         },
       }),
     );
@@ -165,5 +174,107 @@ export async function saveMenu(
   return {
     ok: true,
     message: handle === "main" ? "Menú principal guardado." : "Menú del pie guardado.",
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Bloques de una página (ADR-034 §3): borrador → publicar, como la portada.
+// -----------------------------------------------------------------------------
+const BLOCK_REFERENCE_MESSAGES: Record<string, string> = {
+  image_media_id: "La imagen ya no está disponible. Elige otra.",
+  source: "Lo que elegiste para mostrar productos ya no existe o no se puede filtrar.",
+  category_ids: "Alguna categoría ya no existe o está oculta.",
+  brand_ids: "Alguna marca ya no existe o no tiene logo.",
+  value_ids: "Algún objetivo ya no existe o ya no se usa como filtro.",
+};
+
+export async function savePageBlocks(
+  storeHandle: string,
+  pageId: string,
+  _: HomeFormState,
+  formData: FormData,
+): Promise<HomeFormState> {
+  if (!uuid.safeParse(pageId).success) return { error: "Página no válida." };
+  let input: unknown;
+  try {
+    input = JSON.parse(String(formData.get("sections") ?? "[]"));
+  } catch {
+    return { error: "No pudimos leer los bloques. Recarga la página." };
+  }
+  const sections = normalizeSections(input);
+  const issues = sectionIssues(sections);
+  if (typeof issues === "string") return { error: issues };
+  if (issues) return { error: "Revisa los bloques marcados.", sections: issues };
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    await callRpc(supabase, "content_save_page_blocks", {
+      p_store_id: ctx.store.id,
+      p_page_id: pageId,
+      p_sections: sections,
+    });
+  } catch (error) {
+    const e = themeRpcError(error);
+    if (e.detail === "references") {
+      const byId: Record<string, string[]> = {};
+      for (const item of e.items) {
+        const [id, field] = item.split(":");
+        if (id && field)
+          (byId[id] ??= []).push(BLOCK_REFERENCE_MESSAGES[field] ?? "Revisa este bloque.");
+      }
+      return { error: "Algunos bloques usan algo que ya no existe.", sections: byId };
+    }
+    if (e.detail === "html") return { error: "El texto con formato tiene contenido no permitido." };
+    if (e.detail === "policy_blocks") {
+      return { error: "Las políticas se escriben como texto; no llevan bloques." };
+    }
+    return { error: failure(error).error };
+  }
+  revalidatePath(`${base(storeHandle)}/paginas/${pageId}`);
+  return {
+    ok: true,
+    message: "Bloques guardados en el borrador. Revísalos en la vista previa y publícalos.",
+  };
+}
+
+export async function pageBlocksAction(
+  storeHandle: string,
+  pageId: string,
+  _: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  const action = String(formData.get("action") ?? "");
+  if (!uuid.safeParse(pageId).success || !["publish", "discard"].includes(action)) {
+    return { error: "Acción no válida." };
+  }
+  try {
+    await withStore(storeHandle, ({ supabase, storeId }) =>
+      callRpc(
+        supabase,
+        action === "publish" ? "content_publish_page_blocks" : "content_discard_page_blocks",
+        { p_store_id: storeId, p_page_id: pageId },
+      ),
+    );
+  } catch (error) {
+    const e = themeRpcError(error);
+    if (e.detail === "compliance") {
+      return {
+        error:
+          "Algún bloque tiene términos que las reglas sanitarias de tu tienda no permiten. Cámbialos antes de publicar.",
+      };
+    }
+    if (e.detail === "references") {
+      return { error: "Algún bloque usa algo que ya no existe. Revisa los bloques marcados." };
+    }
+    if (e.detail === "no_draft") return { error: "No hay cambios de bloques sin publicar." };
+    return failure(error);
+  }
+  revalidatePath(`${base(storeHandle)}/paginas/${pageId}`);
+  return {
+    ok: true,
+    message:
+      action === "publish"
+        ? "Bloques publicados. Tus clientes ya los ven si la página está publicada."
+        : "Cambios de bloques descartados.",
   };
 }

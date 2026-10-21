@@ -183,5 +183,27 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
   await wide.reload();
   await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toBeVisible();
+
+  // Página armada solo con bloques (ADR-034 §3): borrador → publicar bloques → publicar página.
+  await page.goto(`/admin/${tenant.handle}/contenido`);
+  await page.getByLabel("Título de la nueva página").fill("Envíos y entregas");
+  await page.getByRole("button", { name: "Crear página" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Envíos y entregas" })).toBeVisible();
+  await page.getByLabel("Nuevo bloque").selectOption({ label: "Preguntas frecuentes" });
+  await page.getByRole("button", { name: "Agregar bloque" }).click();
+  await page.getByLabel("Pregunta", { exact: true }).fill("¿Cuánto tarda mi pedido?");
+  await page.getByLabel("Respuesta").fill("De 2 a 5 días hábiles.");
+  await page.getByRole("button", { name: "Guardar bloques en el borrador" }).click();
+  await expect(page.getByText(/Bloques guardados en el borrador/)).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Publicar bloques" }).click();
+  await expect(page.getByText(/Bloques publicados/)).toBeVisible();
+  await page.getByRole("button", { name: "Publicar", exact: true }).click();
+  await expect(page.getByText(/Publicada/).first()).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await wide.goto(`${store()}/paginas/envios-y-entregas`);
+  await expect(wide.getByRole("heading", { level: 1, name: "Envíos y entregas" })).toBeVisible();
+  await expect(wide.getByText("¿Cuánto tarda mi pedido?")).toBeVisible();
+  await expectNoSeriousA11yViolations(wide);
   await desktop.close();
 });

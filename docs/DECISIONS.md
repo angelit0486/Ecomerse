@@ -873,6 +873,23 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
 - **Panel:** pestaña «Historial» con «Restaurar la versión N al borrador».
 - **Pruebas:** pgTAP `83_theme_versions` (16, con aislamiento entre tiendas y rol sin permiso); E2E `studio` (quitar, publicar, restaurar y volver a publicar).
 
+**Implementación, tramo 3 (2026-10-21): páginas por bloques e imagen social por página.**
+
+- **Migración `20261021000100_page_blocks.sql`:**
+  - `store_pages.sections` y `draft_sections`, con el mismo validador que la portada;
+  - `seo_image_media_id`, con FK compuesta y `set null`;
+  - las políticas no llevan bloques (CHECK).
+- **RPCs:**
+  - `content_save_page_blocks`, `content_publish_page_blocks` (revalida referencias y términos prohibidos) y `content_discard_page_blocks`;
+  - publicar una página exige texto o bloques publicados;
+  - `content_upsert_page` conserva la imagen social si el formulario no la manda.
+- **Tienda:**
+  - `storefront.get_page` devuelve los bloques resueltos y la imagen social;
+  - en la vista previa de esa misma tienda devuelve el borrador y las páginas sin publicar;
+  - la página pinta sus bloques bajo el texto. Su h1 es el título de la página.
+- **Panel (Contenido → página):** editor de bloques (el mismo de la portada), «Publicar bloques» y «Descartar», imagen al compartir y vista previa de Google y de redes.
+- **Pruebas:** pgTAP `84_page_blocks` (16) y E2E `studio`, con una página armada solo con bloques.
+
 ### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Esquema.** `collections`, con dos modos:

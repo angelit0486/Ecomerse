@@ -43,7 +43,7 @@ test("contenido: página publicada y menú principal visibles en la tienda", asy
   await page
     .getByLabel("Contenido")
     .fill("<h2>Nuestra historia</h2><p>Hacemos tazas a mano.</p><script>alert(1)</script>");
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Página guardada." })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Contenido")).not.toHaveValue(/script/);

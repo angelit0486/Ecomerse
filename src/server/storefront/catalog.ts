@@ -171,6 +171,11 @@ export interface PageDetail {
   seo_title: string | null;
   seo_description: string | null;
   updated_at: string;
+  /** Bloques publicados (o el borrador en la vista previa), ya resueltos (ADR-034 §3). */
+  sections?: HomeSectionData[];
+  seo_image?: ImageRef | null;
+  /** Solo en la vista previa: la página aún no se publica. */
+  unpublished?: boolean;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
