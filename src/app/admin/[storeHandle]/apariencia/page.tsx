@@ -246,6 +246,8 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           revision={revision}
           initial={homeSections}
           options={homeOptions}
+          storeName={ctx.store.name}
+          autosave
         />
       ) : null}
       {tab === "historial" ? (

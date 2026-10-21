@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
 import {
@@ -11,9 +11,11 @@ import {
   type BenefitIcon,
   type Visibility,
 } from "@/lib/theme/constants";
+import { buildHomeLayout, HOME_LAYOUTS, type HomeLayoutKey } from "@/lib/theme/home-layouts";
 import { brokenLinkHint, type LinkTargets } from "@/lib/theme/link-targets";
 import { MAX_HERO_SLIDES, type HomeSectionType } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { FormFeedback } from "../_shared/form-feedback";
 import { submitKeepingState } from "@/ui/submit";
@@ -89,6 +91,9 @@ const VISIBILITY_LABELS: Record<Visibility, string> = {
   mobile: "Solo en el celular",
   desktop: "Solo en la computadora",
 };
+
+/** Espera tras el último cambio antes de autoguardar. */
+const AUTOSAVE_MS = 4000;
 
 const DEFAULTS: Record<HomeSectionType, Props> = {
   hero: {
@@ -1455,6 +1460,73 @@ export function HeroNotice({
   return null;
 }
 
+/** Plantillas de portada (misión Portada/Marcas, Paso 3): reemplazan los bloques del editor, no la tienda. */
+function HomeLayoutPicker({
+  applied,
+  onApply,
+  onReset,
+}: {
+  applied: string | null;
+  onApply: (key: HomeLayoutKey) => void;
+  onReset: () => void;
+}) {
+  const [choice, setChoice] = useState<HomeLayoutKey>("anaquel");
+  const name = HOME_LAYOUTS.find((l) => l.key === choice)!.name;
+  return (
+    <details className="rounded-md border border-border p-3" open={applied !== null}>
+      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold md:min-h-0">
+        Empezar con una plantilla
+      </summary>
+      <form
+        className="mt-3 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onApply(choice);
+        }}
+      >
+        <fieldset className="grid gap-2 sm:grid-cols-2">
+          <legend className="sr-only">Plantilla de portada</legend>
+          {HOME_LAYOUTS.map((l) => (
+            <label
+              key={l.key}
+              className="flex min-h-11 cursor-pointer items-start gap-2 rounded-md border border-border p-3 text-sm has-[:checked]:border-accent"
+            >
+              <input
+                type="radio"
+                name="home_layout"
+                value={l.key}
+                checked={choice === l.key}
+                onChange={() => setChoice(l.key)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">{l.name}</span>
+                <span className="block text-[13px] text-fg-muted">{l.description}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <div className="flex flex-wrap items-center gap-3">
+          <ConfirmButton
+            variant="secondary"
+            size="sm"
+            question={`¿Cambiar los bloques por la plantilla «${name}»?`}
+            confirmLabel="Sí, usar la plantilla"
+            detail="Tus clientes no ven nada hasta que guardes y publiques. Puedes volver a como estaba."
+          >
+            Usar esta plantilla
+          </ConfirmButton>
+          {applied ? (
+            <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+              Volver a como estaba
+            </Button>
+          ) : null}
+        </div>
+      </form>
+    </details>
+  );
+}
+
 export function HomeEditor({
   storeHandle,
   revision,
@@ -1463,19 +1535,34 @@ export function HomeEditor({
   save,
   saveLabel = "Guardar portada en el borrador",
   emptyText = "Sin secciones, la portada muestra la plantilla del tema: el nombre de tu tienda, las categorías principales y las novedades.",
+  storeName,
+  autosave = false,
 }: {
   storeHandle: string;
   revision: number;
   initial: EditorSection[];
   options: HomeEditorOptions;
+  /** Con el nombre de la tienda se ofrecen las plantillas de portada (solo en Portada). */
+  storeName?: string;
+  /** Guarda solo en el borrador unos segundos después del último cambio. */
+  autosave?: boolean;
   /** Otra acción de guardado (los bloques de una página, ADR-034 §3). */
   save?: (state: HomeFormState, formData: FormData) => Promise<HomeFormState>;
   saveLabel?: string;
   emptyText?: string;
 }) {
-  const [sections, setSections] = useState<EditorSection[]>(
-    initial.map((s) => ({ ...s, props: { ...DEFAULTS[s.type], ...s.props } })),
-  );
+  const withDefaults = (list: EditorSection[]) =>
+    list.map((s) => ({ ...s, props: { ...DEFAULTS[s.type], ...s.props } }));
+  const [sections, setSections] = useState<EditorSection[]>(() => withDefaults(initial));
+  const [layoutApplied, setLayoutApplied] = useState<string | null>(null);
+  // Lo que había al abrir el editor: `initial` cambia con cada guardado.
+  const [original] = useState(initial);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Autoguardado: lo último que se mandó al borrador, para no repetirlo.
+  const json = JSON.stringify(sections);
+  const [savedJson, setSavedJson] = useState(json);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const dirty = json !== savedJson;
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<HomeSectionType>("hero");
   const [dragging, setDragging] = useState<number | null>(null);
@@ -1490,7 +1577,17 @@ export function HomeEditor({
     // Guardado nuevo: sus avisos valen para todos los bloques.
     setLastState(state);
     setEdited(new Set());
+    if (state.ok) setSavedAt(new Date());
   }
+
+  useEffect(() => {
+    if (!autosave || !dirty || pending) return;
+    // Unos segundos después del primer cambio sin guardar, se guarda en el
+    // borrador (nunca se publica solo); lo que se escriba mientras, en la siguiente vuelta.
+    // Si el guardado falla, no se reintenta hasta el siguiente cambio.
+    const timer = window.setTimeout(() => formRef.current?.requestSubmit(), AUTOSAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [autosave, dirty, pending]);
   const productSections = sections.filter((s) => s.type === "featured_products").length;
   const full = sections.length >= MAX_SECTIONS;
   const productsFull = adding === "featured_products" && productSections >= MAX_PRODUCT_SECTIONS;
@@ -1553,14 +1650,57 @@ export function HomeEditor({
     setAnnouncement(`${SECTION_LABELS[adding]} agregada al final.`);
   }
 
+  function applyLayout(key: HomeLayoutKey) {
+    const layout = buildHomeLayout(
+      key,
+      {
+        storeName: storeName ?? "",
+        brandIds: options.brands.filter((b) => b.hasLogo).map((b) => b.id),
+        goalIds: options.goals.map((g) => g.id),
+      },
+      () => crypto.randomUUID(),
+    );
+    setSections(withDefaults(layout as EditorSection[]));
+    setOpen(null);
+    const name = HOME_LAYOUTS.find((l) => l.key === key)!.name;
+    setLayoutApplied(name);
+    setAnnouncement(
+      `Plantilla «${name}» lista con ${layout.length} bloques. Revisa los textos y guarda.`,
+    );
+  }
+
+  function resetLayout() {
+    setSections(withDefaults(original));
+    setLayoutApplied(null);
+    setAnnouncement("Los bloques volvieron a como estaban.");
+  }
+
   return (
     <div className="space-y-6">
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
-      <form action={action} onSubmit={submitKeepingState(action)} className="space-y-4" noValidate>
+      {storeName !== undefined ? (
+        <HomeLayoutPicker applied={layoutApplied} onApply={applyLayout} onReset={resetLayout} />
+      ) : null}
+      {layoutApplied ? (
+        <p role="status" className="rounded-md border border-border p-3 text-sm">
+          Plantilla «{layoutApplied}» lista. Cambia los textos por los tuyos, revisa la vista previa
+          y guarda: tus clientes no la ven hasta que publiques.
+        </p>
+      ) : null}
+      <form
+        ref={formRef}
+        action={action}
+        onSubmit={(e) => {
+          setSavedJson(json);
+          submitKeepingState(action)(e);
+        }}
+        className="space-y-4"
+        noValidate
+      >
         <input type="hidden" name="revision" value={revision} />
-        <input type="hidden" name="sections" value={JSON.stringify(sections)} />
+        <input type="hidden" name="sections" value={json} />
         <LinkTargetList links={options.links} />
         {sections.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
@@ -1757,6 +1897,17 @@ export function HomeEditor({
           <Button type="submit" loading={pending}>
             {saveLabel}
           </Button>
+          {autosave ? (
+            <p className="text-[13px] text-fg-muted" aria-live="polite">
+              {pending
+                ? "Guardando en el borrador…"
+                : dirty
+                  ? "Cambios sin guardar; se guardan solos en unos segundos."
+                  : savedAt && state.ok
+                    ? `Guardado en el borrador a las ${savedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}.`
+                    : null}
+            </p>
+          ) : null}
           <FormFeedback state={state} />
         </div>
       </form>
