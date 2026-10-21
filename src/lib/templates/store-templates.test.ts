@@ -13,9 +13,19 @@ describe("plantillas de tienda", () => {
       "belleza",
       "abarrotes",
       "generica",
+      "blanco",
     ]);
     expect(findTemplate("ropa")?.name).toBe("Ropa");
     expect(findTemplate("x")).toBeUndefined();
+  });
+
+  it("«En blanco» no trae productos, categorías ni bloques: la tienda se diseña desde cero", () => {
+    const t = findTemplate("blanco")!;
+    const payload = templatePayload(t);
+    expect(payload.products).toEqual([]);
+    expect(payload.categories).toEqual([]);
+    expect(payload.home_sections).toEqual([]);
+    expect(t.name).toBe("En blanco");
   });
 
   it.each(STORE_TEMPLATES.map((t) => [t.key, t] as const))(

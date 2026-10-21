@@ -32,7 +32,7 @@ export interface TemplateProduct {
 }
 
 export interface StoreTemplate {
-  key: "suplementos" | "ropa" | "belleza" | "abarrotes" | "generica";
+  key: "suplementos" | "ropa" | "belleza" | "abarrotes" | "generica" | "blanco";
   name: string;
   description: string;
   colors: Palette;
@@ -491,12 +491,38 @@ const GENERICA: StoreTemplate = {
   ],
 };
 
+/**
+ * Punto de partida vacío: colores neutros, sin portada, categorías ni productos.
+ * No declara ninguna categoría regulada, así que la tienda queda con el perfil
+ * general hasta que la dueña declare una en Cumplimiento.
+ */
+const BLANCO: StoreTemplate = {
+  key: "blanco",
+  name: "En blanco",
+  description: "Colores neutros y nada más: sin productos, categorías ni bloques de portada.",
+  colors: {
+    primary: "#101828",
+    accent: "#344054",
+    background: "#ffffff",
+    foreground: "#101828",
+    muted: "#475467",
+  },
+  settings: {
+    typography: { heading: "inter", body: "inter" },
+    shape: { radius: "sm", button_style: "solid", shadow: "none", density: "comfortable" },
+  },
+  home_sections: [],
+  categories: [],
+  products: [],
+};
+
 export const STORE_TEMPLATES: readonly StoreTemplate[] = [
   SUPLEMENTOS,
   ROPA,
   BELLEZA,
   ABARROTES,
   GENERICA,
+  BLANCO,
 ];
 
 export function findTemplate(key: string): StoreTemplate | undefined {
