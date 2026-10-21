@@ -47,6 +47,13 @@ export function portableDesign(settings: ThemeSettings, sections: HomeSection[])
   for (const key of DESIGN_KEYS) {
     if (settings[key] !== undefined) Object.assign(out, { [key]: settings[key] });
   }
+  // Del encabezado solo la posición del logo: el anuncio y los accesos rápidos
+  // son contenido de cada tienda (revisión del estudio, R-9).
+  if (settings.header) {
+    if (settings.header.logo_position)
+      out.header = { logo_position: settings.header.logo_position };
+    else delete out.header;
+  }
   return {
     settings: out,
     home_sections: sections.map(portableSection).filter((s): s is HomeSection => s !== null),

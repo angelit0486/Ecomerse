@@ -946,6 +946,15 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
 - **Principal:** `domains_set_primary` solo con un dominio activo. El proxy ya redirige 301 desde la dirección de la plataforma al principal. Quitar el principal devuelve la dirección de la plataforma.
 - **Proveedor:** `VERCEL_DOMAINS_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`), opcionales y juntos. Sin ellos, los dominios se quedan «en verificación» con el aviso de que falta configurarlo. Los registros CNAME/A que se muestran salen de `DOMAIN_CNAME_TARGET` y `DOMAIN_APEX_A`; sin ellos, el panel dice que los confirma la plataforma (D-F2-04: no se inventan registros DNS).
 - **Verificado y no verificado:** probado con DNS y Vercel simulados (pgTAP `87_custom_domains`, 20; integración `domains-verify`, 3; unit del adaptador, 4; E2E `custom-domain`). **No probado contra Vercel ni DNS reales:** falta el token del propietario.
+- **Revisión (2026-10-21, `docs/phases/ESTUDIO-PASOS-2-3-REVISION.md`):** migración `20261021000600`. Una sola revisión en cola por dominio. Los fallos de DNS o del proveedor ya no detienen la revisión. Primero se comprueba el TXT y después se agrega el dominio al proveedor. Se exige el dominio raíz. Se bloquean las filas al elegir el principal. Un hostname quitado o vencido en otra tienda se libera. **Pendiente del propietario:** unicidad solo de los dominios activos (cambia ADR-011).
+
+**Implementación del Paso 4 (2026-10-21), migración `20261021000500`:**
+
+- **D-EST-01:** rol de sistema Diseño (`designer`) con permisos de apariencia, páginas, menús y SEO, más lectura de la tienda y de productos. No ve pedidos ni clientes.
+- **D-EST-02:** `store_redirects` con RLS forzado, ≤ 500 por tienda, origen en minúsculas. El destino es siempre una ruta de la misma tienda (sin redirección abierta). No hay cadenas. Las rutas fijas (inicio, carrito, pago, cuenta, búsqueda) están reservadas.
+- **D-EST-02, desviación:** las redirecciones las aplica el **proxy** después de resolver la tienda por host, con el mapa de la tienda en caché de 60 s, y no solo cuando la ruta da 404. El 404 de la tienda se pinta ya en streaming y no permite un 301 real. Por eso las rutas fijas no se pueden redirigir.
+- **D-EST-03:** título y descripción para Google de cada categoría en el panel. La imagen ya la acepta `catalog_upsert_category` (solo imágenes de esa tienda subidas para categorías), pero **su subida desde el panel sigue pendiente**.
+- **Pruebas:** pgTAP `88_designer_redirects` (20) y E2E `redirects-designer` (301 real con la consulta conservada, destino externo rechazado, Diseño sin pedidos) y `supplement-categories` (SEO).
 
 ### Decisiones sin ADR (no tocan contratos críticos)
 

@@ -74,6 +74,8 @@ async function run(id: string, state: ProviderState, txt: string[], added: strin
 }
 
 beforeAll(async () => {
+  await admin`insert into public.platform_settings (key, value)
+              values ('storefront.root_domain', '{"domain":"tiendas.test"}') on conflict (key) do nothing`;
   const [plan] = await admin<{ id: string }[]>`
     insert into public.plans (key, name) values ('domains_plan', 'domains_plan')
     on conflict (key) do update set name = excluded.name returning id`;
@@ -116,10 +118,11 @@ describe("domains.verify", () => {
     const { id, token } = second;
     expect((await run(id, "ready", ["pruva-otro"])).status).toBe("verifying");
     expect((await run(id, "not_configured", [token])).status).toBe("verifying");
+    // Una sola revisión en cola por dominio (revisión del estudio, R-2).
     const [jobs] = await admin<{ n: number }[]>`
       select count(*)::int as n from system.jobs
-       where type = 'domains.verify' and payload ->> 'domain_id' = ${id} and run_after > now()`;
-    expect(jobs!.n).toBeGreaterThan(0);
+       where type = 'domains.verify' and payload ->> 'domain_id' = ${id} and status = 'queued'`;
+    expect(jobs!.n).toBe(1);
   });
 
   it("un dominio quitado ya no se revisa", async () => {

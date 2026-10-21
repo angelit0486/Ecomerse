@@ -2,7 +2,12 @@ import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler } from "@/server/jobs/types";
 import { UUID_RE } from "@/server/notifications/handlers";
 
-import { verificationRecordName, type DomainProvider, type TxtLookup } from "./provider";
+import {
+  verificationRecordName,
+  type DomainProvider,
+  type ProviderState,
+  type TxtLookup,
+} from "./provider";
 
 export interface DomainDeps {
   db: Sql;
@@ -34,12 +39,25 @@ export function createDomainHandlers(deps: DomainDeps): Array<[string, JobHandle
     const target = row?.target;
     if (!target) return; // quitado, activo o vencido: nada que revisar
 
+    // Un fallo de DNS o del proveedor no corta la cadena: se registra como «aún
+    // no» y la base programa la siguiente revisión (revisión del estudio, R-3).
+    const txt = await deps.txt(verificationRecordName(target.hostname)).catch((error: unknown) => {
+      log.warn("DNS sin respuesta", { err: error });
+      return [] as string[];
+    });
+    const [match] = await deps.db<{ owned: boolean }[]>`
+      select system.domains_txt_matches(${id}, ${txt}) as owned
+    `;
     let ref = target.provider_ref;
-    if (!ref) ref = (await deps.provider.add(target.hostname)).ref;
-    const [txt, state] = await Promise.all([
-      deps.txt(verificationRecordName(target.hostname)),
-      deps.provider.state(target.hostname),
-    ]);
+    let state: ProviderState = "pending";
+    try {
+      // Al proveedor solo después de probar la propiedad con el TXT (R-4).
+      if (!ref && match?.owned) ref = (await deps.provider.add(target.hostname)).ref;
+      if (ref) state = await deps.provider.state(target.hostname);
+    } catch (error) {
+      log.warn("Proveedor de dominios sin respuesta", { err: error });
+      state = "pending";
+    }
     const [result] = await deps.db<{ result: { status: string; owned: boolean } }[]>`
       select system.domains_record_check(${id}, ${txt}, ${state}, ${ref}) as result
     `;
