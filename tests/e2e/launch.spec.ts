@@ -58,7 +58,7 @@ test("lanzamiento: pendientes visibles → pago manual → políticas → public
   await page.getByLabel("Color principal (botones y enlaces)").fill("#0f766e");
   await page.getByRole("button", { name: "Guardar en el borrador" }).click();
   await expect(page.getByText("Guardado en el borrador.", { exact: false })).toBeVisible();
-  await expect(page.getByText(/de 4 pasos listos/)).toBeVisible();
+  await expect(page.getByText("5 de 9 pasos listos")).toBeVisible();
 
   // Políticas con contenido propio (el comerciante las redacta; aquí, el test).
   await admin`update public.store_pages set body_html = '<p>Texto propio de la tienda.</p>'

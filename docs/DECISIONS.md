@@ -947,7 +947,6 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
 - **Proveedor:** `VERCEL_DOMAINS_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`), opcionales y juntos. Sin ellos, los dominios se quedan «en verificación» con el aviso de que falta configurarlo. Los registros CNAME/A que se muestran salen de `DOMAIN_CNAME_TARGET` y `DOMAIN_APEX_A`; sin ellos, el panel dice que los confirma la plataforma (D-F2-04: no se inventan registros DNS).
 - **Verificado y no verificado:** probado con DNS y Vercel simulados (pgTAP `87_custom_domains`, 20; integración `domains-verify`, 3; unit del adaptador, 4; E2E `custom-domain`). **No probado contra Vercel ni DNS reales:** falta el token del propietario.
 
-
 ### Decisiones sin ADR (no tocan contratos críticos)
 
 | ID       | Decisión                                                                                                                                                                                                                     |

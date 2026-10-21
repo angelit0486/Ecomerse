@@ -70,7 +70,9 @@ export default async function OnboardingPage({ params }: Props) {
     await Promise.all([
       supabase
         .from("stores")
-        .select("name, contact_email, contact_phone, timezone")
+        .select(
+          "name, contact_email, contact_phone, timezone, currency, tax_rate_bps, prices_include_tax",
+        )
         .eq("id", ctx.store.id)
         .single(),
       supabase
@@ -80,7 +82,7 @@ export default async function OnboardingPage({ params }: Props) {
         .maybeSingle(),
       supabase
         .from("store_domains")
-        .select("hostname")
+        .select("hostname, type")
         .eq("store_id", ctx.store.id)
         .eq("is_primary", true)
         .maybeSingle(),
@@ -157,12 +159,74 @@ export default async function OnboardingPage({ params }: Props) {
   );
   const profileDone = Boolean(store?.contact_email);
 
-  const steps = [
-    { title: "Cuenta y verificación en dos pasos", done: true },
-    { title: "Datos de la tienda y marca", done: profileDone && brandingSaved },
-    { title: "Pagos", done: paymentsDone },
-    { title: "Publicar", done: launched },
+  const base = `/admin/${ctx.store.handle}`;
+  const has = (code: string) => issues.some((i) => i.code === code);
+  const taxRate = (store?.tax_rate_bps as number | undefined) ?? 0;
+  // Recorrido completo de una tienda nueva (Paso 3 del estudio): cada paso lleva
+  // a su pantalla. Los pendientes de publicar los decide la base (§14.3).
+  const steps: {
+    title: string;
+    detail: string;
+    href: string;
+    done: boolean;
+    optional?: boolean;
+  }[] = [
+    {
+      title: "Plantilla y estilo",
+      detail: "Giro, colores y portada",
+      href: "#paso-plantilla",
+      done: brandingSaved,
+    },
+    {
+      title: "Datos de la tienda",
+      detail: `Nombre, contacto, zona horaria · ${store?.currency ?? "MXN"}`,
+      href: "#paso-datos",
+      done: profileDone,
+    },
+    { title: "Logo", detail: "Imagen de tu marca", href: "#paso-logo", done: Boolean(currentLogo) },
+    {
+      title: "Productos",
+      detail: "Agrega o importa tu catálogo",
+      href: `${base}/productos`,
+      done: !has("active_product") && (sampleCount ?? 0) === 0,
+    },
+    {
+      title: "Envíos",
+      detail: "Zonas y tarifas",
+      href: `${base}/envios`,
+      done: !has("shipping_zone"),
+    },
+    {
+      title: "Impuestos",
+      detail:
+        taxRate > 0
+          ? `IVA ${taxRate / 100} % ${store?.prices_include_tax ? "incluido en los precios" : "se suma al precio"}`
+          : "Revisa la tasa con tu contador",
+      href: `${base}/impuestos`,
+      done: taxRate > 0,
+    },
+    {
+      title: "Pagos",
+      detail: "Transferencia y Mercado Pago",
+      href: "#paso-pagos",
+      done: paymentsDone,
+    },
+    {
+      title: "Políticas",
+      detail: "Privacidad, términos, devoluciones y envíos",
+      href: `${base}/contenido`,
+      done: !issues.some((i) => i.code.startsWith("policy_")),
+    },
+    {
+      title: "Dominio propio",
+      detail: "Opcional",
+      href: `${base}/ajustes/dominio`,
+      done: domain?.type === "custom",
+      optional: true,
+    },
+    { title: "Publicar", detail: "Abre tu tienda", href: "#paso-publicar", done: launched },
   ];
+  const required = steps.filter((s) => !s.optional);
 
   return (
     <section className="space-y-8">
@@ -170,23 +234,31 @@ export default async function OnboardingPage({ params }: Props) {
         <h1 className="text-xl font-semibold">Configura tu tienda</h1>
         <div className="space-y-1">
           <p className="text-sm font-medium" id="avance-configuracion">
-            {steps.filter((s) => s.done).length} de {steps.length} pasos listos
+            {required.filter((s) => s.done).length} de {required.length} pasos listos
           </p>
           <progress
             aria-labelledby="avance-configuracion"
-            max={steps.length}
-            value={steps.filter((s) => s.done).length}
+            max={required.length}
+            value={required.filter((s) => s.done).length}
             className="h-2 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-success [&::-webkit-progress-bar]:bg-border [&::-webkit-progress-value]:bg-success"
           />
         </div>
-        <ol className="grid gap-2 sm:grid-cols-4" aria-label="Pasos de configuración">
-          {steps.map((step, i) => (
-            <li key={step.title} className="rounded-md border border-border p-3 text-sm">
-              <span className="block text-[13px] text-fg-muted">Paso {i + 1}</span>
-              <span className="font-medium">{step.title}</span>
-              <span className={`block text-[13px] ${step.done ? "text-success" : "text-fg-muted"}`}>
-                {step.done ? "✓ Listo" : "Pendiente"}
-              </span>
+        <ol
+          className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
+          aria-label="Pasos de configuración"
+        >
+          {steps.map((step) => (
+            <li key={step.title}>
+              <a
+                href={step.href}
+                className="flex min-h-11 flex-col rounded-md border border-border p-3 text-sm hover:bg-canvas"
+              >
+                <span className="font-medium">{step.title}</span>
+                <span className="text-[13px] text-fg-muted">{step.detail}</span>
+                <span className={`text-[13px] ${step.done ? "text-success" : "text-fg-muted"}`}>
+                  {step.done ? "✓ Listo" : step.optional ? "Opcional" : "Pendiente"}
+                </span>
+              </a>
             </li>
           ))}
         </ol>

@@ -27,6 +27,14 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
 }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/configuracion`);
+  // Recorrido guiado: cada paso lleva a su pantalla.
+  const steps = page.getByRole("list", { name: "Pasos de configuración" });
+  await expect(steps.getByRole("link")).toHaveCount(10);
+  await expect(steps.getByRole("link", { name: /^Impuestos/ })).toHaveAttribute(
+    "href",
+    `/admin/${tenant.handle}/impuestos`,
+  );
+  await expect(steps.getByRole("link", { name: /^Dominio propio/ })).toContainText("Opcional");
   const section = page.getByRole("region", { name: "Plantilla por giro" });
   await expect(section.getByRole("radio")).toHaveCount(5);
   await expectNoSeriousA11yViolations(page);
