@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { contrastIssues } from "@/lib/theme/palette";
 import { HomeSectionsV2, ThemeSettingsV2 } from "@/lib/theme/schema";
 
-import { findTemplate, STORE_TEMPLATES, templatePayload } from "./store-templates";
+import {
+  findTemplate,
+  STORE_TEMPLATES,
+  templateAppliedMessage,
+  templatePayload,
+} from "./store-templates";
 
 describe("plantillas de tienda", () => {
   it("hay una por giro y las claves no se repiten", () => {
@@ -54,5 +59,17 @@ describe("plantillas de tienda", () => {
     for (const term of ["cura", "garantiza", "milagro", "adelgaza", "elimina", "100%"]) {
       expect(text).not.toContain(term);
     }
+  });
+
+  it("el aviso de plantilla aplicada no habla de ejemplos cuando no hay", () => {
+    expect(templateAppliedMessage("En blanco", 0)).toBe(
+      "Plantilla «En blanco» aplicada al borrador. Revísala en la vista previa.",
+    );
+    expect(templateAppliedMessage("Ropa", 1)).toBe(
+      "Plantilla «Ropa» aplicada al borrador con 1 producto de ejemplo. Revísala en la vista previa.",
+    );
+    expect(templateAppliedMessage("Ropa", 4)).toBe(
+      "Plantilla «Ropa» aplicada al borrador con 4 productos de ejemplo. Revísala en la vista previa.",
+    );
   });
 });

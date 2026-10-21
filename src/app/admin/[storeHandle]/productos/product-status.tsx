@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { productStatusAction, type CatalogActionState } from "./actions";
 
@@ -81,7 +82,18 @@ export function ProductStatusPanel({
               : null}
             {can.publish && status !== "archived" ? button("archive", "Archivar") : null}
             {can.create ? button("duplicate", "Duplicar") : null}
-            {can.delete ? button("delete", "Eliminar", "danger") : null}
+            {can.delete ? (
+              <ConfirmButton
+                name="action"
+                value="delete"
+                size="sm"
+                disabled={pending}
+                question="¿Eliminar este producto?"
+                detail="Se puede restaurar desde «Ver eliminados» en Productos."
+              >
+                Eliminar
+              </ConfirmButton>
+            ) : null}
           </>
         )}
       </form>

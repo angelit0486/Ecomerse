@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -221,15 +222,14 @@ export function UnlinkVariantButton({
   );
   return (
     <form action={action} className="flex flex-wrap items-center gap-2">
-      <Button
-        type="submit"
-        variant="ghost"
+      <ConfirmButton
         size="sm"
         loading={pending}
         aria-label={`Desvincular ${label}`}
+        question={`¿Desvincular «${label}» de este proveedor?`}
       >
         Desvincular
-      </Button>
+      </ConfirmButton>
       <FormFeedback state={state} />
     </form>
   );

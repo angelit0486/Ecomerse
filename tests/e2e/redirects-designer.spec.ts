@@ -60,6 +60,7 @@ test("Diseño crea una redirección 301 y no ve pedidos", async ({ page, request
   expect(new URL(res.headers()["location"]!, origin()).search).toBe("?utm=x");
 
   await page.getByRole("button", { name: "Quitar /productos/proteina-2024" }).click();
+  await page.getByRole("button", { name: "Sí, quitar" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Redirección quitada." })).toBeVisible();
 
   // Rol Diseño: apariencia sí; pedidos, no.

@@ -69,6 +69,7 @@ test("agregar, ver el TXT, verificar, hacerlo principal y quitarlo", async ({ pa
 
   await page.reload();
   await page.getByRole("button", { name: `Quitar ${hostname}` }).click();
+  await page.getByRole("button", { name: `Sí, quitar ${hostname}` }).click();
   await expect(page.getByRole("status")).toContainText("Dominio quitado.");
   const [back] = await admin<{ hostname: string }[]>`
     select hostname from public.store_domains where store_id = ${tenant.storeId} and is_primary`;

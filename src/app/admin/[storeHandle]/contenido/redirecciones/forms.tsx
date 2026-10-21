@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -54,15 +55,15 @@ export function DeleteRedirect({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="redirect_id" value={id} />
-      <Button
-        type="submit"
+      <ConfirmButton
         size="sm"
-        variant="ghost"
         loading={pending}
         aria-label={`Quitar ${from}`}
+        question={`¿Quitar la redirección de ${from}?`}
+        detail="Quien abra esa dirección ya no se enviará a la nueva."
       >
         Quitar
-      </Button>
+      </ConfirmButton>
       <FormFeedback state={state} />
     </form>
   );

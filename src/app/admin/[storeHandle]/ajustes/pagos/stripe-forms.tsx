@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
@@ -36,9 +37,20 @@ export function StripeToggle({ storeHandle, enabled }: { storeHandle: string; en
   );
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
-      <Button type="submit" size="sm" variant="secondary" loading={pending}>
-        {enabled ? "Desactivar cobro con tarjeta" : "Reactivar cobro con tarjeta"}
-      </Button>
+      {enabled ? (
+        <ConfirmButton
+          size="sm"
+          loading={pending}
+          question="¿Desactivar el cobro con tarjeta?"
+          detail="La tienda deja de aceptar pagos con tarjeta hasta que lo reactives."
+        >
+          Desactivar cobro con tarjeta
+        </ConfirmButton>
+      ) : (
+        <Button type="submit" size="sm" variant="secondary" loading={pending}>
+          Reactivar cobro con tarjeta
+        </Button>
+      )}
       <FormFeedback state={state} />
     </form>
   );

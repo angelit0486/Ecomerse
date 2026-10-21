@@ -5,6 +5,7 @@ import { startTransition, useActionState, useState } from "react";
 
 import { formatMoney } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { bulkProductsAction, type CatalogActionState } from "./actions";
@@ -261,6 +262,31 @@ export function BulkProductsTable({
                 Continuar
               </Link>
             ) : null
+          ) : (bulkAction === "archive" || bulkAction === "delete") && selected.size > 0 ? (
+            // Archivar y eliminar piden confirmación; sin selección se queda el
+            // botón deshabilitado de abajo (y la pregunta se cierra tras aplicar).
+            <ConfirmButton
+              key={bulkAction}
+              size="sm"
+              loading={pending}
+              question={
+                bulkAction === "delete"
+                  ? selected.size === 1
+                    ? "¿Eliminar el producto elegido?"
+                    : `¿Eliminar los ${selected.size} productos elegidos?`
+                  : selected.size === 1
+                    ? "¿Archivar el producto elegido?"
+                    : `¿Archivar los ${selected.size} productos elegidos?`
+              }
+              confirmLabel={bulkAction === "delete" ? "Sí, eliminar" : "Sí, archivar"}
+              detail={
+                bulkAction === "delete"
+                  ? "Se pueden restaurar desde «Ver eliminados»."
+                  : "Dejan de mostrarse en la tienda; puedes volver a publicarlos."
+              }
+            >
+              Aplicar
+            </ConfirmButton>
           ) : (
             <Button
               type="submit"

@@ -5,6 +5,7 @@ import { startTransition, useActionState, useState } from "react";
 
 import { formatMoney } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { cancelSaleAction, scheduleSaleAction, type CatalogActionState } from "./actions";
@@ -317,9 +318,16 @@ function CancelSale({
   return (
     <form onSubmit={submitWith(action)}>
       <input type="hidden" name="sale_id" value={sale.id} />
-      <Button type="submit" size="sm" variant="ghost" loading={pending}>
-        Cancelar<span className="sr-only"> la oferta de {sale.title}</span>
-      </Button>
+      <ConfirmButton
+        size="sm"
+        loading={pending}
+        aria-label={`Cancelar la oferta de ${sale.title}`}
+        question={`¿Cancelar la oferta de «${sale.title}»?`}
+        confirmLabel="Sí, cancelar la oferta"
+        detail="Si ya empezó, el precio regresa al de antes de la oferta."
+      >
+        Cancelar
+      </ConfirmButton>
     </form>
   );
 }

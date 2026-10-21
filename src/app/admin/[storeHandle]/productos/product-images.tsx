@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Input } from "@/ui/primitives/input";
 
 import { mediaAction, setVariantImageAction, type CatalogActionState } from "./actions";
@@ -368,16 +369,15 @@ function ImageCard({
                 Después →
               </Button>
             ) : null}
-            <Button
-              type="submit"
+            <ConfirmButton
               name="action"
               value="delete"
-              variant="ghost"
               size="sm"
               disabled={pending}
+              question={`¿Eliminar la foto ${index + 1}?`}
             >
               Eliminar imagen
-            </Button>
+            </ConfirmButton>
           </div>
           {state.error ? (
             <p role="alert" className="text-[13px] text-danger">

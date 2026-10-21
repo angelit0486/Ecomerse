@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
@@ -73,9 +73,20 @@ export function ThemeHistory({
               <form action={action}>
                 <input type="hidden" name="version_id" value={v.id} />
                 <input type="hidden" name="revision" value={revision} />
-                <Button type="submit" variant="secondary" size="sm" loading={pending}>
-                  Restaurar la versión {v.number} al borrador
-                </Button>
+                <ConfirmButton
+                  variant={hasDraft ? "danger" : "secondary"}
+                  size="sm"
+                  loading={pending}
+                  question={`¿Restaurar la versión ${v.number} al borrador?`}
+                  confirmLabel="Sí, restaurar"
+                  detail={
+                    hasDraft
+                      ? "Reemplaza los cambios que tengas sin publicar. Lo publicado no cambia hasta que publiques."
+                      : "Lo publicado no cambia hasta que publiques."
+                  }
+                >
+                  {`Restaurar la versión ${v.number} al borrador`}
+                </ConfirmButton>
               </form>
             )}
           </li>

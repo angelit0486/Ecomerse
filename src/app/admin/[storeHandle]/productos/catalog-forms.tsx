@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -228,15 +229,15 @@ export function DeleteCategoryButton({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="ghost"
+      <ConfirmButton
         size="sm"
         loading={pending}
         aria-label={`Eliminar ${name}`}
+        question={`¿Eliminar la categoría «${name}»?`}
+        detail="Sus productos dejan de estar en esta categoría."
       >
         Eliminar
-      </Button>
+      </ConfirmButton>
       <Feedback state={state} />
     </form>
   );
@@ -293,15 +294,15 @@ export function DeleteBrandButton({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="ghost"
+      <ConfirmButton
         size="sm"
         loading={pending}
         aria-label={`Eliminar ${name}`}
+        question={`¿Eliminar la marca «${name}»?`}
+        detail="Sus productos quedan sin marca."
       >
         Eliminar
-      </Button>
+      </ConfirmButton>
       <Feedback state={state} />
     </form>
   );

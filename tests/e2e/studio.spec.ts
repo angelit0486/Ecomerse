@@ -175,6 +175,7 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await expect(versions.getByText("Versión 2 (publicada ahora)")).toBeVisible();
   await expectNoSeriousA11yViolations(page);
   await page.getByRole("button", { name: "Restaurar la versión 1 al borrador" }).click();
+  await page.getByRole("button", { name: "Sí, restaurar" }).click();
   await expect(page.getByText(/Versión 1 copiada al borrador/)).toBeVisible();
   // Restaurar no publica: la tienda sigue sin el video hasta publicar.
   await wide.reload();

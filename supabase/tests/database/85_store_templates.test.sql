@@ -6,7 +6,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(24);
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text;
@@ -24,6 +24,8 @@ select tests.create_user('cat', 'cat@a.io');
 select tests.create_tenant('a', 'owner');
 select tests.create_tenant('b', 'owner_b');
 select tests.add_store_member('a', 'cat', 'catalog_manager');
+select tests.create_user('owner_c', 'owner@c.io');
+select tests.create_tenant('c', 'owner_c');
 
 create function pg_temp.template(p_desc text default 'Polvo sabor vainilla para preparar con agua o leche.')
 returns jsonb language sql as $$
@@ -115,6 +117,30 @@ select tests.login('owner_b');
 select is(pg_temp.err(format('select public.store_apply_template(%L, %L, %s)', tests.fx('store_b'),
             pg_temp.template(), tests.theme_rev(tests.fx('store_b')))), 'validation_failed/launched',
           'la tienda publicada no admite plantilla');
+select tests.logout();
+
+-- 6. «En blanco» (Pulido, Paso 3): sin portada, categorías ni productos, y sin
+--    declarar categorías reguladas (perfil general).
+create function tests.store_counts(p_store text) returns int[] language sql security definer set search_path = '' as $$
+  select array[
+    (select count(*)::int from public.products where store_id = tests.fx('store_' || p_store)),
+    (select count(*)::int from public.categories where store_id = tests.fx('store_' || p_store)),
+    (select count(*)::int from public.store_regulated_categories where store_id = tests.fx('store_' || p_store)),
+    (select jsonb_array_length(draft_home_sections)::int from public.store_themes
+      where store_id = tests.fx('store_' || p_store))] $$;
+grant execute on function tests.store_counts(text) to authenticated;
+select tests.login('owner_c');
+select is(pg_temp.err(format('select public.store_apply_template(%L, %L, %s)', tests.fx('store_c'),
+            jsonb_build_object('key', 'blanco',
+              'settings', jsonb_build_object('colors', jsonb_build_object('primary', '#101828',
+                'background', '#ffffff', 'foreground', '#101828')),
+              'home_sections', '[]'::jsonb, 'categories', '[]'::jsonb, 'products', '[]'::jsonb),
+            tests.theme_rev(tests.fx('store_c')))), 'ok', 'la plantilla en blanco se aplica');
+select is(tests.store_counts('c'), array[0, 0, 0, 0],
+          'sin productos, categorías, categorías reguladas ni bloques de portada');
+select is(tests.draft_primary('c'), '#101828', 'con los colores neutros en el borrador');
+select ok(not ('sample_products' = any (tests.issue_codes('c'))), 'sin ejemplos que bloqueen el lanzamiento');
+select is((tests.store_counts('a'))[3], 0, 'ni la plantilla de suplementos declara por sí sola la categoría regulada');
 select tests.logout();
 
 select * from finish();

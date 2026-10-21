@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
@@ -353,9 +354,14 @@ export function RefundForm({
         />
       </label>
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" variant="secondary" loading={pending}>
+        <ConfirmButton
+          size="sm"
+          loading={pending}
+          question="¿Solicitar el reembolso por el monto indicado?"
+          detail="Si se pagó con tarjeta o Mercado Pago, el reembolso se envía al procesador de pagos y no se puede deshacer."
+        >
           Solicitar reembolso
-        </Button>
+        </ConfirmButton>
         <FormFeedback state={state} />
       </div>
     </form>

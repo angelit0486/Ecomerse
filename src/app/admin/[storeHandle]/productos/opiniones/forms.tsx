@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
@@ -36,9 +37,18 @@ export function ModerateButtons({
       ) : null}
       {status !== "rejected" ? (
         <form action={reject}>
-          <Button type="submit" size="sm" variant="secondary" loading={rejecting}>
+          <ConfirmButton
+            size="sm"
+            loading={rejecting}
+            question={
+              status === "published"
+                ? "¿Retirar esta opinión de la tienda?"
+                : "¿Rechazar esta opinión?"
+            }
+            detail="Puedes volver a publicarla después."
+          >
             {status === "published" ? "Retirar" : "Rechazar"}
-          </Button>
+          </ConfirmButton>
         </form>
       ) : null}
       <FormFeedback state={pubState.error || pubState.ok ? pubState : rejState} />

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
@@ -36,9 +37,20 @@ export function MercadoPagoToggle({
   );
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
-      <Button type="submit" size="sm" variant="secondary" loading={pending}>
-        {enabled ? "Desactivar Mercado Pago" : "Reactivar Mercado Pago"}
-      </Button>
+      {enabled ? (
+        <ConfirmButton
+          size="sm"
+          loading={pending}
+          question="¿Desactivar Mercado Pago?"
+          detail="La tienda deja de aceptar pagos con Mercado Pago hasta que lo reactives."
+        >
+          Desactivar Mercado Pago
+        </ConfirmButton>
+      ) : (
+        <Button type="submit" size="sm" variant="secondary" loading={pending}>
+          Reactivar Mercado Pago
+        </Button>
+      )}
       <FormFeedback state={state} />
     </form>
   );

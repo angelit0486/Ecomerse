@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -97,15 +98,15 @@ export function DeleteButton({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="ghost"
+      <ConfirmButton
         size="sm"
         loading={pending}
         aria-label={`Eliminar ${label}`}
+        question={`¿Eliminar ${label}?`}
+        detail={kind === "zone" ? "También se eliminan sus tarifas." : undefined}
       >
         Eliminar
-      </Button>
+      </ConfirmButton>
       <FormFeedback state={state} />
     </form>
   );

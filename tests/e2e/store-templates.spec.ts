@@ -16,10 +16,13 @@ import {
  */
 const run = uniq();
 const ownerEmail = `plantilla-${run}@example.test`;
+const blankEmail = `blanco-${run}@example.test`;
 let tenant: Awaited<ReturnType<typeof createTenant>>;
+let blank: Awaited<ReturnType<typeof createTenant>>;
 
 test.beforeAll(async () => {
   tenant = await createTenant(`t${run}`, await createAuthUser(ownerEmail));
+  blank = await createTenant(`b${run}`, await createAuthUser(blankEmail));
 });
 
 test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos", async ({
@@ -36,7 +39,7 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
   );
   await expect(steps.getByRole("link", { name: /^Dominio propio/ })).toContainText("Opcional");
   const section = page.getByRole("region", { name: "Plantilla por giro" });
-  await expect(section.getByRole("radio")).toHaveCount(5);
+  await expect(section.getByRole("radio")).toHaveCount(6);
   await expectNoSeriousA11yViolations(page);
 
   await section.getByRole("radio", { name: /^Ropa/ }).check();
@@ -66,7 +69,31 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
 
   await page.goto(`/admin/${tenant.handle}/configuracion`);
   await page.getByRole("button", { name: "Quitar los 4 productos de ejemplo" }).click();
+  await page.getByRole("button", { name: "Sí, quitar los 4 productos de ejemplo" }).click();
   await expect(page.getByText("Se quitaron 4 productos de ejemplo.")).toBeVisible();
   await expect(pending.getByText("Quita los productos de ejemplo")).toHaveCount(0);
+  await expectNoSeriousA11yViolations(page);
+});
+
+test("plantilla «En blanco»: borrador sin bloques, sin ejemplos y sin categoría regulada", async ({
+  page,
+}) => {
+  await loginNewStaff(page, blankEmail);
+  await page.goto(`/admin/${blank.handle}/configuracion`);
+  const section = page.getByRole("region", { name: "Plantilla por giro" });
+  await section.getByRole("radio", { name: /^En blanco/ }).check();
+  await section.getByRole("button", { name: "Aplicar plantilla" }).click();
+  await expect(
+    page.getByText("Plantilla «En blanco» aplicada al borrador. Revísala en la vista previa."),
+  ).toBeVisible();
+  await expect(page.getByText(/productos? de ejemplo/)).toHaveCount(0);
+
+  const [state] = await admin<{ sections: number; products: number; regulated: number }[]>`
+    select jsonb_array_length(t.draft_home_sections)::int as sections,
+           (select count(*)::int from public.products p where p.store_id = t.store_id) as products,
+           (select count(*)::int from public.store_regulated_categories r
+             where r.store_id = t.store_id) as regulated
+      from public.store_themes t where t.store_id = ${blank.storeId}`;
+  expect(state).toEqual({ sections: 0, products: 0, regulated: 0 });
   await expectNoSeriousA11yViolations(page);
 });

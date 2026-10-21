@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { formValues } from "@/lib/form-values";
-import { findTemplate, templatePayload } from "@/lib/templates/store-templates";
+import {
+  findTemplate,
+  templateAppliedMessage,
+  templatePayload,
+} from "@/lib/templates/store-templates";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
@@ -285,12 +289,7 @@ export async function applyStoreTemplate(
     return { error: failed.error };
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
-  const products =
-    result.products === 1 ? "1 producto de ejemplo" : `${result.products} productos de ejemplo`;
-  return {
-    ok: true,
-    message: `Plantilla «${template.name}» aplicada al borrador con ${products}. Revísala en la vista previa.`,
-  };
+  return { ok: true, message: templateAppliedMessage(template.name, result.products) };
 }
 
 export async function removeSampleProducts(storeHandle: string, _: StepState): Promise<StepState> {

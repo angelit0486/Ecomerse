@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { FormFeedback } from "../_shared/form-feedback";
 import { applyStoreTemplate, removeSampleProducts, type StepState } from "./actions";
@@ -63,8 +64,9 @@ export function TemplateForm({
         </div>
       </fieldset>
       <p className="text-sm text-fg-muted">
-        Cambia los colores, la portada y crea categorías y productos de ejemplo en borrador (no se
-        venden y solo se ven en la vista previa). Lo que ya tengas no se borra.
+        Cambia los colores y la portada del borrador. Las plantillas por giro también crean
+        categorías y productos de ejemplo (no se venden y solo se ven en la vista previa); «En
+        blanco» no crea nada. Lo que ya tengas no se borra.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={pending}>
@@ -102,11 +104,19 @@ export function SamplesNotice({
       </p>
       {canDelete ? (
         <form action={action} className="flex flex-wrap items-center gap-3">
-          <Button type="submit" variant="secondary" loading={pending}>
+          <ConfirmButton
+            loading={pending}
+            question={
+              count === 1
+                ? "¿Quitar el producto de ejemplo?"
+                : `¿Quitar los ${count} productos de ejemplo?`
+            }
+            detail="Se pueden restaurar desde «Ver eliminados» en Productos."
+          >
             {count === 1
               ? "Quitar el producto de ejemplo"
               : `Quitar los ${count} productos de ejemplo`}
-          </Button>
+          </ConfirmButton>
           <FormFeedback state={state} />
         </form>
       ) : null}

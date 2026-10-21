@@ -94,6 +94,7 @@ test("oferta en la ficha (empieza ya), en la tienda, cancelada y en bloque a fut
 
   await page.goto(`/admin/${tenant.handle}/productos/${productId}`);
   await sales.getByRole("button", { name: /Cancelar/ }).click();
+  await sales.getByRole("button", { name: "Sí, cancelar la oferta" }).click();
   await expect(sales.getByText("Oferta cancelada.")).toBeVisible();
   expect(await priceInDb()).toBe("69900/-");
   await expect(sales.getByRole("cell", { name: "Cancelada" })).toBeVisible();

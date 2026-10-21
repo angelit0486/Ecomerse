@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -166,17 +167,17 @@ export function StatusButtons({
           Activar
         </Button>
       )}
-      <Button
-        type="submit"
+      <ConfirmButton
         name="status"
         value="archived"
         size="sm"
-        variant="ghost"
         disabled={pending}
         aria-label={`Archivar ${code}`}
+        question={`¿Archivar el cupón ${code}?`}
+        detail="Sale de la lista y ya no se podrá usar ni reactivar."
       >
         Archivar
-      </Button>
+      </ConfirmButton>
       <FormFeedback state={state} />
     </form>
   );

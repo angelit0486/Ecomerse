@@ -85,9 +85,11 @@ test("surtir parcial → entregar → reembolso parcial confirmado", async ({ pa
 
   await page.getByLabel(/Monto a reembolsar/).fill("400");
   await page.getByRole("button", { name: "Solicitar reembolso" }).click();
+  await page.getByRole("button", { name: "Sí, solicitar reembolso" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Revisa los datos" })).toBeVisible();
   await page.getByLabel(/Monto a reembolsar/).fill("100.50");
-  await page.getByRole("button", { name: "Solicitar reembolso" }).click();
+  // Tras el error la pregunta sigue abierta: se confirma de nuevo.
+  await page.getByRole("button", { name: "Sí, solicitar reembolso" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Reembolso solicitado." })).toBeVisible();
   await expect(page.getByText(/En proceso/)).toBeVisible();
   await runJobs();

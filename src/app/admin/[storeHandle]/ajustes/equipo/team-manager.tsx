@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 
 import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/ui/primitives/dialog";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
@@ -81,8 +82,13 @@ function TeamManagerInner({
 }: Props) {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  // Qué acción está en curso: mientras dure, todas se deshabilitan y la elegida
+  // muestra su indicador.
+  const [busy, setBusy] = useState<string | null>(null);
+  const loadingFor = (key: string) => pending && busy === key;
 
-  function perform(action: () => Promise<TeamActionState>) {
+  function perform(key: string, action: () => Promise<TeamActionState>) {
+    setBusy(key);
     startTransition(async () => {
       const result = await action();
       if (result.error) toast({ title: result.error, tone: "error" });
@@ -134,7 +140,9 @@ function TeamManagerInner({
                             ]
                       }
                       onValueChange={(value) =>
-                        perform(() => changeMemberRole(storeHandle, m.user_id, value))
+                        perform(`role:${m.user_id}`, () =>
+                          changeMemberRole(storeHandle, m.user_id, value),
+                        )
                       }
                     />
                   ) : (
@@ -150,8 +158,10 @@ function TeamManagerInner({
                           <Button
                             size="sm"
                             variant="secondary"
+                            loading={loadingFor(`status:${m.user_id}`)}
+                            disabled={pending}
                             onClick={() =>
-                              perform(() =>
+                              perform(`status:${m.user_id}`, () =>
                                 setMemberStatus(
                                   storeHandle,
                                   m.user_id,
@@ -162,22 +172,32 @@ function TeamManagerInner({
                           >
                             {m.status === "active" ? "Suspender" : "Reactivar"}
                           </Button>
-                          <ConfirmButton
+                          <ConfirmDialogButton
+                            loading={loadingFor(`remove:${m.user_id}`)}
+                            disabled={pending}
                             label="Quitar"
                             title={`¿Quitar a ${m.full_name ?? m.email}?`}
                             description="Perderá el acceso a esta tienda de inmediato. Podrás invitarlo de nuevo."
                             confirmLabel="Quitar de la tienda"
-                            onConfirm={() => perform(() => removeMember(storeHandle, m.user_id))}
+                            onConfirm={() =>
+                              perform(`remove:${m.user_id}`, () =>
+                                removeMember(storeHandle, m.user_id),
+                              )
+                            }
                           />
                         </>
                       ) : null}
                       {canResetMfa && !self && m.role_key !== "org_owner" ? (
-                        <ConfirmButton
+                        <ConfirmDialogButton
+                          loading={loadingFor(`mfa:${m.user_id}`)}
+                          disabled={pending}
                           label="Restablecer 2FA"
                           title="¿Restablecer la verificación en dos pasos?"
                           description="Se eliminará su app de autenticación; la configurará de nuevo en su siguiente acceso. Úsalo solo si perdió su teléfono."
                           confirmLabel="Restablecer"
-                          onConfirm={() => perform(() => resetMfa(storeHandle, m.user_id))}
+                          onConfirm={() =>
+                            perform(`mfa:${m.user_id}`, () => resetMfa(storeHandle, m.user_id))
+                          }
                         />
                       ) : null}
                     </div>
@@ -213,13 +233,21 @@ function TeamManagerInner({
                   <TD>{roleNames[inv.store_role_id] ?? "—"}</TD>
                   <TD>{inv.expires_label}</TD>
                   <TD>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => perform(() => revokeInvitation(storeHandle, inv.id))}
+                    <form
+                      action={() =>
+                        perform(`revoke:${inv.id}`, () => revokeInvitation(storeHandle, inv.id))
+                      }
                     >
-                      Revocar
-                    </Button>
+                      <ConfirmButton
+                        size="sm"
+                        loading={loadingFor(`revoke:${inv.id}`)}
+                        disabled={pending}
+                        question={`¿Revocar la invitación de ${inv.email}?`}
+                        detail="El enlace que recibió deja de funcionar."
+                      >
+                        Revocar
+                      </ConfirmButton>
+                    </form>
                   </TD>
                 </TR>
               ))
@@ -288,23 +316,27 @@ function InviteDialog({ storeHandle, roles }: { storeHandle: string; roles: Role
   );
 }
 
-function ConfirmButton({
+function ConfirmDialogButton({
   label,
   title,
   description,
   confirmLabel,
   onConfirm,
+  loading,
+  disabled,
 }: {
   label: string;
   title: string;
   description: string;
   confirmLabel: string;
   onConfirm: () => void;
+  loading?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">
+        <Button size="sm" variant="secondary" loading={loading} disabled={disabled}>
           {label}
         </Button>
       </DialogTrigger>

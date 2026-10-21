@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -10,6 +10,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Acción en curso: deshabilita el botón y lo anuncia con aria-busy. */
   loading?: boolean;
+  /** React 19: llega como prop y se reenvía al `<button>` con el resto. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const variants: Record<ButtonVariant, string> = {

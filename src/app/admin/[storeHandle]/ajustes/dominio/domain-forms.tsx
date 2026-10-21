@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -131,6 +132,7 @@ function DomainButton({
   variant = "secondary",
   act,
   targets,
+  confirm,
 }: {
   storeHandle: string;
   domainId: string;
@@ -139,6 +141,8 @@ function DomainButton({
   variant?: "secondary" | "danger";
   act: typeof checkDomain;
   targets?: DnsTargets;
+  /** Acciones destructivas: se pregunta antes de enviar. */
+  confirm?: { question: string; detail?: string };
 }) {
   const [state, action, pending] = useActionState<DomainState, FormData>(
     act.bind(null, storeHandle),
@@ -149,9 +153,21 @@ function DomainButton({
       <form action={action} className="flex flex-wrap items-center gap-3">
         <input type="hidden" name="domain_id" value={domainId} />
         <input type="hidden" name="hostname" value={hostname} />
-        <Button type="submit" size="sm" variant={variant} loading={pending}>
-          {label}
-        </Button>
+        {confirm ? (
+          <ConfirmButton
+            size="sm"
+            variant={variant}
+            loading={pending}
+            question={confirm.question}
+            detail={confirm.detail}
+          >
+            {label}
+          </ConfirmButton>
+        ) : (
+          <Button type="submit" size="sm" variant={variant} loading={pending}>
+            {label}
+          </Button>
+        )}
         <FormFeedback state={state} />
       </form>
       {state.ok && state.token && targets ? (
@@ -193,6 +209,11 @@ export function DomainActions({
         label={`Quitar ${domain.hostname}`}
         variant="danger"
         act={removeDomain}
+        confirm={{
+          question: `¿Quitar ${domain.hostname}?`,
+          detail:
+            "Tu tienda deja de abrir en este dominio; para volver a usarlo tendrás que agregarlo y verificarlo de nuevo.",
+        }}
       />
     </div>
   );

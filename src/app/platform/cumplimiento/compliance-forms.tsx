@@ -8,6 +8,7 @@ import {
   SUPPLEMENT_FIELD_LABELS,
 } from "@/lib/compliance/labels";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -155,15 +156,14 @@ export function RetireRuleButton({ ruleId, label }: { ruleId: string; label: str
   );
   return (
     <form action={action} className="flex items-center gap-2">
-      <Button
-        type="submit"
-        variant="ghost"
+      <ConfirmButton
         size="sm"
         loading={pending}
         aria-label={`Retirar la regla ${label}`}
+        question={`¿Retirar la regla «${label}»?`}
       >
         Retirar
-      </Button>
+      </ConfirmButton>
       <Feedback state={state} />
     </form>
   );

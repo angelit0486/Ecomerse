@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
@@ -237,16 +238,16 @@ export function PageStatusForm({
         {published ? "Despublicar" : "Publicar"}
       </Button>
       {deletable ? (
-        <Button
-          type="submit"
+        <ConfirmButton
           name="action"
           value="delete"
-          variant="ghost"
           size="sm"
           disabled={pending}
+          question="¿Eliminar esta página?"
+          detail="Deja de verse en la tienda."
         >
           Eliminar página
-        </Button>
+        </ConfirmButton>
       ) : null}
       <FormFeedback state={state} />
     </form>
@@ -291,9 +292,15 @@ export function PageBlocksBar({
           <Button type="submit" name="action" value="publish" loading={pending}>
             Publicar bloques
           </Button>
-          <Button type="submit" name="action" value="discard" variant="ghost" disabled={pending}>
+          <ConfirmButton
+            name="action"
+            value="discard"
+            disabled={pending}
+            question="¿Descartar los cambios de bloques?"
+            detail="Se pierden los cambios sin publicar; lo publicado no cambia."
+          >
             Descartar cambios de bloques
-          </Button>
+          </ConfirmButton>
         </form>
       ) : null}
       <FormFeedback state={state} />

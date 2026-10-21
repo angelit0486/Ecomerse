@@ -137,6 +137,7 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
   expect((await productRow("Playera Básica"))?.status).toBe("archived");
 
   await page.getByRole("button", { name: "Eliminar", exact: true }).click();
+  await page.getByRole("button", { name: "Sí, eliminar" }).click();
   await expect(page).toHaveURL(new RegExp(`${base}\\?eliminado=1$`));
   expect((await productRow("Playera Básica"))?.deleted_at).not.toBeNull();
 
@@ -181,6 +182,7 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
   await page.getByRole("checkbox", { name: "Seleccionar Playera Básica" }).check();
   await page.getByLabel("Acción masiva").selectOption("archive");
   await page.getByRole("button", { name: "Aplicar" }).click();
+  await page.getByRole("button", { name: "Sí, archivar" }).click();
   await expect(page.getByRole("status").filter({ hasText: "1 producto archivado." })).toBeVisible();
   expect((await productRow("Playera Básica"))?.status).toBe("archived");
   await expectNoSeriousA11yViolations(page);

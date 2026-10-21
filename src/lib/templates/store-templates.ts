@@ -539,3 +539,12 @@ export function templatePayload(t: StoreTemplate) {
     products: t.products,
   };
 }
+
+/** Aviso tras aplicar una plantilla; sin ejemplos no los menciona («En blanco»). */
+export function templateAppliedMessage(name: string, products: number): string {
+  const samples =
+    products === 0
+      ? ""
+      : ` con ${products === 1 ? "1 producto de ejemplo" : `${products} productos de ejemplo`}`;
+  return `Plantilla «${name}» aplicada al borrador${samples}. Revísala en la vista previa.`;
+}
