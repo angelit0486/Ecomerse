@@ -983,6 +983,15 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
   - En ambos casos el contenido va al borrador.
   - La categoría regulada (suplemento alimenticio) se declara en Ajustes → Cumplimiento, como en la primera tienda.
 
+- **D-PUL-02, implementado. Copiar la estructura de otra tienda.**
+  - Está en «Configura tu tienda» → «Copiar de otra de tus tiendas», con `store_copy_structure` (migración `20261022000200`). Solo entre tiendas de la misma organización, con permiso por parte en la tienda de destino.
+  - **Categorías:** pasan con su jerarquía, descripción y SEO, sin imágenes.
+  - **Páginas de contenido:** llegan en borrador, solo con los bloques que no dependen de productos, fotos, categorías ni marcas.
+  - **Políticas:** el texto completo y publicado llega en borrador, y solo si la de destino sigue con la plantilla.
+  - **Menús:** se copian si están vacíos en el destino. Reasignan categorías por ruta y páginas por slug, y omiten productos, marcas y colecciones.
+  - Nunca borra ni pisa nada, y repetir la copia no duplica. Queda en la auditoría (`store.structure_copied`). pgTAP `91_store_copy_structure` (16) y E2E `multi-store`.
+  - El diseño se sigue copiando aparte (Apariencia → Historial).
+
 ### ADR-038 (propuesto) — Que la dueña cree otra tienda desde su panel
 
 - **Contexto.** El contrato ya define el permiso de organización `org.stores.create`, que tienen `org_owner` y `org_admin`, pero ninguna función lo usa. Hoy solo la plataforma agrega tiendas (D-PUL-01).

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { COPY_PARTS } from "@/lib/templates/copy-structure";
 import { STORE_TEMPLATES } from "@/lib/templates/store-templates";
 import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
@@ -10,7 +12,9 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { publicMediaUrl } from "@/server/catalog/queries";
 
+import { loadSiblingStores } from "../_shared/sibling-stores";
 import { BrandForm } from "../apariencia/forms";
+import { CopyStructureForm } from "./copy-structure-form";
 import { ProfileForm } from "./forms";
 import { LaunchButton, ManualPaymentForm } from "./launch-forms";
 import { LogoForm, type LogoCandidate } from "./logo-form";
@@ -57,6 +61,10 @@ export default async function OnboardingPage({ params }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   const canEditProfile = hasPermission(ctx, "store.update");
+  const copyParts = COPY_PARTS.filter((p) => hasPermission(ctx, p.permission)).map(
+    ({ key, label }) => ({ key, label }),
+  );
+  const siblings = copyParts.length > 0 ? await loadSiblingStores(ctx.store.id) : [];
   const canEditBranding = hasPermission(ctx, "appearance.manage");
   const canManagePayments = hasPermission(ctx, "payments.manage");
   const canApplyTemplate =
@@ -291,6 +299,25 @@ export default async function OnboardingPage({ params }: Props) {
               }))}
             />
           ) : null}
+        </section>
+      ) : null}
+
+      {siblings.length > 0 ? (
+        <section aria-labelledby="copiar-tienda" className="space-y-3">
+          <h2 id="copiar-tienda" className="text-base font-semibold">
+            Copiar de otra de tus tiendas
+          </h2>
+          <p className="text-sm text-fg-muted">
+            Para abrir otra tienda del mismo giro sin empezar de cero. El diseño se copia aparte, en{" "}
+            <Link
+              href={`/admin/${ctx.store.handle}/apariencia?seccion=historial`}
+              className="underline"
+            >
+              Apariencia → Historial
+            </Link>
+            .
+          </p>
+          <CopyStructureForm storeHandle={ctx.store.handle} stores={siblings} parts={copyParts} />
         </section>
       ) : null}
 

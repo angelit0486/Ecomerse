@@ -28,6 +28,10 @@ test.beforeAll(async () => {
   await admin.begin(async (sql) => {
     await sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: ownerId, role: "authenticated", aal: "aal2" })}, true)`;
     await sql`set local role authenticated`;
+    await sql`select public.catalog_upsert_category(${tenant.storeId}, ${sql.json({
+      name: "Proteínas veganas",
+      description: "Proteína de chícharo y arroz.",
+    })})`;
     await sql`select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({
       title: "Proteína de la primera tienda",
       variants: [{ price: 59900, sku: `PRI-${run}` }],
@@ -88,6 +92,18 @@ test("la plataforma agrega una tienda y la dueña administra las dos desde el mi
   await expect(page.getByText("Proteína de la primera tienda")).toHaveCount(0);
   await page.goto(`/admin/${tenant.handle}/productos`);
   await expect(page.getByText("Proteína de la primera tienda").first()).toBeVisible();
+
+  // 5. La tienda nueva copia la estructura de la primera, sin productos.
+  await page.goto(`/admin/${handle}/configuracion`);
+  const copy = page.getByRole("region", { name: "Copiar de otra de tus tiendas" });
+  await expect(copy.getByLabel("Copiar de")).toHaveValue(tenant.storeId);
+  await copy.getByRole("button", { name: "Copiar a esta tienda" }).click();
+  await expect(copy.getByText(/^Copiamos 1 categoría/)).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await page.goto(`/admin/${handle}/productos/categorias`);
+  await expect(page.getByLabel("Nombre de Proteínas veganas")).toHaveValue("Proteínas veganas");
+  await page.goto(`/admin/${handle}/productos`);
+  await expect(page.getByText("Proteína de la primera tienda")).toHaveCount(0);
 
   const [row] = await admin<{ org: string; status: string }[]>`
     select organization_id::text as org, status from public.stores where handle = ${handle}`;

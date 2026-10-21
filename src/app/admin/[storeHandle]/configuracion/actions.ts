@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { formValues } from "@/lib/form-values";
 import {
+  COPY_PARTS,
+  structureCopiedMessage,
+  type CopyCounts,
+} from "@/lib/templates/copy-structure";
+import {
   findTemplate,
   templateAppliedMessage,
   templatePayload,
@@ -290,6 +295,47 @@ export async function applyStoreTemplate(
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
   return { ok: true, message: templateAppliedMessage(template.name, result.products) };
+}
+
+/**
+ * Copia categorías, páginas, políticas y menús de otra tienda de la organización
+ * (D-PUL-02). La base valida la organización, los permisos y que nada apunte a la
+ * tienda de origen.
+ */
+export async function copyStoreStructure(
+  storeHandle: string,
+  _: StepState,
+  formData: FormData,
+): Promise<StepState> {
+  const source = String(formData.get("source_store_id") ?? "");
+  const known = new Set<string>(COPY_PARTS.map((p) => p.key));
+  const parts = formData
+    .getAll("parts")
+    .map(String)
+    .filter((p) => known.has(p));
+  if (!source) return { error: "Elige de qué tienda copiar." };
+  if (parts.length === 0) return { error: "Elige al menos una parte para copiar." };
+  let counts: CopyCounts;
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    counts = await callRpc<CopyCounts>(supabase, "store_copy_structure", {
+      p_store_id: ctx.store.id,
+      p_source_store_id: source,
+      p_parts: parts,
+    });
+    invalidateStore(ctx.store.id);
+  } catch (error) {
+    const appError = reportActionError("configuracion.copy", error);
+    return {
+      error:
+        appError.code === "forbidden"
+          ? "No puedes copiar de esa tienda, o tu rol no permite copiar alguna de las partes elegidas."
+          : appError.message,
+    };
+  }
+  revalidatePath(`/admin/${storeHandle}`, "layout");
+  return { ok: true, message: structureCopiedMessage(counts) };
 }
 
 export async function removeSampleProducts(storeHandle: string, _: StepState): Promise<StepState> {
