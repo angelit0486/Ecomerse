@@ -47,7 +47,7 @@ const ICON = {
  * decir «hay más» en vez de mostrar una palabra cortada.
  */
 const QUICK_LINKS_LIST =
-  "flex gap-1 overflow-x-auto scroll-pl-1.5 pl-1.5 pr-8 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]";
+  "flex gap-1 overflow-x-auto scroll-pl-1.5 pl-1.5 pr-8 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] focus-within:[mask-image:none]";
 
 /**
  * Encabezado (rediseño A+B, revisión de conversión A4): en móvil, fila 1 con

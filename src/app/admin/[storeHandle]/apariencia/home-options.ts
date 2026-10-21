@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { LinkTargets } from "@/lib/theme/link-targets";
+import { hasPermission, type StoreContext } from "@/server/auth/context";
 import { publicMediaUrl } from "@/server/catalog/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -12,6 +13,7 @@ import type { HomeEditorOptions } from "./home-editor";
  */
 export async function loadHomeOptions(
   storeId: string,
+  access: { products: boolean; seo: boolean },
   media: {
     id: string;
     owner_type: string;
@@ -52,7 +54,7 @@ export async function loadHomeOptions(
         .neq("status", "archived")
         .order("created_at", { ascending: false })
         .limit(500),
-      loadLinkTargets(storeId),
+      loadLinkTargets(storeId, access),
     ]);
   return {
     banners: media
@@ -80,41 +82,65 @@ export async function loadHomeOptions(
   };
 }
 
+/** Qué listas puede leer este rol (las demás quedan en `null`). */
+export function linkAccess(ctx: StoreContext): { products: boolean; seo: boolean } {
+  return { products: hasPermission(ctx, "products.read"), seo: hasPermission(ctx, "seo.manage") };
+}
+
 /**
  * Páginas reales de la tienda para revisar los enlaces de los botones
- * (DIAGNOSTICO-PORTADA R3). Con RLS: lo que el rol no puede leer (p. ej. las
- * redirecciones sin permiso de SEO) queda fuera y, a lo más, sobra un aviso.
+ * (DIAGNOSTICO-PORTADA R3). Lo que el rol no puede leer (RLS) o una consulta
+ * que falla queda en `null` y no produce avisos (revisión del Paso 1). Los
+ * productos no se cargan completos: los slugs que se piden se buscan aparte.
  */
-export async function loadLinkTargets(storeId: string): Promise<LinkTargets> {
+export async function loadLinkTargets(
+  storeId: string,
+  access: { products: boolean; seo: boolean },
+  productSlugs: string[] = [],
+): Promise<LinkTargets> {
   const supabase = await createSupabaseServerClient();
+  const list = <T extends Record<string, unknown>>(
+    r: { data: T[] | null; error: unknown },
+    key: keyof T,
+  ): string[] | null => (r.error || !r.data ? null : r.data.map((row) => String(row[key])));
+  const slugs = [...new Set(productSlugs)].slice(0, 100);
   const [categories, brands, pages, products, redirects] = await Promise.all([
-    supabase
-      .from("categories")
-      .select("path")
-      .eq("store_id", storeId)
-      .eq("is_visible", true)
-      .is("deleted_at", null),
-    supabase.from("brands").select("slug").eq("store_id", storeId).is("deleted_at", null),
+    access.products
+      ? supabase
+          .from("categories")
+          .select("path")
+          .eq("store_id", storeId)
+          .eq("is_visible", true)
+          .is("deleted_at", null)
+      : null,
+    access.products
+      ? supabase.from("brands").select("slug").eq("store_id", storeId).is("deleted_at", null)
+      : null,
     supabase
       .from("store_pages")
       .select("slug")
       .eq("store_id", storeId)
       .eq("is_published", true)
       .is("deleted_at", null),
-    supabase
-      .from("products")
-      .select("slug")
-      .eq("store_id", storeId)
-      .eq("status", "active")
-      .is("deleted_at", null)
-      .limit(5000),
-    supabase.from("store_redirects").select("from_path").eq("store_id", storeId).limit(5000),
+    access.products && slugs.length > 0
+      ? supabase
+          .from("products")
+          .select("slug")
+          .eq("store_id", storeId)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .in("slug", slugs)
+      : null,
+    access.seo
+      ? supabase.from("store_redirects").select("from_path").eq("store_id", storeId).limit(1000)
+      : null,
   ]);
   return {
-    categories: (categories.data ?? []).map((r) => r.path as string),
-    brands: (brands.data ?? []).map((r) => r.slug as string),
-    pages: (pages.data ?? []).map((r) => r.slug as string),
-    products: (products.data ?? []).map((r) => r.slug as string),
-    redirects: (redirects.data ?? []).map((r) => r.from_path as string),
+    categories: categories ? list(categories, "path") : null,
+    brands: brands ? list(brands, "slug") : null,
+    pages: list(pages, "slug"),
+    // Sin slugs que revisar (el editor en vivo) no se sabe: no avisa de productos.
+    products: products ? list(products, "slug") : null,
+    redirects: redirects ? list(redirects, "from_path") : null,
   };
 }

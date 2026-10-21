@@ -11,7 +11,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { publicMediaUrl } from "@/server/catalog/queries";
 
 import { HomeEditor } from "../../../apariencia/home-editor";
-import { loadHomeOptions } from "../../../apariencia/home-options";
+import { linkAccess, loadHomeOptions } from "../../../apariencia/home-options";
 import { savePageBlocks } from "../../actions";
 import { PAGE_TYPE_LABELS } from "../../labels";
 import { PageBlocksBar, PageEditorForm, PageStatusForm } from "../../page-forms";
@@ -65,7 +65,7 @@ export default async function PageEditorPage({ params, searchParams }: Props) {
     alt: m.alt_text,
   }));
   const blocksEnabled = page.type === "content" && canEdit;
-  const options = blocksEnabled ? await loadHomeOptions(ctx.store.id, rows) : null;
+  const options = blocksEnabled ? await loadHomeOptions(ctx.store.id, linkAccess(ctx), rows) : null;
   const blocks = (page.draft_sections ?? page.sections ?? []) as Parameters<
     typeof HomeEditor
   >[0]["initial"];

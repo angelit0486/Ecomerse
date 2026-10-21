@@ -11,7 +11,7 @@ import { themeRpcError } from "@/server/theme/errors";
 
 import { storeClient } from "../_shared/action-state";
 import { normalizeSections, sectionIssues } from "./home-normalize";
-import { loadLinkTargets } from "./home-options";
+import { linkAccess, loadLinkTargets } from "./home-options";
 
 /**
  * Portada (F9-T02, F9-DESIGN §3 y §7): se guarda la lista completa de secciones
@@ -56,9 +56,11 @@ export async function saveHomeDraft(
   if (typeof issues === "string") return { error: issues };
   if (issues) return { error: "Revisa las secciones marcadas.", sections: issues };
   let storeId = "";
+  let access = { products: false, seo: false };
   try {
     const client = await storeClient(storeHandle);
     storeId = client.storeId;
+    access = linkAccess(client.ctx);
     await callRpc(client.supabase, "appearance_save_home_draft", {
       p_store_id: storeId,
       p_sections: sections,
@@ -84,7 +86,7 @@ export async function saveHomeDraft(
     return { error: "No pudimos guardar la portada. Inténtalo de nuevo." };
   }
   revalidatePath(`/admin/${storeHandle}/apariencia`);
-  const warnings = await linkWarnings(storeId, sections);
+  const warnings = await linkWarnings(storeId, access, sections);
   return {
     ok: true,
     message: warnings
@@ -97,11 +99,17 @@ export async function saveHomeDraft(
 /** Enlaces a páginas que no existen (DIAGNOSTICO-PORTADA R3): avisan, no bloquean. */
 async function linkWarnings(
   storeId: string,
+  access: { products: boolean; seo: boolean },
   sections: unknown,
 ): Promise<Record<string, string[]> | undefined> {
   if (!Array.isArray(sections)) return undefined;
   try {
-    const targets = await loadLinkTargets(storeId);
+    // Solo se buscan los productos a los que apuntan los botones.
+    const slugs = (sections as { props?: unknown }[])
+      .flatMap((s) => sectionLinks(s.props))
+      .map((l) => /^\/productos\/([^/?#]+)/.exec(l)?.[1])
+      .filter((s): s is string => Boolean(s));
+    const targets = await loadLinkTargets(storeId, access, slugs);
     const out: Record<string, string[]> = {};
     for (const section of sections as { id: string; props?: unknown }[]) {
       for (const link of sectionLinks(section.props)) {

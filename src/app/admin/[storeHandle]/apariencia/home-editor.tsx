@@ -154,6 +154,7 @@ function TextField({
   multiline,
   hint,
   list,
+  describedBy,
 }: {
   id: string;
   text: string;
@@ -164,7 +165,11 @@ function TextField({
   hint?: string;
   /** Id de un <datalist> con sugerencias. */
   list?: string;
+  /** Otro texto que describe el campo (p. ej. un aviso). */
+  describedBy?: string;
 }) {
+  const describedByIds =
+    [hint ? `${id}-hint` : null, describedBy].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className={label}>
@@ -188,7 +193,7 @@ function TextField({
           list={list}
           onChange={(e) => onChange(e.target.value)}
           className={control}
-          aria-describedby={hint ? `${id}-hint` : undefined}
+          aria-describedby={describedByIds}
         />
       )}
       {hint ? (
@@ -279,10 +284,12 @@ function CtaFields({
           maxLength={500}
           list={links ? "link-targets" : undefined}
           hint="Elige una página de la lista o escribe https://…"
+          describedBy={warning ? `${id}-cta-link-warning` : undefined}
           onChange={(link) => onChange({ ...value, link })}
         />
+        {/* Sin región viva: se anunciaría con cada tecla (revisión del Paso 1). */}
         {warning ? (
-          <p role="status" className="text-[13px] font-medium text-warning">
+          <p id={`${id}-cta-link-warning`} className="text-[13px] font-medium text-warning">
             {warning}
           </p>
         ) : null}
@@ -299,9 +306,9 @@ function LinkTargetList({ links }: { links?: LinkTargets }) {
     "/productos",
     "/ofertas",
     "/marcas",
-    ...links.categories.map((c) => `/categoria/${c}`),
-    ...links.brands.map((b) => `/marca/${b}`),
-    ...links.pages.map((p) => `/paginas/${p}`),
+    ...(links.categories ?? []).map((c) => `/categoria/${c}`),
+    ...(links.brands ?? []).map((b) => `/marca/${b}`),
+    ...(links.pages ?? []).map((p) => `/paginas/${p}`),
   ];
   return (
     <datalist id="link-targets">

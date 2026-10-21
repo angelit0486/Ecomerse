@@ -7,13 +7,17 @@ import { INTERNAL_PATH_RE } from "./links";
  * no bloquea el guardado (un rol sin permiso de SEO no ve las redirecciones).
  */
 export interface LinkTargets {
-  /** `path` de las categorías visibles (p. ej. «suplementos/proteinas»). */
-  categories: string[];
-  brands: string[];
-  pages: string[];
-  products: string[];
+  /**
+   * `path` de las categorías visibles (p. ej. «suplementos/proteinas»). `null`
+   * en cualquier lista = no se pudo saber (sin permiso o la consulta falló):
+   * entonces no se avisa nada de ese tipo de enlace (revisión del Paso 1).
+   */
+  categories: string[] | null;
+  brands: string[] | null;
+  pages: string[] | null;
+  products: string[] | null;
   /** Rutas de origen de las redirecciones 301 (ya llevan a otra página). */
-  redirects: string[];
+  redirects: string[] | null;
 }
 
 /** Páginas fijas de la tienda (src/app/_store/[storeId]). */
@@ -24,9 +28,10 @@ const STATIC_PATHS = new Set([
   "/marcas",
   "/buscar",
   "/carrito",
-  "/cuenta",
   "/checkout",
 ]);
+/** Secciones con rutas propias (cuenta del comprador, pedido, pago). */
+const STATIC_PREFIXES = ["/cuenta", "/pedido/", "/pago-simulado/"];
 
 const PREFIXES = [
   { prefix: "/categoria/", key: "categories" },
@@ -57,12 +62,16 @@ function pathOf(link: string): string {
 export function brokenLinkHint(link: string, targets: LinkTargets): string | null {
   if (!link || !INTERNAL_PATH_RE.test(link)) return null;
   const path = pathOf(link);
-  if (STATIC_PATHS.has(path)) return null;
-  if (targets.redirects.some((r) => pathOf(r) === path)) return null;
+  if (STATIC_PATHS.has(path) || STATIC_PREFIXES.some((p) => path.startsWith(p))) return null;
+  // Sin saber qué redirecciones hay, cualquier otra ruta podría ser una.
+  if (targets.redirects === null) return null;
+  // Las redirecciones se guardan y se comparan en minúsculas (redirects.ts).
+  if (targets.redirects.some((r) => pathOf(r).toLowerCase() === path.toLowerCase())) return null;
   for (const { prefix, key } of PREFIXES) {
     if (!path.startsWith(prefix)) continue;
     const rest = path.slice(prefix.length);
-    if (targets[key].includes(rest)) return null;
+    const known = targets[key];
+    if (known === null || known.includes(rest)) return null;
     return `«${link}» no lleva a ninguna ${NAMES[key]} de tu tienda.${suggest(rest, targets)}`;
   }
   return `«${link}» no es una página de tu tienda.${suggest(path.slice(1), targets)}`;
@@ -72,14 +81,14 @@ export function brokenLinkHint(link: string, targets: LinkTargets): string | nul
 function suggest(slug: string, targets: LinkTargets): string {
   const last = slug.split("/").pop()?.toLowerCase();
   if (!last) return "";
-  const category = targets.categories.find((p) => p.split("/").pop() === last);
+  const category = targets.categories?.find((p) => p.split("/").pop() === last);
   const found = category
     ? `/categoria/${category}`
-    : targets.brands.includes(last)
+    : targets.brands?.includes(last)
       ? `/marca/${last}`
-      : targets.pages.includes(last)
+      : targets.pages?.includes(last)
         ? `/paginas/${last}`
-        : targets.products.includes(last)
+        : targets.products?.includes(last)
           ? `/productos/${last}`
           : null;
   return found ? ` ¿Quisiste decir «${found}»?` : "";

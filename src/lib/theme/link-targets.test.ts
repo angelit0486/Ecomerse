@@ -50,6 +50,20 @@ describe("brokenLinkHint", () => {
   });
 });
 
+describe("brokenLinkHint sin datos completos (revisión del Paso 1)", () => {
+  it("lo que no se pudo leer no avisa (rol sin permiso o consulta fallida)", () => {
+    expect(brokenLinkHint("/productos/otro", { ...targets, products: null })).toBeNull();
+    expect(brokenLinkHint("/plumas", { ...targets, redirects: null })).toBeNull();
+    expect(brokenLinkHint("/categoria/x", { ...targets, categories: null })).toBeNull();
+  });
+
+  it("redirecciones sin importar mayúsculas y rutas de la cuenta", () => {
+    expect(brokenLinkHint("/Promo-Vieja", targets)).toBeNull();
+    expect(brokenLinkHint("/cuenta/pedidos", targets)).toBeNull();
+    expect(brokenLinkHint("/cuenta", targets)).toBeNull();
+  });
+});
+
 describe("sectionLinks", () => {
   it("encuentra los enlaces de botones, tarjetas y renglones", () => {
     expect(

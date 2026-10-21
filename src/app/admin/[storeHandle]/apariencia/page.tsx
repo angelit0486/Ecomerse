@@ -20,7 +20,7 @@ import {
 import { ThemeHistory, type ThemeVersionRow } from "./history";
 import { MoveDesign } from "./move-design";
 import { HomeEditor } from "./home-editor";
-import { loadHomeOptions } from "./home-options";
+import { linkAccess, loadHomeOptions } from "./home-options";
 import { loadSiblingStores } from "../_shared/sibling-stores";
 
 export const metadata: Metadata = { title: "Apariencia" };
@@ -122,7 +122,8 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const images = rows
     .filter((m) => m.status === "ready")
     .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text }));
-  const homeOptions = tab === "portada" ? await loadHomeOptions(ctx.store.id, rows) : null;
+  const homeOptions =
+    tab === "portada" ? await loadHomeOptions(ctx.store.id, linkAccess(ctx), rows) : null;
   const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
   const siblingStores = tab === "historial" ? await loadSiblingStores(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
