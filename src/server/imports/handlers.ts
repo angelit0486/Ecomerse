@@ -54,6 +54,8 @@ export function createImportHandlers(deps: ImportDeps): Array<[string, JobHandle
         // transacción (si la importación falla, no queda ninguna a medias).
         if (row!.result.status === "completed") {
           await tx`select system.import_queue_remote_images(${importJobId})`;
+          // Misión Portada/Marcas: descripción y logo (por enlace) de las marcas.
+          await tx`select system.import_apply_brand_profiles(${importJobId})`;
         }
         return row!.result;
       });

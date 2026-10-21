@@ -63,6 +63,8 @@ export const COLUMN_LABELS: Record<string, string> = {
   regulatory_category: "Tipo de producto regulado",
   attributes: "Atributos",
   image_urls: "Fotos (enlaces)",
+  brand_logo_url: "Logo de la marca (enlace)",
+  brand_description: "Descripción de la marca",
 };
 
 /**

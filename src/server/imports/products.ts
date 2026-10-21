@@ -84,6 +84,13 @@ export const MAX_VARIANT_SERVINGS = 10_000;
  */
 export const IMAGE_HEADERS = ["image_urls"] as const;
 export const MAX_IMAGES_PER_PRODUCT = 10;
+/**
+ * Misión Portada/Marcas: logo (enlace https, lo descarga el worker) y descripción
+ * de la marca de la fila. Requieren la columna `brand`; la primera fila de cada
+ * marca manda.
+ */
+export const BRAND_PROFILE_HEADERS = ["brand_logo_url", "brand_description"] as const;
+export const MAX_BRAND_DESCRIPTION = 1000;
 
 export const ALL_IMPORT_HEADERS = [
   ...IMPORT_HEADERS,
@@ -92,6 +99,7 @@ export const ALL_IMPORT_HEADERS = [
   ...VARIANT_SUPPLEMENT_HEADERS,
   ...ATTRIBUTE_HEADERS,
   ...IMAGE_HEADERS,
+  ...BRAND_PROFILE_HEADERS,
 ] as const;
 export type ImportColumn = (typeof ALL_IMPORT_HEADERS)[number];
 
@@ -140,6 +148,8 @@ export interface PlannedProduct {
   /** ADR-033: enlaces https de fotos para descargar (se agregan; nunca se borran fotos). */
   images?: string[];
   brand?: string | null;
+  /** Logo y descripción de esa marca (solo con `brand`). */
+  brand_profile?: { logo_url?: string; description?: string };
   categories?: string[];
   /** null: el archivo no trae columnas de opciones. */
   option_names: string[] | null;
@@ -277,7 +287,28 @@ const DIMENSIONS = ["weight_g", "length_mm", "width_mm", "height_mm"] as const;
  * caracteres y ≤ 10 por producto, sin repetidos. La base los vuelve a validar y
  * el worker, al descargar, bloquea las direcciones internas (T-08).
  */
-function parseImageUrls(value: string, errors: string[]): string[] {
+/** Logo y descripción de la marca de la fila; null si vienen vacíos. */
+function planBrandProfile(
+  f: (k: ImportColumn) => string,
+  has: (k: ImportColumn) => boolean,
+  errors: string[],
+): PlannedProduct["brand_profile"] | null {
+  const profile: NonNullable<PlannedProduct["brand_profile"]> = {};
+  if (has("brand_logo_url") && f("brand_logo_url")) {
+    const [url] = parseImageUrls(f("brand_logo_url"), [], "brand_logo_url");
+    if (url && !f("brand_logo_url").includes("|")) profile.logo_url = url;
+    else errors.push("brand_logo_url: un solo enlace que empiece con https://");
+  }
+  if (has("brand_description") && f("brand_description")) {
+    const description = f("brand_description");
+    if (description.length > MAX_BRAND_DESCRIPTION) {
+      errors.push(`brand_description: hasta ${MAX_BRAND_DESCRIPTION} caracteres`);
+    } else profile.description = description;
+  }
+  return Object.keys(profile).length > 0 ? profile : null;
+}
+
+function parseImageUrls(value: string, errors: string[], column = "image_urls"): string[] {
   const urls = [...new Set(list(value))];
   const valid: string[] = [];
   urls.forEach((raw, i) => {
@@ -296,7 +327,7 @@ function parseImageUrls(value: string, errors: string[]): string[] {
       /\s/.test(raw)
     ) {
       errors.push(
-        `image_urls: el enlace ${i + 1} debe empezar con https:// y ser una dirección completa`,
+        `${column}: el enlace ${i + 1} debe empezar con https:// y ser una dirección completa`,
       );
       return;
     }
@@ -368,6 +399,11 @@ export function planProductImport(
       );
     }
     if (has("brand")) normalized.brand = f("brand") || null;
+    const brandProfile = planBrandProfile(f, has, fe);
+    if (brandProfile) {
+      if (normalized.brand) normalized.brand_profile = brandProfile;
+      else fe.push("brand_logo_url: escribe también el nombre de la marca en la columna brand");
+    }
     if (has("categories")) normalized.categories = list(f("categories"));
     if (has("regulatory_category")) planRegulatory(f, has, normalized, fe);
     if (has("attributes")) {

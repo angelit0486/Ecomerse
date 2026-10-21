@@ -430,3 +430,63 @@ describe("borrador del catálogo desde la investigación (docs/catalogo)", () =>
     expect(products.flatMap((p) => p.variants).every((v) => v.status === "inactive")).toBe(true);
   });
 });
+
+describe("logo y descripción de la marca (misión Portada/Marcas)", () => {
+  const BH = ["handle", "title", "price", "brand", "brand_logo_url", "brand_description"];
+  it("se agregan a la marca de la fila", () => {
+    const plan = planProductImport(BH, [
+      row(
+        {
+          handle: "creatina",
+          title: "Creatina",
+          price: "299",
+          brand: "Muha Meds",
+          brand_logo_url: "https://cdn.example.com/muha.png",
+          brand_description: "Creatinas hechas en México.",
+        },
+        BH,
+      ),
+    ]);
+    expect(plan[0]!.errors).toEqual([]);
+    expect(plan[0]!.normalized?.brand_profile).toEqual({
+      logo_url: "https://cdn.example.com/muha.png",
+      description: "Creatinas hechas en México.",
+    });
+  });
+
+  it("sin marca, con enlace no https o con varios enlaces: error claro", () => {
+    const plan = planProductImport(BH, [
+      row({ handle: "a", title: "A", price: "1", brand_description: "x" }, BH),
+      row(
+        { handle: "b", title: "B", price: "1", brand: "X", brand_logo_url: "http://x.com/l.png" },
+        BH,
+      ),
+      row(
+        {
+          handle: "c",
+          title: "C",
+          price: "1",
+          brand: "X",
+          brand_logo_url: "https://a.com/1.png|https://a.com/2.png",
+        },
+        BH,
+      ),
+      row(
+        { handle: "d", title: "D", price: "1", brand: "X", brand_description: "a".repeat(1001) },
+        BH,
+      ),
+    ]);
+    expect(plan[0]!.errors).toContain(
+      "brand_logo_url: escribe también el nombre de la marca en la columna brand",
+    );
+    expect(plan[1]!.errors).toContain("brand_logo_url: un solo enlace que empiece con https://");
+    expect(plan[2]!.errors).toContain("brand_logo_url: un solo enlace que empiece con https://");
+    expect(plan[3]!.errors).toContain("brand_description: hasta 1000 caracteres");
+  });
+
+  it("son columnas conocidas", () => {
+    expect(ALL_IMPORT_HEADERS).toEqual(
+      expect.arrayContaining(["brand_logo_url", "brand_description"]),
+    );
+  });
+});
