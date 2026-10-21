@@ -154,6 +154,10 @@ export interface BrandDetail {
   seo_description: string | null;
   updated_at: string;
   logo: ImageRef | null;
+  /** Misión Portada/Marcas: banner, descripción y sitio (pueden faltar en datos viejos). */
+  cover?: ImageRef | null;
+  description?: string | null;
+  website_url?: string | null;
 }
 
 export interface MenuEntry {

@@ -18,6 +18,22 @@
       - la tira de accesos rápidos empieza en el margen de la página y se difumina a la derecha;
       - la pestaña Portada dice qué barra de anuncio hay y lleva a editarla.
     - Pruebas: verify 882 y E2E `home-editor-regression` (3) más 19 relacionadas en verde.
+  - **Revisión adversarial del Paso 1 (hecha):** sin hallazgos de seguridad; 3 medios y 5 bajos sobre avisos falsos y accesibilidad, corregidos (`docs/phases/PORTADA-PASO-1-REVISION.md`).
+  - **Paso 2a (hecho): marcas con logo, portada, descripción y sitio.**
+    - Migración `20261023000100_brand_profile`:
+      - columnas `cover_media_id` (FK compuesta, `on delete set null`), `description` y `website_url` (solo https);
+      - la función nueva `catalog_set_brand_media`, que acepta solo medios de marca de la misma tienda y no rechazados, con permiso `brands.manage` y auditoría;
+      - `storefront.get_brand` con portada, descripción y sitio.
+    - pgTAP `92_brand_profile` (19), con aislamiento entre tiendas y permisos.
+    - Panel → Marcas:
+      - cada marca en una tarjeta con logo cuadrado y portada 8:3, encuadrados en el navegador («Completa» o «Llenar el cuadro»), con vista previa, cambiar y quitar (con confirmación);
+      - nombre, descripción y sitio;
+      - subida de logos de varias marcas a la vez, asignados por el nombre del archivo.
+    - Texto alternativo automático: «Logo de …» y «Portada de …».
+    - Tienda:
+      - directorio en cuadrícula con logos e iniciales de respaldo;
+      - página de la marca con portada, logo, descripción y enlace al sitio.
+    - Pruebas: E2E `brands` (375 px, axe) y unitarias `brand-files`, `frame` y `brand-filter`.
 - **Panel pulido + segunda tienda en blanco (2026-10-21):** panel sin errores en todas sus pantallas, edición total de tiendas y una segunda tienda «En blanco» con dominio propio pendiente. Pasos 0–5.
   - **Paso 0 (hecho):** línea base en verde sobre `1118a1f`: verify 837, pgTAP 2202 (91 archivos), integración 319, E2E 79/79. **Staging:** de las 8 migraciones nuevas se aplicó `20261020000200` con su huella sha256 verificada (método del runbook `database-roles.md` §7); las dos tiendas de staging pasan `theme_settings_valid` y `home_sections_valid` con tema v2. Las otras 7 **quedan pendientes**: el conector de Supabase cancela las sentencias con `create table`, `drop` o `delete`, así que no hay forma de aplicarlas desde aquí. Quedó en staging una tabla auxiliar vacía, `supabase_migrations.pruva_pending_chunk`, sin permisos para `public`, `anon` ni `authenticated`; su `drop` también se canceló. Las migraciones son compatibles con el código desplegado (`7458583`).
   - **Paso 1 (hecho):** recorrido de 310 pantallas (dueña con datos y vacía, Diseño, Pedidos, Catálogo, Solo lectura y consola; 375 y 1280 px) más pruebas de interacción. 11 hallazgos en `docs/plan/AUDITORIA-DETALLES.md`, todos corregidos: 2 altos (D-7: 27 acciones destructivas sin confirmación; D-9: guardar sin conexión cambiaba la pantalla por la de error y perdía lo escrito), 5 medios (vista previa de Google y consola desbordadas en el celular, doble clic en Equipo, sesión vencida sin indicación, formularios que se vaciaban tras un error) y 4 bajos. Nuevos: `ConfirmButton` y `useSafeActionState`. verify 849, E2E 81/81 + `panel-resilience`.

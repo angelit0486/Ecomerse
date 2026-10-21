@@ -95,6 +95,10 @@ export const FIELD_MESSAGES: Record<string, string> = {
   bytes: "La imagen pesa demasiado (máximo 10 MB).",
   alt_text: "Máximo 250 caracteres.",
   media_ids: "El orden de las imágenes no es válido. Recarga la página.",
+  description: "Hasta 1000 caracteres, sin caracteres especiales.",
+  website_url: "Escribe la dirección completa, con https://",
+  media: "Esa imagen ya no está disponible. Súbela de nuevo.",
+  kind: "Elige logo o portada.",
 };
 
 export const REJECTION_REASONS: Record<string, string> = {

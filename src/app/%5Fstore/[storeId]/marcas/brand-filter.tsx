@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 
+import { brandInitialsOf } from "@/lib/catalog/brand-initials";
+
 interface Brand {
   slug: string;
   name: string;
@@ -13,16 +15,8 @@ interface Brand {
 /** Sin acentos ni mayúsculas, como la búsqueda de la tienda. */
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
-/** Hasta dos iniciales del nombre de la marca («Muha Meds» → «MM»). */
-export function brandInitials(name: string): string {
-  const words = name.match(/[\p{L}\p{N}]+/gu) ?? [];
-  return (
-    words
-      .slice(0, 2)
-      .map((w) => w[0]!.toUpperCase())
-      .join("") || "?"
-  );
-}
+/** Hasta dos iniciales (se exporta también para las pruebas). */
+export const brandInitials = brandInitialsOf;
 
 /** Lista de marcas con búsqueda por nombre (solo cuando son muchas). */
 export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchable: boolean }) {
@@ -67,38 +61,36 @@ export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchabl
       {shown.length === 0 ? (
         <p className="text-sm">Ninguna marca coincide con «{q}».</p>
       ) : (
-        // Índice tipográfico (como «Compra por categoría»): nombre grande, logo si
-        // existe y el conteo alineado a la derecha.
-        <ul className="grid border-t border-[var(--sf-fg)] sm:grid-cols-2 sm:gap-x-10">
+        // Cuadrícula de logos (misión Portada/Marcas): logo o iniciales, nombre y conteo.
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {shown.map((brand) => (
-            <li key={brand.slug} className="border-b border-[var(--sf-border)]">
+            <li key={brand.slug}>
               <Link
                 href={`/marca/${brand.slug}`}
-                className="group flex min-h-16 items-center gap-4 py-3"
+                className="group flex h-full flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-fg)]"
               >
-                {brand.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
-                  <img
-                    src={brand.logo.src}
-                    alt=""
-                    width={brand.logo.width ?? undefined}
-                    height={brand.logo.height ?? undefined}
-                    loading="lazy"
-                    className="size-12 shrink-0 rounded-[var(--sf-radius-control)] object-contain"
-                  />
-                ) : (
-                  // Sin logo: las iniciales (Paso 2), para que la lista no quede dispareja.
-                  <span
-                    aria-hidden="true"
-                    className="flex size-12 shrink-0 items-center justify-center rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)] text-base font-bold text-[var(--sf-fg)]"
-                  >
-                    {brandInitials(brand.name)}
-                  </span>
-                )}
-                <span className="text-xl font-medium tracking-tight decoration-1 underline-offset-[6px] group-hover:underline sm:text-2xl">
+                <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)]">
+                  {brand.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
+                    <img
+                      src={brand.logo.src}
+                      alt=""
+                      width={brand.logo.width ?? undefined}
+                      height={brand.logo.height ?? undefined}
+                      loading="lazy"
+                      className="size-full object-contain"
+                    />
+                  ) : (
+                    // Sin logo: las iniciales, para que la cuadrícula no quede dispareja.
+                    <span aria-hidden="true" className="text-3xl font-bold text-[var(--sf-fg)]">
+                      {brandInitials(brand.name)}
+                    </span>
+                  )}
+                </span>
+                <span className="font-semibold leading-tight decoration-1 underline-offset-4 group-hover:underline">
                   {brand.name}
                 </span>
-                <span className="ml-auto shrink-0 text-sm tabular-nums text-[var(--sf-muted)]">
+                <span className="text-sm tabular-nums text-[var(--sf-muted)]">
                   {brand.count === 1 ? "1 producto" : `${brand.count} productos`}
                 </span>
               </Link>

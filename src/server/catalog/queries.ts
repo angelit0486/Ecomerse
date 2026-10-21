@@ -163,6 +163,67 @@ export async function listBrands(supabase: SupabaseClient, storeId: string): Pro
   return (data ?? []) as BrandRow[];
 }
 
+export interface BrandImage {
+  id: string;
+  status: "pending" | "ready" | "rejected";
+  /** Solo cuando ya está procesada. */
+  url: string | null;
+}
+
+export interface BrandProfile extends BrandRow {
+  description: string | null;
+  website_url: string | null;
+  logo: BrandImage | null;
+  cover: BrandImage | null;
+}
+
+/** Marcas con su logo y su portada, para la pantalla Marcas (misión Portada/Marcas, Paso 2). */
+export async function listBrandProfiles(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<BrandProfile[]> {
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id, name, slug, description, website_url, logo_media_id, cover_media_id")
+    .eq("store_id", storeId)
+    .is("deleted_at", null)
+    .order("name");
+  if (error) throw error;
+  const rows = (data ?? []) as (BrandRow & {
+    description: string | null;
+    website_url: string | null;
+    logo_media_id: string | null;
+    cover_media_id: string | null;
+  })[];
+  const ids = rows.flatMap((r) => [r.logo_media_id, r.cover_media_id]).filter(Boolean) as string[];
+  const media = new Map<string, BrandImage>();
+  if (ids.length > 0) {
+    const { data: found, error: mediaError } = await supabase
+      .from("media")
+      .select("id, status, storage_path")
+      .eq("store_id", storeId)
+      .in("id", ids)
+      .is("deleted_at", null);
+    if (mediaError) throw mediaError;
+    for (const m of found ?? []) {
+      media.set(m.id as string, {
+        id: m.id as string,
+        status: m.status as BrandImage["status"],
+        url: m.status === "ready" ? publicMediaUrl(m.storage_path as string) : null,
+      });
+    }
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    description: r.description,
+    website_url: r.website_url,
+    logo: r.logo_media_id ? (media.get(r.logo_media_id) ?? null) : null,
+    cover: r.cover_media_id ? (media.get(r.cover_media_id) ?? null) : null,
+  }));
+}
+
 export interface MediaRow {
   id: string;
   status: "pending" | "ready" | "rejected";

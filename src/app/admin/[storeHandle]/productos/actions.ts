@@ -1261,18 +1261,42 @@ export async function saveBrand(
 ): Promise<CatalogActionState> {
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
+  // Descripción y sitio solo si el formulario los trae (el alta rápida no).
+  const profile: Record<string, string> = {};
+  for (const key of ["description", "website_url"]) {
+    if (formData.has(key)) profile[key] = String(formData.get(key) ?? "").trim();
+  }
+  const values = { name, ...profile };
   if (!name || name.length > 120)
-    return { error: "Revisa los datos marcados.", fields: { name: FIELD_MESSAGES.name! } };
+    return {
+      error: "Revisa los datos marcados.",
+      fields: { name: FIELD_MESSAGES.name! },
+      values,
+    };
+  if (profile.website_url && !/^https:\/\/[^\s]+\.[^\s]+$/.test(profile.website_url)) {
+    return {
+      error: "Revisa los datos marcados.",
+      fields: { website_url: "Escribe la dirección completa, con https://" },
+      values,
+    };
+  }
+  if ((profile.description?.length ?? 0) > 1000) {
+    return {
+      error: "Revisa los datos marcados.",
+      fields: { description: "Hasta 1000 caracteres." },
+      values,
+    };
+  }
   if (id && !uuid.safeParse(id).success) return { error: "Marca no válida." };
   try {
     await withStore(storeHandle, ({ supabase, storeId }) =>
       callRpc(supabase, "catalog_upsert_brand", {
         p_store_id: storeId,
-        p_brand: { ...(id ? { id } : {}), name },
+        p_brand: { ...(id ? { id } : {}), name, ...profile },
       }),
     );
   } catch (error) {
-    return failure("catalog.brand", error);
+    return { ...failure("catalog.brand", error), values };
   }
   revalidatePath(`${productsPath(storeHandle)}/marcas`);
   return { ok: true, message: id ? `Marca «${name}» actualizada.` : `Marca «${name}» creada.` };
