@@ -908,7 +908,7 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
 - **Diseño portátil** (`src/lib/theme/portable.ts`): colores, tipografía, forma, encabezado, ficha, listados y portada. Se quitan imágenes, SEO, contacto, redes, favicon y pie, y los bloques que dependen de filas de la tienda (banner, imagen con texto, marcas, objetivos). Los rieles por categoría, marca o selección pasan a «lo más nuevo»; la cuadrícula de categorías muestra todas.
 - **Descarga** (`apariencia/exportar`): archivo `.json` con formato `pruva-theme` (el borrador si hay, si no lo publicado). Pide el permiso de apariencia.
 - **Subida o copia:** `appearance_import_design` (migración `20261021000300`) reemplaza solo las claves de diseño del borrador y la portada en una transacción, con las validaciones de siempre. Rechaza cualquier otra clave y queda en la auditoría con su origen. La copia directa solo ofrece tiendas de la misma organización a las que la persona tiene acceso (el servidor lo vuelve a comprobar) y toma lo publicado.
-- **Decisión (D-EST-05):** las imágenes no se copian entre tiendas. Copiarlas pide un trabajo de almacenamiento con service_role (GATE0 §44.3) y no aporta lo bastante para esta fase. La dueña elige logo e imágenes en la tienda nueva.
+- **Decisión (D-EST-05):** las imágenes no se copian entre tiendas. El job `media.copy` existe, pero copia dentro de UNA tienda (duplicar producto); copiar entre tiendas sería un flujo nuevo de datos entre inquilinos y no aporta lo bastante para esta fase. La dueña elige logo e imágenes en la tienda nueva.
 - **Pruebas:** unit `portable` (7), pgTAP `86_theme_import` (9, con aislamiento) y E2E `theme-move` (copiar, descargar, subir, archivo inválido, axe).
 
 ### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
@@ -933,6 +933,20 @@ Lleva FK compuestas y RLS `products.update`.
 **Recomendación.** Dejarlo para después del lanzamiento. Los cupones actuales y las ofertas con fecha (ADR-030) cubren el arranque.
 
 **E15 y E16 (2026-10-20).** El propietario aprobó **E16** (dominio propio con verificación; su ADR va en esta sección cuando se implemente) y no aprobó E15 (alta de tienda por cuenta propia): las tiendas las sigue creando la plataforma, con plantilla.
+
+### ADR-037 — E16 · Dominio propio con verificación · **aprobado por el propietario el 2026-10-20; implementado el 2026-10-21**
+
+Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
+
+- **Alta:** `domains_add_custom` (permiso `domains.manage`, AAL2) crea `store_domains(type = custom, status = pending)`, hasta 2 por tienda. Nunca bajo el dominio raíz de la plataforma, y un dominio de otra tienda no se puede tomar. Devuelve el código del TXT una sola vez; la base guarda solo su hash (sha256). «Generar un código nuevo» invalida el anterior.
+- **Verificación:** job `domains.verify` (worker, fuera de transacción, §44.10):
+  - consulta el TXT `_platform-verify.{hostname}` y el estado en el `DomainProvider` (Vercel: dominio en el proyecto, verificado y sin mala configuración, lo que incluye el certificado);
+  - entrega lo visto a `system.domains_record_check`, que compara el TXT con el hash y decide: `active` con TXT correcto y proveedor listo; si no, revisa cada 5 min durante 72 h, luego a diario, y a los 17 días pasa a `failed`;
+  - el panel no puede declarar un dominio verificado (la función es del esquema `system`).
+- **Principal:** `domains_set_primary` solo con un dominio activo. El proxy ya redirige 301 desde la dirección de la plataforma al principal. Quitar el principal devuelve la dirección de la plataforma.
+- **Proveedor:** `VERCEL_DOMAINS_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`), opcionales y juntos. Sin ellos, los dominios se quedan «en verificación» con el aviso de que falta configurarlo. Los registros CNAME/A que se muestran salen de `DOMAIN_CNAME_TARGET` y `DOMAIN_APEX_A`; sin ellos, el panel dice que los confirma la plataforma (D-F2-04: no se inventan registros DNS).
+- **Verificado y no verificado:** probado con DNS y Vercel simulados (pgTAP `87_custom_domains`, 20; integración `domains-verify`, 3; unit del adaptador, 4; E2E `custom-domain`). **No probado contra Vercel ni DNS reales:** falta el token del propietario.
+
 
 ### Decisiones sin ADR (no tocan contratos críticos)
 

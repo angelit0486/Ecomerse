@@ -64,6 +64,31 @@ export const serverEnvSchema = z.object({
     .optional(),
   /** Solo pruebas: API de Mercado Pago simulada. */
   MERCADOPAGO_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
+  /**
+   * Dominios propios (E16): token de Vercel con acceso SOLO a este proyecto e id
+   * del proyecto (y del equipo, si aplica). Opcionales: sin ellos los dominios
+   * quedan «en verificación» y el panel dice que falta configurarlo.
+   */
+  VERCEL_DOMAINS_TOKEN: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{20,200}$/)
+    .optional(),
+  VERCEL_PROJECT_ID: z
+    .string()
+    .regex(/^prj_[A-Za-z0-9]{10,64}$/)
+    .optional(),
+  VERCEL_TEAM_ID: z
+    .string()
+    .regex(/^team_[A-Za-z0-9]{10,64}$/)
+    .optional(),
+  /** Solo pruebas: API de Vercel simulada. */
+  VERCEL_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
+  /** Registros que el panel indica (los da Vercel al agregar el dominio al proyecto). */
+  DOMAIN_CNAME_TARGET: z
+    .string()
+    .regex(/^([a-z0-9-]+\.)+[a-z]{2,63}$/)
+    .optional(),
+  DOMAIN_APEX_A: z.ipv4().optional(),
   // Send Email Hook de Supabase Auth (Standard Webhooks): v1,whsec_<base64>.
   SEND_EMAIL_HOOK_SECRET: z
     .string()
@@ -113,6 +138,9 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   // Mercado Pago va completo o no va: un token sin secreto aceptaría cobros sin poder confirmarlos.
   if (!env.MERCADOPAGO_ACCESS_TOKEN !== !env.MERCADOPAGO_WEBHOOK_SECRET) {
     ctx.addIssue({ code: "custom", path: ["MERCADOPAGO_WEBHOOK_SECRET"], message: "van juntas" });
+  }
+  if (!env.VERCEL_DOMAINS_TOKEN !== !env.VERCEL_PROJECT_ID) {
+    ctx.addIssue({ code: "custom", path: ["VERCEL_PROJECT_ID"], message: "van juntas" });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {
     ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "https obligatorio" });

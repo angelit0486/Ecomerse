@@ -111,7 +111,8 @@ test("todas las pantallas del panel cargan sin errores; estado del sistema y avi
       const clean = h.split("#")[0]!;
       if (!clean.startsWith(base) && clean !== "/seguridad/contrasena") continue;
       // Descargas (CSV) y cierre de sesión no son pantallas.
-      if (/\/(errores|plantilla|descargar|salir)\b|\.csv/.test(clean)) continue;
+      if (/\/(errores|plantilla|descargar|salir)|apariencia\/exportar\b|\.csv/.test(clean))
+        continue;
       if (!seen.has(clean)) queue.push(clean);
     }
   }

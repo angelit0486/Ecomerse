@@ -1,5 +1,11 @@
 import { createCatalogHandlers } from "@/server/catalog/handlers";
 import { createComplianceHandlers } from "@/server/compliance/handlers";
+import { createDomainHandlers } from "@/server/domains/handlers";
+import {
+  dnsTxtLookup,
+  notConfiguredProvider,
+  vercelDomainProvider,
+} from "@/server/domains/provider";
 import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 import { createMediaHandlers } from "@/server/media/handlers";
@@ -66,6 +72,23 @@ const catalog = () => createCatalogHandlers({ db: workerDb(), onPublished: inval
 const compliance = () =>
   createComplianceHandlers({ db: workerDb(), onUnpublished: invalidateStore });
 
+const domains = () => {
+  const env = serverEnv();
+  return createDomainHandlers({
+    db: workerDb(),
+    provider:
+      env.VERCEL_DOMAINS_TOKEN && env.VERCEL_PROJECT_ID
+        ? vercelDomainProvider({
+            token: env.VERCEL_DOMAINS_TOKEN,
+            projectId: env.VERCEL_PROJECT_ID,
+            teamId: env.VERCEL_TEAM_ID,
+            apiBase: env.VERCEL_API_BASE,
+          })
+        : notConfiguredProvider,
+    txt: dnsTxtLookup,
+  });
+};
+
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
   ["access.support_access_notice", lazy("access.support_access_notice", notifications)],
@@ -92,6 +115,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["compliance.recheck", lazy("compliance.recheck", compliance)],
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
   ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],
+  ["domains.verify", lazy("domains.verify", domains)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);
