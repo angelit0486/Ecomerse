@@ -1142,6 +1142,22 @@ export async function saveCategory(
       fields: { description: "Máximo 2000 caracteres." },
     };
   }
+  // SEO (D-EST-03): igual que la descripción, solo si el formulario lo manda.
+  const seo: Record<string, string> = {};
+  for (const [key, max] of [
+    ["seo_title", 70],
+    ["seo_description", 320],
+  ] as const) {
+    if (!formData.has(key)) continue;
+    const value = String(formData.get(key) ?? "").trim();
+    if ([...value].length > max) {
+      return {
+        error: "Revisa los datos marcados.",
+        fields: { [key]: `Máximo ${max} caracteres.` },
+      };
+    }
+    seo[key] = value;
+  }
   try {
     await withStore(storeHandle, ({ supabase, storeId }) =>
       callRpc(supabase, "catalog_upsert_category", {
@@ -1153,6 +1169,7 @@ export async function saveCategory(
           is_visible: formData.getAll("is_visible").includes("1"),
           slug: String(formData.get("slug") ?? "").trim() || undefined,
           ...(description !== undefined ? { description } : {}),
+          ...seo,
         },
       }),
     );

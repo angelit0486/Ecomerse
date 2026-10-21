@@ -17,6 +17,7 @@ import {
   safePreviewPath,
   verifyPreviewToken,
 } from "@/server/storefront/preview";
+import { findRedirect } from "@/server/storefront/redirects";
 import { resolveHost } from "@/server/storefront/resolve-host";
 import { signStoreRoute, STORE_ROUTE_HEADER } from "@/server/storefront/route-signature";
 import { refreshSupabaseSession } from "@/server/supabase/proxy-session";
@@ -169,6 +170,20 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
         });
         response.headers.set("cache-control", "no-store");
         return finish(response);
+      }
+      // Redirecciones 301 de la tienda (D-EST-02): solo lecturas públicas y fuera
+      // de la vista previa. Si la consulta falla, la tienda sigue respondiendo.
+      if (!decision.preview && (request.method === "GET" || request.method === "HEAD")) {
+        try {
+          const to = await findRedirect(resolution!.storeId, pathname);
+          if (to) {
+            const location = request.nextUrl.clone();
+            location.pathname = to;
+            return finish(NextResponse.redirect(location, 301));
+          }
+        } catch (error) {
+          log.error("storefront.redirects_failed", { request_id: requestId, err: error });
+        }
       }
       if (decision.preview) requestHeaders.set("x-store-preview", "1");
       requestHeaders.set(

@@ -61,6 +61,8 @@ export function CategoryForm({
     slug: string;
     is_visible: boolean;
     description?: string | null;
+    seo_title?: string | null;
+    seo_description?: string | null;
   };
 }) {
   const [state, action, pending] = useActionState<CatalogActionState, FormData>(
@@ -124,7 +126,7 @@ export function CategoryForm({
       {category ? (
         <details className="sm:col-span-4">
           <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm underline md:min-h-0">
-            Descripción en la tienda
+            Descripción y SEO en la tienda
           </summary>
           <Field
             label={`Descripción de ${category.name}`}
@@ -139,6 +141,38 @@ export function CategoryForm({
                 rows={3}
                 maxLength={2000}
                 defaultValue={category.description ?? ""}
+                className={nativeControl}
+              />
+            )}
+          </Field>
+          <Field
+            label={`Título en Google de ${category.name}`}
+            id={`${prefix}-seo-title`}
+            hint="Hasta 70 caracteres. Vacío: se usa el nombre."
+            error={state.fields?.seo_title}
+          >
+            {(c) => (
+              <Input
+                {...c}
+                name="seo_title"
+                maxLength={70}
+                defaultValue={category.seo_title ?? ""}
+              />
+            )}
+          </Field>
+          <Field
+            label={`Descripción en Google de ${category.name}`}
+            id={`${prefix}-seo-description`}
+            hint="Hasta 320 caracteres. Vacío: se usa la descripción."
+            error={state.fields?.seo_description}
+          >
+            {(c) => (
+              <textarea
+                {...c}
+                name="seo_description"
+                rows={2}
+                maxLength={320}
+                defaultValue={category.seo_description ?? ""}
                 className={nativeControl}
               />
             )}

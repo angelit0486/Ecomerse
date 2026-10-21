@@ -22,6 +22,7 @@ export default async function ContentPage({ params, searchParams }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   const canPages = hasPermission(ctx, "content.manage");
   const canMenus = hasPermission(ctx, "appearance.manage");
+  const canRedirects = hasPermission(ctx, "seo.manage");
   if (!canPages && !canMenus) notFound();
   const sp = await searchParams;
   const base = `/admin/${ctx.store.handle}/contenido`;
@@ -41,14 +42,24 @@ export default async function ContentPage({ params, searchParams }: Props) {
         ) : null}
       </header>
 
-      {canMenus ? (
-        <p>
-          <Link
-            href={`${base}/menus`}
-            className="inline-flex min-h-11 items-center text-sm underline"
-          >
-            Editar menús de la tienda
-          </Link>
+      {canMenus || canRedirects ? (
+        <p className="flex flex-wrap gap-x-6">
+          {canMenus ? (
+            <Link
+              href={`${base}/menus`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
+              Editar menús de la tienda
+            </Link>
+          ) : null}
+          {canRedirects ? (
+            <Link
+              href={`${base}/redirecciones`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
+              Redirecciones de direcciones viejas
+            </Link>
+          ) : null}
         </p>
       ) : null}
 
