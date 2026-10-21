@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { PAGE_TEMPLATES } from "@/lib/content/page-templates";
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
@@ -25,11 +26,28 @@ export function NewPageForm({ storeHandle }: { storeHandle: string }) {
       <Field
         label="Título de la nueva página"
         id="page-new-title"
-        required
+        hint="Con una plantilla puedes dejarlo vacío: toma su nombre."
         error={state.fields?.title ?? state.fields?.slug}
       >
         {(c) => (
           <Input {...c} name="title" defaultValue={state.values?.title ?? ""} maxLength={120} />
+        )}
+      </Field>
+      <Field label="Empezar con" id="page-new-template">
+        {(c) => (
+          <select
+            {...c}
+            name="template"
+            defaultValue={state.values?.template ?? ""}
+            className="h-11 rounded-[var(--radius-control)] border border-control bg-surface px-3 text-sm md:h-9"
+          >
+            <option value="">Página en blanco</option>
+            {PAGE_TEMPLATES.map((t) => (
+              <option key={t.key} value={t.key}>
+                Plantilla: {t.name}
+              </option>
+            ))}
+          </select>
         )}
       </Field>
       <Button type="submit" size="sm" loading={pending}>

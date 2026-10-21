@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { needsLegalReview } from "@/lib/content/legal-review";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { listPages } from "@/server/content/queries";
@@ -95,7 +96,14 @@ export default async function ContentPage({ params, searchParams }: Props) {
                     </td>
                     <td className="py-2 pr-3">{PAGE_TYPE_LABELS[p.type] ?? p.type}</td>
                     <td className="py-2 pr-3 font-mono text-xs">/paginas/{p.slug}</td>
-                    <td className="py-2">{p.is_published ? "Publicada" : "Borrador"}</td>
+                    <td className="py-2">
+                      {p.is_published ? "Publicada" : "Borrador"}
+                      {p.type !== "content" && needsLegalReview(p.body_html) ? (
+                        <span className="ml-2 inline-block rounded-sm border border-warning px-1.5 text-[12px] font-medium">
+                          Pendiente de revisión legal
+                        </span>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

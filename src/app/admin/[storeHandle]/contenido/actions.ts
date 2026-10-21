@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { findPageTemplate } from "@/lib/content/page-templates";
 import { reportActionError } from "@/server/actions/report";
 import { getStoreContext } from "@/server/auth/store-context";
 import { callRpc } from "@/server/db/rpc";
@@ -74,19 +75,29 @@ export async function savePage(
   _: ContentActionState,
   formData: FormData,
 ): Promise<ContentActionState> {
-  const keys = ["title", "slug", "body_html", "seo_title", "seo_description", "seo_image_media_id"];
+  const keys = [
+    "title",
+    "slug",
+    "body_html",
+    "seo_title",
+    "seo_description",
+    "seo_image_media_id",
+    "template",
+  ];
   const values = Object.fromEntries(keys.map((k) => [k, String(formData.get(k) ?? "")]));
   if (pageId && !uuid.safeParse(pageId).success) return { error: "Página no válida." };
+  // Solo al crear: texto guía y bloques de una plantilla (Contacto, Preguntas, Nosotros).
+  const template = pageId ? undefined : findPageTemplate(values.template ?? "");
   let saved: { id: string };
   try {
-    saved = await withStore(storeHandle, ({ supabase, storeId }) =>
-      callRpc<{ id: string }>(supabase, "content_upsert_page", {
+    saved = await withStore(storeHandle, async ({ supabase, storeId }) => {
+      const page = await callRpc<{ id: string }>(supabase, "content_upsert_page", {
         p_store_id: storeId,
         p_page: {
           ...(pageId ? { id: pageId } : {}),
-          title: values.title,
+          title: values.title?.trim() || template?.title || "",
           slug: values.slug,
-          body_html: sanitizeMerchantHtml(values.body_html),
+          body_html: sanitizeMerchantHtml(values.body_html || template?.body_html || ""),
           seo_title: values.seo_title?.slice(0, 70),
           seo_description: values.seo_description?.slice(0, 320),
           // Solo el formulario que tiene el campo lo manda (la base conserva lo demás).
@@ -94,8 +105,16 @@ export async function savePage(
             ? { seo_image_media_id: values.seo_image_media_id || null }
             : {}),
         },
-      }),
-    );
+      });
+      if (template) {
+        await callRpc(supabase, "content_save_page_blocks", {
+          p_store_id: storeId,
+          p_page_id: page.id,
+          p_sections: template.sections.map((section) => ({ ...section, id: crypto.randomUUID() })),
+        });
+      }
+      return page;
+    });
   } catch (error) {
     return { ...failure(error), values };
   }

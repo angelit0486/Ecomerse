@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { needsLegalReview } from "@/lib/content/legal-review";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { getPage } from "@/server/content/queries";
@@ -92,11 +93,15 @@ export default async function PageEditorPage({ params, searchParams }: Props) {
             Página creada como borrador. Escribe el contenido y publícala cuando esté lista.
           </p>
         ) : null}
-        {page.type !== "content" && !page.is_published ? (
-          <p className="mt-2 rounded-md border border-warning px-3 py-2 text-sm">
-            Esta política parte de una plantilla de guía, no de un texto legal. Sustituye cada
-            marcador entre corchetes por las condiciones reales de tu tienda antes de publicarla.
-          </p>
+        {page.type !== "content" && needsLegalReview(page.body_html) ? (
+          <div className="mt-2 space-y-1 rounded-md border border-warning px-3 py-2 text-sm">
+            <p className="font-semibold">Pendiente de revisión legal</p>
+            <p>
+              Esta política parte de una plantilla de guía, no de un texto legal. Sustituye cada
+              marcador entre corchetes por las condiciones reales de tu tienda y revísala con tu
+              asesoría legal. Mientras tenga marcadores, la tienda no se puede publicar.
+            </p>
+          </div>
         ) : null}
       </header>
       {canEdit ? (
