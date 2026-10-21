@@ -13,6 +13,17 @@ interface Brand {
 /** Sin acentos ni mayúsculas, como la búsqueda de la tienda. */
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
+/** Hasta dos iniciales del nombre de la marca («Muha Meds» → «MM»). */
+export function brandInitials(name: string): string {
+  const words = name.match(/[\p{L}\p{N}]+/gu) ?? [];
+  return (
+    words
+      .slice(0, 2)
+      .map((w) => w[0]!.toUpperCase())
+      .join("") || "?"
+  );
+}
+
 /** Lista de marcas con búsqueda por nombre (solo cuando son muchas). */
 export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchable: boolean }) {
   const [q, setQ] = useState("");
@@ -25,14 +36,29 @@ export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchabl
           <label htmlFor={id} className="block text-sm font-medium">
             Buscar marca
           </label>
-          <input
-            id={id}
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            autoComplete="off"
-            className="h-11 w-full rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3"
-          />
+          <div className="relative">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-[var(--sf-muted)]"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              id={id}
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              autoComplete="off"
+              placeholder="Escribe el nombre de una marca"
+              className="h-11 w-full rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] pl-10 pr-3 placeholder:text-[var(--sf-muted)]"
+            />
+          </div>
         </div>
       ) : null}
       <p aria-live="polite" className="sr-only">
@@ -58,9 +84,17 @@ export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchabl
                     width={brand.logo.width ?? undefined}
                     height={brand.logo.height ?? undefined}
                     loading="lazy"
-                    className="h-10 w-16 shrink-0 object-contain"
+                    className="size-12 shrink-0 rounded-[var(--sf-radius-control)] object-contain"
                   />
-                ) : null}
+                ) : (
+                  // Sin logo: las iniciales (Paso 2), para que la lista no quede dispareja.
+                  <span
+                    aria-hidden="true"
+                    className="flex size-12 shrink-0 items-center justify-center rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)] text-base font-bold text-[var(--sf-fg)]"
+                  >
+                    {brandInitials(brand.name)}
+                  </span>
+                )}
                 <span className="text-xl font-medium tracking-tight decoration-1 underline-offset-[6px] group-hover:underline sm:text-2xl">
                   {brand.name}
                 </span>

@@ -97,17 +97,26 @@ export default async function StoreLayout({ children, params }: Props) {
         nonce={nonce}
       >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}`}</style>
       {preview ? (
+        // Compacto en el celular (una fila de 44 px): el aviso no tapa la tienda.
         <div
           role="status"
-          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-[var(--sf-fg)] px-4 py-2 text-center text-sm text-[var(--sf-bg)]"
+          className="flex items-center justify-between gap-3 bg-[var(--sf-fg)] px-4 text-[0.8125rem] text-[var(--sf-bg)] sm:justify-center sm:py-1 sm:text-sm"
         >
-          <p>
-            {store.status === "active"
-              ? "Vista previa del borrador: tus clientes ven la versión publicada."
-              : "Vista previa: solo tú puedes ver esta tienda. Los compradores aún no tienen acceso."}
+          <p className="min-w-0 truncate sm:whitespace-normal">
+            <span className="sm:hidden">
+              {store.status === "active" ? "Vista previa del borrador" : "Vista previa privada"}
+            </span>
+            <span className="hidden sm:inline">
+              {store.status === "active"
+                ? "Vista previa del borrador: tus clientes ven la versión publicada."
+                : "Vista previa: solo tú puedes ver esta tienda. Los compradores aún no tienen acceso."}
+            </span>
           </p>
-          <form method="post" action="/_preview/salir">
-            <button type="submit" className="underline underline-offset-2">
+          <form method="post" action="/_preview/salir" className="shrink-0">
+            <button
+              type="submit"
+              className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2"
+            >
               Salir de la vista previa
             </button>
           </form>

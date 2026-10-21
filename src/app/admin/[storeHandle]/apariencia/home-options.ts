@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { LinkTargets } from "@/lib/theme/link-targets";
 import { publicMediaUrl } from "@/server/catalog/queries";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -20,7 +21,7 @@ export async function loadHomeOptions(
   }[],
 ): Promise<HomeEditorOptions> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: categories }, { data: brands }, { data: attributes }, { data: products }] =
+  const [{ data: categories }, { data: brands }, { data: attributes }, { data: products }, links] =
     await Promise.all([
       supabase
         .from("categories")
@@ -51,6 +52,7 @@ export async function loadHomeOptions(
         .neq("status", "archived")
         .order("created_at", { ascending: false })
         .limit(500),
+      loadLinkTargets(storeId),
     ]);
   return {
     banners: media
@@ -74,5 +76,45 @@ export async function loadHomeOptions(
       id: p.id,
       title: p.status === "active" ? p.title : `${p.title} (borrador)`,
     })),
+    links,
+  };
+}
+
+/**
+ * Páginas reales de la tienda para revisar los enlaces de los botones
+ * (DIAGNOSTICO-PORTADA R3). Con RLS: lo que el rol no puede leer (p. ej. las
+ * redirecciones sin permiso de SEO) queda fuera y, a lo más, sobra un aviso.
+ */
+export async function loadLinkTargets(storeId: string): Promise<LinkTargets> {
+  const supabase = await createSupabaseServerClient();
+  const [categories, brands, pages, products, redirects] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("path")
+      .eq("store_id", storeId)
+      .eq("is_visible", true)
+      .is("deleted_at", null),
+    supabase.from("brands").select("slug").eq("store_id", storeId).is("deleted_at", null),
+    supabase
+      .from("store_pages")
+      .select("slug")
+      .eq("store_id", storeId)
+      .eq("is_published", true)
+      .is("deleted_at", null),
+    supabase
+      .from("products")
+      .select("slug")
+      .eq("store_id", storeId)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .limit(5000),
+    supabase.from("store_redirects").select("from_path").eq("store_id", storeId).limit(5000),
+  ]);
+  return {
+    categories: (categories.data ?? []).map((r) => r.path as string),
+    brands: (brands.data ?? []).map((r) => r.slug as string),
+    pages: (pages.data ?? []).map((r) => r.slug as string),
+    products: (products.data ?? []).map((r) => r.slug as string),
+    redirects: (redirects.data ?? []).map((r) => r.from_path as string),
   };
 }

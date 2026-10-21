@@ -459,6 +459,8 @@ export function HeaderFooterForm({
             />
           )}
         </Field>
+        {/* Destino de «Editar la barra de anuncio» desde la pestaña Portada. */}
+        <div id="anuncio" className="scroll-mt-20" />
         <Field
           label="Barra de anuncio"
           hint="Hasta 120 caracteres. Vacía, no se muestra."

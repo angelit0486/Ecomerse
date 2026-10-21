@@ -5,6 +5,19 @@
 
 ## Ahora
 
+- **Portada, marcas y personalización (2026-10-21):** fotos y logos de marcas, editor completo de la portada y personalización de la tienda, corrigiendo los errores del camino. Pasos 0–5.
+  - **Paso 0 (hecho):** línea base sobre `0045646`: verify 870, `db:test` en verde (pgTAP 93 archivos + integración 326), E2E 84/84. Staging tiene las 113 migraciones del repo, con huellas idénticas a las de las 9 de hoy.
+  - **Paso 1 (hecho):** diagnóstico en `docs/plan/DIAGNOSTICO-PORTADA.md`.
+    - R1: la dueña no tiene acceso a demo2 (otra organización). Pendiente de su autorización.
+    - R2: la portada principal de demo estaba oculta y apenas se notaba. Ahora el bloque oculto se ve punteado, tiene la leyenda «Oculto» y hay avisos de portada oculta o repetida.
+    - R3: el botón llevaba a `/plumas`, que no existe. Ahora hay sugerencias de páginas reales y un aviso «¿Quisiste decir …?».
+    - R4: el código desplegado era viejo; quedó resuelto con el despliegue de hoy.
+    - Además:
+      - el aviso de vista previa ocupa una sola fila en el celular;
+      - el buscador de Marcas tiene ícono y texto de ayuda, y las marcas sin logo muestran sus iniciales;
+      - la tira de accesos rápidos empieza en el margen de la página y se difumina a la derecha;
+      - la pestaña Portada dice qué barra de anuncio hay y lleva a editarla.
+    - Pruebas: verify 882 y E2E `home-editor-regression` (3) más 19 relacionadas en verde.
 - **Panel pulido + segunda tienda en blanco (2026-10-21):** panel sin errores en todas sus pantallas, edición total de tiendas y una segunda tienda «En blanco» con dominio propio pendiente. Pasos 0–5.
   - **Paso 0 (hecho):** línea base en verde sobre `1118a1f`: verify 837, pgTAP 2202 (91 archivos), integración 319, E2E 79/79. **Staging:** de las 8 migraciones nuevas se aplicó `20261020000200` con su huella sha256 verificada (método del runbook `database-roles.md` §7); las dos tiendas de staging pasan `theme_settings_valid` y `home_sections_valid` con tema v2. Las otras 7 **quedan pendientes**: el conector de Supabase cancela las sentencias con `create table`, `drop` o `delete`, así que no hay forma de aplicarlas desde aquí. Quedó en staging una tabla auxiliar vacía, `supabase_migrations.pruva_pending_chunk`, sin permisos para `public`, `anon` ni `authenticated`; su `drop` también se canceló. Las migraciones son compatibles con el código desplegado (`7458583`).
   - **Paso 1 (hecho):** recorrido de 310 pantallas (dueña con datos y vacía, Diseño, Pedidos, Catálogo, Solo lectura y consola; 375 y 1280 px) más pruebas de interacción. 11 hallazgos en `docs/plan/AUDITORIA-DETALLES.md`, todos corregidos: 2 altos (D-7: 27 acciones destructivas sin confirmación; D-9: guardar sin conexión cambiaba la pantalla por la de error y perdía lo escrito), 5 medios (vista previa de Google y consola desbordadas en el celular, doble clic en Equipo, sesión vencida sin indicación, formularios que se vaciaban tras un error) y 4 bajos. Nuevos: `ConfirmButton` y `useSafeActionState`. verify 849, E2E 81/81 + `panel-resilience`.

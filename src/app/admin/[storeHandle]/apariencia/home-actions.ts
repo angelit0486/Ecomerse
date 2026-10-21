@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
+import { brokenLinkHint, sectionLinks } from "@/lib/theme/link-targets";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
@@ -10,6 +11,7 @@ import { themeRpcError } from "@/server/theme/errors";
 
 import { storeClient } from "../_shared/action-state";
 import { normalizeSections, sectionIssues } from "./home-normalize";
+import { loadLinkTargets } from "./home-options";
 
 /**
  * Portada (F9-T02, F9-DESIGN §3 y §7): se guarda la lista completa de secciones
@@ -21,6 +23,8 @@ export interface HomeFormState {
   error?: string;
   /** Errores por sección (id de la sección → mensajes). */
   sections?: Record<string, string[]>;
+  /** Avisos que no impiden guardar, p. ej. un enlace a una página que no existe. */
+  warnings?: Record<string, string[]>;
 }
 
 const CONFLICT =
@@ -51,9 +55,11 @@ export async function saveHomeDraft(
   const issues = sectionIssues(sections);
   if (typeof issues === "string") return { error: issues };
   if (issues) return { error: "Revisa las secciones marcadas.", sections: issues };
+  let storeId = "";
   try {
-    const { supabase, storeId } = await storeClient(storeHandle);
-    await callRpc(supabase, "appearance_save_home_draft", {
+    const client = await storeClient(storeHandle);
+    storeId = client.storeId;
+    await callRpc(client.supabase, "appearance_save_home_draft", {
       p_store_id: storeId,
       p_sections: sections,
       p_expected_revision: Number(rawRevision),
@@ -78,10 +84,36 @@ export async function saveHomeDraft(
     return { error: "No pudimos guardar la portada. Inténtalo de nuevo." };
   }
   revalidatePath(`/admin/${storeHandle}/apariencia`);
+  const warnings = await linkWarnings(storeId, sections);
   return {
     ok: true,
-    message: "Portada guardada en el borrador. Revísala en la vista previa y publícala.",
+    message: warnings
+      ? "Portada guardada en el borrador, pero revisa los avisos: hay botones que llevan a páginas que no existen."
+      : "Portada guardada en el borrador. Revísala en la vista previa y publícala.",
+    ...(warnings ? { warnings } : {}),
   };
+}
+
+/** Enlaces a páginas que no existen (DIAGNOSTICO-PORTADA R3): avisan, no bloquean. */
+async function linkWarnings(
+  storeId: string,
+  sections: unknown,
+): Promise<Record<string, string[]> | undefined> {
+  if (!Array.isArray(sections)) return undefined;
+  try {
+    const targets = await loadLinkTargets(storeId);
+    const out: Record<string, string[]> = {};
+    for (const section of sections as { id: string; props?: unknown }[]) {
+      for (const link of sectionLinks(section.props)) {
+        const hint = brokenLinkHint(link, targets);
+        if (hint) (out[section.id] ??= []).push(hint);
+      }
+    }
+    return Object.keys(out).length ? out : undefined;
+  } catch (error) {
+    reportActionError("appearance.home.links", error);
+    return undefined;
+  }
 }
 
 // -----------------------------------------------------------------------------

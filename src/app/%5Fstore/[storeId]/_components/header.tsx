@@ -42,6 +42,14 @@ const ICON = {
 };
 
 /**
+ * Tira de accesos rápidos en el celular: empieza en el margen de la página
+ * (nada cortado al inicio, DIAGNOSTICO-PORTADA) y se difumina a la derecha para
+ * decir «hay más» en vez de mostrar una palabra cortada.
+ */
+const QUICK_LINKS_LIST =
+  "flex gap-1 overflow-x-auto scroll-pl-1.5 pl-1.5 pr-8 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]";
+
+/**
  * Encabezado (rediseño A+B, revisión de conversión A4): en móvil, fila 1 con
  * menú, nombre, cuenta y carrito; fila 2 con el buscador (≤ 120 px en total).
  * Fijo arriba para que el carrito siempre esté a la vista. En escritorio, una
@@ -152,7 +160,7 @@ export function QuickLinks({
   if (custom && custom.length > 0) {
     return (
       <nav aria-label="Accesos rápidos" className="border-b border-[var(--sf-border)] sm:hidden">
-        <ul className="flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]">
+        <ul className={QUICK_LINKS_LIST}>
           {custom.map((link) => (
             <li key={`${link.label}:${link.link}`} className="shrink-0">
               <ThemeLink
@@ -177,7 +185,7 @@ export function QuickLinks({
   ].filter((link, i, all) => all.findIndex((l) => l.href === link.href) === i);
   return (
     <nav aria-label="Accesos rápidos" className="border-b border-[var(--sf-border)] sm:hidden">
-      <ul className="flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]">
+      <ul className={QUICK_LINKS_LIST}>
         {links.slice(0, 12).map((link) => (
           <li key={link.href} className="shrink-0">
             <Link

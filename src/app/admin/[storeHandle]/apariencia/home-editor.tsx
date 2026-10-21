@@ -11,6 +11,7 @@ import {
   type BenefitIcon,
   type Visibility,
 } from "@/lib/theme/constants";
+import { brokenLinkHint, type LinkTargets } from "@/lib/theme/link-targets";
 import type { HomeSectionType } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
 
@@ -49,6 +50,8 @@ export interface HomeEditorOptions {
   brands: { id: string; name: string; hasLogo: boolean }[];
   goals: { id: string; label: string }[];
   products: { id: string; title: string }[];
+  /** Páginas reales de la tienda para sugerir y revisar enlaces (DIAGNOSTICO-PORTADA R3). */
+  links?: LinkTargets;
 }
 
 export const SECTION_LABELS: Record<HomeSectionType, string> = {
@@ -150,6 +153,7 @@ function TextField({
   maxLength,
   multiline,
   hint,
+  list,
 }: {
   id: string;
   text: string;
@@ -158,6 +162,8 @@ function TextField({
   maxLength: number;
   multiline?: boolean;
   hint?: string;
+  /** Id de un <datalist> con sugerencias. */
+  list?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -179,6 +185,7 @@ function TextField({
           id={id}
           maxLength={maxLength}
           value={value}
+          list={list}
           onChange={(e) => onChange(e.target.value)}
           className={control}
           aria-describedby={hint ? `${id}-hint` : undefined}
@@ -245,13 +252,16 @@ function ImagePicker({
 function CtaFields({
   id,
   cta,
+  links,
   onChange,
 }: {
   id: string;
   cta: { label?: string; link?: string } | undefined;
+  links?: LinkTargets;
   onChange: (v: { label: string; link: string }) => void;
 }) {
   const value = { label: cta?.label ?? "", link: cta?.link ?? "" };
+  const warning = links && value.link ? brokenLinkHint(value.link.trim(), links) : null;
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <TextField
@@ -261,15 +271,44 @@ function CtaFields({
         maxLength={30}
         onChange={(label) => onChange({ ...value, label })}
       />
-      <TextField
-        id={`${id}-cta-link`}
-        text="Enlace del botón"
-        value={value.link}
-        maxLength={500}
-        hint="Una ruta de tu tienda (/productos?objetivo=energia) o https://…"
-        onChange={(link) => onChange({ ...value, link })}
-      />
+      <div className="flex flex-col gap-1">
+        <TextField
+          id={`${id}-cta-link`}
+          text="Enlace del botón"
+          value={value.link}
+          maxLength={500}
+          list={links ? "link-targets" : undefined}
+          hint="Elige una página de la lista o escribe https://…"
+          onChange={(link) => onChange({ ...value, link })}
+        />
+        {warning ? (
+          <p role="status" className="text-[13px] font-medium text-warning">
+            {warning}
+          </p>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+/** Sugerencias para los enlaces: las páginas que de verdad existen en la tienda. */
+function LinkTargetList({ links }: { links?: LinkTargets }) {
+  if (!links) return null;
+  const options = [
+    "/",
+    "/productos",
+    "/ofertas",
+    "/marcas",
+    ...links.categories.map((c) => `/categoria/${c}`),
+    ...links.brands.map((b) => `/marca/${b}`),
+    ...links.pages.map((p) => `/paginas/${p}`),
+  ];
+  return (
+    <datalist id="link-targets">
+      {options.map((o) => (
+        <option key={o} value={o} />
+      ))}
+    </datalist>
   );
 }
 
@@ -331,7 +370,7 @@ function SectionFields({
             onChange={set("image_media_id")}
             banners={options.banners}
           />
-          <CtaFields id={id} cta={p.cta as never} onChange={set("cta")} />
+          <CtaFields id={id} cta={p.cta as never} links={options.links} onChange={set("cta")} />
         </div>
       );
     case "featured_products": {
@@ -495,7 +534,7 @@ function SectionFields({
             maxLength={200}
             onChange={set("text")}
           />
-          <CtaFields id={id} cta={p.cta as never} onChange={set("cta")} />
+          <CtaFields id={id} cta={p.cta as never} links={options.links} onChange={set("cta")} />
         </div>
       );
     case "image_with_text":
@@ -537,7 +576,7 @@ function SectionFields({
               <option value="right">A la derecha</option>
             </select>
           </div>
-          <CtaFields id={id} cta={p.cta as never} onChange={set("cta")} />
+          <CtaFields id={id} cta={p.cta as never} links={options.links} onChange={set("cta")} />
         </div>
       );
     case "brand_logos":
@@ -1221,6 +1260,47 @@ function BannerUpload({ storeHandle }: { storeHandle: string }) {
   );
 }
 
+/**
+ * La portada principal oculta o repetida (DIAGNOSTICO-PORTADA R2): en `demo` la
+ * dueña ocultó la suya sin notarlo y agregó otra en vez de volver a mostrarla.
+ */
+export function HeroNotice({
+  sections,
+  onShow,
+}: {
+  sections: Pick<EditorSection, "id" | "type" | "enabled">[];
+  onShow: (id: string) => void;
+}) {
+  const heroes = sections.filter((s) => s.type === "hero");
+  const visible = heroes.filter((s) => s.enabled);
+  const hidden = heroes.find((s) => !s.enabled);
+  if (visible.length === 0 && hidden) {
+    return (
+      <div
+        role="status"
+        className="flex flex-wrap items-center gap-3 rounded-md border border-warning p-3 text-sm"
+      >
+        <p className="mr-auto">
+          Tu portada principal está oculta: tus clientes no la ven. Puedes volver a mostrarla en
+          lugar de crear otra.
+        </p>
+        <Button type="button" size="sm" onClick={() => onShow(hidden.id)}>
+          Mostrar la portada principal
+        </Button>
+      </div>
+    );
+  }
+  if (visible.length > 1) {
+    return (
+      <p role="status" className="rounded-md border border-warning p-3 text-sm">
+        Tienes {visible.length} portadas principales visibles: tus clientes las verán una debajo de
+        otra. Oculta o elimina las que no quieras.
+      </p>
+    );
+  }
+  return null;
+}
+
 export function HomeEditor({
   storeHandle,
   revision,
@@ -1250,6 +1330,13 @@ export function HomeEditor({
     save ?? saveHomeDraft.bind(null, storeHandle),
     {},
   );
+  const [edited, setEdited] = useState<Set<string>>(new Set());
+  const [lastState, setLastState] = useState(state);
+  if (lastState !== state) {
+    // Guardado nuevo: sus avisos valen para todos los bloques.
+    setLastState(state);
+    setEdited(new Set());
+  }
   const productSections = sections.filter((s) => s.type === "featured_products").length;
   const full = sections.length >= MAX_SECTIONS;
   const productsFull = adding === "featured_products" && productSections >= MAX_PRODUCT_SECTIONS;
@@ -1297,6 +1384,8 @@ export function HomeEditor({
 
   function patch(id: string, change: Partial<EditorSection>) {
     setSections((all) => all.map((s) => (s.id === id ? { ...s, ...change } : s)));
+    // Los avisos del último guardado ya no aplican a un bloque que se editó.
+    setEdited((all) => (all.has(id) ? all : new Set(all).add(id)));
   }
 
   function add() {
@@ -1318,11 +1407,18 @@ export function HomeEditor({
       <form action={action} onSubmit={submitKeepingState(action)} className="space-y-4" noValidate>
         <input type="hidden" name="revision" value={revision} />
         <input type="hidden" name="sections" value={JSON.stringify(sections)} />
+        <LinkTargetList links={options.links} />
         {sections.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
             {emptyText}
           </p>
         ) : null}
+        <HeroNotice
+          sections={sections}
+          onShow={(id) =>
+            setSections((all) => all.map((s) => (s.id === id ? { ...s, enabled: true } : s)))
+          }
+        />
         <ol className="space-y-3" aria-label="Bloques de la portada">
           {sections.map((section, index) => {
             const name = SECTION_LABELS[section.type];
@@ -1332,7 +1428,13 @@ export function HomeEditor({
             return (
               <li
                 key={section.id}
-                className={`rounded-md border ${dragging === index ? "border-accent opacity-60" : "border-border"}`}
+                className={`rounded-md border ${
+                  dragging === index
+                    ? "border-accent opacity-60"
+                    : section.enabled
+                      ? "border-border"
+                      : "border-dashed border-border bg-canvas"
+                }`}
                 onDragOver={(e) => {
                   if (dragging !== null) e.preventDefault();
                 }}
@@ -1388,7 +1490,7 @@ export function HomeEditor({
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant={section.enabled ? "ghost" : "primary"}
                     size="sm"
                     onClick={() =>
                       setSections((all) =>
@@ -1409,10 +1511,23 @@ export function HomeEditor({
                     {expanded ? `Cerrar ${name}` : `Editar ${name}`}
                   </Button>
                 </div>
+                {section.enabled ? null : (
+                  <p className="mx-3 mb-3 text-sm text-fg-muted">
+                    Oculto: tus clientes no ven este bloque. Usa «Mostrar {name}» para que vuelva a
+                    aparecer.
+                  </p>
+                )}
                 {errors ? (
                   <ul role="alert" className="mx-3 mb-3 list-disc pl-5 text-sm text-danger">
                     {errors.map((e, i) => (
                       <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {state.warnings?.[section.id] && !edited.has(section.id) ? (
+                  <ul role="status" className="mx-3 mb-3 list-disc pl-5 text-sm text-warning">
+                    {state.warnings[section.id]!.map((w, i) => (
+                      <li key={i}>{w}</li>
                     ))}
                   </ul>
                 ) : null}

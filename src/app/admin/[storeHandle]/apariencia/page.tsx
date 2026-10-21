@@ -220,6 +220,21 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           phone={store?.contact_phone ?? null}
         />
       ) : null}
+      {tab === "portada" ? (
+        <p className="rounded-md border border-border p-3 text-sm">
+          {settings.header?.announcement
+            ? `Barra de anuncio arriba de la portada: «${settings.header.announcement.text}». `
+            : "Sin barra de anuncio arriba de la portada. "}
+          <Link
+            href={`${base}/apariencia?seccion=encabezado#anuncio`}
+            className="inline-flex min-h-11 items-center font-medium underline underline-offset-2 md:min-h-0"
+          >
+            {settings.header?.announcement
+              ? "Editar la barra de anuncio"
+              : "Agregar una barra de anuncio"}
+          </Link>
+        </p>
+      ) : null}
       {tab === "portada" && homeOptions ? (
         <HomeEditor
           key={formKey}
