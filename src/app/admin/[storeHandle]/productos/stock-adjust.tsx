@@ -91,7 +91,7 @@ function StockRowForm({ storeHandle, row }: { storeHandle: string; row: StockRow
           required
           min={0}
           max={1000000}
-          defaultValue={row.onHand}
+          defaultValue={state.values?.quantity ?? row.onHand}
           aria-label={`En mano de ${row.label}`}
           aria-invalid={state.fields?.quantity ? true : undefined}
           className="w-24"
@@ -101,7 +101,7 @@ function StockRowForm({ storeHandle, row }: { storeHandle: string; row: StockRow
         Motivo
         <Input
           name="reason"
-          defaultValue="Conteo físico"
+          defaultValue={state.values?.reason ?? "Conteo físico"}
           aria-label={`Motivo del ajuste de ${row.label}`}
           aria-invalid={state.fields?.reason ? true : undefined}
           className="w-44"

@@ -34,7 +34,7 @@ export function TaxForm({
             <Input
               {...c}
               name="rate"
-              defaultValue={initial.rate}
+              defaultValue={state.values?.rate ?? initial.rate}
               inputMode="decimal"
               maxLength={6}
             />

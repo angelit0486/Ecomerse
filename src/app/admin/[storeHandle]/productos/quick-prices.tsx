@@ -66,7 +66,7 @@ export function QuickPrices({
                 Precio
                 <Input
                   name={`price_${v.id}`}
-                  defaultValue={v.price}
+                  defaultValue={state.values?.[`price_${v.id}`] ?? v.price}
                   inputMode="decimal"
                   aria-label={`Precio de ${v.label}`}
                   aria-invalid={fieldError(`price_${v.id}`) ? true : undefined}
@@ -77,7 +77,7 @@ export function QuickPrices({
                 Precio antes
                 <Input
                   name={`compare_${v.id}`}
-                  defaultValue={v.compare}
+                  defaultValue={state.values?.[`compare_${v.id}`] ?? v.compare}
                   inputMode="decimal"
                   placeholder="Opcional"
                   aria-label={`Precio antes de ${v.label}`}

@@ -33,6 +33,17 @@ test("sin conexión y con la sesión vencida, el formulario sigue y lo escrito n
   await expect(name).toHaveValue("Zona Norte");
   await context.setOffline(false);
 
+  // La categoría no rellenaba sus campos con lo enviado: tras un error se vaciaban.
+  await page.goto(`/admin/${tenant.handle}/productos/categorias`);
+  const category = page.getByLabel("Nombre").first();
+  await category.fill("Termos y botellas");
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Crear categoría" }).click();
+  await expect(page.getByText(/^Sin conexión a internet/)).toBeVisible();
+  await expect(category).toHaveValue("Termos y botellas");
+  await context.setOffline(false);
+
+  await page.goto(`/admin/${tenant.handle}/envios`);
   await context.clearCookies();
   await name.fill("Zona Sur");
   await create.click();

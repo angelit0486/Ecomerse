@@ -145,8 +145,12 @@ test("todas las pantallas del panel cargan sin errores; estado del sistema y avi
 
   // Búsqueda global: «/» la enfoca desde cualquier pantalla y lleva al producto (F3).
   await page.goto(`/admin/${tenant.handle}/pedidos`);
-  await page.keyboard.press("/");
-  await expect(page.getByLabel("Buscar productos, pedidos o clientes")).toBeFocused();
+  // El atajo existe hasta que la página se hidrata; antes, «/» no hace nada.
+  const search = page.getByLabel("Buscar productos, pedidos o clientes");
+  await expect(async () => {
+    await page.keyboard.press("/");
+    await expect(search).toBeFocused({ timeout: 500 });
+  }).toPass();
   await page.keyboard.type("recorrido");
   await page.getByRole("link", { name: /Proteína de recorrido/ }).click();
   await expect(page.getByRole("heading", { name: "Proteína de recorrido" })).toBeVisible();

@@ -83,14 +83,21 @@ export function CategoryForm({
         required
         error={nameError(state)}
       >
-        {(c) => <Input {...c} name="name" defaultValue={category?.name ?? ""} maxLength={120} />}
+        {(c) => (
+          <Input
+            {...c}
+            name="name"
+            defaultValue={state.values?.name ?? category?.name ?? ""}
+            maxLength={120}
+          />
+        )}
       </Field>
       <Field label="Dentro de" id={`${prefix}-parent`} error={state.fields?.parent_id}>
         {(c) => (
           <select
             {...c}
             name="parent_id"
-            defaultValue={category?.parent_id ?? ""}
+            defaultValue={state.values?.parent_id ?? category?.parent_id ?? ""}
             className={nativeControl}
           >
             <option value="">Ninguna (principal)</option>
@@ -140,7 +147,7 @@ export function CategoryForm({
                 name="description"
                 rows={3}
                 maxLength={2000}
-                defaultValue={category.description ?? ""}
+                defaultValue={state.values?.description ?? category.description ?? ""}
                 className={nativeControl}
               />
             )}
@@ -156,7 +163,7 @@ export function CategoryForm({
                 {...c}
                 name="seo_title"
                 maxLength={70}
-                defaultValue={category.seo_title ?? ""}
+                defaultValue={state.values?.seo_title ?? category.seo_title ?? ""}
               />
             )}
           </Field>
@@ -172,7 +179,7 @@ export function CategoryForm({
                 name="seo_description"
                 rows={2}
                 maxLength={320}
-                defaultValue={category.seo_description ?? ""}
+                defaultValue={state.values?.seo_description ?? category.seo_description ?? ""}
                 className={nativeControl}
               />
             )}
@@ -262,7 +269,14 @@ export function BrandForm({
         required
         error={nameError(state)}
       >
-        {(c) => <Input {...c} name="name" defaultValue={brand?.name ?? ""} maxLength={120} />}
+        {(c) => (
+          <Input
+            {...c}
+            name="name"
+            defaultValue={state.values?.name ?? brand?.name ?? ""}
+            maxLength={120}
+          />
+        )}
       </Field>
       <Button type="submit" variant={brand ? "secondary" : "primary"} size="sm" loading={pending}>
         {brand ? "Guardar" : "Crear marca"}

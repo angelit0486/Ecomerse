@@ -34,6 +34,8 @@ export interface CatalogActionState {
   error?: string;
   fields?: Record<string, string>;
   issues?: string[];
+  /** Lo enviado, para no perderlo tras un error (useSafeActionState lo llena). */
+  values?: Record<string, string>;
   /** Vista previa de precios en bloque (aún sin aplicar). */
   preview?: BulkPricePreview;
   /** Vista previa de una oferta con fechas (ADR-030), aún sin programar. */
