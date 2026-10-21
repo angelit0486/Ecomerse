@@ -4,9 +4,9 @@
 -- últimas 30. «Restaurar» copia una versión al BORRADOR (nunca publica
 -- directo): la dueña la revisa en la vista previa y publica como siempre.
 --
--- La versión es un documento (como la auditoría): guarda el id del logo sin FK
--- para no impedir la purga de imágenes; al restaurar se revalidan todas las
--- referencias contra la tienda (las mismas reglas que al guardar).
+-- El logo va con FK compuesta y `on delete set null (logo_media_id)`, como las
+-- marcas: purgar la imagen no rompe la versión. Al restaurar se revalidan todas
+-- las referencias contra la tienda (las mismas reglas que al guardar).
 -- =============================================================================
 
 create table public.store_theme_versions (
@@ -19,13 +19,19 @@ create table public.store_theme_versions (
   published_by  uuid references auth.users (id) on delete set null,
   published_at  timestamptz not null default now(),
   unique (store_id, id),
-  unique (store_id, number)
+  unique (store_id, number),
+  foreign key (store_id, logo_media_id) references public.media (store_id, id)
+    on delete set null (logo_media_id)
 );
 create index store_theme_versions_store_idx on public.store_theme_versions (store_id, number desc);
 
--- Solo se agregan (y la publicación poda las más viejas); nunca se editan.
-create trigger store_theme_versions_append_only before update on public.store_theme_versions
-  for each row execute function app.forbid_mutation();
+-- Solo se agregan (y la publicación poda las más viejas); su contenido nunca se
+-- edita. Lo único que cambia es un null puesto por una FK (logo purgado, usuario
+-- borrado).
+create trigger store_theme_versions_prevent_tenant_change before update on public.store_theme_versions
+  for each row execute function app.prevent_tenant_change();
+create trigger store_theme_versions_immutable before update on public.store_theme_versions
+  for each row execute function app.prevent_column_change('number', 'settings', 'home_sections', 'published_at');
 
 alter table public.store_theme_versions enable row level security;
 alter table public.store_theme_versions force row level security;

@@ -869,7 +869,7 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
   - tabla `store_theme_versions`: `store_id NOT NULL`, RLS forzado (lectura con `appearance.manage`), solo agrega (`forbid_mutation` en UPDATE) y `UNIQUE (store_id, number)`;
   - `appearance_publish_theme` guarda la versión en la misma transacción y poda a 30;
   - `appearance_restore_theme_version` copia la versión al borrador. Revalida las referencias y, si el logo ya no existe, lo omite y lo avisa. Pasa por la revisión del borrador (conflicto, no pisa) y queda en la auditoría.
-- **Decisión:** la versión guarda el id del logo **sin FK**, como la auditoría, para no impedir la purga de imágenes; al restaurar se vuelve a validar todo.
+- **Decisión:** el logo de la versión lleva FK compuesta con `on delete set null (logo_media_id)`, como las marcas: purgar la imagen no rompe la versión. Al restaurar se vuelve a validar todo.
 - **Panel:** pestaña «Historial» con «Restaurar la versión N al borrador».
 - **Pruebas:** pgTAP `83_theme_versions` (16, con aislamiento entre tiendas y rol sin permiso); E2E `studio` (quitar, publicar, restaurar y volver a publicar).
 

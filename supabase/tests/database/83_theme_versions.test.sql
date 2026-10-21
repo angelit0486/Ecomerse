@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(17);
 
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 declare v_msg text; v_detail text;
@@ -93,9 +93,24 @@ select is((select min(number) from public.store_theme_versions where store_id = 
           'se podan las más viejas');
 select tests.logout();
 
--- 6. Las versiones no se editan.
-select throws_ok($$ update public.store_theme_versions set number = 99 $$, '42501', 'append_only',
+-- 6. Las versiones no se editan; purgar el logo solo deja el id en null.
+select throws_ok($$ update public.store_theme_versions set number = 99 $$, '42501', 'column_immutable',
                  'una versión no se puede editar');
+create function pg_temp.purge_logo() returns integer language plpgsql security definer as $$
+declare v_media uuid;
+begin
+  insert into public.media (store_id, owner_type, status, storage_path, mime_type, bytes, width, height)
+  values (tests.fx('store_a'), 'store_branding', 'ready',
+          tests.fx('store_a') || '/store_branding/x/' || gen_random_uuid() || '/original.png', 'image/png', 100, 64, 64)
+  returning id into v_media;
+  update public.store_themes set logo_media_id = v_media where store_id = tests.fx('store_a');
+  insert into public.store_theme_versions (store_id, number, settings, home_sections, logo_media_id)
+  values (tests.fx('store_a'), 1000, '{}', '[]', v_media);
+  delete from public.media where id = v_media;
+  return (select count(*)::int from public.store_theme_versions
+           where store_id = tests.fx('store_a') and number = 1000 and logo_media_id is null);
+end $$;
+select is(pg_temp.purge_logo(), 1, 'purgar la imagen del logo no rompe la versión (queda en null)');
 
 select * from finish();
 rollback;
