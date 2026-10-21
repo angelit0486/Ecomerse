@@ -48,7 +48,7 @@ Lighthouse se midió en este entorno local; el almacenamiento local sirve las fo
 
 ## 5. Lo que necesito de ti (una sola lista)
 
-1. **Aplicar en staging las 7 migraciones nuevas**, en orden, antes de subir este código:
+1. **Aplicar en staging las 8 migraciones nuevas**, en orden, antes de subir este código:
    - `20261020000200`
    - `20261020000300`
    - `20261021000100`
