@@ -21,7 +21,11 @@ import {
   setMemberStatus,
   type TeamActionState,
 } from "./actions";
-import { useSafeActionState } from "@/ui/use-safe-action-state";
+import {
+  isNextControlFlow,
+  unreachableMessage,
+  useSafeActionState,
+} from "@/ui/use-safe-action-state";
 
 export interface MemberRow {
   user_id: string;
@@ -91,7 +95,16 @@ function TeamManagerInner({
   function perform(key: string, action: () => Promise<TeamActionState>) {
     setBusy(key);
     startTransition(async () => {
-      const result = await action();
+      let result: TeamActionState;
+      try {
+        result = await action();
+      } catch (error) {
+        // Sin red, el error no debe cambiar la pantalla por la de error (H4).
+        if (isNextControlFlow(error)) throw error;
+        console.error(error);
+        toast({ title: unreachableMessage(), tone: "error" });
+        return;
+      }
       if (result.error) toast({ title: result.error, tone: "error" });
       else if (result.message) toast({ title: result.message, tone: "success" });
     });
@@ -301,7 +314,9 @@ function InviteDialog({ storeHandle, roles }: { storeHandle: string; roles: Role
             )}
           </Field>
           <Field label="Rol" required error={state.fields?.role}>
-            {(control) => <Select {...control} name="role" options={roles} />}
+            {(control) => (
+              <Select {...control} name="role" options={roles} defaultValue={state.values?.role} />
+            )}
           </Field>
           <div className="flex justify-end gap-2">
             <DialogClose asChild>

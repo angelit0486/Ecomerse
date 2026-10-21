@@ -44,6 +44,8 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
 
   await section.getByRole("radio", { name: /^Ropa/ }).check();
   await section.getByRole("button", { name: "Aplicar plantilla" }).click();
+  await expect(section.getByRole("group", { name: "¿Aplicar «Ropa» al borrador?" })).toBeVisible();
+  await section.getByRole("button", { name: "Sí, aplicar" }).click();
   await expect(
     page.getByText("Plantilla «Ropa» aplicada al borrador con 4 productos de ejemplo."),
   ).toBeVisible();
@@ -83,6 +85,7 @@ test("plantilla «En blanco»: borrador sin bloques, sin ejemplos y sin categor�
   const section = page.getByRole("region", { name: "Plantilla por giro" });
   await section.getByRole("radio", { name: /^En blanco/ }).check();
   await section.getByRole("button", { name: "Aplicar plantilla" }).click();
+  await section.getByRole("button", { name: "Sí, aplicar" }).click();
   await expect(
     page.getByText("Plantilla «En blanco» aplicada al borrador. Revísala en la vista previa."),
   ).toBeVisible();

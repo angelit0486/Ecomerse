@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { FormFeedback } from "../_shared/form-feedback";
@@ -63,14 +62,25 @@ export function TemplateForm({
         </div>
       </fieldset>
       <p className="text-sm text-fg-muted">
-        Cambia los colores y la portada del borrador. Las plantillas por giro también crean
-        categorías y productos de ejemplo (no se venden y solo se ven en la vista previa); «En
-        blanco» no crea nada. Lo que ya tengas no se borra.
+        Reemplaza los colores y la portada del borrador; lo publicado no cambia hasta que publiques.
+        Las plantillas por giro también crean categorías y productos de ejemplo (no se venden y solo
+        se ven en la vista previa); «En blanco» no crea nada. Tus productos y categorías no se
+        borran.
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" loading={pending}>
+        <ConfirmButton
+          variant="primary"
+          loading={pending}
+          question={(form) => {
+            const key = form ? String(new FormData(form).get("template") ?? "") : "";
+            const name = templates.find((t) => t.key === key)?.name ?? "la plantilla";
+            return `¿Aplicar «${name}» al borrador?`;
+          }}
+          confirmLabel="Sí, aplicar"
+          detail="Reemplaza los colores y la portada del borrador."
+        >
           Aplicar plantilla
-        </Button>
+        </ConfirmButton>
         <FormFeedback state={state} />
       </div>
     </form>

@@ -55,11 +55,67 @@ describe("ConfirmButton", () => {
   });
 
   it("en carga, «Sí» queda deshabilitado (sin doble envío)", () => {
-    render(
-      <ConfirmButton question="¿Quitar?" loading>
-        Quitar
-      </ConfirmButton>,
+    const { rerender } = render(
+      <form>
+        <ConfirmButton question="¿Quitar?">Quitar</ConfirmButton>
+      </form>,
     );
-    expect(screen.getByRole("button", { name: "Quitar" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Quitar" }));
+    rerender(
+      <form>
+        <ConfirmButton question="¿Quitar?" loading>
+          Quitar
+        </ConfirmButton>
+      </form>,
+    );
+    expect(screen.getByRole("button", { name: "Sí, quitar" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("al terminar la acción la pregunta se cierra y el foco vuelve al botón (H1)", () => {
+    const { rerender } = render(
+      <form>
+        <ConfirmButton question="¿Reembolsar?">Reembolsar</ConfirmButton>
+      </form>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    for (const loading of [true, false]) {
+      rerender(
+        <form>
+          <ConfirmButton question="¿Reembolsar?" loading={loading}>
+            Reembolsar
+          </ConfirmButton>
+        </form>,
+      );
+    }
+    expect(screen.queryByRole("button", { name: "Sí, reembolsar" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Reembolsar" }));
+  });
+
+  it("si se edita el formulario con la pregunta abierta, se cierra (H2)", () => {
+    render(
+      <form>
+        <input aria-label="Monto" defaultValue="400" />
+        <ConfirmButton question="¿Reembolsar?">Reembolsar</ConfirmButton>
+      </form>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    fireEvent.input(screen.getByLabelText("Monto"), { target: { value: "100" } });
+    expect(screen.queryByRole("button", { name: "Sí, reembolsar" })).toBeNull();
+  });
+
+  it("la pregunta se calcula al abrirla con lo que tiene el formulario", () => {
+    render(
+      <form>
+        <input name="amount" aria-label="Monto" defaultValue="400" />
+        <ConfirmButton
+          question={(form) => `¿Reembolsar $${String(new FormData(form!).get("amount"))}?`}
+        >
+          Reembolsar
+        </ConfirmButton>
+      </form>,
+    );
+    fireEvent.change(screen.getByLabelText("Monto"), { target: { value: "100.50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    expect(screen.getByRole("group", { name: "¿Reembolsar $100.50?" })).toBeTruthy();
   });
 });

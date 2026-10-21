@@ -221,7 +221,7 @@ export function RateForm({
           type="checkbox"
           name="is_active"
           value="1"
-          defaultChecked={rate?.is_active ?? true}
+          defaultChecked={state.values ? state.values.is_active === "1" : (rate?.is_active ?? true)}
         />
         Activa
       </label>

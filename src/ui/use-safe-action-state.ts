@@ -10,19 +10,28 @@ export const UNREACHABLE_MESSAGE =
   "El servidor no respondió y no pudimos confirmar si se guardó. Revisa en un momento y, si no quedó, vuelve a intentarlo.";
 
 /** redirect() y notFound() de Next viajan como errores con `digest` «NEXT_…». */
-function isNextControlFlow(error: unknown): boolean {
+export function isNextControlFlow(error: unknown): boolean {
   const digest = (error as { digest?: unknown } | null)?.digest;
   return typeof digest === "string" && digest.startsWith("NEXT_");
 }
 
-// No se devuelven al formulario: una contraseña o un código no deben quedar escritos.
-const SENSITIVE = /password|contrasena|token|secret|code|otp|totp/i;
+/** Aviso cuando la acción no llegó o no respondió (sin red o servidor caído). */
+export function unreachableMessage(): string {
+  return typeof navigator !== "undefined" && navigator.onLine === false
+    ? OFFLINE_MESSAGE
+    : UNREACHABLE_MESSAGE;
+}
+
+// No se devuelven al formulario. Por segmento del nombre: `code` (cupón) o
+// `postal_code` sí se conservan (revisión del Paso 1, H3).
+const SENSITIVE = /(^|_)(password|contrasena|token|secret|otp|totp)(_|$)/i;
 
 function submittedValues(payload: unknown): Record<string, string> | undefined {
   if (!(payload instanceof FormData)) return undefined;
   const values: Record<string, string> = {};
+  // Gana el último valor: una casilla va después de su `hidden` con «0» (H5).
   for (const [key, value] of payload.entries()) {
-    if (typeof value === "string" && !(key in values) && !SENSITIVE.test(key)) values[key] = value;
+    if (typeof value === "string" && !SENSITIVE.test(key)) values[key] = value;
   }
   return values;
 }
@@ -63,15 +72,11 @@ export function useSafeActionState<State, Payload>(
         return next;
       } catch (error) {
         if (isNextControlFlow(error)) throw error;
-        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        // Sin causa en la pantalla, al menos en la consola del navegador (H6).
+        console.error(error);
         const values = submittedValues(payload);
-        return {
-          ...(state as object),
-          ok: false,
-          message: undefined,
-          error: offline ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE,
-          ...(values ? { values } : {}),
-        } as State;
+        // Sin el estado anterior: sus errores de campo ya no aplican (H7).
+        return { ok: false, error: unreachableMessage(), ...(values ? { values } : {}) } as State;
       }
     },
     initialState,

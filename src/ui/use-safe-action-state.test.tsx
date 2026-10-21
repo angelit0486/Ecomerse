@@ -102,4 +102,59 @@ describe("useSafeActionState", () => {
     expect(JSON.parse(screen.getByRole("status").textContent!)).toEqual({ name: "Termos" });
     expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("Termos");
   });
+
+  it("conserva el código de un cupón y el último valor de una casilla con su hidden", async () => {
+    function Coupon() {
+      const [state, formAction] = useSafeActionState<State, FormData>(
+        async () => ({ error: "Tu sesión terminó." }),
+        {},
+      );
+      return (
+        <form action={formAction}>
+          <input name="code" aria-label="Código" defaultValue={state.values?.code ?? ""} />
+          <input type="hidden" name="is_active" value="0" />
+          <input type="checkbox" name="is_active" value="1" defaultChecked aria-label="Activo" />
+          <input name="otp_code" defaultValue="123456" />
+          <button type="submit">Guardar</button>
+          <output>{JSON.stringify(state.values ?? null)}</output>
+        </form>
+      );
+    }
+    render(<Coupon />);
+    fireEvent.change(screen.getByLabelText("Código"), { target: { value: "VERANO10" } });
+    await submit();
+    expect(JSON.parse(screen.getByRole("status").textContent!)).toEqual({
+      code: "VERANO10",
+      is_active: "1",
+    });
+  });
+
+  it("sin red no arrastra los errores de campo del intento anterior", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let calls = 0;
+    function Fields() {
+      const [state, formAction] = useSafeActionState<
+        State & { fields?: Record<string, string> },
+        FormData
+      >(async () => {
+        calls += 1;
+        if (calls === 1) return { error: "Revisa el nombre.", fields: { name: "Muy corto" } };
+        throw new TypeError("Failed to fetch");
+      }, {});
+      return (
+        <form action={formAction}>
+          <button type="submit">Guardar</button>
+          <p role="alert">{state.error}</p>
+          <p>{state.fields?.name ?? "sin error de campo"}</p>
+        </form>
+      );
+    }
+    render(<Fields />);
+    await submit();
+    expect(screen.getByText("Muy corto")).toBeTruthy();
+    await submit();
+    expect(screen.getByRole("alert").textContent).toBe(OFFLINE_MESSAGE);
+    expect(screen.getByText("sin error de campo")).toBeTruthy();
+  });
 });

@@ -118,7 +118,9 @@ export function CategoryForm({
           type="checkbox"
           name="is_visible"
           value="1"
-          defaultChecked={category?.is_visible ?? true}
+          defaultChecked={
+            state.values ? state.values.is_visible === "1" : (category?.is_visible ?? true)
+          }
         />
         Visible
       </label>

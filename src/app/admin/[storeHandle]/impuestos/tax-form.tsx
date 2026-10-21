@@ -47,7 +47,11 @@ export function TaxForm({
               type="radio"
               name="prices_include_tax"
               value="1"
-              defaultChecked={initial.include}
+              defaultChecked={
+                state.values?.prices_include_tax
+                  ? state.values.prices_include_tax === "1"
+                  : initial.include
+              }
             />
             ya incluyen el impuesto
           </label>
@@ -56,7 +60,11 @@ export function TaxForm({
               type="radio"
               name="prices_include_tax"
               value="0"
-              defaultChecked={!initial.include}
+              defaultChecked={
+                state.values?.prices_include_tax
+                  ? state.values.prices_include_tax === "0"
+                  : !initial.include
+              }
             />
             no lo incluyen (se suma en el checkout)
           </label>
@@ -66,7 +74,9 @@ export function TaxForm({
             type="checkbox"
             name="tax_applies_to_shipping"
             value="1"
-            defaultChecked={initial.shipping}
+            defaultChecked={
+              state.values ? state.values.tax_applies_to_shipping === "1" : initial.shipping
+            }
           />
           El envío también paga impuesto
         </label>

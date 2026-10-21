@@ -356,7 +356,11 @@ export function RefundForm({
         <ConfirmButton
           size="sm"
           loading={pending}
-          question="¿Solicitar el reembolso por el monto indicado?"
+          // El monto del momento: si se edita, la pregunta se cierra (H2).
+          question={(form) => {
+            const amount = form ? String(new FormData(form).get("amount") ?? "").trim() : "";
+            return `¿Reembolsar ${amount || "0"} (máximo ${maxLabel})?`;
+          }}
           detail="Si se pagó con tarjeta o Mercado Pago, el reembolso se envía al procesador de pagos y no se puede deshacer."
         >
           Solicitar reembolso
