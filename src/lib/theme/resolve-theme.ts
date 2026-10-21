@@ -1,4 +1,4 @@
-import { contrastRatio } from "@/lib/color/contrast";
+import { contrastRatio, relativeLuminance } from "@/lib/color/contrast";
 
 import { buttonTextColor, COLOR_KEYS, resolvePalette, type Palette } from "./palette";
 import { isValidInstant } from "./constants";
@@ -186,6 +186,16 @@ export function stateColors(theme: ResolvedTheme): Record<keyof typeof STATE_COL
   };
 }
 
+/**
+ * Mezcla de las fotos de producto con su marco. Sobre una superficie clara,
+ * `multiply` funde el fondo blanco de la foto con el gris de la tienda; sobre una
+ * oscura lo volvería negro (y oscurecería el producto), así que la foto va tal cual.
+ */
+export function photoBlend(theme: ResolvedTheme): "multiply" | "normal" {
+  const surface = mix(theme.palette.foreground, theme.palette.background, 0.05);
+  return relativeLuminance(surface) >= 0.6 ? "multiply" : "normal";
+}
+
 /** `a` al `share` (0–1) sobre `b`, como `color-mix(in srgb, a share, b)`. */
 function mix(a: string, b: string, share: number): string {
   const ca = Number.parseInt(a.slice(1), 16);
@@ -258,6 +268,7 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-footer-bg:${footer.bg}`,
     `--sf-footer-fg:${footer.fg}`,
     `--sf-link:${linkColor(theme)}`,
+    `--sf-photo-blend:${photoBlend(theme)}`,
     `--sf-danger:${state.danger}`,
     `--sf-success:${state.success}`,
     `--sf-warning:${state.warning}`,

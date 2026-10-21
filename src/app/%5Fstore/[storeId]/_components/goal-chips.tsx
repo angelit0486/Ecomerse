@@ -90,7 +90,7 @@ export function GoalTiles({
                     height={goal.image.height ?? 320}
                     loading="lazy"
                     decoding="async"
-                    className="h-full w-full object-contain mix-blend-multiply"
+                    className="h-full w-full object-contain [mix-blend-mode:var(--sf-photo-blend,multiply)]"
                   />
                 </span>
               ) : null}

@@ -81,7 +81,7 @@ export function ProductGallery({
           height={current.height}
           fetchPriority={index === 0 ? "high" : "auto"}
           decoding="async"
-          className="aspect-square w-full object-contain p-4 mix-blend-multiply sm:p-8"
+          className="aspect-square w-full object-contain p-4 [mix-blend-mode:var(--sf-photo-blend,multiply)] sm:p-8"
         />
         {many ? (
           <>
@@ -155,7 +155,7 @@ export function ProductGallery({
                   height={image.height}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-square w-full object-contain p-1 mix-blend-multiply"
+                  className="aspect-square w-full object-contain p-1 [mix-blend-mode:var(--sf-photo-blend,multiply)]"
                 />
               </button>
             </li>

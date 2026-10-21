@@ -192,7 +192,7 @@ async function CategoryCircles({
                       height={image.height ?? 320}
                       loading="lazy"
                       decoding="async"
-                      className={`h-full w-full mix-blend-multiply ${category.image ? "object-cover" : "object-contain p-1.5"}`}
+                      className={`h-full w-full [mix-blend-mode:var(--sf-photo-blend,multiply)] ${category.image ? "object-cover" : "object-contain p-1.5"}`}
                     />
                   ) : (
                     <span

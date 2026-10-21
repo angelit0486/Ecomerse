@@ -8,6 +8,7 @@ import {
   announcementActive,
   footerColors,
   linkColor,
+  photoBlend,
   resolveTheme,
   saleColors,
   STATE_COLORS,
@@ -50,7 +51,9 @@ describe("resolveTheme", () => {
       css
         .split(";")
         .every((d) =>
-          /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px|\d+(\.\d+)?rem|none|var\(--font-[a-z-]+\))$/.test(d),
+          /^--sf-[a-z-]+:(#[0-9a-f]{6}|\d+px|\d+(\.\d+)?rem|none|multiply|normal|var\(--font-[a-z-]+\))$/.test(
+            d,
+          ),
         ),
     ).toBe(true);
   });
@@ -258,5 +261,28 @@ describe("stateColors (identidad PRUVA, fase 2)", () => {
     });
     expect(themeCss(dark)).toContain("--sf-danger:#f5f5f5");
     expect(themeCss(resolveTheme({}))).toContain(`--sf-success:${STATE_COLORS.success}`);
+  });
+});
+
+describe("photoBlend: fotos de producto sin fondo negro", () => {
+  const colors = (background: string, foreground: string) =>
+    resolveTheme({ colors: { background, foreground, primary: "#1d3fd1", accent: "#d62d20" } });
+
+  it("con fondo claro multiplica: el blanco de la foto se funde con el gris de la tienda", () => {
+    expect(photoBlend(colors("#ffffff", "#1a1c22"))).toBe("multiply");
+    for (const preset of THEME_PRESETS) {
+      expect(photoBlend(resolveTheme({ colors: preset.colors }))).toBe("multiply");
+    }
+  });
+
+  it("con fondo oscuro o de tono medio no multiplica: la foto se ve tal cual", () => {
+    expect(photoBlend(colors("#000000", "#ffffff"))).toBe("normal");
+    expect(photoBlend(colors("#1e3a5f", "#ffffff"))).toBe("normal");
+    expect(photoBlend(colors("#808080", "#000000"))).toBe("normal");
+  });
+
+  it("la variable va en el CSS del tema", () => {
+    expect(themeCss(colors("#000000", "#ffffff"))).toContain("--sf-photo-blend:normal");
+    expect(themeCss(colors("#ffffff", "#1a1c22"))).toContain("--sf-photo-blend:multiply");
   });
 });

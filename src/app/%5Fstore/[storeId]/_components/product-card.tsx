@@ -148,7 +148,7 @@ function ProductCard({
               decoding="async"
               {...(eager ? { fetchPriority: "high" as const } : {})}
               // Multiplicar: el fondo blanco de una foto de producto toma el gris del anaquel.
-              className={`h-full w-full object-contain p-1.5 mix-blend-multiply motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
+              className={`h-full w-full object-contain p-1.5 [mix-blend-mode:var(--sf-photo-blend,multiply)] motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
             />
           ) : (
             <div

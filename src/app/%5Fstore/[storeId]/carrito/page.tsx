@@ -108,7 +108,7 @@ export default async function CartPage({ params }: Props) {
                     alt=""
                     width={96}
                     height={96}
-                    className="h-full w-full object-contain p-1 mix-blend-multiply"
+                    className="h-full w-full object-contain p-1 [mix-blend-mode:var(--sf-photo-blend,multiply)]"
                   />
                 ) : null}
               </div>
