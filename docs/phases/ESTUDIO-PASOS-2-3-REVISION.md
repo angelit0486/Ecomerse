@@ -27,7 +27,7 @@
 Hallazgos del propio cierre de pasos (no del revisor):
 
 - **Redirecciones.** El panel convertía una URL externa en «Llevar a» en una ruta interna. **Corregido:** solo se convierte la dirección vieja; el destino debe ser una ruta y la base rechaza el resto.
-- **404 del panel.** Con `loading.tsx` (Paso 1), un 404 llega con código 200 y la pantalla «No encontramos esta página», porque la respuesta ya va en streaming. En el panel (noindex) solo cambia el código; la tienda no tiene `loading.tsx` y sus 404 siguen siendo 404.
+- **404 del panel.** El `loading.tsx` de la tienda (Paso 1) hacía que un 404 por permisos llegara con código 200, porque la respuesta ya iba en streaming. Lo detectó la E2E `team` en la suite completa. **Corregido:** se quitó ese `loading.tsx` y los 404 del panel vuelven a ser 404 (E2E `team` y `redirects-designer`).
 
 ## Decisión pendiente del propietario (R-1)
 

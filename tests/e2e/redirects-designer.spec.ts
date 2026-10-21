@@ -65,8 +65,6 @@ test("Diseño crea una redirección 301 y no ve pedidos", async ({ page, request
   // Rol Diseño: apariencia sí; pedidos, no.
   const design = await page.goto(`/admin/${tenant.handle}/apariencia`);
   expect(design?.status()).toBe(200);
-  // Con la carga en streaming (loading.tsx) el 404 llega como pantalla, no como código.
-  await page.goto(`/admin/${tenant.handle}/pedidos`);
-  await expect(page.getByRole("heading", { name: "No encontramos esta página" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Pedidos", exact: true })).toHaveCount(0);
+  const orders = await page.goto(`/admin/${tenant.handle}/pedidos`);
+  expect(orders?.status()).toBe(404);
 });

@@ -49,15 +49,12 @@ export function TemplateForm({
               <span className="space-y-1">
                 <span className="flex items-center gap-2 font-medium">
                   {t.name}
-                  <span aria-hidden="true" className="flex">
-                    {[t.colors.primary, t.colors.accent, t.colors.background].map((c) => (
-                      <span
-                        key={c}
-                        className="-ml-1 size-4 rounded-full border border-border first:ml-0"
-                        style={{ backgroundColor: c }}
-                      />
+                  {/* SVG con fill: la CSP no permite atributos style en el HTML. */}
+                  <svg aria-hidden="true" width="40" height="16" viewBox="0 0 40 16">
+                    {[t.colors.primary, t.colors.accent, t.colors.background].map((c, k) => (
+                      <circle key={k} cx={8 + k * 12} cy="8" r="7" fill={c} stroke="#d0d5dd" />
                     ))}
-                  </span>
+                  </svg>
                 </span>
                 <span className="block text-fg-muted">{t.description}</span>
               </span>
