@@ -6,6 +6,7 @@ import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { publicMediaUrl } from "@/server/catalog/queries";
+import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { LogoForm, type LogoCandidate } from "../configuracion/logo-form";
@@ -18,6 +19,7 @@ import {
   SocialContactForm,
 } from "./forms";
 import { ThemeHistory, type ThemeVersionRow } from "./history";
+import { MoveDesign } from "./move-design";
 import { HomeEditor } from "./home-editor";
 import { loadHomeOptions } from "./home-options";
 
@@ -122,6 +124,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
     .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text }));
   const homeOptions = tab === "portada" ? await loadHomeOptions(ctx.store.id, rows) : null;
   const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
+  const siblingStores = tab === "historial" ? await loadSiblingStores(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
     []) as Parameters<typeof HomeEditor>[0]["initial"];
   // Tras descartar, los formularios se montan de nuevo con lo publicado.
@@ -235,6 +238,14 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           hasDraft={hasDraft}
         />
       ) : null}
+      {tab === "historial" ? (
+        <MoveDesign
+          key={`m${formKey}`}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          stores={siblingStores}
+        />
+      ) : null}
       {tab === "presentacion" ? (
         <PresentationForm
           key={formKey}
@@ -289,4 +300,17 @@ async function loadVersions(storeId: string): Promise<ThemeVersionRow[]> {
       summary: parts.join(" · "),
     };
   });
+}
+
+/** Otras tiendas de la misma organización a las que esta persona tiene acceso. */
+async function loadSiblingStores(storeId: string): Promise<{ id: string; name: string }[]> {
+  const supabase = await createSupabaseServerClient();
+  const stores = await callRpc<{ store_id: string; organization_id: string; name: string }[]>(
+    supabase,
+    "access_list_my_stores",
+  );
+  const org = stores.find((s) => s.store_id === storeId)?.organization_id;
+  return stores
+    .filter((s) => s.organization_id === org && s.store_id !== storeId)
+    .map((s) => ({ id: s.store_id, name: s.name }));
 }

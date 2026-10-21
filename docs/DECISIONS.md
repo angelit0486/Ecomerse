@@ -903,6 +903,14 @@ Misión del propietario del 2026-10-20: crear, personalizar y lanzar una tienda 
 - **Decisión:** la plantilla se elige en «Configura tu tienda» (no hace falta E15). El formulario solo manda la clave; el servidor arma el contenido.
 - **Pruebas:** unit (esquema, contraste, límites, textos sin promesas), pgTAP `85_store_templates` (19, con aislamiento, rol sin permiso y tienda publicada) y E2E `store-templates` (axe).
 
+**Implementación, tramo 5 (2026-10-21): llevar el diseño entre tiendas.**
+
+- **Diseño portátil** (`src/lib/theme/portable.ts`): colores, tipografía, forma, encabezado, ficha, listados y portada. Se quitan imágenes, SEO, contacto, redes, favicon y pie, y los bloques que dependen de filas de la tienda (banner, imagen con texto, marcas, objetivos). Los rieles por categoría, marca o selección pasan a «lo más nuevo»; la cuadrícula de categorías muestra todas.
+- **Descarga** (`apariencia/exportar`): archivo `.json` con formato `pruva-theme` (el borrador si hay, si no lo publicado). Pide el permiso de apariencia.
+- **Subida o copia:** `appearance_import_design` (migración `20261021000300`) reemplaza solo las claves de diseño del borrador y la portada en una transacción, con las validaciones de siempre. Rechaza cualquier otra clave y queda en la auditoría con su origen. La copia directa solo ofrece tiendas de la misma organización a las que la persona tiene acceso (el servidor lo vuelve a comprobar) y toma lo publicado.
+- **Decisión (D-EST-05):** las imágenes no se copian entre tiendas. Copiarlas pide un trabajo de almacenamiento con service_role (GATE0 §44.3) y no aporta lo bastante para esta fase. La dueña elige logo e imágenes en la tienda nueva.
+- **Pruebas:** unit `portable` (7), pgTAP `86_theme_import` (9, con aislamiento) y E2E `theme-move` (copiar, descargar, subir, archivo inválido, axe).
+
 ### ADR-035 — Colecciones inteligentes (adelanta `/coleccion/[slug]`, P2 en GATE0 §21.2) · **pospuesto por el propietario el 2026-10-20: después del lanzamiento**
 
 **Esquema.** `collections`, con dos modos:

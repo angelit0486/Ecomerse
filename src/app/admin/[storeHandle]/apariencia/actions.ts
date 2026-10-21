@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  MAX_THEME_FILE_BYTES,
+  parseThemeFile,
+  portableDesign,
+  type PortableDesign,
+} from "@/lib/theme/portable";
+import { HomeSectionsV2, ThemeSettingsV2 } from "@/lib/theme/schema";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 import { invalidateStore } from "@/server/storefront/cache";
@@ -202,4 +209,94 @@ export async function restoreThemeVersion(
     ok: true,
     message: `Versión ${result.version} copiada al borrador${result.logo_missing ? " (su logo ya no existe: elige uno en Marca)" : ""}. Revísala en la vista previa y publícala.`,
   };
+}
+
+// -----------------------------------------------------------------------------
+// Mover el diseño (ADR-034 §6): importar un archivo exportado o copiar el diseño
+// publicado de otra tienda de la misma organización. Siempre al borrador.
+// -----------------------------------------------------------------------------
+async function importDesign(
+  storeHandle: string,
+  design: PortableDesign,
+  revision: number,
+  source: string,
+): Promise<FormState | null> {
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "appearance_import_design", {
+      p_store_id: storeId,
+      p_settings: design.settings,
+      p_sections: design.home_sections,
+      p_expected_revision: revision,
+      p_source: source,
+    });
+  } catch (error) {
+    return rpcFailure(error);
+  }
+  revalidatePath(`/admin/${storeHandle}/apariencia`);
+  return null;
+}
+
+const MOVED =
+  "Diseño copiado al borrador. Las imágenes y las secciones que dependían de productos, categorías o marcas de la otra tienda no se copian: revísalo en la vista previa y publícalo.";
+
+export async function importDesignFile(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Elige el archivo del diseño." };
+  if (file.size > MAX_THEME_FILE_BYTES) return { error: "El archivo es demasiado grande." };
+  const parsed = parseThemeFile(await file.text());
+  if (!parsed.ok) return { error: parsed.error };
+  const failed = await importDesign(storeHandle, parsed.design, revision, "file");
+  return failed ?? { ok: true, message: MOVED };
+}
+
+export async function copyDesignFromStore(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
+  const sourceId = String(formData.get("source_store_id") ?? "");
+  let design: PortableDesign;
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    // Solo tiendas de la MISMA organización a las que esta persona tiene acceso.
+    const stores = await callRpc<{ store_id: string; organization_id: string }[]>(
+      supabase,
+      "access_list_my_stores",
+    );
+    const target = stores.find((s) => s.store_id === storeId);
+    const source = stores.find((s) => s.store_id === sourceId);
+    if (
+      !target ||
+      !source ||
+      source.organization_id !== target.organization_id ||
+      sourceId === storeId
+    ) {
+      return { error: "Elige otra tienda de tu organización." };
+    }
+    const { data: theme, error } = await supabase
+      .from("store_themes")
+      .select("settings, home_sections")
+      .eq("store_id", sourceId)
+      .maybeSingle();
+    if (error) throw error;
+    const settings = ThemeSettingsV2.safeParse(theme?.settings ?? {});
+    const sections = HomeSectionsV2.safeParse(theme?.home_sections ?? []);
+    if (!theme || !settings.success || !sections.success) {
+      return { error: "Esa tienda todavía no tiene un diseño publicado." };
+    }
+    design = portableDesign(settings.data, sections.data);
+  } catch (error) {
+    return rpcFailure(error);
+  }
+  const failed = await importDesign(storeHandle, design, revision, `store:${sourceId}`);
+  return failed ?? { ok: true, message: MOVED };
 }
