@@ -61,6 +61,20 @@ function cleanItem(type: string, item: Json): Json {
   return out;
 }
 
+/** Una portada extra del hero: textos recortados, opcionales vacíos fuera. */
+function cleanSlide(slide: Json): Json {
+  const out: Json = { heading: clean(slide.heading) };
+  for (const key of ["subheading", "image_media_id", "mobile_image_media_id"]) {
+    const v = clean(slide[key]);
+    if (typeof v === "string" && v) out[key] = v;
+  }
+  const cta = (slide.cta ?? {}) as Json;
+  const label = clean(cta.label);
+  const link = typeof cta.link === "string" ? normalizeLink(cta.link) : "";
+  if (label || link) out.cta = { label, link };
+  return out;
+}
+
 const FIELD_LABELS: Record<string, string> = {
   heading: "Título",
   title: "Título",
@@ -85,6 +99,9 @@ const FIELD_LABELS: Record<string, string> = {
   visibility: "Dónde se ve",
   starts_at: "Mostrar desde",
   ends_at: "Mostrar hasta",
+  mobile_image_media_id: "Imagen para el celular",
+  slides: "Portadas que rotan",
+  autoplay: "Rotación",
 };
 
 /** Recorta textos, quita opcionales vacíos, normaliza enlaces y sanitiza el HTML. */
@@ -103,6 +120,13 @@ export function normalizeSections(input: unknown): unknown {
         const link = typeof cta.link === "string" ? normalizeLink(cta.link) : "";
         if (!label && !link) delete props.cta;
         else props.cta = { label, link };
+      } else if (key === "slides" && Array.isArray(value)) {
+        // Portadas extra del hero (tema v3): mismas reglas que el hero.
+        const slides = value.map((slide: Json) => cleanSlide(slide ?? {}));
+        if (slides.length === 0) {
+          delete props.slides;
+          delete props.autoplay;
+        } else props.slides = slides;
       } else if (key === "items" && Array.isArray(value)) {
         props.items = value.map((item: Json) => cleanItem(String(section.type), item ?? {}));
       } else if (key === "video_id" && typeof value === "string") {

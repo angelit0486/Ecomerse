@@ -90,6 +90,16 @@ export const SETTINGS_CASES: ReadonlyArray<SchemaCase> = [
     valid: true,
   },
   {
+    name: "barra de anuncio apagada (tema v3)",
+    value: { header: { announcement: { ...bar, hidden: true } } },
+    valid: true,
+  },
+  {
+    name: "barra de anuncio con «hidden» que no es booleano",
+    value: { header: { announcement: { ...bar, hidden: "no" } } },
+    valid: false,
+  },
+  {
     name: "barra de 120",
     value: { header: { announcement: { ...bar, text: "a".repeat(120) } } },
     valid: true,
@@ -405,6 +415,68 @@ export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
       }),
     ],
     valid: true,
+  },
+  // Tema v3 (misión Portada/Marcas): imagen del celular, foto de fondo y portadas que rotan.
+  {
+    name: "hero v3 completo",
+    value: [
+      sec(1, "hero", {
+        heading: "Hola",
+        align: "left",
+        image_media_id: id(9),
+        mobile_image_media_id: id(8),
+        layout: "background",
+        autoplay: true,
+        slides: [
+          {
+            heading: "Segunda",
+            subheading: "Sub",
+            image_media_id: id(7),
+            mobile_image_media_id: id(6),
+          },
+          { heading: "Tercera", cta: { label: "Ver", link: "/ofertas" } },
+        ],
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "hero con presentación desconocida",
+    value: [sec(1, "hero", { heading: "Hola", align: "left", layout: "full" })],
+    valid: false,
+  },
+  {
+    name: "hero con 4 portadas extra",
+    value: [
+      sec(1, "hero", {
+        heading: "Hola",
+        align: "left",
+        slides: [1, 2, 3, 4].map((n) => ({ heading: `P${n}` })),
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "hero con lista de portadas vacía",
+    value: [sec(1, "hero", { heading: "Hola", align: "left", slides: [] })],
+    valid: false,
+  },
+  {
+    name: "portada extra sin título",
+    value: [sec(1, "hero", { heading: "Hola", align: "left", slides: [{ subheading: "x" }] })],
+    valid: false,
+  },
+  {
+    name: "portada extra con campo desconocido",
+    value: [
+      sec(1, "hero", { heading: "Hola", align: "left", slides: [{ heading: "x", color: "#fff" }] }),
+    ],
+    valid: false,
+  },
+  {
+    name: "hero con autoplay que no es booleano",
+    value: [sec(1, "hero", { heading: "Hola", align: "left", autoplay: "sí" })],
+    valid: false,
   },
   { name: "hero sin título", value: [sec(1, "hero", { align: "center" })], valid: false },
   {

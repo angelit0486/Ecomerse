@@ -123,6 +123,37 @@ describe("secciones del editor de portada", () => {
     expect(sectionIssues([faq, benefits, video, hero])).toBeNull();
   });
 
+  it("portadas que rotan: textos recortados, enlace normalizado y lista vacía fuera (tema v3)", () => {
+    const hero = (props: Record<string, unknown>) => [
+      { id: ID, type: "hero", enabled: true, props: { heading: "Hola", align: "left", ...props } },
+    ];
+    expect(
+      normalizeSections(
+        hero({
+          slides: [
+            {
+              heading: "  Proteínas  ",
+              subheading: "",
+              image_media_id: "",
+              cta: { label: " Ver ", link: "categoria/proteinas" },
+            },
+            { heading: "Envío gratis", cta: { label: "", link: "" } },
+          ],
+          autoplay: true,
+        }),
+      ),
+    ).toEqual(
+      hero({
+        slides: [
+          { heading: "Proteínas", cta: { label: "Ver", link: "/categoria/proteinas" } },
+          { heading: "Envío gratis" },
+        ],
+        autoplay: true,
+      }),
+    );
+    expect(normalizeSections(hero({ slides: [], autoplay: true }))).toEqual(hero({}));
+  });
+
   it("la vigencia al revés se marca en su sección", () => {
     const issues = sectionIssues([
       {

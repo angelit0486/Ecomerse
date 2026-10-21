@@ -12,7 +12,7 @@ import {
   type Visibility,
 } from "@/lib/theme/constants";
 import { brokenLinkHint, type LinkTargets } from "@/lib/theme/link-targets";
-import type { HomeSectionType } from "@/lib/theme/schema";
+import { MAX_HERO_SLIDES, type HomeSectionType } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
 
 import { FormFeedback } from "../_shared/form-feedback";
@@ -211,16 +211,21 @@ function ImagePicker({
   onChange,
   banners,
   required,
+  legend = "Imagen",
 }: {
   id: string;
   value: string;
   onChange: (v: string) => void;
   banners: HomeEditorOptions["banners"];
   required?: boolean;
+  legend?: string;
 }) {
   return (
     <fieldset>
-      <legend className={label}>Imagen{required ? " (obligatoria)" : " (opcional)"}</legend>
+      <legend className={label}>
+        {legend}
+        {required ? " (obligatoria)" : " (opcional)"}
+      </legend>
       {banners.length === 0 ? (
         <p className="text-[13px] text-fg-muted">Sube una imagen abajo para usarla aquí.</p>
       ) : null}
@@ -319,6 +324,116 @@ function LinkTargetList({ links }: { links?: LinkTargets }) {
   );
 }
 
+interface HeroSlide {
+  heading: string;
+  subheading?: string;
+  image_media_id?: string;
+  mobile_image_media_id?: string;
+  cta?: { label: string; link: string };
+}
+
+/** Hasta 3 portadas más que rotan (tema v3), cada una con su texto, imágenes y botón. */
+function HeroSlidesFields({
+  id,
+  slides,
+  autoplay,
+  options,
+  onChange,
+}: {
+  id: string;
+  slides: HeroSlide[];
+  autoplay: boolean;
+  options: HomeEditorOptions;
+  onChange: (slides: HeroSlide[], autoplay: boolean) => void;
+}) {
+  const setSlide = (index: number, change: Partial<HeroSlide>) =>
+    onChange(
+      slides.map((s, i) => (i === index ? { ...s, ...change } : s)),
+      autoplay,
+    );
+  return (
+    <fieldset className="space-y-3 rounded-md border border-border p-3">
+      <legend className="px-1 text-sm font-semibold">Más portadas que rotan (opcional)</legend>
+      <p className="text-[13px] text-fg-muted">
+        Hasta {MAX_HERO_SLIDES} portadas más. Tus clientes pueden pausarlas y pasar de una a otra.
+      </p>
+      {slides.map((slide, index) => (
+        <div key={index} className="space-y-3 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-semibold">Portada {index + 2}</p>
+          <TextField
+            id={`${id}-s${index}-heading`}
+            text={`Título de la portada ${index + 2}`}
+            value={slide.heading ?? ""}
+            maxLength={80}
+            onChange={(heading) => setSlide(index, { heading })}
+          />
+          <TextField
+            id={`${id}-s${index}-sub`}
+            text={`Subtítulo de la portada ${index + 2} (opcional)`}
+            value={slide.subheading ?? ""}
+            maxLength={200}
+            onChange={(subheading) => setSlide(index, { subheading })}
+          />
+          <ImagePicker
+            id={`${id}-s${index}-img`}
+            legend={`Imagen de la portada ${index + 2}`}
+            value={slide.image_media_id ?? ""}
+            onChange={(image_media_id) => setSlide(index, { image_media_id })}
+            banners={options.banners}
+          />
+          <ImagePicker
+            id={`${id}-s${index}-mimg`}
+            legend={`Imagen para el celular de la portada ${index + 2}`}
+            value={slide.mobile_image_media_id ?? ""}
+            onChange={(mobile_image_media_id) => setSlide(index, { mobile_image_media_id })}
+            banners={options.banners}
+          />
+          <CtaFields
+            id={`${id}-s${index}`}
+            cta={slide.cta}
+            links={options.links}
+            onChange={(cta) => setSlide(index, { cta })}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              onChange(
+                slides.filter((_, i) => i !== index),
+                autoplay,
+              )
+            }
+          >
+            Quitar la portada {index + 2}
+          </Button>
+        </div>
+      ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={slides.length >= MAX_HERO_SLIDES}
+          onClick={() => onChange([...slides, { heading: "" }], autoplay)}
+        >
+          Agregar otra portada
+        </Button>
+        {slides.length > 0 ? (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={autoplay}
+              onChange={(e) => onChange(slides, e.target.checked)}
+            />
+            Que roten solas cada 6 segundos
+          </label>
+        ) : null}
+      </div>
+    </fieldset>
+  );
+}
+
 function SectionFields({
   section,
   options,
@@ -371,13 +486,45 @@ function SectionFields({
               <option value="left">A la izquierda</option>
             </select>
           </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${id}-layout`} className={label}>
+              Presentación
+            </label>
+            <select
+              id={`${id}-layout`}
+              value={str("layout") || "split"}
+              onChange={(e) => set("layout")(e.target.value)}
+              className={control}
+              aria-describedby={`${id}-layout-hint`}
+            >
+              <option value="split">Foto al lado, texto sobre tu color</option>
+              <option value="background">Foto de fondo con texto blanco</option>
+            </select>
+            <p id={`${id}-layout-hint`} className="text-[13px] text-fg-muted">
+              Con foto de fondo se agrega una capa oscura para que el texto siempre se lea.
+            </p>
+          </div>
           <ImagePicker
             id={`${id}-img`}
             value={str("image_media_id")}
             onChange={set("image_media_id")}
             banners={options.banners}
           />
+          <ImagePicker
+            id={`${id}-mimg`}
+            legend="Imagen para el celular"
+            value={str("mobile_image_media_id")}
+            onChange={set("mobile_image_media_id")}
+            banners={options.banners}
+          />
           <CtaFields id={id} cta={p.cta as never} links={options.links} onChange={set("cta")} />
+          <HeroSlidesFields
+            id={id}
+            slides={Array.isArray(p.slides) ? (p.slides as HeroSlide[]) : []}
+            autoplay={p.autoplay === true}
+            options={options}
+            onChange={(slides, autoplay) => update({ ...p, slides, autoplay })}
+          />
         </div>
       );
     case "featured_products": {

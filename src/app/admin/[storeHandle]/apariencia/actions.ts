@@ -146,6 +146,50 @@ export async function publishTheme(
   return { ok: true, message: "Publicado. Tus clientes ya ven la nueva apariencia." };
 }
 
+/**
+ * «Deshacer la última publicación» (misión Portada/Marcas, Paso 3): copia la
+ * versión anterior del historial al borrador y la publica. Son las mismas dos
+ * RPC que «Restaurar» + «Publicar», con la revisión encadenada; si otra persona
+ * cambió el borrador en medio, la publicación se rechaza y nada se pierde.
+ */
+export async function undoPublish(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const versionId = String(formData.get("version_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/.test(versionId)) return { error: "Versión no válida." };
+  const revision = readRevision(formData);
+  if (revision === null) return { error: "Recarga la página e inténtalo de nuevo." };
+  let version: number;
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    const restored = await callRpc<{ revision: number; version: number }>(
+      supabase,
+      "appearance_restore_theme_version",
+      { p_store_id: storeId, p_version_id: versionId, p_expected_revision: revision },
+    );
+    version = restored.version;
+    await callRpc(supabase, "appearance_publish_theme", {
+      p_store_id: storeId,
+      p_expected_revision: restored.revision,
+    });
+    invalidateStore(storeId);
+  } catch (error) {
+    const e = themeRpcError(error);
+    if (e.detail === "references") {
+      return {
+        error:
+          "La versión anterior usa imágenes, productos o categorías que ya no existen. Elige otra en Historial.",
+      };
+    }
+    if (e.code === "not_found") return { error: "Esa versión ya no está en el historial." };
+    return rpcFailure(error);
+  }
+  revalidatePath(`/admin/${storeHandle}/apariencia`);
+  return { ok: true, message: `Listo: volviste a la versión ${version}. Tus clientes ya la ven.` };
+}
+
 export async function discardThemeDraft(
   storeHandle: string,
   section: string,

@@ -116,6 +116,8 @@ const announcement = z
     foreground: hex,
     starts_at: instant.optional(),
     ends_at: instant.optional(),
+    /** Tema v3: apagada sin perder el texto. */
+    hidden: z.boolean().optional(),
   })
   .refine(schedule, SCHEDULE_ERROR);
 
@@ -205,12 +207,34 @@ export type ThemeSettings = z.infer<typeof ThemeSettingsV2>;
 
 const cta = z.strictObject({ label: text(1, 30), link });
 
+/** Una portada extra del hero (tema v3). */
+const heroSlide = z.strictObject({
+  heading: text(1, 80),
+  subheading: text(1, 200).optional(),
+  image_media_id: uuid.optional(),
+  mobile_image_media_id: uuid.optional(),
+  cta: cta.optional(),
+});
+
+export const MAX_HERO_SLIDES = 3;
+
 const hero = z.strictObject({
   heading: text(1, 80),
   subheading: text(1, 200).optional(),
   image_media_id: uuid.optional(),
   cta: cta.optional(),
   align: z.enum(["left", "center"]),
+  /** Tema v3: otra imagen para el celular. */
+  mobile_image_media_id: uuid.optional(),
+  /** «split»: foto al lado (como antes); «background»: foto de fondo con capa oscura. */
+  layout: z.enum(["split", "background"]).optional(),
+  /** Hasta 3 portadas más que rotan (con pausa). */
+  slides: z
+    .array(heroSlide)
+    .min(1, "Agrega al menos una portada o quita la lista.")
+    .max(MAX_HERO_SLIDES, `Hasta ${MAX_HERO_SLIDES} portadas más.`)
+    .optional(),
+  autoplay: z.boolean().optional(),
 });
 
 const productSource = z.discriminatedUnion("type", [

@@ -154,6 +154,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
         hasDraft={hasDraft}
         publishedAt={theme?.published_at ?? null}
         previewAction={`${base}/apariencia/vista-previa`}
+        previous={hasDraft ? null : await loadPreviousVersion(ctx.store.id)}
       />
 
       <nav aria-label="Secciones de apariencia">
@@ -224,7 +225,9 @@ export default async function AppearancePage({ params, searchParams }: Props) {
       {tab === "portada" ? (
         <p className="rounded-md border border-border p-3 text-sm">
           {settings.header?.announcement
-            ? `Barra de anuncio arriba de la portada: «${settings.header.announcement.text}». `
+            ? settings.header.announcement.hidden
+              ? `Barra de anuncio apagada (no se muestra): «${settings.header.announcement.text}». `
+              : `Barra de anuncio arriba de la portada: «${settings.header.announcement.text}». `
             : "Sin barra de anuncio arriba de la portada. "}
           <Link
             href={`${base}/apariencia?seccion=encabezado#anuncio`}
@@ -286,6 +289,21 @@ export default async function AppearancePage({ params, searchParams }: Props) {
 }
 
 /** Lo que se puede elegir en la portada: imágenes, categorías, marcas y objetivos. */
+
+/** La publicación anterior a la vigente; null si solo hay una o no se pudo leer. */
+async function loadPreviousVersion(
+  storeId: string,
+): Promise<{ id: string; number: number } | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("store_theme_versions")
+    .select("id, number")
+    .eq("store_id", storeId)
+    .order("number", { ascending: false })
+    .range(1, 1);
+  if (error || !data?.[0]) return null;
+  return { id: data[0].id as string, number: data[0].number as number };
+}
 
 /** Versiones publicadas (ADR-034 §4), con un resumen legible de cada una. */
 async function loadVersions(storeId: string): Promise<ThemeVersionRow[]> {

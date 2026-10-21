@@ -24,6 +24,12 @@ describe("enlaces y WhatsApp escritos por una persona", () => {
     expect(normalizeLink("/productos")).toBe("/productos");
   });
 
+  it("una ruta escrita sin la diagonal inicial sigue siendo de la tienda", () => {
+    expect(normalizeLink("categoria/proteinas")).toBe("/categoria/proteinas");
+    expect(normalizeLink(" ofertas ")).toBe("/ofertas");
+    expect(normalizeLink("marca.com/promo")).toBe("https://marca.com/promo");
+  });
+
   it("no convierte en válido lo que no lo es", () => {
     expect(normalizeLink("http://example.com")).toBe("http://example.com");
     expect(normalizeLink("javascript:alert(1)")).toBe("javascript:alert(1)");
@@ -130,6 +136,28 @@ describe("tema v2 en el panel (ADR-034)", () => {
       ],
     });
     expect(validatePatch(patch)).toEqual({ ok: true, patch });
+  });
+
+  it("encabezado: la barra se puede ocultar sin borrarla", () => {
+    const base = {
+      announcement_text: "Buen Fin",
+      announcement_background: "#111827",
+      announcement_foreground: "#ffffff",
+      announcement_toggle: "1",
+    };
+    const off = form(base);
+    const hidden = sectionPatch("encabezado", off.get, off.getAll);
+    expect(hidden.header).toHaveProperty("announcement", {
+      text: "Buen Fin",
+      background: "#111827",
+      foreground: "#ffffff",
+      hidden: true,
+    });
+    expect(validatePatch(hidden)).toEqual({ ok: true, patch: hidden });
+    const on = form({ ...base, announcement_shown: "1" });
+    expect(sectionPatch("encabezado", on.get, on.getAll).header).not.toHaveProperty(
+      "announcement.hidden",
+    );
   });
 
   it("un acceso rápido sin nombre se marca en su campo", () => {

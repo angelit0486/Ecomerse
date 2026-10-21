@@ -148,6 +148,7 @@ test("armar la portada por secciones, vista previa y publicar", async ({ page, b
 
   // Publicar: el comprador la ve y "Ver todos" lleva al listado filtrado.
   await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Sí, publicar" }).click();
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
   await shopper.reload();
   await expect(shopper.getByRole("heading", { level: 1 })).toHaveText(

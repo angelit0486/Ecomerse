@@ -74,6 +74,7 @@ type Raw = {
       foreground?: unknown;
       starts_at?: unknown;
       ends_at?: unknown;
+      hidden?: unknown;
     };
   };
 };
@@ -114,8 +115,9 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
       s.shape?.density === "compact" || s.shape?.density === "spacious"
         ? s.shape.density
         : "comfortable",
+    // Tema v3: «hidden» la apaga sin perder el texto.
     announcement:
-      bar && typeof bar.text === "string" && bar.text && barBg && barFg
+      bar && typeof bar.text === "string" && bar.text && barBg && barFg && bar.hidden !== true
         ? {
             text: bar.text,
             link: typeof bar.link === "string" ? bar.link : null,

@@ -49,6 +49,9 @@ function multiline(value: string): string {
 export function normalizeLink(value: string): string {
   const v = value.trim();
   if (!v || v.startsWith("/")) return v;
+  // «categoria/proteinas» o «ofertas» son rutas de la tienda escritas sin la
+  // diagonal, no un dominio: sin punto antes de la primera «/» no hay dominio.
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^[^/?#]*\./.test(v)) return `/${v}`;
   const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
   try {
     const url = new URL(withScheme);
@@ -109,6 +112,8 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
             foreground: get("announcement_foreground").trim().toLowerCase(),
             ...(startsAt ? { starts_at: startsAt } : {}),
             ...(endsAt ? { ends_at: endsAt } : {}),
+            // Apagada se guarda con su texto para volver a mostrarla con un clic.
+            ...(get("announcement_toggle") && !get("announcement_shown") ? { hidden: true } : {}),
           }
         : undefined,
       quick_links: quickLinks.length ? quickLinks : undefined,

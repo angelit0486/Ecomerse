@@ -21,6 +21,7 @@ import {
 } from "@/lib/theme/constants";
 import type { ThemeSettings } from "@/lib/theme/schema";
 import { Button } from "@/ui/primitives/button";
+import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
@@ -30,7 +31,7 @@ import { FormFeedback } from "../_shared/form-feedback";
 import { SeoPreview } from "../_shared/seo-preview";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
-import { discardThemeDraft, publishTheme, saveThemeSection } from "./actions";
+import { discardThemeDraft, publishTheme, saveThemeSection, undoPublish } from "./actions";
 import type { ThemeSection } from "./patch";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
@@ -461,6 +462,13 @@ export function HeaderFooterForm({
         </Field>
         {/* Destino de «Editar la barra de anuncio» desde la pestaña Portada. */}
         <div id="anuncio" className="scroll-mt-20" />
+        <input type="hidden" name="announcement_toggle" value="1" />
+        <Toggle
+          name="announcement_shown"
+          label="Mostrar el anuncio en la tienda"
+          hint="Apágala para quitarla un tiempo sin perder el texto ni los colores."
+          initial={bar?.hidden !== true}
+        />
         <Field
           label="Barra de anuncio"
           hint="Hasta 120 caracteres. Vacía, no se muestra."
@@ -1035,6 +1043,7 @@ export function PublishBar({
   hasDraft,
   publishedAt,
   previewAction,
+  previous,
 }: {
   storeHandle: string;
   section: string;
@@ -1042,9 +1051,15 @@ export function PublishBar({
   hasDraft: boolean;
   publishedAt: string | null;
   previewAction: string;
+  /** La publicación anterior a la vigente, para «Deshacer la última publicación». */
+  previous: { id: string; number: number } | null;
 }) {
   const [publishState, publish, publishing] = useSafeActionState<FormState, FormData>(
     publishTheme.bind(null, storeHandle),
+    {},
+  );
+  const [undoState, undo, undoing] = useSafeActionState<FormState, FormData>(
+    undoPublish.bind(null, storeHandle),
     {},
   );
   const [discardState, discard, discarding] = useSafeActionState<FormState, FormData>(
@@ -1080,13 +1095,34 @@ export function PublishBar({
         {hasDraft ? (
           <form action={publish} onSubmit={submitKeepingState(publish)}>
             <input type="hidden" name="revision" value={revision} />
-            <Button type="submit" loading={publishing}>
+            <ConfirmButton
+              variant="primary"
+              loading={publishing}
+              question="¿Publicar los cambios? Tus clientes los verán al instante."
+              confirmLabel="Sí, publicar"
+              detail="Si algo no te gusta, después puedes deshacer la publicación."
+            >
               Publicar
-            </Button>
+            </ConfirmButton>
+          </form>
+        ) : previous ? (
+          <form action={undo} onSubmit={submitKeepingState(undo)}>
+            <input type="hidden" name="revision" value={revision} />
+            <input type="hidden" name="version_id" value={previous.id} />
+            <ConfirmButton
+              variant="ghost"
+              loading={undoing}
+              question={`¿Volver a la versión ${previous.number}? Tus clientes la verán al instante.`}
+              confirmLabel="Sí, deshacer"
+              detail="La versión actual queda en el historial por si la quieres recuperar."
+            >
+              Deshacer la última publicación
+            </ConfirmButton>
           </form>
         ) : null}
       </div>
       <FormFeedback state={publishState} />
+      <FormFeedback state={undoState} />
       {hasDraft ? (
         <form
           action={discard}

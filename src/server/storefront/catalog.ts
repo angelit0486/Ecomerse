@@ -682,6 +682,17 @@ type SectionBody =
       align: "left" | "center";
       cta?: { label: string; link: string } | null;
       image: ImageRef | null;
+      /** Tema v3 (pueden faltar en datos resueltos antes de la migración). */
+      mobile_image?: ImageRef | null;
+      layout?: "split" | "background";
+      autoplay?: boolean;
+      slides?: {
+        heading: string;
+        subheading?: string | null;
+        cta?: { label: string; link: string } | null;
+        image: ImageRef | null;
+        mobile_image: ImageRef | null;
+      }[];
     }
   | {
       type: "featured_products";

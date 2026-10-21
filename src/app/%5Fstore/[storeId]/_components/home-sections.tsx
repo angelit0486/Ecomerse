@@ -1,7 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { getCategoryCovers, mediaUrl, type HomeSectionData } from "@/server/storefront/catalog";
+import {
+  getCategoryCovers,
+  mediaUrl,
+  type HomeSectionData,
+  type ImageRef,
+} from "@/server/storefront/catalog";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { GoalTiles, type GoalTile } from "./goal-chips";
@@ -14,6 +19,7 @@ import {
   VideoBlock,
 } from "./home-blocks";
 import { ProductGrid } from "./rated-product-grid";
+import { HeroCarousel } from "./hero-carousel";
 import { ThemeLink } from "./theme-link";
 
 /**
@@ -94,61 +100,153 @@ export function viewAllHref(
   }
 }
 
+type HeroData = Extract<HomeSectionData, { type: "hero" }>;
+interface HeroSlideData {
+  heading: string;
+  subheading?: string | null;
+  cta?: { label: string; link: string } | null;
+  image: ImageRef | null;
+  mobile_image?: ImageRef | null;
+}
+
 /**
- * Hero de anaquel (rediseño A+B): tarjeta en el color de compra con el texto que
- * ese color ya garantiza (≥ 4.5:1) y el botón invertido (mismo par). Con imagen,
- * va a la derecha en escritorio y abajo en móvil.
+ * Hero de anaquel (rediseño A+B). «split»: tarjeta en el color de compra con el
+ * texto que ese color ya garantiza (≥ 4.5:1) y la imagen al lado (abajo en el
+ * celular). «background» (tema v3): foto de fondo con capa negra al 60 % y texto
+ * blanco, ≥ 5.7:1 con cualquier foto. La imagen del celular, si la hay, se usa
+ * por debajo de 640 px. Con portadas extra, rotan con pausa (HeroCarousel).
  */
-function Hero({
-  section,
-  headingLevel,
+function Hero({ section, headingLevel }: { section: HeroData; headingLevel: 1 | 2 }) {
+  const slides: HeroSlideData[] = [section, ...(section.slides ?? [])];
+  const rendered = slides.map((slide, index) => (
+    <HeroSlide
+      key={index}
+      slide={slide}
+      align={section.align}
+      layout={section.layout ?? "split"}
+      // Un solo h1 (el de la primera); solo la primera imagen es el LCP.
+      headingLevel={index === 0 ? headingLevel : 2}
+      eager={index === 0}
+    />
+  ));
+  if (rendered.length === 1) return rendered[0]!;
+  return (
+    <HeroCarousel autoplay={section.autoplay ?? false} labels={slides.map((s) => s.heading)}>
+      {rendered}
+    </HeroCarousel>
+  );
+}
+
+function HeroPicture({
+  slide,
+  className,
+  eager,
 }: {
-  section: Extract<HomeSectionData, { type: "hero" }>;
+  slide: HeroSlideData;
+  className: string;
+  eager: boolean;
+}) {
+  const image = slide.image ?? slide.mobile_image ?? null;
+  if (!image) return null;
+  const mobile = slide.mobile_image && slide.image ? slide.mobile_image : null;
+  return (
+    <picture className="contents">
+      {mobile ? <source media="(max-width: 639px)" srcSet={mediaUrl(mobile.path)} /> : null}
+      <img
+        src={mediaUrl(image.path)}
+        alt={image.alt ?? ""}
+        width={image.width ?? 1600}
+        height={image.height ?? 640}
+        fetchPriority={eager ? "high" : undefined}
+        loading={eager ? undefined : "lazy"}
+        decoding="async"
+        className={className}
+      />
+    </picture>
+  );
+}
+
+function HeroSlide({
+  slide,
+  align,
+  layout,
+  headingLevel,
+  eager,
+}: {
+  slide: HeroSlideData;
+  align: "left" | "center";
+  layout: "split" | "background";
   headingLevel: 1 | 2;
+  eager: boolean;
 }) {
   const Heading = headingLevel === 1 ? "h1" : "h2";
-  const centered = section.align === "center";
-  const image = section.image;
+  const centered = align === "center";
+  const hasImage = Boolean(slide.image ?? slide.mobile_image);
+  const background = layout === "background" && hasImage;
+  const text = (
+    <>
+      <Heading className="max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
+        {slide.heading}
+      </Heading>
+      {slide.subheading ? (
+        <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+          {slide.subheading}
+        </p>
+      ) : null}
+    </>
+  );
+  if (background) {
+    return (
+      <section className="relative isolate grid min-h-[22rem] overflow-hidden rounded-[var(--sf-radius-panel)] text-white sm:min-h-[28rem] [&_:focus-visible]:outline-white">
+        <HeroPicture
+          slide={slide}
+          eager={eager}
+          className="absolute inset-0 -z-20 size-full object-cover"
+        />
+        {/* Capa negra al 60 %: el texto blanco queda ≥ 5.7:1 sobre cualquier foto. */}
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
+        <div
+          className={`flex flex-col justify-end gap-4 px-5 py-8 sm:px-12 sm:py-14 ${centered ? "items-center text-center" : "items-start"}`}
+        >
+          {text}
+          {slide.cta ? (
+            <ThemeLink
+              href={slide.cta.link}
+              className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-white px-7 font-bold text-black"
+            >
+              {slide.cta.label}
+            </ThemeLink>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
   return (
     <section
       className={`grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
-        image && !centered ? "sm:grid-cols-[1.1fr_1fr] sm:items-center" : ""
+        hasImage && !centered ? "sm:grid-cols-[1.1fr_1fr] sm:items-center" : ""
       }`}
     >
       <div
-        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${image ? "pb-2" : "pb-7"} ${centered ? "items-center text-center" : "items-start"}`}
+        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${hasImage ? "pb-2" : "pb-7"} ${centered ? "items-center text-center" : "items-start"}`}
       >
-        <Heading className="max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
-          {section.heading}
-        </Heading>
-        {section.subheading ? (
-          <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-            {section.subheading}
-          </p>
-        ) : null}
-        {section.cta ? (
+        {text}
+        {slide.cta ? (
           <ThemeLink
-            href={section.cta.link}
+            href={slide.cta.link}
             className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-on-primary)] px-7 font-bold text-[var(--sf-primary)]"
           >
-            {section.cta.label}
+            {slide.cta.label}
           </ThemeLink>
         ) : null}
       </div>
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la portada
-        <img
-          src={mediaUrl(image.path)}
-          alt={image.alt ?? ""}
-          width={image.width ?? 1600}
-          height={image.height ?? 640}
-          fetchPriority="high"
-          decoding="async"
-          className={`block w-full object-cover ${
-            centered ? "aspect-[16/7]" : "aspect-[16/9] sm:aspect-auto sm:h-full sm:min-h-80"
-          }`}
-        />
-      ) : null}
+      <HeroPicture
+        slide={slide}
+        eager={eager}
+        className={`block w-full object-cover ${
+          centered ? "aspect-[16/7]" : "aspect-[16/9] sm:aspect-auto sm:h-full sm:min-h-80"
+        }`}
+      />
     </section>
   );
 }

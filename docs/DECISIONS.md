@@ -1000,3 +1000,23 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
   - Es distinto de E15, que es el registro público de organizaciones nuevas: aquí no se crea ninguna organización ni cuenta.
 - **Riesgos.** Más tiendas facturables sin intervención de la plataforma, y nombres de dirección reservados por error. Se mitigan con el límite del plan, la auditoría y la tienda en borrador.
 - **Estado.** **Pendiente de aprobación del propietario.** Sin aprobación no se implementa.
+
+## 27. Portada y marcas: editar la portada sin problemas y fotos de marcas (2026-10-21)
+
+Ninguna de estas decisiones toca un contrato crítico de GATE0 §43: amplían el tema v2 (ADR-034, aprobado) y el perfil de las marcas con los mismos validadores, RLS y funciones `SECURITY DEFINER`.
+
+- **D-POR-01. Perfil de la marca.**
+  - Portada, descripción y sitio web (`20261023000100`). Se cambian solo con `brands.manage`.
+  - Logo y descripción también desde el CSV (`20261023000200`), con el descargador seguro de ADR-033. Un logo listo nunca se reemplaza desde el archivo (`20261023000400`).
+- **D-POR-02. Tema v3, extensión de ADR-034.**
+  - **Barra de anuncio apagada:** `header.announcement.hidden` la quita de la tienda sin borrar el texto ni los colores.
+  - **Portada principal:**
+    - `layout`: «split» (como antes) o «background», que pone la foto de fondo con una capa negra al 60 % y texto blanco, para que el contraste sea ≥ 4.5:1 con cualquier foto;
+    - `mobile_image_media_id`: otra imagen para el celular;
+    - `slides`: hasta 3 portadas más, con `autoplay` opcional cada 6 s.
+  - Las imágenes nuevas pasan por la misma regla de referencias (banners listos de la misma tienda) y los textos de las portadas extra por la revisión de cumplimiento.
+  - El carrusel cumple WCAG 2.2.2: botón de pausa, se detiene al pasar el mouse o al enfocar, y no rota con «reducir movimiento».
+  - Migración `20261023000300` y pgTAP `95_theme_v3`. El esquema Zod y SQL siguen en paridad (`theme-schema-cases.ts`).
+- **D-POR-03. Publicar con confirmación y «Deshacer la última publicación».**
+  - «Publicar» pregunta antes, porque los clientes ven el cambio al instante.
+  - «Deshacer» copia la versión anterior del historial al borrador y la publica, con las mismas RPC que «Restaurar» y «Publicar» (ADR-034 T4) y la revisión encadenada. Si otra persona cambió el borrador en medio, se rechaza sin perder nada. La versión deshecha queda en el historial.

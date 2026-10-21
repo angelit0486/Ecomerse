@@ -112,6 +112,7 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await expectNoSeriousA11yViolations(page);
 
   await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Sí, publicar" }).click();
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
 
   // Tienda en el celular: preguntas sí, beneficios no; video sin iframe hasta tocarlo.
@@ -166,6 +167,7 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
     page.getByRole("status").filter({ hasText: "Portada guardada en el borrador" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Sí, publicar" }).click();
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
   await wide.goto(store());
   await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toHaveCount(0);
@@ -181,6 +183,7 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await wide.reload();
   await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toHaveCount(0);
   await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Sí, publicar" }).click();
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
   await wide.reload();
   await expect(wide.getByRole("heading", { name: "Cómo preparar tu batido" })).toBeVisible();

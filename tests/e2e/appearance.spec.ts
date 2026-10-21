@@ -146,6 +146,7 @@ test("editar por pestañas, vista previa privada y publicar", async ({ page, bro
 
   // Publicar: los clientes lo ven al instante.
   await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Sí, publicar" }).click();
   await expect(page.getByText("Publicado. Tus clientes ya ven la nueva apariencia.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Todo está publicado" })).toBeVisible();
   const fonts = new Set<string>();

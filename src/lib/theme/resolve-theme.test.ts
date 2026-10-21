@@ -91,6 +91,16 @@ describe("resolveTheme", () => {
     expect(announcementActive(null)).toBe(false);
   });
 
+  it("anuncio apagado (tema v3): no se muestra aunque tenga texto", () => {
+    const bar = { text: "Hola", background: "#111827", foreground: "#ffffff" };
+    expect(
+      resolveTheme({ header: { announcement: { ...bar, hidden: true } } }).announcement,
+    ).toBeNull();
+    expect(
+      resolveTheme({ header: { announcement: { ...bar, hidden: false } } }).announcement,
+    ).not.toBeNull();
+  });
+
   it("fuentes solo de la lista curada; cualquier otra cae en la de por defecto", () => {
     const theme = resolveTheme({ typography: { heading: "oswald", body: "x);}*{y:z" } });
     expect(theme.fonts).toEqual({ heading: "oswald", body: "inter" });
