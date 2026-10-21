@@ -484,6 +484,18 @@ describe("logo y descripción de la marca (misión Portada/Marcas)", () => {
     expect(plan[3]!.errors).toContain("brand_description: hasta 1000 caracteres");
   });
 
+  it("caracteres invisibles (pegados de Excel o Word): error por fila, no se cae la importación", () => {
+    const plan = planProductImport(BH, [
+      row(
+        { handle: "e", title: "E", price: "1", brand: "X", brand_description: "Hola\u000Bmundo" },
+        BH,
+      ),
+    ]);
+    expect(plan[0]!.errors).toContain(
+      "brand_description: tiene caracteres invisibles; vuelve a escribir el texto",
+    );
+  });
+
   it("son columnas conocidas", () => {
     expect(ALL_IMPORT_HEADERS).toEqual(
       expect.arrayContaining(["brand_logo_url", "brand_description"]),

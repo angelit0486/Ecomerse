@@ -303,6 +303,8 @@ function planBrandProfile(
     const description = f("brand_description");
     if (description.length > MAX_BRAND_DESCRIPTION) {
       errors.push(`brand_description: hasta ${MAX_BRAND_DESCRIPTION} caracteres`);
+    } else if (/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(description)) {
+      errors.push("brand_description: tiene caracteres invisibles; vuelve a escribir el texto");
     } else profile.description = description;
   }
   return Object.keys(profile).length > 0 ? profile : null;

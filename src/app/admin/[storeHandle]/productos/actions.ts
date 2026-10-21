@@ -1263,8 +1263,14 @@ export async function saveBrand(
   const name = String(formData.get("name") ?? "").trim();
   // Descripción y sitio solo si el formulario los trae (el alta rápida no).
   const profile: Record<string, string> = {};
-  for (const key of ["description", "website_url"]) {
+  for (const key of ["description", "website_url", "slug"]) {
     if (formData.has(key)) profile[key] = String(formData.get(key) ?? "").trim();
+  }
+  // El host va en minúsculas (como lo exige la base); la ruta se respeta.
+  if (profile.website_url) {
+    profile.website_url = profile.website_url.replace(/^(https?:\/\/[^/?#]+)/i, (h) =>
+      h.toLowerCase(),
+    );
   }
   const values = { name, ...profile };
   if (!name || name.length > 120)

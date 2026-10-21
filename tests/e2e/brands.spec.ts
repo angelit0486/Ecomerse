@@ -70,6 +70,15 @@ test("logos de varias marcas, portada, descripción y sitio desde el celular", a
   ]);
   await expect(page.getByLabel("Marca de muha-meds-logo.png")).toHaveValue(/.+/);
   await expect(page.getByLabel("Marca de otra-marca.png")).toHaveValue("");
+  // La misma marca en dos archivos se bloquea con un aviso (revisión del Paso 2, B7).
+  await page.getByLabel("Marca de otra-marca.png").selectOption({ label: "Muha Meds" });
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Elegiste la misma marca para dos archivos" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Subir \d+ logos?$/ })).toBeDisabled();
+  await page
+    .getByLabel("Marca de otra-marca.png")
+    .selectOption({ label: "Sin marca (no se sube)" });
   await page.getByRole("button", { name: "Subir 2 logos" }).click();
   await expect(page.getByRole("status").filter({ hasText: "2 logos subidos." })).toBeVisible({
     timeout: 20_000,
@@ -92,6 +101,8 @@ test("logos de varias marcas, portada, descripción y sitio desde el celular", a
   await expect(muha.getByRole("status").filter({ hasText: "Listo." })).toBeVisible({
     timeout: 20_000,
   });
+  // Renombrar no cambia la dirección de la marca (M5).
+  await muha.getByLabel("Nombre").fill("Muha Meds MX");
   await muha.getByLabel("Descripción (opcional)").fill("Creatinas y proteínas.\nHechas en México.");
   await muha.getByLabel("Sitio web (opcional)").fill("http://muha.example.com");
   await muha.getByRole("button", { name: "Guardar datos de la marca" }).click();
@@ -101,7 +112,7 @@ test("logos de varias marcas, portada, descripción y sitio desde el celular", a
   await muha.getByLabel("Sitio web (opcional)").fill("https://muha.example.com");
   await muha.getByRole("button", { name: "Guardar datos de la marca" }).click();
   await expect(
-    muha.getByRole("status").filter({ hasText: "Marca «Muha Meds» actualizada." }),
+    muha.getByRole("status").filter({ hasText: "Marca «Muha Meds MX» actualizada." }),
   ).toBeVisible();
   await runJobs();
 
@@ -121,6 +132,7 @@ test("logos de varias marcas, portada, descripción y sitio desde el celular", a
   await expectNoSeriousA11yViolations(page);
   await page.goto(`${store()}/marca/muha-meds`);
   await expect(page.getByRole("img", { name: "Portada de Muha Meds" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Muha Meds MX" })).toBeVisible();
   await expect(page.getByText("Hechas en México.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Sitio de Muha Meds/ })).toHaveAttribute(
     "href",
@@ -132,9 +144,15 @@ test("logos de varias marcas, portada, descripción y sitio desde el celular", a
   await page.goto(`/admin/${tenant.handle}/productos/marcas`);
   const ace = page.getByRole("listitem").filter({ hasText: "Ace Ultra" });
   await ace.getByText("Editar").click();
+  const [aceLogo] = await admin<{ id: string }[]>`
+    select logo_media_id as id from public.brands where store_id = ${tenant.storeId} and slug = 'ace-ultra'`;
   await ace.getByRole("button", { name: "Quitar logo" }).click();
   await ace.getByRole("button", { name: "Sí, quitar logo" }).click();
   await expect(ace.getByRole("status").filter({ hasText: "Logo quitado." })).toBeVisible();
+  // La imagen quitada no queda huérfana contando en la cuota (M4).
+  const [removed] = await admin<{ deleted: boolean }[]>`
+    select deleted_at is not null as deleted from public.media where id = ${aceLogo!.id}`;
+  expect(removed!.deleted).toBe(true);
   await page.goto(`${store()}/marcas`);
   await expect(page.getByText("AU", { exact: true })).toBeVisible();
 });

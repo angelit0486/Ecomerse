@@ -14,7 +14,13 @@ export function BrandProfileForm({
   brand,
 }: {
   storeHandle: string;
-  brand: { id: string; name: string; description: string | null; website_url: string | null };
+  brand: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    website_url: string | null;
+  };
 }) {
   const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     saveBrand.bind(null, storeHandle),
@@ -24,6 +30,8 @@ export function BrandProfileForm({
   return (
     <form action={action} className="space-y-3" noValidate>
       <input type="hidden" name="id" value={brand.id} />
+      {/* Renombrar no cambia la dirección de la página de la marca (revisión del Paso 2). */}
+      <input type="hidden" name="slug" value={brand.slug} />
       <Field
         label="Nombre"
         id={`${prefix}-name`}

@@ -94,11 +94,15 @@ export function BrandImageField({
     if (!picked) return;
     let url: string | null = null;
     let alive = true;
-    void frameImage(picked, SIZES[kind], fit).then((framed) => {
-      if (!alive) return;
-      url = URL.createObjectURL(framed);
-      setPreview(url);
-    });
+    frameImage(picked, SIZES[kind], fit)
+      .then((framed) => {
+        if (!alive) return;
+        url = URL.createObjectURL(framed);
+        setPreview(url);
+      })
+      .catch(() => {
+        if (alive) setStatus({ error: "No pudimos leer esa imagen. Prueba con otra (JPG o PNG)." });
+      });
     return () => {
       alive = false;
       if (url) URL.revokeObjectURL(url);
@@ -110,8 +114,12 @@ export function BrandImageField({
     setBusy(true);
     setStatus({});
     try {
-      const framed = await frameImage(picked, SIZES[kind], fit);
-      const error = await uploadBrandImage(storeHandle, brand, kind, framed);
+      const framed = await frameImage(picked, SIZES[kind], fit).catch(() => null);
+      if (!framed)
+        return setStatus({ error: "No pudimos leer esa imagen. Prueba con otra (JPG o PNG)." });
+      const error = await uploadBrandImage(storeHandle, brand, kind, framed).catch(
+        () => "No se pudo subir la imagen. Revisa tu conexión e inténtalo de nuevo.",
+      );
       if (error) return setStatus({ error });
       setStatus({ message: `Listo. En unos segundos se ve en la tienda.` });
       setPicked(null);
@@ -264,14 +272,22 @@ export function BulkBrandLogos({
 
   function add(files: FileList | File[]) {
     setSummary(null);
+    // Dos archivos para la misma marca: solo el primero se asigna solo.
+    const taken = new Set<string>();
     setRows(
-      [...files].map((file) => ({
-        file,
-        brandId: validFile(file) ? (matchBrandFile(file.name, brands)?.id ?? "") : "",
-        ...(validFile(file) ? {} : { result: FILE_ERROR }),
-      })),
+      [...files].map((file) => {
+        if (!validFile(file)) return { file, brandId: "", result: FILE_ERROR };
+        const match = matchBrandFile(file.name, brands)?.id ?? "";
+        if (match && taken.has(match)) return { file, brandId: "" };
+        if (match) taken.add(match);
+        return { file, brandId: match };
+      }),
     );
   }
+
+  const duplicated = new Set(
+    rows.map((r) => r.brandId).filter((id, i, all) => id && all.indexOf(id) !== i),
+  );
 
   async function uploadAll() {
     setBusy(true);
@@ -284,22 +300,29 @@ export function BulkBrandLogos({
     async function worker() {
       for (let item = queue.shift(); item; item = queue.shift()) {
         const brand = brands.find((b) => b.id === item.row.brandId)!;
-        const framed = await frameImage(item.row.file, SIZES.logo, "contain");
-        const error = await uploadBrandImage(storeHandle, brand, "logo", framed).catch(
-          () => "No se pudo subir.",
-        );
+        let error: string | null;
+        try {
+          const framed = await frameImage(item.row.file, SIZES.logo, "contain");
+          error = await uploadBrandImage(storeHandle, brand, "logo", framed);
+        } catch {
+          error = "No pudimos leer o subir esta imagen.";
+        }
         next[item.index] = { ...item.row, result: error ?? "Subido" };
         if (!error) ok += 1;
         setRows([...next]);
       }
     }
-    await Promise.all([worker(), worker(), worker()]);
-    setBusy(false);
+    try {
+      await Promise.all([worker(), worker(), worker()]);
+    } finally {
+      setBusy(false);
+    }
     setSummary(`${ok} ${ok === 1 ? "logo subido" : "logos subidos"}.`);
     router.refresh();
   }
 
   const ready = rows.filter((r) => r.brandId && !r.result).length;
+  const blocked = duplicated.size > 0;
   return (
     <section
       aria-labelledby={`${id}-title`}
@@ -324,7 +347,7 @@ export function BulkBrandLogos({
           setOver(false);
           add(e.dataTransfer.files);
         }}
-        className={`flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center text-sm ${
+        className={`flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus ${
           over ? "border-accent bg-canvas" : "border-border"
         }`}
       >
@@ -342,7 +365,7 @@ export function BulkBrandLogos({
         />
       </label>
       {rows.length > 0 ? (
-        <ul aria-label="Logos por subir" className="space-y-2">
+        <ul aria-label="Logos por subir" aria-live="polite" className="space-y-2">
           {rows.map((row, index) => (
             <li
               key={`${row.file.name}-${index}`}
@@ -382,7 +405,12 @@ export function BulkBrandLogos({
         </ul>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" disabled={ready === 0} loading={busy} onClick={uploadAll}>
+        {blocked ? (
+          <p role="alert" className="basis-full text-sm text-danger">
+            Elegiste la misma marca para dos archivos. Deja una sola.
+          </p>
+        ) : null}
+        <Button type="button" disabled={ready === 0 || blocked} loading={busy} onClick={uploadAll}>
           {ready === 1 ? "Subir 1 logo" : `Subir ${ready} logos`}
         </Button>
         {summary ? (
