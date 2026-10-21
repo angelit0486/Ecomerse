@@ -117,6 +117,21 @@ describe("parseServerEnv", () => {
     ).toThrow(/MERCADOPAGO_ACCESS_TOKEN/);
   });
 
+  it("dominios: VERCEL_PROJECT_ID sin token es válido (Vercel lo inyecta en cada build)", () => {
+    const projectId = "prj_AbCdEf0123456789";
+    expect(() => parseServerEnv({ ...valid, VERCEL_PROJECT_ID: projectId })).not.toThrow();
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        VERCEL_DOMAINS_TOKEN: "t".repeat(24),
+        VERCEL_PROJECT_ID: projectId,
+      }),
+    ).not.toThrow();
+    expect(() => parseServerEnv({ ...valid, VERCEL_DOMAINS_TOKEN: "t".repeat(24) })).toThrow(
+      /VERCEL_PROJECT_ID: requerida con VERCEL_DOMAINS_TOKEN/,
+    );
+  });
+
   it("el remitente debe tener formato 'Nombre <email>'", () => {
     expect(() => parseServerEnv({ ...valid, EMAIL_FROM: "no-reply@example.test" })).toThrow(
       /EMAIL_FROM/,

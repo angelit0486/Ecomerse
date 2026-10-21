@@ -139,8 +139,14 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   if (!env.MERCADOPAGO_ACCESS_TOKEN !== !env.MERCADOPAGO_WEBHOOK_SECRET) {
     ctx.addIssue({ code: "custom", path: ["MERCADOPAGO_WEBHOOK_SECRET"], message: "van juntas" });
   }
-  if (!env.VERCEL_DOMAINS_TOKEN !== !env.VERCEL_PROJECT_ID) {
-    ctx.addIssue({ code: "custom", path: ["VERCEL_PROJECT_ID"], message: "van juntas" });
+  // Vercel inyecta VERCEL_PROJECT_ID en cada build y ejecución: sola no significa
+  // nada. Solo el token la exige.
+  if (env.VERCEL_DOMAINS_TOKEN && !env.VERCEL_PROJECT_ID) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["VERCEL_PROJECT_ID"],
+      message: "requerida con VERCEL_DOMAINS_TOKEN",
+    });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {
     ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "https obligatorio" });
