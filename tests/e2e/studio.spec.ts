@@ -200,7 +200,7 @@ test("bloques nuevos, dónde se ven y presentación de la ficha", async ({ page,
   await page.getByRole("button", { name: "Publicar bloques" }).click();
   await expect(page.getByText(/Bloques publicados/)).toBeVisible();
   await page.getByRole("button", { name: "Publicar", exact: true }).click();
-  await expect(page.getByText(/Publicada/).first()).toBeVisible();
+  await expect(page.getByText(/· Publicada/)).toBeVisible();
   await expectNoSeriousA11yViolations(page);
   await wide.goto(`${store()}/paginas/envios-y-entregas`);
   await expect(wide.getByRole("heading", { level: 1, name: "Envíos y entregas" })).toBeVisible();
