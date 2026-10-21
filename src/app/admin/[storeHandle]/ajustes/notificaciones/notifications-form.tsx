@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { saveNotifications } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function NotificationsForm({
   storeHandle,
@@ -18,7 +17,7 @@ export function NotificationsForm({
   initial: { staff_emails: string; notify_new_order: boolean; notify_paid: boolean };
   contactEmail: string | null;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveNotifications.bind(null, storeHandle),
     {},
   );

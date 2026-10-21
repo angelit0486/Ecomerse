@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
@@ -16,6 +14,7 @@ import {
   type CatalogActionState,
 } from "./actions";
 import { nativeControl } from "./styles";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 function Feedback({ state }: { state: CatalogActionState }) {
   if (state.ok) {
@@ -66,7 +65,7 @@ export function CategoryForm({
     seo_description?: string | null;
   };
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     saveCategory.bind(null, storeHandle),
     {},
   );
@@ -199,7 +198,7 @@ export function SupplementCategoriesButton({
   storeHandle: string;
   count: number;
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState>(
     createSupplementCategories.bind(null, storeHandle),
     {},
   );
@@ -222,7 +221,7 @@ export function DeleteCategoryButton({
   id: string;
   name: string;
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     deleteCategory.bind(null, storeHandle),
     {},
   );
@@ -250,7 +249,7 @@ export function BrandForm({
   storeHandle: string;
   brand?: { id: string; name: string };
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     saveBrand.bind(null, storeHandle),
     {},
   );
@@ -287,7 +286,7 @@ export function DeleteBrandButton({
   id: string;
   name: string;
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     deleteBrand.bind(null, storeHandle),
     {},
   );

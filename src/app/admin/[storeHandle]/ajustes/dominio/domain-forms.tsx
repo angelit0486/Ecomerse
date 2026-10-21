@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
@@ -16,6 +14,7 @@ import {
   setPrimaryDomain,
   type DomainState,
 } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface DnsTargets {
   cname: string | null;
@@ -87,7 +86,7 @@ export function AddDomainForm({
   storeHandle: string;
   targets: DnsTargets;
 }) {
-  const [state, action, pending] = useActionState<DomainState, FormData>(
+  const [state, action, pending] = useSafeActionState<DomainState, FormData>(
     addCustomDomain.bind(null, storeHandle),
     {},
   );
@@ -144,7 +143,7 @@ function DomainButton({
   /** Acciones destructivas: se pregunta antes de enviar. */
   confirm?: { question: string; detail?: string };
 }) {
-  const [state, action, pending] = useActionState<DomainState, FormData>(
+  const [state, action, pending] = useSafeActionState<DomainState, FormData>(
     act.bind(null, storeHandle),
     {},
   );

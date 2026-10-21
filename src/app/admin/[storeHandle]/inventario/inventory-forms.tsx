@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
 import { adjustInventory, setLowStockThreshold, type InventoryActionState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const control =
   "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
@@ -38,7 +39,7 @@ export function AdjustForm({
 }) {
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [type, setType] = useState("adjustment");
-  const [state, action, pending] = useActionState<InventoryActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<InventoryActionState, FormData>(
     async (previous: InventoryActionState, formData: FormData) => {
       const result = await adjustInventory(storeHandle, previous, formData);
       // Ajuste aplicado: el siguiente envío es un ajuste nuevo.
@@ -136,7 +137,7 @@ export function ThresholdForm({
   label: string;
   threshold: number | null;
 }) {
-  const [state, action, pending] = useActionState<InventoryActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<InventoryActionState, FormData>(
     setLowStockThreshold.bind(null, storeHandle),
     {},
   );

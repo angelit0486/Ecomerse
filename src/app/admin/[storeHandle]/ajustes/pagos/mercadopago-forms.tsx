@@ -1,16 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { connectMercadoPago, setMercadoPagoEnabled } from "./mercadopago-actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ConnectMercadoPagoButton({ storeHandle }: { storeHandle: string }) {
-  const [state, action, pending] = useActionState<FormState>(
+  const [state, action, pending] = useSafeActionState<FormState>(
     connectMercadoPago.bind(null, storeHandle),
     {},
   );
@@ -31,7 +30,7 @@ export function MercadoPagoToggle({
   storeHandle: string;
   enabled: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState>(
+  const [state, action, pending] = useSafeActionState<FormState>(
     setMercadoPagoEnabled.bind(null, storeHandle, !enabled),
     {},
   );

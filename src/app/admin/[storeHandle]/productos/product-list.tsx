@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useState } from "react";
 
 import { formatMoney } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
@@ -11,6 +11,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 import { bulkProductsAction, type CatalogActionState } from "./actions";
 import { QuickPrices, type QuickPriceVariant } from "./quick-prices";
 import { linkButton, nativeControl } from "./styles";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 interface Row {
   id: string;
@@ -70,7 +71,7 @@ export function BulkProductsTable({
   const [brandId, setBrandId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [tag, setTag] = useState("");
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     async (previous: CatalogActionState, formData: FormData) => {
       const result = await bulkProductsAction(storeHandle, previous, formData);
       if (result.ok) {

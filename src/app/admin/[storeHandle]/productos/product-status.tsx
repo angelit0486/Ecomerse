@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { productStatusAction, type CatalogActionState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /** Publicar, despublicar, archivar, duplicar, eliminar y restaurar (cada uno valida en la base). */
 export function ProductStatusPanel({
@@ -26,7 +25,7 @@ export function ProductStatusPanel({
   /** Lo que impide publicar hoy (catalog_validate_product), en palabras de la dueña. */
   blockers: string[];
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     productStatusAction.bind(null, storeHandle, productId),
     {},
   );

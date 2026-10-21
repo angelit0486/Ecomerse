@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   PLACEMENT_LABELS,
@@ -14,6 +14,7 @@ import { Input } from "@/ui/primitives/input";
 
 import type { ConsoleState } from "../actions";
 import { retireComplianceRule, saveComplianceRule, setComplianceProfileStatus } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const native =
   "h-11 md:h-9 w-full rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg aria-[invalid=true]:border-danger";
@@ -37,7 +38,7 @@ function Feedback({ state }: { state: ConsoleState }) {
 }
 
 export function RuleForm({ profileId, fieldKeys }: { profileId: string; fieldKeys: string[] }) {
-  const [state, action, pending] = useActionState<ConsoleState, FormData>(
+  const [state, action, pending] = useSafeActionState<ConsoleState, FormData>(
     saveComplianceRule.bind(null, profileId),
     {},
   );
@@ -150,7 +151,7 @@ export function RuleForm({ profileId, fieldKeys }: { profileId: string; fieldKey
 }
 
 export function RetireRuleButton({ ruleId, label }: { ruleId: string; label: string }) {
-  const [state, action, pending] = useActionState<ConsoleState, FormData>(
+  const [state, action, pending] = useSafeActionState<ConsoleState, FormData>(
     retireComplianceRule.bind(null, ruleId),
     {},
   );
@@ -176,7 +177,7 @@ export function ProfileStatusForm({
   profileId: string;
   reviewedBy: string | null;
 }) {
-  const [state, action, pending] = useActionState<ConsoleState, FormData>(
+  const [state, action, pending] = useSafeActionState<ConsoleState, FormData>(
     setComplianceProfileStatus.bind(null, profileId),
     {},
   );

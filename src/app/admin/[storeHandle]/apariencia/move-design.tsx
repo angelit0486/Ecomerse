@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { copyDesignFromStore, importDesignFile } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /**
  * Llevar el diseño de una tienda a otra (ADR-034 §6): descargar el archivo,
@@ -22,11 +21,11 @@ export function MoveDesign({
   revision: number;
   stores: { id: string; name: string }[];
 }) {
-  const [imported, importAction, importing] = useActionState<FormState, FormData>(
+  const [imported, importAction, importing] = useSafeActionState<FormState, FormData>(
     importDesignFile.bind(null, storeHandle),
     {},
   );
-  const [copied, copyAction, copying] = useActionState<FormState, FormData>(
+  const [copied, copyAction, copying] = useSafeActionState<FormState, FormData>(
     copyDesignFromStore.bind(null, storeHandle),
     {},
   );

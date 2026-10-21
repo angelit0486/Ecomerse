@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
@@ -16,6 +16,7 @@ import {
   setOrganizationStatus,
   type ConsoleState,
 } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 function Feedback({ state, rendered = [] }: { state: ConsoleState; rendered?: readonly string[] }) {
   if (state.ok)
@@ -52,7 +53,7 @@ export function StatusButton({
   organizationName: string;
   status: "active" | "suspended";
 }) {
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useSafeActionState(
     setOrganizationStatus.bind(null, organizationId, status),
     {},
   );
@@ -92,7 +93,7 @@ export function StatusButton({
 }
 
 export function CreateTenantForm({ plans }: { plans: { value: string; label: string }[] }) {
-  const [state, action, pending] = useActionState(createTenant, {});
+  const [state, action, pending] = useSafeActionState(createTenant, {});
   return (
     <form action={action} className="grid max-w-lg gap-4" noValidate>
       <Field label="Nombre de la organización" required>
@@ -133,7 +134,7 @@ export function GrantSupportForm({
   stores: { value: string; label: string }[];
   staff: { value: string; label: string }[];
 }) {
-  const [state, action, pending] = useActionState(grantSupport, {});
+  const [state, action, pending] = useSafeActionState(grantSupport, {});
   return (
     <form action={action} className="grid max-w-lg gap-4" noValidate>
       <Field label="Tienda" required>

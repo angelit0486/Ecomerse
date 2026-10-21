@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
@@ -10,6 +10,7 @@ import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { submitKeepingState } from "@/ui/submit";
 import { deleteAttribute, saveAttribute, saveProductAttributes } from "./attribute-actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface AttributeFormData {
   id: string;
@@ -38,7 +39,7 @@ export function AttributeForm({
   storeHandle: string;
   attribute?: AttributeFormData;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveAttribute.bind(null, storeHandle),
     {},
   );
@@ -179,7 +180,7 @@ export function DeleteAttributeForm({
   name: string;
   products: number;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     deleteAttribute.bind(null, storeHandle),
     {},
   );
@@ -218,7 +219,7 @@ export function ProductAttributesForm({
   attributes: ProductAttributeOption[];
   selected: string[];
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveProductAttributes.bind(null, storeHandle, productId),
     {},
   );

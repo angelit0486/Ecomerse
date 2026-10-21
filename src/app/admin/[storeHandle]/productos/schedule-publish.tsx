@@ -1,11 +1,12 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition } from "react";
 
 import { Button } from "@/ui/primitives/button";
 
 import { schedulePublishAction, type CatalogActionState } from "./actions";
 import { nativeControl } from "./styles";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /**
  * Publicación programada de un borrador (tanda 7). La hora es la de la tienda;
@@ -24,7 +25,7 @@ export function SchedulePublish({
   scheduledLabel: string | null;
   timeZoneLabel: string;
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     schedulePublishAction.bind(null, storeHandle, productId),
     {},
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
 import {
@@ -24,6 +24,7 @@ import {
   saveHomeDraft,
   type HomeFormState,
 } from "./home-actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /**
  * Editor de la portada (F9-T02 y ADR-034): agregar, editar, ocultar, duplicar,
@@ -1245,7 +1246,7 @@ export function HomeEditor({
   const [adding, setAdding] = useState<HomeSectionType>("hero");
   const [dragging, setDragging] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const [state, action, pending] = useActionState<HomeFormState, FormData>(
+  const [state, action, pending] = useSafeActionState<HomeFormState, FormData>(
     save ?? saveHomeDraft.bind(null, storeHandle),
     {},
   );

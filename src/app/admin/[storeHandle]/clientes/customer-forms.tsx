@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { anonymizeCustomer, updateCustomer } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const inputClass =
   "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
@@ -26,7 +25,7 @@ export function CustomerForm({
     accepts_marketing: boolean;
   };
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     updateCustomer.bind(null, storeHandle, customerId),
     {},
   );
@@ -88,7 +87,7 @@ export function AnonymizeForm({
   storeHandle: string;
   customerId: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     anonymizeCustomer.bind(null, storeHandle, customerId),
     {},
   );

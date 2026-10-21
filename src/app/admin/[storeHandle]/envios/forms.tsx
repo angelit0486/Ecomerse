@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
@@ -11,6 +11,7 @@ import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { nativeControl } from "../productos/styles";
 import { deleteRate, deleteZone, saveRate, saveZone } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ZoneForm({
   storeHandle,
@@ -19,7 +20,7 @@ export function ZoneForm({
   storeHandle: string;
   zone?: { id: string; name: string; countries: string[]; regions: string[] | null };
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveZone.bind(null, storeHandle),
     {},
   );
@@ -91,7 +92,7 @@ export function DeleteButton({
   id: string;
   label: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     (kind === "zone" ? deleteZone : deleteRate).bind(null, storeHandle),
     {},
   );
@@ -135,7 +136,7 @@ export function RateForm({
   rate?: RateValues;
   currency: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveRate.bind(null, storeHandle),
     {},
   );

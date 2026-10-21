@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
 import { FormFeedback } from "../_shared/form-feedback";
 import { launchStore, saveManualPayment, type StepState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ManualPaymentForm({
   storeHandle,
@@ -16,7 +15,7 @@ export function ManualPaymentForm({
   storeHandle: string;
   initial: { display_name: string; instructions: string; active: boolean };
 }) {
-  const [state, action, pending] = useActionState<StepState, FormData>(
+  const [state, action, pending] = useSafeActionState<StepState, FormData>(
     saveManualPayment.bind(null, storeHandle),
     {},
   );
@@ -68,7 +67,7 @@ export function ManualPaymentForm({
 }
 
 export function LaunchButton({ storeHandle, ready }: { storeHandle: string; ready: boolean }) {
-  const [state, action, pending] = useActionState<StepState>(
+  const [state, action, pending] = useSafeActionState<StepState>(
     launchStore.bind(null, storeHandle),
     {},
   );

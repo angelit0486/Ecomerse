@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
@@ -11,6 +11,7 @@ import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { nativeControl } from "../productos/styles";
 import { saveDiscount, setDiscountStatus } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface DiscountValues {
   id: string;
@@ -33,7 +34,7 @@ export function DiscountForm({
   discount?: DiscountValues;
   currency: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveDiscount.bind(null, storeHandle),
     {},
   );
@@ -135,7 +136,7 @@ export function StatusButtons({
   status: string;
   code: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     setDiscountStatus.bind(null, storeHandle),
     {},
   );

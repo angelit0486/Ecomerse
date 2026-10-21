@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Field } from "@/ui/primitives/field";
@@ -18,6 +16,7 @@ import {
   type SupplierCsvState,
 } from "./actions";
 import { AVAILABILITY_LABELS } from "./labels";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const area =
   "w-full rounded-[var(--radius-control)] border border-control bg-surface px-3 py-2 text-sm text-fg aria-[invalid=true]:border-danger";
@@ -36,7 +35,7 @@ export function SupplierForm({
     shipping_terms: string | null;
   };
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveSupplier.bind(null, storeHandle),
     {},
   );
@@ -136,7 +135,7 @@ export function SupplierVariantForm({
     quantity: string;
   };
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     setSupplierVariant.bind(null, storeHandle, supplierId),
     {},
   );
@@ -216,7 +215,7 @@ export function UnlinkVariantButton({
   variantId: string;
   label: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     unlinkSupplierVariant.bind(null, storeHandle, supplierId, variantId),
     {},
   );
@@ -243,7 +242,7 @@ export function SupplierCsvForm({
   storeHandle: string;
   supplierId: string;
 }) {
-  const [state, action, pending] = useActionState<SupplierCsvState, FormData>(
+  const [state, action, pending] = useSafeActionState<SupplierCsvState, FormData>(
     importSupplierCsv.bind(null, storeHandle, supplierId),
     {},
   );

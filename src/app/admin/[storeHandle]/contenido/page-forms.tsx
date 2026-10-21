@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
@@ -10,12 +10,13 @@ import { Input } from "@/ui/primitives/input";
 import { FormFeedback } from "../_shared/form-feedback";
 import { SeoPreview } from "../_shared/seo-preview";
 import { pageAction, pageBlocksAction, savePage, type ContentActionState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const textarea =
   "rounded-[var(--radius-control)] border border-control bg-surface p-3 font-mono text-sm";
 
 export function NewPageForm({ storeHandle }: { storeHandle: string }) {
-  const [state, action, pending] = useActionState<ContentActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<ContentActionState, FormData>(
     savePage.bind(null, storeHandle, null),
     {},
   );
@@ -66,7 +67,7 @@ export function PageEditorForm({
   /** Dirección pública de la página, para la vista previa de buscadores. */
   pageUrl?: string;
 }) {
-  const [state, action, pending] = useActionState<ContentActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<ContentActionState, FormData>(
     savePage.bind(null, storeHandle, page.id),
     {},
   );
@@ -221,7 +222,7 @@ export function PageStatusForm({
   published: boolean;
   deletable: boolean;
 }) {
-  const [state, action, pending] = useActionState<ContentActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<ContentActionState, FormData>(
     pageAction.bind(null, storeHandle, pageId),
     {},
   );
@@ -266,7 +267,7 @@ export function PageBlocksBar({
   hasDraft: boolean;
   previewHref: string | null;
 }) {
-  const [state, action, pending] = useActionState<ContentActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<ContentActionState, FormData>(
     pageBlocksAction.bind(null, storeHandle, pageId),
     {},
   );

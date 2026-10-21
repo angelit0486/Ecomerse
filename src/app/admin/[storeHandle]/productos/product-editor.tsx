@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { matchDrafts, renameOptionKey, renameOptionValue } from "@/lib/catalog/variant-drafts";
 import {
@@ -18,6 +18,7 @@ import { Input } from "@/ui/primitives/input";
 import { saveProduct, type CatalogActionState } from "./actions";
 import type { EditorProduct } from "./editor-model";
 import { nativeControl } from "./styles";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /**
  * Editor de producto (F3-T05): simple (una variante) o con hasta 3 opciones y
@@ -84,7 +85,7 @@ export function ProductEditor({
   /** Base de la página de ajuste de inventario; null sin permiso para ajustar. */
   inventoryHref?: string | null;
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     saveProduct.bind(null, storeHandle, initial.id),
     {},
   );

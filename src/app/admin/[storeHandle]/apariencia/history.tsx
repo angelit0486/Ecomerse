@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { restoreThemeVersion } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface ThemeVersionRow {
   id: string;
@@ -30,7 +29,7 @@ export function ThemeHistory({
   versions: ThemeVersionRow[];
   hasDraft: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     restoreThemeVersion.bind(null, storeHandle),
     {},
   );

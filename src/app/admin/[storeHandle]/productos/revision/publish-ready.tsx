@@ -1,17 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 
 import { publishReadyDraftsAction, type CatalogActionState } from "../actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /**
  * Publica de una vez los borradores completos (D-PANEL-07). La base decide cuál
  * está completo; aquí solo se pide y se muestra el resultado.
  */
 export function PublishReady({ storeHandle, drafts }: { storeHandle: string; drafts: number }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     (previous) => publishReadyDraftsAction(storeHandle, previous),
     {},
   );

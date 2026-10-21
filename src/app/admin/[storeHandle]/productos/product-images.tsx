@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
@@ -12,6 +12,7 @@ import { mediaAction, setVariantImageAction, type CatalogActionState } from "./a
 import { REJECTION_REASONS } from "./messages";
 import { nativeControl } from "./styles";
 import { uploadProductImages } from "./upload-client";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface ProductImage {
   id: string;
@@ -210,7 +211,7 @@ function VariantImageRow({
   variant: VariantImageChoice;
   images: ProductImage[];
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     setVariantImageAction.bind(null, storeHandle, productId),
     {},
   );
@@ -280,7 +281,7 @@ function ImageCard({
   processingBlocked: boolean;
 }) {
   const first = index === 0;
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     mediaAction.bind(null, storeHandle, productId),
     {},
   );

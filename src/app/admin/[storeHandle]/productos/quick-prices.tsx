@@ -1,11 +1,12 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 
 import { quickPricesAction, type CatalogActionState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface QuickPriceVariant {
   id: string;
@@ -30,7 +31,7 @@ export function QuickPrices({
   productTitle: string;
   variants: QuickPriceVariant[];
 }) {
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     quickPricesAction.bind(null, storeHandle, productId),
     {},
   );

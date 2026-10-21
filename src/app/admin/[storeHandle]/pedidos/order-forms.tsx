@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
@@ -17,6 +15,7 @@ import {
   requestRefund,
   saveStaffNote,
 } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ConfirmPaymentForm({
   storeHandle,
@@ -25,7 +24,7 @@ export function ConfirmPaymentForm({
   storeHandle: string;
   orderId: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     confirmManualPayment.bind(null, storeHandle, orderId),
     {},
   );
@@ -58,7 +57,7 @@ export function StaffNoteForm({
   orderId: string;
   note: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveStaffNote.bind(null, storeHandle, orderId),
     {},
   );
@@ -117,7 +116,7 @@ export function FulfillForm({
   lines: FulfillLine[];
   idempotencyKey: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     fulfillOrder.bind(null, storeHandle, orderId),
     {},
   );
@@ -200,7 +199,7 @@ export function DeliveredButton({
   orderId: string;
   shipmentId: string;
 }) {
-  const [state, action, pending] = useActionState<FormState>(
+  const [state, action, pending] = useSafeActionState<FormState>(
     markDelivered.bind(null, storeHandle, orderId, shipmentId),
     {},
   );
@@ -225,7 +224,7 @@ export function CancelForm({
   idempotencyKey: string;
   willRefund: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     cancelOrder.bind(null, storeHandle, orderId),
     {},
   );
@@ -297,7 +296,7 @@ export function RefundForm({
   maxLabel: string;
   lines: ReturnLine[];
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     requestRefund.bind(null, storeHandle, orderId),
     {},
   );
@@ -379,7 +378,7 @@ export function CloseUnshippedForm({
   idempotencyKey: string;
   canRefund: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     closeUnshipped.bind(null, storeHandle, orderId),
     {},
   );
@@ -432,7 +431,7 @@ export function ResolveAttentionForm({
   storeHandle: string;
   orderId: string;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     resolveAttention.bind(null, storeHandle, orderId),
     {},
   );

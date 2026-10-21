@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { PLACEMENT_LABELS, SUPPLEMENT_FIELD_LABELS } from "@/lib/compliance/labels";
 import { Button } from "@/ui/primitives/button";
@@ -10,6 +10,7 @@ import { Input } from "@/ui/primitives/input";
 import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { saveRegulatoryInfo } from "./regulatory-actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface RegulatoryCategoryOption {
   key: string;
@@ -66,7 +67,7 @@ export function RegulatoryForm({
   categories: RegulatoryCategoryOption[];
   initial: RegulatoryInitial;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveRegulatoryInfo.bind(null, storeHandle, productId),
     {},
   );

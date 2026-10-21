@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { connectStripe, setStripeEnabled } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ConnectStripeButton({
   storeHandle,
@@ -16,7 +15,7 @@ export function ConnectStripeButton({
   storeHandle: string;
   label: string;
 }) {
-  const [state, action, pending] = useActionState<FormState>(
+  const [state, action, pending] = useSafeActionState<FormState>(
     connectStripe.bind(null, storeHandle),
     {},
   );
@@ -31,7 +30,7 @@ export function ConnectStripeButton({
 }
 
 export function StripeToggle({ storeHandle, enabled }: { storeHandle: string; enabled: boolean }) {
-  const [state, action, pending] = useActionState<FormState>(
+  const [state, action, pending] = useSafeActionState<FormState>(
     setStripeEnabled.bind(null, storeHandle, !enabled),
     {},
   );

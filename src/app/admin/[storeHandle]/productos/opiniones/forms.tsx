@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { moderateReview } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ModerateButtons({
   storeHandle,
@@ -18,11 +17,11 @@ export function ModerateButtons({
   reviewId: string;
   status: "pending" | "published" | "rejected";
 }) {
-  const [pubState, publish, publishing] = useActionState<FormState>(
+  const [pubState, publish, publishing] = useSafeActionState<FormState>(
     moderateReview.bind(null, storeHandle, reviewId, "published"),
     {},
   );
-  const [rejState, reject, rejecting] = useActionState<FormState>(
+  const [rejState, reject, rejecting] = useSafeActionState<FormState>(
     moderateReview.bind(null, storeHandle, reviewId, "rejected"),
     {},
   );

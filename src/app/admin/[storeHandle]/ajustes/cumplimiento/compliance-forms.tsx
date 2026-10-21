@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
@@ -9,6 +7,7 @@ import { Input } from "@/ui/primitives/input";
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { classifyPublishedAsUnregulated, saveStoreLegend, setRegulatedCategory } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function DeclareCategoryForm({
   storeHandle,
@@ -21,7 +20,7 @@ export function DeclareCategoryForm({
   categoryName: string;
   declared: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     setRegulatedCategory.bind(null, storeHandle, categoryKey, !declared),
     {},
   );
@@ -55,7 +54,7 @@ export function ClassifyPublishedForm({
   storeHandle: string;
   count: number;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     classifyPublishedAsUnregulated.bind(null, storeHandle),
     {},
   );
@@ -100,7 +99,7 @@ export function StoreLegendForm({
   initialReviewer: string;
   canEdit: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     saveStoreLegend.bind(null, storeHandle, categoryKey),
     {},
   );

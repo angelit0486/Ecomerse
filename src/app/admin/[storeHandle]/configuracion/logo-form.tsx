@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_BRANDING_UPLOAD_BYTES } from "@/lib/media/constants";
 import { Button } from "@/ui/primitives/button";
 
 import { finalizeLogoUpload, requestLogoUpload, setLogoDraft, type StepState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface LogoCandidate {
   id: string;
@@ -32,7 +33,7 @@ export function LogoForm({
   revision: number;
 }) {
   const router = useRouter();
-  const [state, action, pending] = useActionState<StepState, FormData>(
+  const [state, action, pending] = useSafeActionState<StepState, FormData>(
     setLogoDraft.bind(null, storeHandle),
     {},
   );

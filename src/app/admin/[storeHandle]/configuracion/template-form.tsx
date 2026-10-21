@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import { FormFeedback } from "../_shared/form-feedback";
 import { applyStoreTemplate, removeSampleProducts, type StepState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface TemplateOption {
   key: string;
@@ -25,7 +24,7 @@ export function TemplateForm({
   revision: number;
   templates: TemplateOption[];
 }) {
-  const [state, action, pending] = useActionState<StepState, FormData>(
+  const [state, action, pending] = useSafeActionState<StepState, FormData>(
     applyStoreTemplate.bind(null, storeHandle),
     {},
   );
@@ -91,7 +90,7 @@ export function SamplesNotice({
   count: number;
   canDelete: boolean;
 }) {
-  const [state, action, pending] = useActionState<StepState>(
+  const [state, action, pending] = useSafeActionState<StepState>(
     removeSampleProducts.bind(null, storeHandle),
     {},
   );

@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import {
   nextSupplierOrderStatuses,
   SUPPLIER_ORDER_ACTIONS,
@@ -12,6 +10,7 @@ import { Button } from "@/ui/primitives/button";
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
 import { setSupplierOrderStatus } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const inputClass =
   "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm";
@@ -35,7 +34,7 @@ export function SupplierOrderForm({
   storeHandle: string;
   supplierOrder: SupplierOrderFormData;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(
+  const [state, action, pending] = useSafeActionState<FormState, FormData>(
     setSupplierOrderStatus.bind(null, storeHandle, so.id, so.orderId),
     {},
   );

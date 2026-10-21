@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { contrastRatio } from "@/lib/color/contrast";
 import { SOCIAL_NETWORKS, type SocialNetwork } from "@/lib/theme/links";
@@ -32,6 +32,7 @@ import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { discardThemeDraft, publishTheme, saveThemeSection } from "./actions";
 import type { ThemeSection } from "./patch";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /** Formularios de Apariencia (F9-T01, F9-DESIGN §7). Controlados: un error no borra nada. */
 
@@ -79,7 +80,10 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 };
 
 function useSection(storeHandle: string, section: ThemeSection) {
-  return useActionState<FormState, FormData>(saveThemeSection.bind(null, storeHandle, section), {});
+  return useSafeActionState<FormState, FormData>(
+    saveThemeSection.bind(null, storeHandle, section),
+    {},
+  );
 }
 
 function SaveRow({ state, pending }: { state: FormState; pending: boolean }) {
@@ -1037,11 +1041,11 @@ export function PublishBar({
   publishedAt: string | null;
   previewAction: string;
 }) {
-  const [publishState, publish, publishing] = useActionState<FormState, FormData>(
+  const [publishState, publish, publishing] = useSafeActionState<FormState, FormData>(
     publishTheme.bind(null, storeHandle),
     {},
   );
-  const [discardState, discard, discarding] = useActionState<FormState, FormData>(
+  const [discardState, discard, discarding] = useSafeActionState<FormState, FormData>(
     discardThemeDraft.bind(null, storeHandle, section),
     {},
   );

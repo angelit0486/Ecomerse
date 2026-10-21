@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
@@ -21,6 +21,7 @@ import {
   setMemberStatus,
   type TeamActionState,
 } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface MemberRow {
   user_id: string;
@@ -262,7 +263,7 @@ function TeamManagerInner({
 function InviteDialog({ storeHandle, roles }: { storeHandle: string; roles: RoleOption[] }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useSafeActionState(
     async (prev: TeamActionState, formData: FormData) => {
       const result = await inviteMember(storeHandle, prev, formData);
       if (result.ok) {

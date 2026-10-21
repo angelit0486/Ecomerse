@@ -23,7 +23,8 @@ export const ERROR_STATUS = {
 export type ErrorCode = keyof typeof ERROR_STATUS;
 
 const DEFAULT_MESSAGES: Record<ErrorCode, string> = {
-  unauthenticated: "Necesitas iniciar sesión.",
+  unauthenticated:
+    "Tu sesión terminó. Inicia sesión de nuevo en otra pestaña y vuelve a guardar aquí.",
   mfa_required: "Completa la verificación en dos pasos para continuar.",
   forbidden: "No tienes permiso para realizar esta acción.",
   not_found: "No encontramos lo que buscas.",

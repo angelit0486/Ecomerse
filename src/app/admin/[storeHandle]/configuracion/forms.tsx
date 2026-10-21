@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { hasUnrenderedFieldError } from "@/lib/form-values";
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
@@ -9,6 +7,7 @@ import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 
 import { saveStoreProfile, type StepState } from "./actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 function Feedback({ state, rendered = [] }: { state: StepState; rendered?: readonly string[] }) {
   if (state.ok) {
@@ -48,7 +47,7 @@ export function ProfileForm({
   initial: { name: string; contact_email: string; contact_phone: string; timezone: string };
   timezones: string[];
 }) {
-  const [state, action, pending] = useActionState(saveStoreProfile.bind(null, storeHandle), {});
+  const [state, action, pending] = useSafeActionState(saveStoreProfile.bind(null, storeHandle), {});
   return (
     <form action={action} className="grid max-w-lg gap-4" noValidate>
       <Field label="Nombre de la tienda" required error={state.fields?.name}>

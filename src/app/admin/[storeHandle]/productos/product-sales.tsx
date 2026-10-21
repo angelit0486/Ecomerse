@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useState } from "react";
 
 import { formatMoney } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
@@ -10,6 +10,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
 
 import { cancelSaleAction, scheduleSaleAction, type CatalogActionState } from "./actions";
 import { nativeControl } from "./styles";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 /** Fila de catalog_list_sales. */
 export interface SaleRow {
@@ -111,7 +112,7 @@ export function ScheduleSaleForm({
   const [mode, setMode] = useState<"percent" | "fixed">("percent");
   // Si se edita el formulario, la vista previa deja de valer.
   const [edited, setEdited] = useState(false);
-  const [state, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     async (previous: CatalogActionState, formData: FormData) => {
       const result = await scheduleSaleAction(storeHandle, productIds, previous, formData);
       setEdited(false);
@@ -307,7 +308,7 @@ function CancelSale({
   /** El aviso vive en la lista: al cancelar, esta fila pierde el botón. */
   onResult: (state: CatalogActionState) => void;
 }) {
-  const [, action, pending] = useActionState<CatalogActionState, FormData>(
+  const [, action, pending] = useSafeActionState<CatalogActionState, FormData>(
     async (previous: CatalogActionState, formData: FormData) => {
       const result = await cancelSaleAction(storeHandle, previous, formData);
       onResult(result);

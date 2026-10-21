@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 
 import { adjustInventory, type InventoryActionState } from "../inventario/actions";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export interface StockRow {
   id: string;
@@ -48,7 +49,7 @@ function StockRowForm({ storeHandle, row }: { storeHandle: string; row: StockRow
   const router = useRouter();
   // Una clave por intento: un doble clic no ajusta dos veces.
   const [key, setKey] = useState(() => crypto.randomUUID());
-  const [state, action, pending] = useActionState<InventoryActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<InventoryActionState, FormData>(
     async (previous, formData) => {
       const result = await adjustInventory(storeHandle, previous, formData);
       if (result.ok) {

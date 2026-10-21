@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 
 import { saveMenu, type ContentActionState } from "../actions";
 import { filterHref, LINK_TYPE_LABELS } from "../labels";
+import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const control =
   "h-11 md:h-9 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm text-fg";
@@ -200,7 +201,7 @@ export function MenuEditor({
   targets: TargetOptions;
 }) {
   const [items, setItems] = useState<MenuDraft[]>(initial);
-  const [state, action, pending] = useActionState<ContentActionState, FormData>(
+  const [state, action, pending] = useSafeActionState<ContentActionState, FormData>(
     saveMenu.bind(null, storeHandle, handle),
     {},
   );
