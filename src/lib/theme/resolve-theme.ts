@@ -328,8 +328,17 @@ export function themeCss(theme: ResolvedTheme): string {
   return declarations.join(";");
 }
 
-/** Variables de un área con colores propios: todo lo de adentro se recalcula. */
-function scopeVars(bg: string, fg: string): string {
+/** Tonos de texto que se reutilizan dentro de un área si ahí se leen. */
+type ZoneTones = { saleText: string; danger: string; success: string; warning: string };
+
+/**
+ * Variables de un área con colores propios: todo lo de adentro se recalcula.
+ * Los tonos de oferta y de estado se conservan solo si se leen (≥ 4.5:1) sobre
+ * el fondo del área; si no, o si no se conocen, caen al texto del área.
+ */
+function scopeVars(bg: string, fg: string, tones?: ZoneTones): string {
+  const keep = (color: string | undefined) =>
+    color && contrastRatio(color, bg) >= 4.5 ? color : fg;
   return [
     `--sf-bg:${bg}`,
     `--sf-fg:${fg}`,
@@ -340,6 +349,10 @@ function scopeVars(bg: string, fg: string): string {
     `--sf-surface:color-mix(in srgb,${fg} 5%,${bg})`,
     `--sf-border:color-mix(in srgb,${fg} 15%,${bg})`,
     `--sf-border-strong:color-mix(in srgb,${fg} 55%,${bg})`,
+    `--sf-sale-text:${keep(tones?.saleText)}`,
+    `--sf-danger:${keep(tones?.danger)}`,
+    `--sf-success:${keep(tones?.success)}`,
+    `--sf-warning:${keep(tones?.warning)}`,
     `background-color:${bg}`,
     `color:${fg}`,
   ].join(";");
@@ -352,6 +365,8 @@ function scopeVars(bg: string, fg: string): string {
  */
 export function elementCss(theme: ResolvedTheme): string {
   const rules: string[] = [];
+  const state = stateColors(theme);
+  const tones: ZoneTones = { saleText: saleColors(theme).text, ...state };
   const classes: Partial<Record<ElementKey, string>> = {
     hero: "sf-el-hero",
     header: "sf-el-header",
@@ -368,7 +383,7 @@ export function elementCss(theme: ResolvedTheme): string {
           ? // La portada principal se pinta con el primario y su texto.
             `;--sf-primary:${c.bg};--sf-on-primary:${c.fg}`
           : "";
-    rules.push(`.sf-root .${cls}{${scopeVars(c.bg, c.fg)}${extra}}`);
+    rules.push(`.sf-root .${cls}{${scopeVars(c.bg, c.fg, tones)}${extra}}`);
   }
   return rules.join("");
 }
@@ -380,13 +395,14 @@ export function elementCss(theme: ResolvedTheme): string {
 export function sectionCss(
   sections: ReadonlyArray<{ id: string; colors?: { background?: unknown; foreground?: unknown } }>,
 ): string {
-  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return sections
     .flatMap((section) => {
       const bg = hex(section.colors?.background);
       const fg = hex(section.colors?.foreground);
       if (!UUID.test(section.id) || !bg || !fg || contrastRatio(fg, bg) < 4.5) return [];
-      return [`.sf-root [data-sec="${section.id}"]{${scopeVars(bg, fg)}}`];
+      // Los ids se comparan en minúsculas (`data-sec` también va en minúsculas).
+      return [`.sf-root [data-sec="${section.id.toLowerCase()}"]{${scopeVars(bg, fg)}}`];
     })
     .join("");
 }

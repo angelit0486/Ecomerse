@@ -341,7 +341,7 @@ function SectionFrame({ section, children }: { section: HomeSectionData; childre
   if (!section.colors && !spacing) return children;
   return (
     <div
-      data-sec={section.colors ? section.id : undefined}
+      data-sec={section.colors ? section.id.toLowerCase() : undefined}
       className={`${section.colors ? "rounded-[var(--sf-radius-card)] px-4 py-6 sm:px-8 sm:py-10" : ""} ${spacing}`}
     >
       {children}

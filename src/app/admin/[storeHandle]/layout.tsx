@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
+import { checkSchemaVersion } from "@/server/db/schema-version";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { STORE_STATUS_SHORT } from "../_shared/store-status";
@@ -24,7 +25,10 @@ export default async function StoreLayout({ children, params }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   const supabase = await createSupabaseServerClient();
-  const stores = await callRpc<MyStore[]>(supabase, "access_list_my_stores");
+  const [stores, schema] = await Promise.all([
+    callRpc<MyStore[]>(supabase, "access_list_my_stores"),
+    checkSchemaVersion(supabase),
+  ]);
 
   const base = `/admin/${ctx.store.handle}`;
   type Entry = { href: string; label: string; show: boolean };
@@ -174,6 +178,12 @@ export default async function StoreLayout({ children, params }: Props) {
           <GlobalSearch storeHandle={ctx.store.handle} />
           <NoticesButton storeHandle={ctx.store.handle} />
         </div>
+        {schema.ok ? null : (
+          <p role="alert" className="rounded-md border border-danger px-3 py-2 text-sm">
+            Faltan actualizaciones de la base de datos (migraciones). Algunas pantallas pueden
+            fallar hasta que se apliquen; avisa a quien administra la plataforma.
+          </p>
+        )}
         {ctx.supportGrantId ? (
           <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
             Acceso de soporte: solo lectura y con tiempo limitado. Todo lo que abres queda

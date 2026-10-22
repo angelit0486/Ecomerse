@@ -6,11 +6,13 @@ import { contrastRatio } from "@/lib/color/contrast";
 import { THEME_PRESETS } from "./presets";
 import {
   announcementActive,
+  elementCss,
   footerColors,
   linkColor,
   photoBlend,
   resolveTheme,
   saleColors,
+  sectionCss,
   STATE_COLORS,
   stateColors,
   themeCss,
@@ -294,5 +296,41 @@ describe("photoBlend: fotos de producto sin fondo negro", () => {
   it("la variable va en el CSS del tema", () => {
     expect(themeCss(colors("#000000", "#ffffff"))).toContain("--sf-photo-blend:normal");
     expect(themeCss(colors("#ffffff", "#1a1c22"))).toContain("--sf-photo-blend:multiply");
+  });
+});
+
+describe("colores por zona (tema v4)", () => {
+  it("en un bloque oscuro, el rojo de oferta ilegible cae al texto del bloque", () => {
+    const css = sectionCss([
+      {
+        id: "00000000-0000-4000-8000-00000000000A",
+        colors: { background: "#111827", foreground: "#ffffff" },
+      },
+    ]);
+    expect(css).toContain('[data-sec="00000000-0000-4000-8000-00000000000a"]');
+    expect(css).toContain("--sf-sale-text:#ffffff");
+    expect(css).toContain("--sf-danger:#ffffff");
+  });
+
+  it("en un elemento claro se conserva el tono de oferta si se lee", () => {
+    const theme = resolveTheme({
+      colors: { sale: "#b91c1c" },
+      element_colors: { header: { background: "#ffffff", foreground: "#111827" } },
+    });
+    const css = elementCss(theme);
+    const sale = saleColors(theme).text;
+    expect(contrastRatio(sale, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+    expect(css).toContain(`--sf-sale-text:${sale}`);
+  });
+
+  it("en un elemento oscuro ningún tono queda ilegible", () => {
+    const theme = resolveTheme({
+      element_colors: { cards: { background: "#0b1f3a", foreground: "#ffffff" } },
+    });
+    const css = elementCss(theme);
+    for (const token of ["sale-text", "danger", "success", "warning"]) {
+      const value = new RegExp(`--sf-${token}:(#[0-9a-f]{6})`).exec(css)![1]!;
+      expect(contrastRatio(value, "#0b1f3a")).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

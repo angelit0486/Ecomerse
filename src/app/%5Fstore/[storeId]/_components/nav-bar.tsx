@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import { brandInitialsOf } from "@/lib/catalog/brand-initials";
 import { activeNavIndex, type NavBarConfig, type NavBarItem } from "@/lib/theme/nav-bar";
@@ -15,20 +15,33 @@ import { activeNavIndex, type NavBarConfig, type NavBarItem } from "@/lib/theme/
  * hay más. Cada enlace mide al menos 44 px y tiene foco visible por dentro (no
  * lo corta el desplazamiento).
  */
-export function NavBar({
-  items,
-  thumbs = {},
-  config = {},
-}: {
+type Props = {
   items: NavBarItem[];
   /** Foto de cada categoría por enlace (estilo «con foto»). */
   thumbs?: Record<string, string>;
   config?: Pick<NavBarConfig, "style" | "align" | "size" | "visibility">;
-}) {
+};
+
+export function NavBar(props: Props) {
+  // Los parámetros (`?objetivo=…`) deciden el activo entre enlaces de la misma
+  // ruta. useSearchParams necesita su propio Suspense: mientras tanto (y en el
+  // HTML estático) cuenta solo la ruta. Así el activo se actualiza también al
+  // navegar con <Link>, que no dispara `popstate`.
+  return (
+    <Suspense fallback={<NavBarView {...props} search="" />}>
+      <NavBarWithParams {...props} />
+    </Suspense>
+  );
+}
+
+function NavBarWithParams(props: Props) {
+  const params = useSearchParams();
+  const query = params.toString();
+  return <NavBarView {...props} search={query ? `?${query}` : ""} />;
+}
+
+function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { search: string }) {
   const pathname = usePathname();
-  // Los parámetros se leen en el navegador (useSearchParams obligaría a un
-  // Suspense en todo el encabezado); en el servidor cuenta solo la ruta.
-  const search = useSyncExternalStore(subscribeToHistory, readSearch, () => "");
   const list = useRef<HTMLUListElement>(null);
   const [more, setMore] = useState(false);
   const active = activeNavIndex(items, pathname ?? "/", search);
@@ -76,9 +89,10 @@ export function NavBar({
               : item.visibility === "desktop"
                 ? "max-sm:hidden"
                 : "";
-          const thumb = thumbs[item.href];
+          const thumb = Object.hasOwn(thumbs, item.href) ? thumbs[item.href] : undefined;
           return (
-            <li key={`${item.href}:${item.label}`} className={`shrink-0 ${shown}`}>
+            // Dos enlaces pueden repetir ruta y nombre: el índice desambigua.
+            <li key={`${index}:${item.href}`} className={`shrink-0 ${shown}`}>
               <Link
                 href={item.href}
                 aria-current={current ? "page" : undefined}
@@ -114,13 +128,6 @@ export function NavBar({
     </nav>
   );
 }
-
-// Se vuelve a leer en cada render (al cambiar la ruta) y al ir atrás o adelante.
-function subscribeToHistory(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-  return () => window.removeEventListener("popstate", onChange);
-}
-const readSearch = () => window.location.search;
 
 function linkClass(style: NonNullable<NavBarConfig["style"]>, current: boolean, text: string) {
   const base = `inline-flex min-h-11 items-center whitespace-nowrap font-semibold outline-offset-[-3px] ${text}`;

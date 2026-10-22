@@ -91,6 +91,12 @@ test("los borradores solo se ven en la vista previa, marcados y sin compra", asy
   await expect(shopper.getByText("Proteína en borrador")).toHaveCount(0);
   await shopper.context().close();
 
+  // En el celular el aviso ocupa una sola fila y «Salir» sigue a la mano.
+  await preview.setViewportSize({ width: 375, height: 800 });
+  const notice = preview.getByRole("status").filter({ hasText: "Vista previa" }).first();
+  expect((await notice.boundingBox())!.height).toBeLessThanOrEqual(48);
+  await expect(preview.getByRole("button", { name: "Salir de la vista previa" })).toBeInViewport();
+
   // Al salir de la vista previa, el borrador desaparece también para ella.
   await preview.getByRole("button", { name: "Salir de la vista previa" }).click();
   await preview.waitForURL(`${store()}/`);

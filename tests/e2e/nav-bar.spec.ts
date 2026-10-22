@@ -45,6 +45,7 @@ test.beforeAll(async () => {
                 .replace(/\p{Diacritic}/gu, "")
                 .toLowerCase()}`,
             })),
+            { label: "Novedades", link: "/productos?orden=newest" },
           ],
           style: "pills",
           visibility: "all",
@@ -97,6 +98,18 @@ for (const width of [360, 375, 1280]) {
       .first()
       .evaluate((el) => getComputedStyle(el).outlineStyle);
     expect(outline).not.toBe("none");
+
+    // Entre enlaces de la misma ruta, el activo sigue a los parámetros al
+    // navegar dentro de la tienda (sin recargar).
+    await page.goto(`${store()}/productos`);
+    await expect(bar.getByRole("link", { name: "Todos" })).toHaveAttribute("aria-current", "page");
+    await bar.getByRole("link", { name: "Novedades" }).click();
+    await page.waitForURL(/orden=newest/);
+    await expect(bar.getByRole("link", { name: "Novedades" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(bar.locator('[aria-current="page"]')).toHaveCount(1);
   });
 }
 
@@ -104,8 +117,10 @@ test("la dueña arma la barra desde el panel", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/apariencia?seccion=encabezado`);
+  // La base local tiene todas las migraciones: sin aviso (Paso E).
+  await expect(page.getByText("Faltan actualizaciones de la base de datos")).toHaveCount(0);
   const list = page.getByRole("list", { name: "Enlaces de la barra" });
-  await expect(list.getByRole("listitem")).toHaveCount(7);
+  await expect(list.getByRole("listitem")).toHaveCount(8);
   // Quitar «Proteínas», subir «Bienestar» y agregar «Más vendidos».
   await page.getByRole("button", { name: "Quitar Proteínas" }).click();
   await page.getByRole("button", { name: "Subir Bienestar" }).click();
@@ -130,6 +145,7 @@ test("la dueña arma la barra desde el panel", async ({ page }) => {
     "Bienestar",
     "Recuperación",
     "Vitaminas",
+    "Novedades",
     "Más vendidos",
   ]);
   expect(row!.nav).toMatchObject({ style: "photos", sticky: true });

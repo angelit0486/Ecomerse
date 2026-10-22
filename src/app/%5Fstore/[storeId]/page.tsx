@@ -73,7 +73,10 @@ export default async function StoreHomePage({ params }: Props) {
     key,
     label,
     count,
-    image: thumbs[key] ?? covers[key] ?? null,
+    image:
+      (Object.hasOwn(thumbs, key) ? thumbs[key] : null) ??
+      (Object.hasOwn(covers, key) ? covers[key] : null) ??
+      null,
   }));
   const sections = home.sections ?? [];
   const categories = home.categories ?? [];
