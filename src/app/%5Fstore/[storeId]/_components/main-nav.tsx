@@ -231,16 +231,36 @@ export function MainNav({
  * Panel del menú en móvil (rediseño A+B): ocupa la pantalla, retiene el foco
  * mientras está abierto y lo devuelve al botón «Menú» al cerrarse.
  */
+/** Miniatura decorativa de la categoría (el nombre ya está escrito al lado). */
+function Thumb({ url }: { url: string | undefined }) {
+  if (!url) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
+    <img
+      src={url}
+      alt=""
+      width={28}
+      height={28}
+      loading="lazy"
+      decoding="async"
+      className="mr-2 size-7 shrink-0 rounded-full object-cover"
+    />
+  );
+}
+
 export function MobileMenu({
   menu,
   discovery = [],
   cartCount,
   whatsapp,
+  thumbs = {},
 }: {
   menu: NavEntry[];
   discovery?: { label: string; href: string }[];
   cartCount: number;
   whatsapp?: string | undefined;
+  /** Foto de cada categoría por enlace (misión Panel, Paso A). */
+  thumbs?: Record<string, string>;
 }) {
   const { id, open, setOpen } = useMobileMenu();
   const panel = useRef<HTMLDivElement>(null);
@@ -309,6 +329,7 @@ export function MobileMenu({
                     : `${row} ${offerClass(item.href)}`
                 }
               >
+                <Thumb url={thumbs[item.href]} />
                 {item.label}
               </Link>
               {item.children.length > 0 ? (
@@ -316,6 +337,7 @@ export function MobileMenu({
                   {item.children.map((child) => (
                     <li key={child.href + child.label}>
                       <Link href={child.href} onClick={() => close(false)} className={row}>
+                        <Thumb url={thumbs[child.href]} />
                         {child.label}
                       </Link>
                     </li>

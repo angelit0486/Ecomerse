@@ -10,28 +10,24 @@ import { frameImage, type Fit } from "@/lib/media/frame";
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
+import { ENTITY_MEDIA, entityKind, type MediaEntity } from "./entity-media";
 import {
-  attachBrandImage,
-  removeBrandImage,
-  requestBrandImageUpload,
-  type BrandImageKind,
-} from "./brand-media-actions";
+  attachEntityImage,
+  removeEntityImage,
+  requestEntityImageUpload,
+} from "./entity-media-actions";
 
 /**
- * Logo y portada de una marca (misión Portada/Marcas, Paso 2). Se elige de la
- * galería del celular o de la computadora, se encuadra en el navegador (logo
- * cuadrado; portada en franja 8:3), se ve la vista previa y se sube por el
- * pipeline seguro de medios.
+ * Imágenes de marcas (logo y portada; misión Portada/Marcas, Paso 2) y de
+ * categorías (foto cuadrada y banner; misión Panel, Paso A). Se elige de la
+ * galería del celular o de la computadora, se encuadra en el navegador
+ * (cuadro o franja 8:3), se ve la vista previa y se sube por el pipeline seguro
+ * de medios.
  */
-export interface BrandImageView {
+export interface EntityImageView {
   status: "pending" | "ready" | "rejected";
   url: string | null;
 }
-
-const SIZES: Record<BrandImageKind, { width: number; height: number }> = {
-  logo: { width: 512, height: 512 },
-  cover: { width: 1600, height: 600 },
-};
 
 const FILE_ERROR = "Usa una imagen JPG, PNG, WebP o AVIF de hasta 10 MB.";
 
@@ -41,14 +37,16 @@ function validFile(file: File): boolean {
   );
 }
 
-/** Sube un archivo ya encuadrado y lo liga a la marca. */
-async function uploadBrandImage(
+/** Sube un archivo ya encuadrado y lo liga a la marca o categoría. */
+async function uploadEntityImage(
   storeHandle: string,
-  brand: { id: string; name: string },
-  kind: BrandImageKind,
+  entity: MediaEntity,
+  item: { id: string; name: string },
+  kind: string,
   file: File,
 ): Promise<string | null> {
-  const ticket = await requestBrandImageUpload(storeHandle, {
+  const ticket = await requestEntityImageUpload(storeHandle, {
+    entity,
     mimeType: file.type,
     bytes: file.size,
   });
@@ -59,42 +57,48 @@ async function uploadBrandImage(
     body: file,
   }).catch(() => null);
   if (!put?.ok) return "No se pudo subir la imagen. Revisa tu conexión e inténtalo de nuevo.";
-  const done = await attachBrandImage(storeHandle, {
-    brandId: brand.id,
+  const done = await attachEntityImage(storeHandle, {
+    entity,
+    id: item.id,
     mediaId: ticket.mediaId,
     kind,
-    brandName: brand.name,
+    name: item.name,
   });
   return done.ok ? null : done.error;
 }
 
-export function BrandImageField({
+export function EntityImageField({
   storeHandle,
-  brand,
-  kind,
+  entity,
+  item,
+  kind: kindKey,
   current,
 }: {
   storeHandle: string;
-  brand: { id: string; name: string };
-  kind: BrandImageKind;
-  current: BrandImageView | null;
+  entity: MediaEntity;
+  item: { id: string; name: string };
+  kind: string;
+  current: EntityImageView | null;
 }) {
+  const kind = entityKind(entity, kindKey);
   const router = useRouter();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
-  const [fit, setFit] = useState<Fit>(kind === "logo" ? "contain" : "cover");
+  // Un logo se acomoda completo; una foto o un banner llenan el cuadro.
+  const [fit, setFit] = useState<Fit>(kind.key === "logo" ? "contain" : "cover");
   const [picked, setPicked] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ error?: string; message?: string }>({});
-  const label = kind === "logo" ? "logo" : "portada";
+  const label = kind.label;
+  const alt = `${kind.altPrefix} ${item.name}`;
 
   // Vista previa encuadrada, como quedará en la tienda.
   useEffect(() => {
     if (!picked) return;
     let url: string | null = null;
     let alive = true;
-    frameImage(picked, SIZES[kind], fit)
+    frameImage(picked, kind.size, fit)
       .then((framed) => {
         if (!alive) return;
         url = URL.createObjectURL(framed);
@@ -107,17 +111,17 @@ export function BrandImageField({
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [picked, fit, kind]);
+  }, [picked, fit, kind.size]);
 
   async function upload() {
     if (!picked) return;
     setBusy(true);
     setStatus({});
     try {
-      const framed = await frameImage(picked, SIZES[kind], fit).catch(() => null);
+      const framed = await frameImage(picked, kind.size, fit).catch(() => null);
       if (!framed)
         return setStatus({ error: "No pudimos leer esa imagen. Prueba con otra (JPG o PNG)." });
-      const error = await uploadBrandImage(storeHandle, brand, kind, framed).catch(
+      const error = await uploadEntityImage(storeHandle, entity, item, kind.key, framed).catch(
         () => "No se pudo subir la imagen. Revisa tu conexión e inténtalo de nuevo.",
       );
       if (error) return setStatus({ error });
@@ -135,9 +139,9 @@ export function BrandImageField({
     setBusy(true);
     setStatus({});
     try {
-      const done = await removeBrandImage(storeHandle, { brandId: brand.id, kind });
+      const done = await removeEntityImage(storeHandle, { entity, id: item.id, kind: kind.key });
       if (!done.ok) return setStatus({ error: done.error });
-      setStatus({ message: kind === "logo" ? "Logo quitado." : "Portada quitada." });
+      setStatus({ message: kind.removedMessage });
       router.refresh();
     } finally {
       setBusy(false);
@@ -145,31 +149,25 @@ export function BrandImageField({
   }
 
   const shown = preview ?? current?.url ?? null;
-  const box = kind === "logo" ? "size-24" : "aspect-[8/3] w-full max-w-sm";
+  const box = kind.square ? "size-24" : "aspect-[8/3] w-full max-w-sm";
   return (
     <fieldset className="space-y-2 rounded-md border border-border p-3">
-      <legend className="px-1 text-sm font-semibold">
-        {kind === "logo" ? "Logo (cuadrado)" : "Portada de la marca (opcional)"}
-      </legend>
+      <legend className="px-1 text-sm font-semibold">{kind.legend}</legend>
       <div className="flex flex-wrap items-start gap-3">
         <div
           className={`${box} flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-canvas`}
         >
           {shown ? (
             // eslint-disable-next-line @next/next/no-img-element -- vista previa local o imagen re-codificada
-            <img
-              src={shown}
-              alt={`${kind === "logo" ? "Logo" : "Portada"} de ${brand.name}`}
-              className="size-full object-contain"
-            />
+            <img src={shown} alt={alt} className="size-full object-contain" />
           ) : current?.status === "pending" ? (
             <span className="p-2 text-center text-[13px] text-fg-muted">Procesando…</span>
-          ) : kind === "logo" ? (
+          ) : kind.square ? (
             <span aria-hidden="true" className="text-2xl font-bold text-fg-muted">
-              {brandInitialsOf(brand.name)}
+              {brandInitialsOf(item.name)}
             </span>
           ) : (
-            <span className="p-2 text-center text-[13px] text-fg-muted">Sin portada</span>
+            <span className="p-2 text-center text-[13px] text-fg-muted">Sin {label}</span>
           )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -228,7 +226,7 @@ export function BrandImageField({
                 <ConfirmButton
                   size="sm"
                   loading={busy}
-                  question={`¿Quitar ${kind === "logo" ? "el logo" : "la portada"} de ${brand.name}?`}
+                  question={`¿Quitar ${kind.article} de ${item.name}?`}
                   confirmLabel={`Sí, quitar ${label}`}
                 >
                   {`Quitar ${label}`}
@@ -252,17 +250,21 @@ export function BrandImageField({
 }
 
 /**
- * Logos de varias marcas a la vez: se arrastran o se eligen varios archivos y
- * cada uno se asigna a la marca cuyo nombre coincide con el del archivo; los
- * que no coinciden se asignan a mano o se omiten.
+ * Imágenes de varias marcas o categorías a la vez: se arrastran o se eligen
+ * varios archivos y cada uno se asigna a la que tiene el mismo nombre que el
+ * archivo; los que no coinciden se asignan a mano o se omiten.
  */
-export function BulkBrandLogos({
+export function BulkEntityImages({
   storeHandle,
-  brands,
+  entity,
+  items: brands,
 }: {
   storeHandle: string;
-  brands: { id: string; name: string; slug: string }[];
+  entity: MediaEntity;
+  items: { id: string; name: string; slug: string }[];
 }) {
+  const cfg = ENTITY_MEDIA[entity];
+  const main = cfg.kinds[0];
   const router = useRouter();
   const id = useId();
   const [rows, setRows] = useState<{ file: File; brandId: string; result?: string }[]>([]);
@@ -302,8 +304,8 @@ export function BulkBrandLogos({
         const brand = brands.find((b) => b.id === item.row.brandId)!;
         let error: string | null;
         try {
-          const framed = await frameImage(item.row.file, SIZES.logo, "contain");
-          error = await uploadBrandImage(storeHandle, brand, "logo", framed);
+          const framed = await frameImage(item.row.file, main.size, cfg.bulkFit);
+          error = await uploadEntityImage(storeHandle, entity, brand, main.key, framed);
         } catch {
           error = "No pudimos leer o subir esta imagen.";
         }
@@ -317,7 +319,10 @@ export function BulkBrandLogos({
     } finally {
       setBusy(false);
     }
-    setSummary(`${ok} ${ok === 1 ? "logo subido" : "logos subidos"}.`);
+    const [one, many] = cfg.bulkUnit;
+    setSummary(
+      `${ok} ${ok === 1 ? `${one} subid${one === "foto" ? "a" : "o"}` : `${many} subid${one === "foto" ? "as" : "os"}`}.`,
+    );
     router.refresh();
   }
 
@@ -329,12 +334,9 @@ export function BulkBrandLogos({
       className="space-y-3 rounded-md border border-border p-4"
     >
       <h2 id={`${id}-title`} className="text-base font-semibold">
-        Subir logos de varias marcas
+        {cfg.bulkTitle}
       </h2>
-      <p className="text-sm text-fg-muted">
-        Nombra cada archivo como la marca (por ejemplo «muha-meds.png») y se asigna solo. Se
-        acomodan en un cuadro sin recortar.
-      </p>
+      <p className="text-sm text-fg-muted">{cfg.bulkHint}</p>
       <label
         htmlFor={`${id}-files`}
         onDragOver={(e) => {
@@ -351,7 +353,7 @@ export function BulkBrandLogos({
           over ? "border-accent bg-canvas" : "border-border"
         }`}
       >
-        <span className="font-medium">Arrastra aquí los logos o toca para elegirlos</span>
+        <span className="font-medium">{cfg.bulkDrop}</span>
         <span className="text-[13px] text-fg-muted">
           JPG, PNG, WebP o AVIF, hasta 10 MB cada uno
         </span>
@@ -365,7 +367,7 @@ export function BulkBrandLogos({
         />
       </label>
       {rows.length > 0 ? (
-        <ul aria-label="Logos por subir" aria-live="polite" className="space-y-2">
+        <ul aria-label={cfg.bulkListLabel} aria-live="polite" className="space-y-2">
           {rows.map((row, index) => (
             <li
               key={`${row.file.name}-${index}`}
@@ -375,7 +377,7 @@ export function BulkBrandLogos({
                 {row.file.name}
               </span>
               <label className="sr-only" htmlFor={`${id}-brand-${index}`}>
-                Marca de {row.file.name}
+                {cfg.bulkPickLabel} {row.file.name}
               </label>
               <select
                 id={`${id}-brand-${index}`}
@@ -388,7 +390,7 @@ export function BulkBrandLogos({
                 }
                 className="min-h-11 rounded-md border border-control bg-surface px-2"
               >
-                <option value="">Sin marca (no se sube)</option>
+                <option value="">{cfg.bulkNone}</option>
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -407,11 +409,11 @@ export function BulkBrandLogos({
       <div className="flex flex-wrap items-center gap-3">
         {blocked ? (
           <p role="alert" className="basis-full text-sm text-danger">
-            Elegiste la misma marca para dos archivos. Deja una sola.
+            {cfg.bulkDuplicate}
           </p>
         ) : null}
         <Button type="button" disabled={ready === 0 || blocked} loading={busy} onClick={uploadAll}>
-          {ready === 1 ? "Subir 1 logo" : `Subir ${ready} logos`}
+          {ready === 1 ? `Subir 1 ${cfg.bulkUnit[0]}` : `Subir ${ready} ${cfg.bulkUnit[1]}`}
         </Button>
         {summary ? (
           <p role="status" className="text-sm">

@@ -142,6 +142,8 @@ export interface CategoryDetail {
   seo_description: string | null;
   updated_at: string;
   image: ImageRef | null;
+  /** Banner ancho (misión Panel, Paso A); falta en bases sin la migración. */
+  cover?: ImageRef | null;
   children: { name: string; path: string }[];
   breadcrumb: { name: string; path: string }[];
 }
@@ -376,6 +378,32 @@ const readDiscovery = (storeId: string, db: Db = gatewayDb()) =>
   call<DiscoverySummary>(db`select storefront.discovery_summary(${storeId}::uuid) as value`);
 const discoveryCached = cachedRead("discovery_summary", (storeId: string) =>
   readDiscovery(storeId),
+);
+
+/**
+ * Fotos cuadradas de las categorías por ruta (misión Panel, Paso A), para el
+ * menú y la barra de categorías. Sin la migración, o si falla, `{}`: se usan
+ * las iniciales.
+ */
+export async function getCategoryThumbs(storeId: string): Promise<Record<string, ImageRef>> {
+  assertStore(storeId);
+  try {
+    return (
+      (await catalogRead(
+        storeId,
+        (db) => readCategoryThumbs(storeId, db),
+        () => categoryThumbsCached(storeId),
+      )) ?? {}
+    );
+  } catch {
+    return {};
+  }
+}
+
+const readCategoryThumbs = (storeId: string, db: Db = gatewayDb()) =>
+  call<Record<string, ImageRef>>(db`select storefront.category_thumbs(${storeId}::uuid) as value`);
+const categoryThumbsCached = cachedRead("category_thumbs", (storeId: string) =>
+  readCategoryThumbs(storeId),
 );
 
 export const getProduct = cache(

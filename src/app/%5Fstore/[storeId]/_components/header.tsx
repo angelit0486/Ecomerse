@@ -62,6 +62,7 @@ export function StoreHeader({
   cartCount,
   logoPosition = "left",
   whatsapp,
+  thumbs,
 }: {
   store: StorePublic;
   menu: MenuEntry[];
@@ -71,6 +72,8 @@ export function StoreHeader({
   logoPosition?: "left" | "center";
   /** WhatsApp de la tienda, para el panel del menú en móvil. */
   whatsapp?: string | undefined;
+  /** Foto de cada categoría por enlace, para el menú del celular. */
+  thumbs?: Record<string, string>;
 }) {
   const centered = logoPosition === "center";
   return (
@@ -136,7 +139,13 @@ export function StoreHeader({
           </Link>
         </div>
         <MainNav menu={menu} discovery={discovery} />
-        <MobileMenu menu={menu} discovery={discovery} cartCount={cartCount} whatsapp={whatsapp} />
+        <MobileMenu
+          menu={menu}
+          discovery={discovery}
+          cartCount={cartCount}
+          whatsapp={whatsapp}
+          thumbs={thumbs}
+        />
       </NavProvider>
     </header>
   );

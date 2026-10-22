@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getCategory } from "@/server/storefront/catalog";
+import { getCategory, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 
@@ -69,12 +69,39 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           ...category.breadcrumb.map((c) => ({ label: c.name, href: `/categoria/${c.path}` })),
         ]}
       />
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
-          {category.name}
-        </h1>
+      <header className="space-y-3">
+        {category.cover ? (
+          // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la categoría
+          <img
+            src={mediaUrl(category.cover.path)}
+            alt=""
+            width={category.cover.width ?? 1600}
+            height={category.cover.height ?? 600}
+            fetchPriority="high"
+            decoding="async"
+            className="block aspect-[8/3] w-full rounded-[var(--sf-radius-card)] object-cover"
+          />
+        ) : null}
+        <div className="flex items-center gap-4">
+          {category.image && !category.cover ? (
+            // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
+            <img
+              src={mediaUrl(category.image.path)}
+              alt=""
+              width={72}
+              height={72}
+              decoding="async"
+              className="size-16 shrink-0 rounded-full object-cover ring-1 ring-[var(--sf-border)] sm:size-20"
+            />
+          ) : null}
+          <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl">
+            {category.name}
+          </h1>
+        </div>
         {category.description ? (
-          <p className="max-w-prose text-[var(--sf-muted)]">{category.description}</p>
+          <p className="max-w-prose whitespace-pre-line text-[var(--sf-muted)]">
+            {category.description}
+          </p>
         ) : null}
       </header>
       {category.children.length > 0 ? (

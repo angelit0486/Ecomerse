@@ -5,7 +5,12 @@ import type { ReactNode } from "react";
 import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart } from "@/server/storefront/cart";
-import { getDiscoverySummary, getMenus, mediaUrl } from "@/server/storefront/catalog";
+import {
+  getCategoryThumbs,
+  getDiscoverySummary,
+  getMenus,
+  mediaUrl,
+} from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
@@ -70,13 +75,21 @@ export default async function StoreLayout({ children, params }: Props) {
   // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
   // el principio adelanta la imagen principal (LCP) en el celular.
   const mediaOrigin = new URL(mediaUrl("")).origin;
-  const [menus, nonce, cart, discovery] = await Promise.all([
+  const [menus, nonce, cart, discovery, categoryThumbs] = await Promise.all([
     getMenus(store.id),
     headers().then((h) => h.get("x-nonce") ?? undefined),
     // Sin caché: depende de la cookie del comprador (§44.7).
     getCart(store.id).catch(() => null),
     getDiscoverySummary(store.id),
+    getCategoryThumbs(store.id),
   ]);
+  // Foto de cada categoría por enlace (misión Panel, Paso A): menú y barra.
+  const thumbs = Object.fromEntries(
+    Object.entries(categoryThumbs).map(([path, image]) => [
+      `/categoria/${path}`,
+      mediaUrl(image.path),
+    ]),
+  );
   // «Marcas» con al menos dos (una sola no ayuda a explorar) y «Ofertas» con
   // descuentos reales (super prompt §5 y §8).
   const discoveryLinks = [
@@ -141,6 +154,7 @@ export default async function StoreLayout({ children, params }: Props) {
         cartCount={cart?.item_count ?? 0}
         logoPosition={theme.logoPosition}
         whatsapp={settings.contact?.whatsapp}
+        thumbs={thumbs}
       />
       <QuickLinks
         menu={menus.main}

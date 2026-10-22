@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import {
+  getCategoryThumbs,
   getGoalCovers,
   getHome,
   getShippingPromo,
@@ -59,15 +60,20 @@ export default async function StoreHomePage({ params }: Props) {
   const goalValues = (facets.find((f) => f.key === GOAL_KEY)?.values ?? [])
     .filter((v) => v.count > 0)
     .slice(0, 8);
-  const covers = await getGoalCovers(
-    store.id,
-    goalValues.map((v) => v.key),
-  );
+  const [covers, thumbs] = await Promise.all([
+    getGoalCovers(
+      store.id,
+      goalValues.map((v) => v.key),
+    ),
+    getCategoryThumbs(store.id),
+  ]);
+  // Si hay una categoría con el mismo nombre que el objetivo («Energía»), se usa
+  // la foto que subió la tienda (misión Panel, Paso A); si no, la del producto.
   const goals: GoalTile[] = goalValues.map(({ key, label, count }) => ({
     key,
     label,
     count,
-    image: covers[key] ?? null,
+    image: thumbs[key] ?? covers[key] ?? null,
   }));
   const sections = home.sections ?? [];
   const categories = home.categories ?? [];

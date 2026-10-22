@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
 import { BrandForm, DeleteBrandButton } from "../catalog-forms";
-import { BrandImageField, BulkBrandLogos } from "./brand-images";
+import { BulkEntityImages, EntityImageField } from "../_media/entity-images";
 import { BrandProfileForm } from "./brand-profile-form";
 
 export const metadata: Metadata = { title: "Marcas" };
@@ -60,9 +60,10 @@ export default async function BrandsPage({ params }: Props) {
                 : `${withoutLogo} marcas no tienen logo: en la tienda se ven sus iniciales.`}
             </p>
           ) : null}
-          <BulkBrandLogos
+          <BulkEntityImages
             storeHandle={ctx.store.handle}
-            brands={brands.map((b) => ({ id: b.id, name: b.name, slug: b.slug }))}
+            entity="brand"
+            items={brands.map((b) => ({ id: b.id, name: b.name, slug: b.slug }))}
           />
           <ul aria-label="Marcas" className="space-y-3">
             {brands.map((brand) => (
@@ -100,15 +101,17 @@ export default async function BrandsPage({ params }: Props) {
                   </summary>
                   <div className="space-y-4 border-t border-border p-3">
                     <div className="grid gap-4 lg:grid-cols-2">
-                      <BrandImageField
+                      <EntityImageField
                         storeHandle={ctx.store.handle}
-                        brand={{ id: brand.id, name: brand.name }}
+                        entity="brand"
+                        item={{ id: brand.id, name: brand.name }}
                         kind="logo"
                         current={brand.logo}
                       />
-                      <BrandImageField
+                      <EntityImageField
                         storeHandle={ctx.store.handle}
-                        brand={{ id: brand.id, name: brand.name }}
+                        entity="brand"
+                        item={{ id: brand.id, name: brand.name }}
                         kind="cover"
                         current={brand.cover}
                       />

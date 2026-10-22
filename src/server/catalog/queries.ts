@@ -195,24 +195,11 @@ export async function listBrandProfiles(
     logo_media_id: string | null;
     cover_media_id: string | null;
   })[];
-  const ids = rows.flatMap((r) => [r.logo_media_id, r.cover_media_id]).filter(Boolean) as string[];
-  const media = new Map<string, BrandImage>();
-  if (ids.length > 0) {
-    const { data: found, error: mediaError } = await supabase
-      .from("media")
-      .select("id, status, storage_path")
-      .eq("store_id", storeId)
-      .in("id", ids)
-      .is("deleted_at", null);
-    if (mediaError) throw mediaError;
-    for (const m of found ?? []) {
-      media.set(m.id as string, {
-        id: m.id as string,
-        status: m.status as BrandImage["status"],
-        url: m.status === "ready" ? publicMediaUrl(m.storage_path as string) : null,
-      });
-    }
-  }
+  const media = await mediaViews(
+    supabase,
+    storeId,
+    rows.flatMap((r) => [r.logo_media_id, r.cover_media_id]),
+  );
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -222,6 +209,64 @@ export async function listBrandProfiles(
     logo: r.logo_media_id ? (media.get(r.logo_media_id) ?? null) : null,
     cover: r.cover_media_id ? (media.get(r.cover_media_id) ?? null) : null,
   }));
+}
+
+/** Estado y URL pública de varias imágenes de la tienda (no borradas). */
+async function mediaViews(
+  supabase: SupabaseClient,
+  storeId: string,
+  ids: (string | null)[],
+): Promise<Map<string, BrandImage>> {
+  const wanted = [...new Set(ids.filter(Boolean) as string[])];
+  const media = new Map<string, BrandImage>();
+  if (wanted.length === 0) return media;
+  const { data, error } = await supabase
+    .from("media")
+    .select("id, status, storage_path")
+    .eq("store_id", storeId)
+    .in("id", wanted)
+    .is("deleted_at", null);
+  if (error) throw error;
+  for (const m of data ?? []) {
+    media.set(m.id as string, {
+      id: m.id as string,
+      status: m.status as BrandImage["status"],
+      url: m.status === "ready" ? publicMediaUrl(m.storage_path as string) : null,
+    });
+  }
+  return media;
+}
+
+/** Foto cuadrada y banner de cada categoría (misión Panel, Paso A). */
+export async function listCategoryImages(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<Map<string, { image: BrandImage | null; cover: BrandImage | null }>> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, image_media_id, cover_media_id")
+    .eq("store_id", storeId)
+    .is("deleted_at", null);
+  if (error) throw error;
+  const rows = (data ?? []) as {
+    id: string;
+    image_media_id: string | null;
+    cover_media_id: string | null;
+  }[];
+  const media = await mediaViews(
+    supabase,
+    storeId,
+    rows.flatMap((r) => [r.image_media_id, r.cover_media_id]),
+  );
+  return new Map(
+    rows.map((r) => [
+      r.id,
+      {
+        image: r.image_media_id ? (media.get(r.image_media_id) ?? null) : null,
+        cover: r.cover_media_id ? (media.get(r.cover_media_id) ?? null) : null,
+      },
+    ]),
+  );
 }
 
 export interface MediaRow {
