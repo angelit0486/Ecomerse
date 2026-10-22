@@ -256,7 +256,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 
 - Aprobado por el propietario («Las 2, quiero control total y apruebo»):
   - **Rol de plataforma en staging:** `almanzaangel164@gmail.com` (dueña de `demo`, con verificación en dos pasos) es `platform_owner` en `pruva-staging` (fila en `public.platform_staff`). Ve la consola `/platform` y «Agregar otra tienda».
-  - **ADR-038 implementado:** la dueña o administradora de la organización crea tiendas desde «Tus tiendas» → «Nueva tienda en …». Migración `20261025000100_org_create_store` (pendiente de aplicar en staging), pgTAP `99_org_create_store`, E2E `org-create-store`.
+  - **ADR-038 implementado:** la dueña o administradora de la organización crea tiendas desde «Tus tiendas» → «Nueva tienda en …». Migración `20261025000100_org_create_store` (pendiente de aplicar en staging), pgTAP `99_org_create_store`, E2E `org-create-store`. verify 941, pgTAP 2348 (101 archivos), integración 355, E2E completa 97/97.
 - Sin cambiar: `demo2` sigue a nombre de `demo2@example.test` y `maranahomyr@gmail.com` no tiene tiendas ni rol.
 
 ## Despliegue del 2026-10-21 (multitienda y pulido)
