@@ -13,6 +13,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { publicMediaUrl } from "@/server/catalog/queries";
 
 import { loadSiblingStores } from "../_shared/sibling-stores";
+import { TIMEZONES } from "../_shared/timezones";
 import { BrandForm } from "../apariencia/forms";
 import { CopyStructureForm } from "./copy-structure-form";
 import { ProfileForm } from "./forms";
@@ -23,23 +24,6 @@ import { SamplesNotice, TemplateForm } from "./template-form";
 export const metadata: Metadata = { title: "Configura tu tienda" };
 
 type Props = { params: Promise<{ storeHandle: string }> };
-
-const TIMEZONES = [
-  "America/Mexico_City",
-  "America/Monterrey",
-  "America/Cancun",
-  "America/Mazatlan",
-  "America/Hermosillo",
-  "America/Chihuahua",
-  "America/Tijuana",
-  "America/Bogota",
-  "America/Lima",
-  "America/Santiago",
-  "America/Argentina/Buenos_Aires",
-  "America/Sao_Paulo",
-  "America/New_York",
-  "Europe/Madrid",
-];
 
 interface LaunchIssue {
   code: string;

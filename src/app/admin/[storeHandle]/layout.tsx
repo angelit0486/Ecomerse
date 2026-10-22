@@ -99,6 +99,11 @@ export default async function StoreLayout({ children, params }: Props) {
       title: "Ajustes",
       items: visible([
         {
+          href: `${base}/ajustes/tienda`,
+          label: "Datos de la tienda",
+          show: hasPermission(ctx, "store.update"),
+        },
+        {
           href: `${base}/ajustes/pagos`,
           label: "Pagos",
           show: hasPermission(ctx, "payments.manage"),
