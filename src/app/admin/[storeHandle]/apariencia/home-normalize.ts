@@ -149,6 +149,7 @@ export function normalizeSections(input: unknown): unknown {
     // Comunes (ADR-034): «en todos los dispositivos» y sin fechas es lo de siempre.
     const out: Json = { ...section, props };
     if (out.visibility === "all" || out.visibility === "") delete out.visibility;
+    if (out.spacing === "normal" || out.spacing === "") delete out.spacing;
     for (const key of ["starts_at", "ends_at"]) {
       if (out[key] === "" || out[key] === null) delete out[key];
     }

@@ -758,7 +758,8 @@ type SectionBody =
   | {
       type: "brand_logos";
       title: string;
-      brands: { name: string; slug: string; logo: Omit<ImageRef, "alt"> }[];
+      /** Tema v4: `logo` null = la marca no tiene logo (se ven sus iniciales). */
+      brands: { name: string; slug: string; logo: Omit<ImageRef, "alt"> | null }[];
     }
   | {
       type: "testimonials";
@@ -788,7 +789,13 @@ type SectionBody =
   | { type: "video"; provider: VideoProvider; video_id: string; title: string; caption?: string }
   | { type: "contact_map"; title: string; show_whatsapp: boolean };
 
-export type HomeSectionData = SectionBody & { id: string; visibility?: Visibility };
+export type HomeSectionData = SectionBody & {
+  id: string;
+  visibility?: Visibility;
+  /** Tema v4: colores propios del bloque y espacio arriba y abajo. */
+  colors?: { background: string; foreground: string };
+  spacing?: "compact" | "normal" | "spacious";
+};
 
 /**
  * Portada: secciones publicadas (o del borrador en la vista previa) o, si la

@@ -50,23 +50,40 @@ export function contrastIssues(
   });
 }
 
-export type ThemeContrastKey = ColorKey | "announcement";
+export type ThemeContrastKey = ColorKey | "announcement" | "sale" | `element_colors.${string}`;
+
+/** Orden de los elementos en `app.theme_contrast_issues` (tema v4). */
+const ELEMENT_ORDER = ["hero", "header", "nav_bar", "cards", "buttons", "footer"] as const;
 
 /**
  * Todas las comprobaciones de contraste de un tema (paleta + barra de anuncio),
  * con las mismas claves y el mismo orden que `app.theme_contrast_issues`.
  */
 export function themeContrastIssues(settings: {
-  colors?: Partial<Palette>;
+  colors?: Partial<Palette> & { sale?: string };
   shape?: { button_style?: "solid" | "outline" };
   header?: { announcement?: { background: string; foreground: string } };
+  element_colors?: Partial<
+    Record<string, { background: string; foreground: string; active?: string } | undefined>
+  >;
 }): ThemeContrastKey[] {
+  const palette = resolvePalette(settings.colors);
   const keys: ThemeContrastKey[] = contrastIssues(
-    resolvePalette(settings.colors),
+    palette,
     settings.shape?.button_style ?? "solid",
   ).map((i) => i.key);
   const bar = settings.header?.announcement;
   if (bar && contrastRatio(bar.foreground, bar.background) < 4.5) keys.push("announcement");
+  const sale = settings.colors?.sale;
+  if (sale && contrastRatio(sale, palette.background) < 4.5) keys.push("sale");
+  for (const key of ELEMENT_ORDER) {
+    const pair = settings.element_colors?.[key];
+    if (!pair) continue;
+    if (contrastRatio(pair.foreground, pair.background) < 4.5) keys.push(`element_colors.${key}`);
+    if (pair.active && contrastRatio(pair.active, pair.background) < 4.5) {
+      keys.push(`element_colors.${key}.active`);
+    }
+  }
   return keys;
 }
 

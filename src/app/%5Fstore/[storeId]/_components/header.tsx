@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import type { SocialNetwork } from "@/lib/theme/links";
@@ -46,9 +47,6 @@ const ICON = {
  * (nada cortado al inicio, DIAGNOSTICO-PORTADA) y se difumina a la derecha para
  * decir «hay más» en vez de mostrar una palabra cortada.
  */
-const QUICK_LINKS_LIST =
-  "flex gap-1 overflow-x-auto scroll-pl-1.5 pl-1.5 pr-8 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] focus-within:[mask-image:none]";
-
 /**
  * Encabezado (rediseño A+B, revisión de conversión A4): en móvil, fila 1 con
  * menú, nombre, cuenta y carrito; fila 2 con el buscador (≤ 120 px en total).
@@ -63,6 +61,7 @@ export function StoreHeader({
   logoPosition = "left",
   whatsapp,
   thumbs,
+  below,
 }: {
   store: StorePublic;
   menu: MenuEntry[];
@@ -74,10 +73,12 @@ export function StoreHeader({
   whatsapp?: string | undefined;
   /** Foto de cada categoría por enlace, para el menú del celular. */
   thumbs?: Record<string, string>;
+  /** Barra de categorías fija (tema v4): va dentro del encabezado. */
+  below?: ReactNode;
 }) {
   const centered = logoPosition === "center";
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]">
+    <header className="sf-el-header sticky top-0 z-30 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]">
       <NavProvider>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-2 px-2 pb-2.5 pt-1.5 sm:gap-x-5 sm:px-4 sm:py-3">
           <MenuButton />
@@ -147,68 +148,8 @@ export function StoreHeader({
           thumbs={thumbs}
         />
       </NavProvider>
+      {below}
     </header>
-  );
-}
-
-/**
- * Accesos rápidos de móvil (rediseño A+B): una fila que se desliza bajo el
- * encabezado con «Ofertas» (si hay), «Más vendidos» y los destinos del menú de la
- * tienda. No es fija: el encabezado se queda en ≤ 120 px.
- */
-export function QuickLinks({
-  menu,
-  discovery = [],
-  custom,
-}: {
-  menu: MenuEntry[];
-  discovery?: { label: string; href: string }[];
-  /** Accesos elegidos por la tienda (tema v2): reemplazan a los automáticos. */
-  custom?: { label: string; link: string }[];
-}) {
-  if (custom && custom.length > 0) {
-    return (
-      <nav aria-label="Accesos rápidos" className="border-b border-[var(--sf-border)] sm:hidden">
-        <ul className={QUICK_LINKS_LIST}>
-          {custom.map((link) => (
-            <li key={`${link.label}:${link.link}`} className="shrink-0">
-              <ThemeLink
-                href={link.link}
-                className="inline-flex h-11 items-center whitespace-nowrap px-2.5 text-sm font-semibold"
-              >
-                {link.label}
-              </ThemeLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    );
-  }
-  const offers = discovery.find((d) => d.href === "/ofertas");
-  const leaves = menu.flatMap((m) => (m.children.length > 0 ? m.children : [m]));
-  const links = [
-    ...(offers ? [offers] : []),
-    { label: "Más vendidos", href: "/productos?orden=best_selling" },
-    ...leaves,
-    ...discovery.filter((d) => d.href !== "/ofertas"),
-  ].filter((link, i, all) => all.findIndex((l) => l.href === link.href) === i);
-  return (
-    <nav aria-label="Accesos rápidos" className="border-b border-[var(--sf-border)] sm:hidden">
-      <ul className={QUICK_LINKS_LIST}>
-        {links.slice(0, 12).map((link) => (
-          <li key={link.href} className="shrink-0">
-            <Link
-              href={link.href}
-              className={`inline-flex h-11 items-center whitespace-nowrap px-2.5 text-sm font-semibold ${
-                link.href === "/ofertas" ? "text-[var(--sf-sale-text)]" : ""
-              }`}
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }
 

@@ -32,6 +32,8 @@ import { SeoPreview } from "../_shared/seo-preview";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { discardThemeDraft, publishTheme, saveThemeSection, undoPublish } from "./actions";
+import type { NavPick } from "./home-options";
+import { NavBarEditor } from "./nav-bar-editor";
 import type { ThemeSection } from "./patch";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
@@ -155,6 +157,8 @@ export function BrandForm({
   return (
     <form action={action} onSubmit={submitKeepingState(action)} className="space-y-6" noValidate>
       <input type="hidden" name="revision" value={revision} />
+      {/* El color de oferta se edita en Portada → Colores; aquí se conserva. */}
+      <input type="hidden" name="sale" value={settings.colors?.sale ?? ""} />
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-semibold">Estilos sugeridos</legend>
         <p className="text-sm text-fg-muted">
@@ -420,11 +424,13 @@ export function HeaderFooterForm({
   revision,
   settings,
   menusHref,
+  navPicks,
 }: {
   storeHandle: string;
   revision: number;
   settings: ThemeSettings;
   menusHref: string | null;
+  navPicks: NavPick[];
 }) {
   const [state, action, pending] = useSection(storeHandle, "encabezado");
   const bar = settings.header?.announcement;
@@ -439,7 +445,6 @@ export function HeaderFooterForm({
   );
   const barRatio = contrastRatio(fg, bg);
   const barLow = text.trim() !== "" && barRatio < 4.5;
-  const quick = settings.header?.quick_links ?? [];
 
   return (
     <form action={action} onSubmit={submitKeepingState(action)} className="space-y-6" noValidate>
@@ -544,39 +549,12 @@ export function HeaderFooterForm({
             error={state.fields?.announcement_ends_at}
           />
         </div>
-        <fieldset className="space-y-2">
-          <legend className="text-[13px] font-medium">
-            Accesos rápidos en el celular (opcional)
-          </legend>
-          <p className="text-[13px] text-fg-muted">
-            Hasta 4 botones bajo el encabezado del celular. Sin llenar, se arman solos con tus
-            ofertas, lo más vendido y tu menú.
-          </p>
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="grid gap-2 sm:grid-cols-2">
-              <Field label={`Acceso ${i + 1}: nombre`} error={state.fields?.[`quick_label_${i}`]}>
-                {(c) => (
-                  <Input
-                    {...c}
-                    name={`quick_label_${i}`}
-                    defaultValue={quick[i]?.label ?? ""}
-                    maxLength={20}
-                  />
-                )}
-              </Field>
-              <Field label={`Acceso ${i + 1}: enlace`}>
-                {(c) => (
-                  <Input
-                    {...c}
-                    name={`quick_link_${i}`}
-                    defaultValue={quick[i]?.link ?? ""}
-                    placeholder="/categoria/proteinas"
-                  />
-                )}
-              </Field>
-            </div>
-          ))}
-        </fieldset>
+        <NavBarEditor
+          initial={settings.header?.nav_bar}
+          legacy={settings.header?.quick_links}
+          picks={navPicks}
+          errors={state.fields?.nav_items}
+        />
         {menusHref ? (
           <p className="text-sm">
             El menú principal y el del pie se editan en{" "}

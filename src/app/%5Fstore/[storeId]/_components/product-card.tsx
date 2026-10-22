@@ -121,7 +121,7 @@ function ProductCard({
   return (
     // `relative`: los textos sr-only (absolutos) quedan dentro de la tarjeta y del
     // carrusel; sin él escapaban al viewport y abrían scroll horizontal en móvil.
-    <article className="group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
+    <article className="sf-el-card group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
       <Link
         href={href}
         className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"

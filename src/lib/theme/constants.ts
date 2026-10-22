@@ -75,3 +75,6 @@ export function isValidInstant(value: string): boolean {
   const day = Number(m[3]);
   return day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
+
+/** Tema v4: enlaces de la barra de categorías del encabezado. */
+export const MAX_NAV_ITEMS = 12;

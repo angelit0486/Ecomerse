@@ -146,7 +146,7 @@ test("tienda en el celular: el primer acceso rápido se ve completo", async ({ p
   const { tenant } = await seed("q");
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`http://${tenant.handle}.localhost:3000/`);
-  const first = page.getByRole("navigation", { name: "Accesos rápidos" }).getByRole("link").first();
+  const first = page.getByRole("navigation", { name: "Categorías" }).getByRole("link").first();
   const box = (await first.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   // El texto empieza en el margen de la página (16 px), no pegado al borde.

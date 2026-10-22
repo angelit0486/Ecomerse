@@ -21,6 +21,10 @@ export interface ResolvedTheme {
   /** Tema v2 (ADR-034): sombra de tarjetas y espacio entre bloques. */
   shadow: "none" | "soft" | "strong";
   density: "compact" | "comfortable" | "spacious";
+  /** Tema v4: color de las ofertas elegido por la tienda (ya legible) o null. */
+  sale: string | null;
+  /** Tema v4: colores propios por elemento (solo pares legibles). */
+  elements: Partial<Record<ElementKey, ElementColors>>;
   announcement: {
     text: string;
     link: string | null;
@@ -30,6 +34,15 @@ export interface ResolvedTheme {
     startsAt: string | null;
     endsAt: string | null;
   } | null;
+}
+
+export const ELEMENT_KEYS = ["hero", "header", "nav_bar", "cards", "buttons", "footer"] as const;
+export type ElementKey = (typeof ELEMENT_KEYS)[number];
+export interface ElementColors {
+  bg: string;
+  fg: string;
+  active?: string;
+  border?: string;
 }
 
 const SHADOW: Record<ResolvedTheme["shadow"], string> = {
@@ -63,6 +76,7 @@ export const DEFAULT_FONT: FontKey = "inter";
 
 type Raw = {
   colors?: Record<string, unknown>;
+  element_colors?: Record<string, Record<string, unknown> | undefined>;
   shape?: { radius?: unknown; button_style?: unknown; shadow?: unknown; density?: unknown };
   typography?: { heading?: unknown; body?: unknown };
   header?: {
@@ -103,7 +117,27 @@ export function resolveTheme(settings: unknown): ResolvedTheme {
   const bar = s.header?.announcement;
   const barBg = hex(bar?.background);
   const barFg = hex(bar?.foreground);
+  // Tema v4: la base ya exige 4.5:1; aquí se vuelve a revisar (lo que no se
+  // lee se ignora y queda el color del tema).
+  const sale = hex(s.colors?.sale);
+  const elements: ResolvedTheme["elements"] = {};
+  for (const key of ELEMENT_KEYS) {
+    const raw = s.element_colors?.[key];
+    const bg = hex(raw?.background);
+    const fg = hex(raw?.foreground);
+    if (!bg || !fg || contrastRatio(fg, bg) < 4.5) continue;
+    const active = hex(raw?.active);
+    const border = hex(raw?.border);
+    elements[key] = {
+      bg,
+      fg,
+      ...(active && contrastRatio(active, bg) >= 4.5 ? { active } : {}),
+      ...(border ? { border } : {}),
+    };
+  }
   return {
+    sale: sale && contrastRatio(sale, palette.background) >= 4.5 ? sale : null,
+    elements,
     palette,
     buttonText: buttonTextColor(palette.primary),
     radius: radius ?? RADIUS.md!,
@@ -155,8 +189,9 @@ export function saleColors(theme: ResolvedTheme): { bg: string; fg: string; text
       : theme.buttonStyle === "outline"
         ? { bg: p.background, fg: p.primary }
         : { bg: p.primary, fg: theme.buttonText };
-  const text =
-    contrastRatio(p.accent, p.background) >= 4.5
+  const text = theme.sale
+    ? theme.sale
+    : contrastRatio(p.accent, p.background) >= 4.5
       ? p.accent
       : midTone
         ? linkColor(theme)
@@ -250,7 +285,11 @@ export function themeCss(theme: ResolvedTheme): string {
   const p = theme.palette;
   const outline = theme.buttonStyle === "outline";
   const sale = saleColors(theme);
-  const footer = footerColors(theme);
+  const custom = theme.elements;
+  const footer = custom.footer
+    ? { bg: custom.footer.bg, fg: custom.footer.fg }
+    : footerColors(theme);
+  const button = custom.buttons;
   const state = stateColors(theme);
   const declarations = [
     `--sf-primary:${p.primary}`,
@@ -261,9 +300,9 @@ export function themeCss(theme: ResolvedTheme): string {
     `--sf-on-primary:${theme.buttonText}`,
     `--sf-radius:${theme.radius}`,
     // Botón principal: relleno o contorno (§20.2). El contorno exige 4.5:1 (§13 M5).
-    `--sf-btn-bg:${outline ? p.background : p.primary}`,
-    `--sf-btn-fg:${outline ? p.primary : theme.buttonText}`,
-    `--sf-btn-border:${p.primary}`,
+    `--sf-btn-bg:${button ? button.bg : outline ? p.background : p.primary}`,
+    `--sf-btn-fg:${button ? button.fg : outline ? p.primary : theme.buttonText}`,
+    `--sf-btn-border:${button ? button.bg : p.primary}`,
     `--sf-sale-bg:${sale.bg}`,
     `--sf-sale-fg:${sale.fg}`,
     `--sf-sale-text:${sale.text}`,
@@ -287,4 +326,67 @@ export function themeCss(theme: ResolvedTheme): string {
     );
   }
   return declarations.join(";");
+}
+
+/** Variables de un área con colores propios: todo lo de adentro se recalcula. */
+function scopeVars(bg: string, fg: string): string {
+  return [
+    `--sf-bg:${bg}`,
+    `--sf-fg:${fg}`,
+    // Texto secundario y enlaces del mismo color: con colores propios no se
+    // garantiza otro tono legible (§20.2).
+    `--sf-muted:${fg}`,
+    `--sf-link:${fg}`,
+    `--sf-surface:color-mix(in srgb,${fg} 5%,${bg})`,
+    `--sf-border:color-mix(in srgb,${fg} 15%,${bg})`,
+    `--sf-border-strong:color-mix(in srgb,${fg} 55%,${bg})`,
+    `background-color:${bg}`,
+    `color:${fg}`,
+  ].join(";");
+}
+
+/**
+ * Reglas de los elementos con colores propios (tema v4): `.sf-el-<elemento>`
+ * redefine las variables del tema dentro de esa área. Sin estilos en línea (CSP)
+ * y solo con hex de la lista blanca.
+ */
+export function elementCss(theme: ResolvedTheme): string {
+  const rules: string[] = [];
+  const classes: Partial<Record<ElementKey, string>> = {
+    hero: "sf-el-hero",
+    header: "sf-el-header",
+    nav_bar: "sf-el-nav",
+    cards: "sf-el-card",
+  };
+  for (const [key, cls] of Object.entries(classes) as [ElementKey, string][]) {
+    const c = theme.elements[key];
+    if (!c) continue;
+    const extra =
+      key === "nav_bar"
+        ? `;--sf-nav-active:${c.active ?? c.fg}${c.border ? `;--sf-nav-border:${c.border}` : ""}`
+        : key === "hero"
+          ? // La portada principal se pinta con el primario y su texto.
+            `;--sf-primary:${c.bg};--sf-on-primary:${c.fg}`
+          : "";
+    rules.push(`.sf-root .${cls}{${scopeVars(c.bg, c.fg)}${extra}}`);
+  }
+  return rules.join("");
+}
+
+/**
+ * Colores propios de los bloques de la portada (tema v4): una regla por bloque
+ * con su id (uuid validado) y sus hex (validados y legibles).
+ */
+export function sectionCss(
+  sections: ReadonlyArray<{ id: string; colors?: { background?: unknown; foreground?: unknown } }>,
+): string {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  return sections
+    .flatMap((section) => {
+      const bg = hex(section.colors?.background);
+      const fg = hex(section.colors?.foreground);
+      if (!UUID.test(section.id) || !bg || !fg || contrastRatio(fg, bg) < 4.5) return [];
+      return [`.sf-root [data-sec="${section.id}"]{${scopeVars(bg, fg)}}`];
+    })
+    .join("");
 }

@@ -160,6 +160,50 @@ describe("tema v2 en el panel (ADR-034)", () => {
     );
   });
 
+  it("barra de categorías: enlaces limpios, estilo y reemplaza a los accesos rápidos", () => {
+    const { get, getAll } = form({
+      nav_present: "1",
+      nav_items: JSON.stringify([
+        { label: "  Todos ", link: "productos", visibility: "all" },
+        { label: "Energía", link: "/categoria/energia", visibility: "mobile" },
+        { label: "", link: "" },
+      ]),
+      nav_style: "pills",
+      nav_sticky: "1",
+      nav_align: "start",
+      nav_size: "sm",
+      nav_visibility: "all",
+      quick_label_0: "Viejo",
+      quick_link_0: "/x",
+    });
+    const patch = sectionPatch("encabezado", get, getAll);
+    expect(patch.header).toEqual({
+      nav_bar: {
+        items: [
+          { label: "Todos", link: "/productos" },
+          { label: "Energía", link: "/categoria/energia", visibility: "mobile" },
+        ],
+        style: "pills",
+        sticky: true,
+        visibility: "all",
+      },
+    });
+    expect(validatePatch(patch)).toEqual({ ok: true, patch });
+  });
+
+  it("barra de categorías: un enlace no válido se marca en la lista", () => {
+    const { get, getAll } = form({
+      nav_present: "1",
+      nav_items: JSON.stringify([{ label: "Malo", link: "javascript:alert(1)" }]),
+    });
+    expect(validatePatch(sectionPatch("encabezado", get, getAll))).toMatchObject({
+      ok: false,
+      fields: { nav_items: expect.any(String) },
+    });
+    const broken = form({ nav_present: "1", nav_items: "{no es json" });
+    expect(sectionPatch("encabezado", broken.get, broken.getAll).header).toBeNull();
+  });
+
   it("un acceso rápido sin nombre se marca en su campo", () => {
     const { get, getAll } = form({ quick_link_1: "/ofertas" });
     expect(validatePatch(sectionPatch("encabezado", get, getAll))).toEqual({

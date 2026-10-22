@@ -384,6 +384,91 @@ export const SETTINGS_CASES: ReadonlyArray<SchemaCase> = [
   { name: "v2 listado con texto", value: { listing: { columns_mobile: "2" } }, valid: false },
   { name: "v2 listado 1.5", value: { listing: { columns_mobile: 1.5 } }, valid: false },
   { name: "v2 marca no booleana", value: { listing: { show_brand: "sí" } }, valid: false },
+  // Tema v4.
+  { name: "v4 color de oferta", value: { colors: { sale: "#b91c1c" } }, valid: true },
+  { name: "v4 color de oferta mal escrito", value: { colors: { sale: "red" } }, valid: false },
+  {
+    name: "v4 colores por elemento",
+    value: {
+      element_colors: {
+        hero: { background: "#111827", foreground: "#ffffff" },
+        nav_bar: {
+          background: "#ffffff",
+          foreground: "#111827",
+          active: "#1d4ed8",
+          border: "#e5e7eb",
+        },
+        footer: { background: "#111827", foreground: "#ffffff" },
+      },
+    },
+    valid: true,
+  },
+  {
+    name: "v4 elemento desconocido",
+    value: { element_colors: { sidebar: { background: "#ffffff", foreground: "#111827" } } },
+    valid: false,
+  },
+  {
+    name: "v4 activo solo en la barra",
+    value: {
+      element_colors: { hero: { background: "#ffffff", foreground: "#111827", active: "#000000" } },
+    },
+    valid: false,
+  },
+  {
+    name: "v4 elemento sin texto",
+    value: { element_colors: { header: { background: "#ffffff" } } },
+    valid: false,
+  },
+  {
+    name: "v4 barra de categorías completa",
+    value: {
+      header: {
+        nav_bar: {
+          items: [
+            { label: "Todos", link: "/productos" },
+            { label: "Energía", link: "/categoria/energia", visibility: "mobile" },
+          ],
+          style: "pills",
+          sticky: true,
+          align: "center",
+          size: "md",
+          visibility: "all",
+        },
+      },
+    },
+    valid: true,
+  },
+  { name: "v4 barra vacía", value: { header: { nav_bar: {} } }, valid: true },
+  {
+    name: "v4 barra con estilo desconocido",
+    value: { header: { nav_bar: { style: "tabs" } } },
+    valid: false,
+  },
+  {
+    name: "v4 barra con enlace javascript",
+    value: { header: { nav_bar: { items: [{ label: "x", link: "javascript:alert(1)" }] } } },
+    valid: false,
+  },
+  {
+    name: "v4 barra con nombre largo",
+    value: { header: { nav_bar: { items: [{ label: "x".repeat(31), link: "/" }] } } },
+    valid: false,
+  },
+  {
+    name: "v4 barra con 13 enlaces",
+    value: {
+      header: {
+        nav_bar: { items: Array.from({ length: 13 }, (_, n) => ({ label: `L${n}`, link: "/" })) },
+      },
+    },
+    valid: false,
+  },
+  {
+    name: "v4 barra con clave extra",
+    value: { header: { nav_bar: { items: [{ label: "x", link: "/", icon: "star" }] } } },
+    valid: false,
+  },
 ];
 
 const sec = (n: number, type: string, props: unknown, enabled = true) => ({
@@ -910,6 +995,40 @@ export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
   {
     name: "v2 bloque con clave desconocida",
     value: [{ ...sec(1, "hero", { heading: "a", align: "center" }), css: "color:red" }],
+    valid: false,
+  },
+  // Tema v4.
+  {
+    name: "v4 bloque con colores y espaciado",
+    value: [
+      {
+        ...sec(1, "hero", { heading: "a", align: "center" }),
+        colors: { background: "#111827", foreground: "#ffffff" },
+        spacing: "spacious",
+      },
+    ],
+    valid: true,
+  },
+  {
+    name: "v4 bloque con texto ilegible",
+    value: [
+      {
+        ...sec(1, "hero", { heading: "a", align: "center" }),
+        colors: { background: "#ffffff", foreground: "#eeeeee" },
+      },
+    ],
+    valid: false,
+  },
+  {
+    name: "v4 bloque con un solo color",
+    value: [
+      { ...sec(1, "hero", { heading: "a", align: "center" }), colors: { background: "#ffffff" } },
+    ],
+    valid: false,
+  },
+  {
+    name: "v4 espaciado desconocido",
+    value: [{ ...sec(1, "hero", { heading: "a", align: "center" }), spacing: "huge" }],
     valid: false,
   },
 ];

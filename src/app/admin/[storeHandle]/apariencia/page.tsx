@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -19,8 +20,10 @@ import {
 } from "./forms";
 import { ThemeHistory, type ThemeVersionRow } from "./history";
 import { MoveDesign } from "./move-design";
+import { ColorsEditor } from "./colors-editor";
 import { HomeEditor } from "./home-editor";
-import { linkAccess, loadHomeOptions } from "./home-options";
+import { SECTION_LABELS } from "./section-labels";
+import { linkAccess, loadHomeOptions, loadNavPicks } from "./home-options";
 import { loadSiblingStores } from "../_shared/sibling-stores";
 
 export const metadata: Metadata = { title: "Apariencia" };
@@ -122,12 +125,23 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const images = rows
     .filter((m) => m.status === "ready")
     .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text }));
+  const navPicks = tab === "encabezado" ? await loadNavPicks(ctx.store.id, linkAccess(ctx)) : [];
   const homeOptions =
     tab === "portada" ? await loadHomeOptions(ctx.store.id, linkAccess(ctx), rows) : null;
   const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
   const siblingStores = tab === "historial" ? await loadSiblingStores(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
     []) as Parameters<typeof HomeEditor>[0]["initial"];
+  // Portada → Diseño (estructura) o Colores (apariencia), por separado (misión Panel, Paso C).
+  const view = tab === "portada" && sp.vista === "colores" ? "colores" : "diseno";
+  const nonce = view === "colores" ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
+  const titleOf = (section: (typeof homeSections)[number]) => {
+    const props = section.props as { heading?: unknown; title?: unknown };
+    const title = typeof props.heading === "string" ? props.heading : props.title;
+    return typeof title === "string" && title
+      ? `${SECTION_LABELS[section.type]} «${title}»`
+      : SECTION_LABELS[section.type];
+  };
   // Tras descartar, los formularios se montan de nuevo con lo publicado.
   const formKey = discarded ? `d${sp.descartado}` : "editor";
 
@@ -207,6 +221,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           revision={revision}
           settings={settings}
           menusHref={hasPermission(ctx, "content.manage") ? `${base}/contenido/menus` : null}
+          navPicks={navPicks}
         />
       ) : null}
       {tab === "redes" ? (
@@ -239,7 +254,42 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           </Link>
         </p>
       ) : null}
-      {tab === "portada" && homeOptions ? (
+      {tab === "portada" ? (
+        <nav aria-label="Portada" className="flex gap-2">
+          {(
+            [
+              ["diseno", "Diseño", `${base}/apariencia?seccion=portada`],
+              ["colores", "Colores", `${base}/apariencia?seccion=portada&vista=colores`],
+            ] as const
+          ).map(([key, label, href]) => (
+            <Link
+              key={key}
+              href={href}
+              aria-current={view === key ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium ${
+                view === key ? "border-accent bg-canvas font-semibold" : "border-border"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+      {tab === "portada" && view === "colores" ? (
+        <ColorsEditor
+          key={formKey}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          settings={settings}
+          nonce={nonce}
+          blocks={homeSections.map((section) => ({
+            id: section.id,
+            label: titleOf(section),
+            colors: (section as { colors?: { background: string; foreground: string } }).colors,
+          }))}
+        />
+      ) : null}
+      {tab === "portada" && view === "diseno" && homeOptions ? (
         <HomeEditor
           key={formKey}
           storeHandle={ctx.store.handle}

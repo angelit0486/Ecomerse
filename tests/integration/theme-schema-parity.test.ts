@@ -66,6 +66,16 @@ describe("paridad del contraste del tema", () => {
       colors: { foreground: "#aaaaaa", primary: "#ffff00" },
       header: { announcement: { text: "x", background: "#111827", foreground: "#1f2937" } },
     },
+    // Tema v4: oferta y colores por elemento.
+    { colors: { sale: "#b91c1c" } },
+    { colors: { sale: "#f87171" } },
+    {
+      element_colors: {
+        footer: { background: "#111827", foreground: "#374151" },
+        nav_bar: { background: "#ffffff", foreground: "#111827", active: "#93c5fd" },
+        hero: { background: "#111827", foreground: "#ffffff" },
+      },
+    },
   ];
 
   it.each(samples.map((s) => [JSON.stringify(s), s] as const))(

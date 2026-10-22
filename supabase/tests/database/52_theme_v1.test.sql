@@ -147,9 +147,10 @@ select is(pg_temp.home(pg_temp.sec(2, 'featured_products', jsonb_build_object('t
           'validation_failed/references/00000000-0000-4000-8000-000000000002:source',
           'ni uno de un atributo que no filtra');
 select is(pg_temp.home(pg_temp.sec(3, 'brand_logos', jsonb_build_object('title', 'Marcas',
-            'brand_ids', jsonb_build_array(tests.fx('sin_logo'), tests.fx('con_logo'))))),
+            'brand_ids', jsonb_build_array('00000000-0000-4000-8000-0000000000ff', tests.fx('con_logo'))))),
           'validation_failed/references/00000000-0000-4000-8000-000000000003:brand_ids',
-          'las marcas de la sección necesitan logo');
+          -- Tema v4: una marca sin logo sí vale (iniciales, pgTAP 97); una que no existe, no.
+          'una marca que no existe se rechaza');
 select is(pg_temp.home(pg_temp.sec(4, 'category_grid', jsonb_build_object('title', 'Categorías',
             'category_ids', jsonb_build_array(tests.fx('oculta'))))),
           'validation_failed/references/00000000-0000-4000-8000-000000000004:category_ids',

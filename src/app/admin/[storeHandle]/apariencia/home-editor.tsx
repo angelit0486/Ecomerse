@@ -21,6 +21,7 @@ import { FormFeedback } from "../_shared/form-feedback";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { HomePreview } from "./home-preview";
+import { SECTION_LABELS } from "./section-labels";
 import {
   finalizeBannerUpload,
   requestBannerUpload,
@@ -44,6 +45,10 @@ export interface EditorSection {
   visibility?: Visibility;
   starts_at?: string;
   ends_at?: string;
+  /** Tema v4: lo edita Colores; Diseño lo conserva tal cual. */
+  colors?: { background: string; foreground: string };
+  /** Tema v4 (Diseño): espacio arriba y abajo del bloque. */
+  spacing?: "compact" | "normal" | "spacious";
 }
 
 export interface HomeEditorOptions {
@@ -56,22 +61,7 @@ export interface HomeEditorOptions {
   links?: LinkTargets;
 }
 
-export const SECTION_LABELS: Record<HomeSectionType, string> = {
-  hero: "Portada principal",
-  featured_products: "Productos destacados",
-  category_grid: "Categorías",
-  promo_banner: "Banner de promoción",
-  image_with_text: "Imagen con texto",
-  brand_logos: "Marcas",
-  testimonials: "Testimonios (escritos por ti)",
-  rich_text: "Texto con formato",
-  faq: "Preguntas frecuentes",
-  benefits: "Beneficios y confianza",
-  goals: "Compra por objetivo",
-  reviews: "Opiniones verificadas",
-  video: "Video",
-  contact_map: "Contacto y ubicación",
-};
+export { SECTION_LABELS };
 
 export const BENEFIT_ICON_LABELS: Record<BenefitIcon, string> = {
   truck: "Envío",
@@ -749,24 +739,24 @@ function SectionFields({
             onChange={set("title")}
           />
           <fieldset>
-            <legend className={label}>Marcas (de 2 a 12, con logo)</legend>
+            <legend className={label}>Marcas (de 2 a 12)</legend>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {options.brands
-                .filter((b) => b.hasLogo)
-                .map((b) => (
-                  <label key={b.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={list("brand_ids").includes(b.id)}
-                      onChange={(e) => toggle("brand_ids", b.id, e.target.checked)}
-                    />
-                    {b.name}
-                  </label>
-                ))}
+              {options.brands.map((b) => (
+                <label key={b.id} className="flex min-h-11 items-center gap-2 text-sm md:min-h-0">
+                  <input
+                    type="checkbox"
+                    checked={list("brand_ids").includes(b.id)}
+                    onChange={(e) => toggle("brand_ids", b.id, e.target.checked)}
+                  />
+                  {b.name}
+                  {b.hasLogo ? null : <span className="text-fg-muted">(sin logo)</span>}
+                </label>
+              ))}
             </div>
             {options.brands.some((b) => !b.hasLogo) ? (
               <p className="mt-2 text-[13px] text-fg-muted">
-                Las marcas sin logo no aparecen aquí.
+                Las marcas sin logo se muestran con sus iniciales. Sube su logo en Productos →
+                Marcas.
               </p>
             ) : null}
           </fieldset>
@@ -1269,8 +1259,8 @@ function SectionDisplay({
 }) {
   const id = `d-${section.id}`;
   return (
-    <fieldset className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-3">
-      <legend className={label}>Dónde y cuándo se ve</legend>
+    <fieldset className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-4">
+      <legend className={label}>Dónde, cuándo y con cuánto espacio</legend>
       <div className="flex flex-col gap-1">
         <label htmlFor={`${id}-vis`} className={label}>
           Dispositivos
@@ -1286,6 +1276,23 @@ function SectionDisplay({
               {v}
             </option>
           ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={`${id}-space`} className={label}>
+          Espacio
+        </label>
+        <select
+          id={`${id}-space`}
+          value={section.spacing ?? "normal"}
+          onChange={(e) =>
+            onChange({ spacing: e.target.value as NonNullable<EditorSection["spacing"]> })
+          }
+          className={control}
+        >
+          <option value="compact">Compacto</option>
+          <option value="normal">Normal</option>
+          <option value="spacious">Amplio</option>
         </select>
       </div>
       <div className="flex flex-col gap-1">

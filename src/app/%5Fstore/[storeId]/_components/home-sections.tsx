@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -7,6 +8,8 @@ import {
   type HomeSectionData,
   type ImageRef,
 } from "@/server/storefront/catalog";
+import { brandInitialsOf } from "@/lib/catalog/brand-initials";
+import { sectionCss } from "@/lib/theme/resolve-theme";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { GoalTiles, type GoalTile } from "./goal-chips";
@@ -223,7 +226,7 @@ function HeroSlide({
   }
   return (
     <section
-      className={`grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
+      className={`sf-el-hero grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
         hasImage && !centered ? "sm:grid-cols-[1.1fr_1fr] sm:items-center" : ""
       }`}
     >
@@ -325,7 +328,28 @@ function VisibleOn({
   return <div className={visibility === "mobile" ? "sm:hidden" : "max-sm:hidden"}>{children}</div>;
 }
 
-export function HomeSections({
+/** Espacio extra por bloque (tema v4); el normal lo da el tema (densidad). */
+const SPACING: Record<NonNullable<HomeSectionData["spacing"]>, string> = {
+  compact: "-my-3 sm:-my-5",
+  normal: "",
+  spacious: "py-4 sm:py-8",
+};
+
+/** Marco del bloque: colores propios (regla por id en un <style>) y espacio. */
+function SectionFrame({ section, children }: { section: HomeSectionData; children: ReactNode }) {
+  const spacing = SPACING[section.spacing ?? "normal"] ?? "";
+  if (!section.colors && !spacing) return children;
+  return (
+    <div
+      data-sec={section.colors ? section.id : undefined}
+      className={`${section.colors ? "rounded-[var(--sf-radius-card)] px-4 py-6 sm:px-8 sm:py-10" : ""} ${spacing}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export async function HomeSections({
   sections,
   store,
   storeName,
@@ -347,10 +371,13 @@ export function HomeSections({
   goals?: GoalTile[];
 }) {
   const heroFirst = !asPage && sections[0]?.type === "hero";
+  const colorCss = sectionCss(sections);
+  const nonce = colorCss ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
   return (
     <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
+      {colorCss ? <style nonce={nonce}>{colorCss}</style> : null}
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
       {heroFirst || asPage ? null : (
         <div className="space-y-8">
@@ -361,7 +388,7 @@ export function HomeSections({
       )}
       {sections.map((section, index) => (
         <VisibleOn key={section.id} visibility={section.visibility}>
-          {renderSection(section, index)}
+          <SectionFrame section={section}>{renderSection(section, index)}</SectionFrame>
         </VisibleOn>
       ))}
     </div>
@@ -502,16 +529,31 @@ export function HomeSections({
                     href={`/marca/${encodeURIComponent(brand.slug)}`}
                     className="flex h-20 items-center justify-center rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-primary)]"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado */}
-                    <img
-                      src={mediaUrl(brand.logo.path)}
-                      alt={brand.name}
-                      width={brand.logo.width ?? 160}
-                      height={brand.logo.height ?? 64}
-                      loading="lazy"
-                      decoding="async"
-                      className="max-h-12 w-auto object-contain"
-                    />
+                    {brand.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado
+                      <img
+                        src={mediaUrl(brand.logo.path)}
+                        alt={brand.name}
+                        width={brand.logo.width ?? 160}
+                        height={brand.logo.height ?? 64}
+                        loading="lazy"
+                        decoding="async"
+                        className="max-h-12 w-auto object-contain"
+                      />
+                    ) : (
+                      // Sin logo (tema v4): iniciales grandes y el nombre completo.
+                      <span className="flex flex-col items-center text-center">
+                        <span
+                          aria-hidden="true"
+                          className="text-xl font-extrabold leading-none text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]"
+                        >
+                          {brandInitialsOf(brand.name)}
+                        </span>
+                        <span className="mt-1 line-clamp-1 text-xs font-semibold">
+                          {brand.name}
+                        </span>
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}

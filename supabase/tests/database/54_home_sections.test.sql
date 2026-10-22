@@ -112,8 +112,9 @@ select public.catalog_set_product_attributes(tests.fx('store_a'), tests.fx('cafe
 select tests.logout();
 select is((select array_agg(e ->> 'type' order by o) from jsonb_array_elements(pg_temp.gw('get_home') -> 'sections')
             with ordinality x(e, o)),
-          array['hero', 'testimonials'],
-          'sin banner, con una sola marca con logo o sin productos, la sección no se muestra');
+          array['hero', 'brand_logos', 'testimonials'],
+          -- Tema v4: una marca que pierde el logo sigue con sus iniciales.
+          'sin banner o sin productos la sección no se muestra; las marcas siguen con iniciales');
 update public.media set deleted_at = now() where id = tests.fx('banner');
 select is(pg_temp.gw('get_home') #> '{sections,0,image}', 'null'::jsonb, 'un hero sin imagen sigue con su texto');
 
@@ -141,7 +142,7 @@ end $$;
 select is(pg_temp.recheck_home()::text, array[tests.fx('store_a')]::text,
           'la revisión devuelve las tiendas cuya portada cambió');
 select is((select array_agg(e ->> 'type') from jsonb_array_elements(pg_temp.gw('get_home') -> 'sections') e),
-          array['hero'], 'y oculta la sección con el término prohibido');
+          array['hero', 'brand_logos'], 'y oculta la sección con el término prohibido');
 select is((select a.reason from audit.audit_logs a where a.action = 'theme.home_sections_hidden'
             and a.store_id = tests.fx('store_a')), 'compliance', 'con auditoría y motivo');
 

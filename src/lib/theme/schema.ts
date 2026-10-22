@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { contrastRatio } from "@/lib/color/contrast";
+
 import { COLOR_KEYS } from "./palette";
 import { isValidLink, isValidSocialUrl, SOCIAL_NETWORKS } from "./links";
 
@@ -26,6 +28,7 @@ z.config({ jitless: true });
 // Constantes sin Zod en `constants.ts`: los formularios del panel las usan en el
 // navegador y no deben arrastrar el esquema (misión panel, F4).
 export {
+  MAX_NAV_ITEMS,
   BENEFIT_ICONS,
   FONT_KEYS,
   MAX_PRODUCT_SECTIONS,
@@ -42,6 +45,7 @@ import {
   DENSITIES,
   FONT_KEYS,
   isValidInstant,
+  MAX_NAV_ITEMS,
   MAX_PRODUCT_SECTIONS,
   MAX_RICH_TEXT_BYTES,
   MAX_SECTIONS,
@@ -101,12 +105,54 @@ function uniqueBy<T>(items: readonly T[], key: (item: T) => string): boolean {
 // Tema (store_themes.settings / draft_settings)
 // -----------------------------------------------------------------------------
 
-const colors = z.strictObject(
-  Object.fromEntries(COLOR_KEYS.map((k) => [k, hex.optional()])) as Record<
+const colors = z.strictObject({
+  ...(Object.fromEntries(COLOR_KEYS.map((k) => [k, hex.optional()])) as Record<
     (typeof COLOR_KEYS)[number],
     z.ZodOptional<typeof hex>
-  >,
-);
+  >),
+  /** Tema v4: color de las ofertas (si falta, el de siempre). */
+  sale: hex.optional(),
+});
+
+/** Tema v4: fondo y texto propios de un elemento (el contraste se revisa al guardar). */
+const elementPair = z.strictObject({ background: hex, foreground: hex });
+export const ELEMENT_KEYS = ["hero", "header", "nav_bar", "cards", "buttons", "footer"] as const;
+export type ElementKey = (typeof ELEMENT_KEYS)[number];
+const elementColors = z.strictObject({
+  hero: elementPair.optional(),
+  header: elementPair.optional(),
+  nav_bar: z
+    .strictObject({
+      background: hex,
+      foreground: hex,
+      active: hex.optional(),
+      border: hex.optional(),
+    })
+    .optional(),
+  cards: elementPair.optional(),
+  buttons: elementPair.optional(),
+  footer: elementPair.optional(),
+});
+
+/** Tema v4: barra de categorías del encabezado. */
+const navBar = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        label: text(1, 30),
+        link,
+        visibility: z.enum(VISIBILITIES).optional(),
+      }),
+    )
+    .max(MAX_NAV_ITEMS, `Hasta ${MAX_NAV_ITEMS} enlaces.`)
+    .optional(),
+  style: z.enum(["text", "pills", "photos"]).optional(),
+  sticky: z.boolean().optional(),
+  align: z.enum(["start", "center"]).optional(),
+  size: z.enum(["sm", "md"]).optional(),
+  visibility: z.enum(["mobile", "all"]).optional(),
+});
+export type NavBarSettings = z.infer<typeof navBar>;
 
 const announcement = z
   .strictObject({
@@ -142,8 +188,10 @@ export const ThemeSettingsV2 = z.strictObject({
       logo_position: z.enum(["left", "center"]).optional(),
       announcement: announcement.optional(),
       quick_links: z.array(quickLink).max(4, "Hasta 4 accesos rápidos.").optional(),
+      nav_bar: navBar.optional(),
     })
     .optional(),
+  element_colors: elementColors.optional(),
   footer: z
     .strictObject({
       legal_text: text(1, 500, true).optional(),
@@ -385,6 +433,14 @@ const contactMap = z.strictObject({
   show_whatsapp: z.boolean(),
 });
 
+/** Tema v4: colores propios de un bloque, siempre legibles (≥ 4.5:1). */
+const sectionColors = z
+  .strictObject({ background: hex, foreground: hex })
+  .refine((c) => contrastRatio(c.foreground, c.background) >= 4.5, {
+    message: "El texto no se lee sobre ese fondo (necesita al menos 4.5:1).",
+    path: ["foreground"],
+  });
+
 function section<T extends string, P extends z.ZodType>(type: T, props: P) {
   return z
     .strictObject({
@@ -395,6 +451,10 @@ function section<T extends string, P extends z.ZodType>(type: T, props: P) {
       visibility: z.enum(VISIBILITIES).optional(),
       starts_at: instant.optional(),
       ends_at: instant.optional(),
+      /** Tema v4 (COLORES): fondo y texto del bloque. */
+      colors: sectionColors.optional(),
+      /** Tema v4 (DISEÑO): espacio arriba y abajo del bloque. */
+      spacing: z.enum(["compact", "normal", "spacious"]).optional(),
     })
     .refine(schedule, SCHEDULE_ERROR);
 }

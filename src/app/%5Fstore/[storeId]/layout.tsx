@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
-import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
+import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
+import { navBarItems } from "@/lib/theme/nav-bar";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart } from "@/server/storefront/cart";
 import {
@@ -15,7 +16,8 @@ import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
-import { AnnouncementBar, QuickLinks, StoreFooter, StoreHeader } from "./_components/header";
+import { AnnouncementBar, StoreFooter, StoreHeader } from "./_components/header";
+import { NavBar } from "./_components/nav-bar";
 import { CartToast } from "./_components/quick-add";
 
 /**
@@ -101,6 +103,21 @@ export default async function StoreLayout({ children, params }: Props) {
   // no llega a la página.
   const parsed = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
+  // Barra de categorías (misión Panel, Paso D): elegida en Apariencia o automática.
+  const navConfig = settings.header?.nav_bar;
+  const navSticky = navConfig?.sticky === true;
+  const navBar = (
+    <NavBar
+      items={navBarItems({
+        config: navConfig,
+        quickLinks: settings.header?.quick_links,
+        menu: menus.main,
+        discovery: discoveryLinks,
+      })}
+      thumbs={navConfig?.style === "photos" ? thumbs : {}}
+      config={navConfig ?? {}}
+    />
+  );
   const fonts = fontVariableClasses([theme.fonts.heading, theme.fonts.body]);
 
   return (
@@ -111,7 +128,7 @@ export default async function StoreLayout({ children, params }: Props) {
     >
       <style
         nonce={nonce}
-      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}`}</style>
+      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}${elementCss(theme)}`}</style>
       {/* React lo sube al <head>. */}
       <link rel="preconnect" href={mediaOrigin} />
       {preview ? (
@@ -155,12 +172,9 @@ export default async function StoreLayout({ children, params }: Props) {
         logoPosition={theme.logoPosition}
         whatsapp={settings.contact?.whatsapp}
         thumbs={thumbs}
+        below={navSticky ? navBar : null}
       />
-      <QuickLinks
-        menu={menus.main}
-        discovery={discoveryLinks}
-        custom={settings.header?.quick_links}
-      />
+      {navSticky ? null : navBar}
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>

@@ -32,6 +32,7 @@ const CONTRAST: Record<string, string> = {
   primary: "El color principal no se distingue del fondo (con botones de contorno exige 4.5:1).",
   accent: "El acento no se distingue del fondo.",
   announcement: "El texto de la barra de anuncio no se lee bien sobre su fondo.",
+  sale: "El color de oferta no se lee sobre el fondo (necesita 4.5:1).",
 };
 
 const CONTRAST_FIELD: Record<string, string> = {
@@ -40,6 +41,7 @@ const CONTRAST_FIELD: Record<string, string> = {
   primary: "primary",
   accent: "accent",
   announcement: "announcement_foreground",
+  sale: "sale",
 };
 
 function readRevision(formData: FormData): number | null {
@@ -54,7 +56,17 @@ function rpcFailure(error: unknown): FormState {
   if (e.code === "internal") reportActionError("appearance", error);
   if (e.detail === "contrast") {
     const fields = Object.fromEntries(
-      e.items.filter((k) => CONTRAST[k]).map((k) => [CONTRAST_FIELD[k]!, CONTRAST[k]!]),
+      e.items.flatMap((k): [string, string][] => {
+        if (CONTRAST[k]) return [[CONTRAST_FIELD[k]!, CONTRAST[k]!]];
+        // Tema v4: «element_colors.<elemento>» o «element_colors.nav_bar.active».
+        const [, element, part] = k.split(".");
+        if (k.startsWith("element_colors.") && element) {
+          return part === "active"
+            ? [["el_nav_bar_active", "El color del elemento activo no se lee sobre el fondo."]]
+            : [[`el_${element}_fg`, "Este texto no se lee sobre su fondo (necesita 4.5:1)."]];
+        }
+        return [];
+      }),
     );
     return { error: "Ajusta los colores marcados: el contraste no es suficiente.", fields };
   }

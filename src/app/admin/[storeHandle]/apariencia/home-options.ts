@@ -1,5 +1,6 @@
 import "server-only";
 
+import { GOAL_KEY } from "@/lib/catalog/attributes";
 import type { LinkTargets } from "@/lib/theme/link-targets";
 import { hasPermission, type StoreContext } from "@/server/auth/context";
 import { publicMediaUrl } from "@/server/catalog/queries";
@@ -143,4 +144,90 @@ export async function loadLinkTargets(
     products: products ? list(products, "slug") : null,
     redirects: redirects ? list(redirects, "from_path") : null,
   };
+}
+
+/** Un destino que se puede agregar a la barra de categorías con un toque. */
+export interface NavPick {
+  group: string;
+  label: string;
+  link: string;
+}
+
+/**
+ * Destinos para la barra de categorías (misión Panel, Paso D): accesos fijos,
+ * categorías, objetivos, marcas y páginas publicadas de la tienda. Lo que no se
+ * pueda leer (permiso o error) simplemente no se ofrece.
+ */
+export async function loadNavPicks(
+  storeId: string,
+  access: { products: boolean },
+): Promise<NavPick[]> {
+  const supabase = await createSupabaseServerClient();
+  const [categories, goals, brands, pages] = await Promise.all([
+    access.products
+      ? supabase
+          .from("categories")
+          .select("name, path")
+          .eq("store_id", storeId)
+          .eq("is_visible", true)
+          .is("deleted_at", null)
+          .order("path")
+          .limit(100)
+      : null,
+    access.products
+      ? supabase
+          .from("attributes")
+          .select("key, attribute_values(key, label, position)")
+          .eq("store_id", storeId)
+          .eq("key", GOAL_KEY)
+          .eq("is_filterable", true)
+          .limit(1)
+      : null,
+    access.products
+      ? supabase
+          .from("brands")
+          .select("name, slug")
+          .eq("store_id", storeId)
+          .is("deleted_at", null)
+          .order("name")
+          .limit(100)
+      : null,
+    supabase
+      .from("store_pages")
+      .select("title, slug")
+      .eq("store_id", storeId)
+      .eq("is_published", true)
+      .is("deleted_at", null)
+      .order("title")
+      .limit(50),
+  ]);
+  const picks: NavPick[] = [
+    { group: "Accesos", label: "Todos", link: "/productos" },
+    { group: "Accesos", label: "Más vendidos", link: "/productos?orden=best_selling" },
+    { group: "Accesos", label: "Ofertas", link: "/ofertas" },
+    { group: "Accesos", label: "Marcas", link: "/marcas" },
+  ];
+  for (const c of categories?.data ?? []) {
+    picks.push({ group: "Categorías", label: c.name as string, link: `/categoria/${c.path}` });
+  }
+  const values = (goals?.data?.[0]?.attribute_values ?? []) as {
+    key: string;
+    label: string;
+    position: number;
+  }[];
+  for (const v of [...values].sort((a, b) => a.position - b.position)) {
+    picks.push({
+      group: "Objetivos",
+      label: v.label,
+      link: `/productos?${new URLSearchParams([[GOAL_KEY, v.key]])}`,
+    });
+  }
+  for (const b of brands?.data ?? []) {
+    picks.push({ group: "Marcas", label: b.name as string, link: `/marca/${b.slug}` });
+  }
+  for (const p of pages?.data ?? []) {
+    picks.push({ group: "Páginas", label: p.title as string, link: `/paginas/${p.slug}` });
+  }
+  // Los nombres de la barra miden hasta 30 caracteres.
+  return picks.map((p) => ({ ...p, label: p.label.slice(0, 30) }));
 }

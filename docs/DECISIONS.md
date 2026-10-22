@@ -1031,3 +1031,9 @@ Ninguna de estas decisiones toca un contrato crítico de GATE0 §43: amplían el
   - Exportación CSV en el panel con permiso de marketing y auditoría. Sin envíos masivos desde la plataforma en esta fase.
 - **Riesgos.** Datos personales y cumplimiento legal; abuso del formulario (spam); costo de envíos.
 - **Estado.** **Pendiente de aprobación del propietario.** Sin aprobación no se implementa, y mientras tanto el editor no ofrece el bloque.
+
+- **D-POR-04. Tema v4: Diseño y Colores por separado, y barra de categorías.** (Misión Panel, Pasos B–D; extiende ADR-034 sin tocar contratos críticos.)
+  - `colors.sale`, `element_colors` (hero, header, nav_bar con activo y borde, cards, buttons, footer) y `colors` por bloque: siempre ≥ 4.5:1, revisado en Zod, al guardar y al publicar (`app.theme_contrast_issues`, `app.home_section_colors_valid`).
+  - `spacing` por bloque (Diseño) y `header.nav_bar` (enlaces, estilo, fija, alineación, tamaño, dónde se ve). Los accesos rápidos de antes siguen siendo válidos y la barra los toma al editarse.
+  - «Nuestras marcas» acepta marcas sin logo (iniciales). Migración `20261024000200`, pgTAP 97, paridad Zod/SQL.
+- **D-POR-05. Fotos de categorías.** Foto cuadrada y banner con el pipeline de medios de siempre; `catalog_set_category_media` y `storefront.category_thumbs` (migración `20261024000100`, pgTAP 96).

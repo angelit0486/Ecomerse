@@ -8,7 +8,14 @@ import { PAYMENT_METHODS, ThemeSettingsV2, type ThemeSettings } from "@/lib/them
  * clave vacía va como `null` (la base la quita). Puro: lo usa la acción y lo
  * prueban los unit.
  */
-export const THEME_SECTIONS = ["marca", "encabezado", "redes", "seo", "presentacion"] as const;
+export const THEME_SECTIONS = [
+  "marca",
+  "encabezado",
+  "redes",
+  "seo",
+  "presentacion",
+  "colores",
+] as const;
 export type ThemeSection = (typeof THEME_SECTIONS)[number];
 
 export const SECTION_KEYS: Record<ThemeSection, readonly (keyof ThemeSettings)[]> = {
@@ -17,7 +24,12 @@ export const SECTION_KEYS: Record<ThemeSection, readonly (keyof ThemeSettings)[]
   redes: ["social", "contact"],
   seo: ["seo"],
   presentacion: ["product_page", "listing"],
+  // Portada → Colores (misión Panel, Paso C): solo colores; el diseño no se toca.
+  colores: ["colors", "element_colors"],
 };
+
+/** Elementos con colores propios (tema v4), en el orden del formulario. */
+export const ELEMENT_FIELDS = ["hero", "header", "nav_bar", "cards", "buttons", "footer"] as const;
 
 /** Casilla «sí/no» que solo se guarda cuando difiere de lo que hace la tienda por omisión. */
 function flag(get: Get, name: string, fallback: boolean): boolean | undefined {
@@ -77,10 +89,37 @@ function compact<T extends Record<string, unknown>>(obj: T): Partial<T> | null {
 
 export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: string) => string[]) {
   const patch: Record<string, unknown> = {};
-  if (section === "marca") {
-    patch.colors = compact(
-      Object.fromEntries(COLOR_KEYS.map((k) => [k, get(k).trim().toLowerCase() || undefined])),
+  if (section === "marca" || section === "colores") {
+    patch.colors = compact({
+      ...Object.fromEntries(COLOR_KEYS.map((k) => [k, get(k).trim().toLowerCase() || undefined])),
+      // El color de oferta se elige en Colores; Marca lo conserva (campo oculto).
+      sale:
+        (section === "marca" || get("sale_on") === "1" ? get("sale").trim().toLowerCase() : "") ||
+        undefined,
+    });
+  }
+  if (section === "colores") {
+    patch.element_colors = compact(
+      Object.fromEntries(
+        ELEMENT_FIELDS.map((key) => {
+          if (get(`el_${key}_on`) !== "1") return [key, undefined];
+          const color = (name: string) => get(name).trim().toLowerCase() || undefined;
+          return [
+            key,
+            compact({
+              background: color(`el_${key}_bg`),
+              foreground: color(`el_${key}_fg`),
+              ...(key === "nav_bar"
+                ? { active: color("el_nav_bar_active"), border: color("el_nav_bar_border") }
+                : {}),
+            }) ?? undefined,
+          ];
+        }),
+      ),
     );
+    return patch;
+  }
+  if (section === "marca") {
     patch.typography = compact({
       heading: get("heading_font") || undefined,
       body: get("body_font") || undefined,
@@ -102,6 +141,8 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
       const href = normalizeLink(get(`quick_link_${i}`));
       return label || href ? [{ label, link: href }] : [];
     });
+    // Barra de categorías (misión Panel, Paso D): reemplaza a los accesos rápidos.
+    const nav = get("nav_present") === "1" ? navBarPatch(get) : undefined;
     patch.header = compact({
       logo_position: get("logo_position") || undefined,
       announcement: text
@@ -116,7 +157,8 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
             ...(get("announcement_toggle") && !get("announcement_shown") ? { hidden: true } : {}),
           }
         : undefined,
-      quick_links: quickLinks.length ? quickLinks : undefined,
+      quick_links: nav === undefined && quickLinks.length ? quickLinks : undefined,
+      nav_bar: nav,
     });
     const payments = getAll("payment_methods").filter((m) =>
       (PAYMENT_METHODS as readonly string[]).includes(m),
@@ -155,6 +197,38 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
     });
   }
   return patch;
+}
+
+/** La barra de categorías del formulario; `undefined` si queda como viene por omisión. */
+function navBarPatch(get: Get): Record<string, unknown> | undefined {
+  let raw: unknown = [];
+  try {
+    raw = JSON.parse(get("nav_items") || "[]");
+  } catch {
+    raw = [];
+  }
+  const items = (Array.isArray(raw) ? raw : []).flatMap((entry: unknown) => {
+    const e = (entry && typeof entry === "object" ? entry : {}) as Record<string, unknown>;
+    const label = line(String(e.label ?? ""));
+    const href = normalizeLink(String(e.link ?? ""));
+    if (!label && !href) return [];
+    const visibility =
+      e.visibility === "mobile" || e.visibility === "desktop" ? e.visibility : null;
+    return [{ label, link: href, ...(visibility ? { visibility } : {}) }];
+  });
+  const pick = (name: string, fallback: string) => {
+    const value = get(name);
+    return value && value !== fallback ? value : undefined;
+  };
+  const nav = compact({
+    items: items.length ? items : undefined,
+    style: pick("nav_style", "text"),
+    sticky: get("nav_sticky") === "1" ? true : undefined,
+    align: pick("nav_align", "start"),
+    size: pick("nav_size", "sm"),
+    visibility: pick("nav_visibility", "mobile"),
+  });
+  return nav && Object.keys(nav).length > 0 ? nav : undefined;
 }
 
 /** Nombre del campo del formulario para un error de Zod (ruta dentro del tema). */
@@ -197,6 +271,16 @@ export function validatePatch(patch: Record<string, unknown>): PatchResult {
     const path = issue.path.join(".");
     let field = FIELD_FOR_PATH[path];
     if (!field && path.startsWith("colors.")) field = path.slice("colors.".length);
+    if (!field && path.startsWith("header.nav_bar")) field = "nav_items";
+    if (!field && path.startsWith("element_colors.")) {
+      const [, key, part] = issue.path.map(String);
+      field =
+        part === "background"
+          ? `el_${key}_bg`
+          : part === "active" || part === "border"
+            ? `el_nav_bar_${part}`
+            : `el_${key}_fg`;
+    }
     if (!field && path.startsWith("header.quick_links."))
       field = `quick_label_${String(issue.path[2])}`;
     if (!field && path.startsWith("social.")) {
