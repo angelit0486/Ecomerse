@@ -20,9 +20,14 @@ interface MyStore {
 
 export default async function AdminHomePage() {
   const supabase = await createSupabaseServerClient();
-  const [stores, platformRole] = await Promise.all([
+  const [stores, platformRole, creatable] = await Promise.all([
     callRpc<MyStore[]>(supabase, "access_list_my_stores"),
     callRpc<string | null>(supabase, "access_platform_role"),
+    // ADR-038: organizaciones donde la dueña o administradora puede crear tiendas.
+    callRpc<{ organization_id: string; organization_name: string }[]>(
+      supabase,
+      "access_orgs_can_create_stores",
+    ),
   ]);
   const consoleLink = platformRole ? (
     <Link href="/platform" className="inline-flex min-h-11 items-center text-sm underline">
@@ -40,7 +45,7 @@ export default async function AdminHomePage() {
       </div>
     );
   }
-  // Una sola entrada por organización para agregar otra tienda (la crea la plataforma).
+  // Una sola entrada por organización para que la plataforma agregue otra tienda.
   const organizations = [
     ...new Map(stores.map((s) => [s.organization_id, s.organization_name])).entries(),
   ];
@@ -69,23 +74,37 @@ export default async function AdminHomePage() {
           </li>
         ))}
       </ul>
-      {platformRole ? (
+      {creatable.length > 0 || platformRole ? (
         <ul aria-label="Agregar tienda" className="flex flex-wrap gap-x-6">
-          {organizations.map(([id, name]) => (
-            <li key={id}>
+          {creatable.map((o) => (
+            <li key={o.organization_id}>
               <Link
-                href={`/platform/organizaciones/${id}/tienda-nueva`}
-                className="inline-flex min-h-11 items-center text-sm underline"
+                href={`/admin/tiendas/nueva?org=${o.organization_id}`}
+                className="inline-flex min-h-11 items-center text-sm font-medium underline"
               >
-                Agregar otra tienda a {name}
+                Nueva tienda en {o.organization_name}
               </Link>
             </li>
           ))}
+          {platformRole
+            ? organizations
+                .filter(([id]) => !creatable.some((o) => o.organization_id === id))
+                .map(([id, name]) => (
+                  <li key={id}>
+                    <Link
+                      href={`/platform/organizaciones/${id}/tienda-nueva`}
+                      className="inline-flex min-h-11 items-center text-sm underline"
+                    >
+                      Agregar otra tienda a {name}
+                    </Link>
+                  </li>
+                ))
+            : null}
         </ul>
       ) : (
         <p className="text-sm text-fg-muted">
-          ¿Necesitas otra tienda, por ejemplo para otra marca? La activa el equipo de la plataforma
-          y aparecerá aquí y en el selector de tiendas.
+          ¿Necesitas otra tienda, por ejemplo para otra marca? Pídela a la dueña de tu organización
+          o al equipo de la plataforma; aparecerá aquí y en el selector de tiendas.
         </p>
       )}
     </section>

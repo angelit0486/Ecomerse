@@ -999,7 +999,7 @@ Sigue el contrato de GATE0 («Dominio propio (P2)» y ADR-011) sin cambiarlo:
   - «Nueva tienda» en «Tus tiendas» para quien tenga `org.stores.create`, dentro de su propia organización y con el mismo límite `max_stores` del plan.
   - Es distinto de E15, que es el registro público de organizaciones nuevas: aquí no se crea ninguna organización ni cuenta.
 - **Riesgos.** Más tiendas facturables sin intervención de la plataforma, y nombres de dirección reservados por error. Se mitigan con el límite del plan, la auditoría y la tienda en borrador.
-- **Estado.** **Pendiente de aprobación del propietario.** Sin aprobación no se implementa.
+- **Estado.** **Aprobado por el propietario el 2026-10-22** («Las 2, quiero control total y apruebo») e implementado: `org_create_store` y `access_orgs_can_create_stores` (migración `20261025000100`, pgTAP `99_org_create_store` 19), «Nueva tienda en …» en «Tus tiendas» (`/admin/tiendas/nueva`, «tiendas» es una dirección reservada) y E2E `org-create-store`. La tienda hereda moneda, zona horaria, idioma e impuesto de la primera tienda de la organización.
 
 ## 27. Portada y marcas: editar la portada sin problemas y fotos de marcas (2026-10-21)
 
