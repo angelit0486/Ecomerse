@@ -247,6 +247,11 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
 - S-3 (Storage alojado): vigencia real de la URL firmada de subida (2 h por defecto), que `postgres` lea `storage.objects` desde funciones SECURITY DEFINER (`media_finalize`, purga) y costo de las transformaciones de imagen (§25.3.5).
 - CI de GitHub Actions (primer run, incluido el job nuevo `stack`).
 
+## Despliegue del 2026-10-22 (misión Panel, Pasos A–E)
+
+- Staging (`pruva-staging`): el propietario aplicó las 7 migraciones (`20261023000100` a `20261024000300`) desde el editor SQL con bloques en base64 y sha256. El bloque 2 (`brand_csv`) no se registró la primera vez; se volvió a correr y quedó con su huella. `app_schema_version()` = `20261024000300` y `imports_create` igual al de pruebas.
+- Vercel: despliegue `dpl_HNHyJRaeujVt9DGZDw6njLxfRTJZ` (commit `0461575`) READY; demo y demo2 responden con su portada. El panel (requiere sesión) y los registros de errores de Vercel no se pudieron revisar desde aquí (403 del conector).
+
 ## Despliegue del 2026-10-21 (multitienda y pulido)
 
 - Staging (`pruva-staging`): las 9 migraciones pendientes (20261020000300 a 20261022000200) las aplicó el propietario desde el editor SQL con bloques en base64 y verificación sha256; huellas y funciones comprobadas contra el ensayo local.
