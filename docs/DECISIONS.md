@@ -1020,3 +1020,14 @@ Ninguna de estas decisiones toca un contrato crítico de GATE0 §43: amplían el
 - **D-POR-03. Publicar con confirmación y «Deshacer la última publicación».**
   - «Publicar» pregunta antes, porque los clientes ven el cambio al instante.
   - «Deshacer» copia la versión anterior del historial al borrador y la publica, con las mismas RPC que «Restaurar» y «Publicar» (ADR-034 T4) y la revisión encadenada. Si otra persona cambió el borrador en medio, se rechaza sin perder nada. La versión deshecha queda en el historial.
+
+### ADR-039 (propuesto) — Bloque «Boletín» en la portada
+
+- **Contexto.** La misión pide un bloque de boletín. Guardar correos de compradores es tratamiento de datos personales (LFPDPPP): hace falta consentimiento expreso, un aviso de privacidad y una forma de darse de baja. Hoy no hay ninguna tabla de suscriptores, y GATE0 §44.12 prohíbe registrar PII completa.
+- **Propuesta.**
+  - Una tabla `newsletter_subscribers` por tienda (`store_id NOT NULL`, RLS forzado, FK compuestas), con correo normalizado, fecha y texto del consentimiento, origen y `unsubscribed_at`.
+  - Alta solo vía `storefront.newsletter_subscribe`, con límite de intentos por IP y correo, y doble confirmación por correo (Resend, aún pendiente de configurar).
+  - Casilla de consentimiento obligatoria con enlace al aviso de privacidad de la tienda; baja con un clic desde cada correo.
+  - Exportación CSV en el panel con permiso de marketing y auditoría. Sin envíos masivos desde la plataforma en esta fase.
+- **Riesgos.** Datos personales y cumplimiento legal; abuso del formulario (spam); costo de envíos.
+- **Estado.** **Pendiente de aprobación del propietario.** Sin aprobación no se implementa, y mientras tanto el editor no ofrece el bloque.

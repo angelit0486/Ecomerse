@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useState } from "react";
 
 import { formatMoney } from "@/lib/money/format";
+import { localInputNow } from "@/lib/time/local-input";
 import { Button } from "@/ui/primitives/button";
 import { ConfirmButton } from "@/ui/primitives/confirm-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/ui/primitives/table";
@@ -209,6 +210,8 @@ export function ScheduleSaleForm({
           <input
             type="datetime-local"
             name="starts_at"
+            // Sin horas pasadas: la base las rechaza. Se calcula al abrir el selector.
+            onFocus={(e) => (e.currentTarget.min = localInputNow(timeZone))}
             aria-invalid={state.fields?.starts_at ? true : undefined}
             className={nativeControl}
           />
@@ -218,6 +221,8 @@ export function ScheduleSaleForm({
           <input
             type="datetime-local"
             name="ends_at"
+            // Sin horas pasadas: la base las rechaza. Se calcula al abrir el selector.
+            onFocus={(e) => (e.currentTarget.min = localInputNow(timeZone))}
             required
             aria-invalid={state.fields?.ends_at ? true : undefined}
             className={nativeControl}

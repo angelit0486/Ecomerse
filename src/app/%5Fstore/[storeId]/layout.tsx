@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart } from "@/server/storefront/cart";
-import { getDiscoverySummary, getMenus } from "@/server/storefront/catalog";
+import { getDiscoverySummary, getMenus, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
@@ -67,6 +67,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StoreLayout({ children, params }: Props) {
   const { storeId } = await params;
   const { store, preview } = await getStorefront(storeId);
+  // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
+  // el principio adelanta la imagen principal (LCP) en el celular.
+  const mediaOrigin = new URL(mediaUrl("")).origin;
   const [menus, nonce, cart, discovery] = await Promise.all([
     getMenus(store.id),
     headers().then((h) => h.get("x-nonce") ?? undefined),
@@ -96,6 +99,8 @@ export default async function StoreLayout({ children, params }: Props) {
       <style
         nonce={nonce}
       >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}`}</style>
+      {/* React lo sube al <head>. */}
+      <link rel="preconnect" href={mediaOrigin} />
       {preview ? (
         // Compacto en el celular (una fila de 44 px): el aviso no tapa la tienda.
         <div
