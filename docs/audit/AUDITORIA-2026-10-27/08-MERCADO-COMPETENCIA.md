@@ -1,0 +1,247 @@
+# 08 · Mercado y competencia (prefijo MER-)
+
+Fecha de la auditoría: 2026-10-27. Analista: mercado y competencia.
+Alcance: (a) la tienda PRUVA de suplementos como negocio propio y (b) la plataforma multitienda como SaaS para comercios mexicanos.
+
+## Cómo se obtuvo la información (leer primero)
+
+- **Herramienta.** `WebFetch` falló con `getaddrinfo ENOTFOUND` en todos los dominios que se probaron (shopify.com, tiendanube.com.mx, woocommerce.com). Todo lo de la web se leyó con el buscador y lector **Exa** (`web_search_exa` / `web_fetch_exa`), que entrega la **copia indexada** de cada página. La fecha de consulta es 2026-10-27, pero la copia puede ser anterior. Cuando la propia página muestra una fecha (p. ej. «Entrega GRATIS el martes, 27 de octubre»), se anota. Los precios de tiendas cambian a diario: tómalos como **referencia de orden de magnitud, no como cotización**.
+- **Páginas que no cargaron:** `jumpseller.mx/pricing/` (CRAWL_NOT_FOUND; se usó `jumpseller.mx/sign-up/`), `facturama.mx` (verificación anti-bot), `mercadolibre.com.mx/ayuda/...` de productos para la salud (contenido vacío).
+- **Etiquetas.** [VERIFICADO] = leído en la fuente citada (copia indexada). [INFERIDO] = deducido o calculado a partir de fuentes o del código del repo. [NO VERIFICADO] = no se pudo comprobar.
+- **Nada legal aquí es asesoría.** Lo regulatorio es orientación informativa; valídalo con un abogado o asesor regulatorio (COFEPRIS).
+- **Términos.** *SaaS*: software que se renta por suscripción en la nube. *GMV*: valor total vendido. *MSI*: meses sin intereses. *CFDI*: factura electrónica del SAT. *PAC*: proveedor que timbra el CFDI. *Pasarela*: servicio que cobra la tarjeta u OXXO. *Umbral de envío gratis*: compra mínima a partir de la cual el envío no se cobra.
+
+---
+
+## 1. Competencia directa: suplementos en línea en México
+
+### 1.1 Envíos, pagos, lealtad y contenido
+
+| Competidor | Enfoque y catálogo | Envío (costo, umbral, tiempo) | Pagos | Lealtad, suscripción y confianza | Contenido y canales | Fuente (consulta 2026-10-27) |
+|---|---|---|---|---|---|---|
+| **GNC México** | Cadena multimarca (nutrición deportiva, vitaminas, herbales, belleza). Más de 500 tiendas físicas | Gratis arriba de **$399**. Estándar 3–5 días hábiles (hasta 10 en zonas extendidas). **Express < 60 min o < 2 h** desde tienda (vía Rappi, radio < 8 km). **Pickup gratis** en 1 h. *Ojo: otra parte de la misma página dice «todos nuestros productos cuentan con envío gratis»: el texto es contradictorio* | Crédito, débito, AmEx, PayPal y OXXO (3 días hábiles para pagar) | **GNC Rewards** (dinero electrónico, nivel «VitPro» a $6,000 de compra), garantía de satisfacción, reseñas en ficha, «precio por porción» en ficha, leyenda «Este producto no es un medicamento…» | Blog (`blog.gnc.com.mx`), venta por WhatsApp con coach (8–20 h y bot 24/7), teléfono 800 | [Políticas de envío](https://gnc.com.mx/politicas-de-envio), [GNC Express](https://gnc.com.mx/gnc-express), [Preguntas frecuentes](https://gnc.com.mx/preguntas-frecuentes), [Promociones](https://gnc.com.mx/promocion), [Blog Hot Sale (2025-05-08)](https://blog.gnc.com.mx/hot-sale-beneficios-de-comprar-gnc/) |
+| **Birdman** (`mx.birdman.com`) | Marca propia: proteína vegetal orgánica, creatina y línea femenina | Gratis arriba de **$499**; **$99** abajo. 3–7 días hábiles (la ficha dice «2–3 días»). FedEx, 99Minutos, iVoy, Treggo. *La ficha también dice «Envíos gratis en compras +$449»: inconsistente* | No se pudo leer la lista completa de métodos [NO VERIFICADO] | **Suscripción «piloto automático» con 10 % de descuento** cada 30/60/90 días, descuento por volumen (2 piezas −3 %, 3 piezas −7 %), puntos «**Plumas**», **quiz** de suplemento ideal, reseñas de «cliente verificado», «garantía del precio más bajo», precio por servicio en ficha, certificado de análisis (COA) a solicitud | Recetas, preguntas frecuentes por producto; vende también en Amazon (vendedor «Vida Birdman») y en GNC | [Política de envíos](https://mx.birdman.com/policies/shipping-policy), [Portada](https://mx.birdman.com/), [Ficha Falcon 1.17 kg](https://mx.birdman.com/products/falcon-protein-natural-1-17-kg), [Colección creatina](https://mx.birdman.com/collections/creatina) |
+| **B Life** (`blife.mx`) | Marca propia: vitaminas, minerales, mezclas herbales | **$129**, o gratis arriba de **$799** | 3 MSI con PayPal en pedidos ≥ $2,499; otros métodos [NO VERIFICADO] | **Muestra el número de permiso de publicidad COFEPRIS en la ficha** («No. Permiso PUBLICIDAD 233300201A0183»), aviso «avísame cuando haya inventario», contador de «clientes viendo» | **Blog** (entrada del 19-may-2026), **app** propia (Google Play: 50 K+ descargas), tienda oficial en Amazon con miles de reseñas | [Ficha Krill Oil](https://blife.mx/products/icelandic-krill-oil), [Blog](https://www.blife.mx/blog), [App](https://www.blife.app/), [Google Play](https://play.google.com/store/apps/details?id=com.blifemx&hl=es_US), [Tienda Amazon](https://www.amazon.com.mx/stores/BLife/page/9CC0D60C-2E65-4D03-BA36-95F41B867E4B) |
+| **Amazon México** | Marketplace; marcas y revendedores | Entrega gratis al día siguiente o en 2 días en las fichas consultadas | Tarjetas (Visa, MC, AmEx, Carnet), efectivo en tiendas, vales de despensa, MSI (hasta 24 con bancos participantes), «Planea y ahorra» (suscripción con descuento) | Miles de reseñas por producto, devoluciones de 30 días en algunas fichas | Ranking de «más vendidos», precio por gramo | [ON Creatine 300 g](https://www.amazon.com.mx/Creatine-Powder-300g-Creatina-monohidratada/dp/B0CM1HYPJ3), [ON Whey 2 lb](https://www.amazon.com.mx/Optimum-Nutrition-Prote%C3%ADnas-Amino%C3%A1cidos-Standard/dp/B073D7FG88), [Birdman 450 g](https://www.amazon.com.mx/dp/B089ZWVJ2K) |
+| **Mercado Libre** | Marketplace; tiendas oficiales | Filtro «Envío gratis» en 256 de 264 resultados de creatinas ON | MSI hasta 24 meses en publicaciones | Reputación del vendedor, tiendas oficiales | Filtros por porciones, peso y sabor | [Listado creatinas ON](https://listado.mercadolibre.com.mx/creatinas-optimum-nutrition) |
+| **Farmacias del Ahorro** | Farmacia con tienda en línea; vende proteína ON | **Envío gratis** a domicilio sin mínimo (horario 7–23 h); recoger en sucursal en 2 h | Tarjeta; 3 MSI en la ficha consultada | **Monedero del Ahorro** (1 % en la ficha de whey), campo «Suscripción activa: Sí», devolución de 30 días | Catálogo muy amplio de salud | [Términos de compra](https://www.fahorro.com/terminos-y-condiciones-de-compra), [Ficha ON Whey 907 g](https://www.fahorro.com/optimum-nutrition-gold-standard-proteina-whey-sabor-chocolate-907-gr.html) |
+| Tiendas especializadas pequeñas (ejemplos) | Revendedores multimarca | Maximizarte: **$149** fijo (+$99 en zonas extendidas), 3–7 días. BuscaMed: $99, gratis desde $2,000 | — | Maximizarte muestra «$/porción» | — | [Maximizarte GN Creatine](https://www.maximizarte.com.mx/productos/gn-creatine), [BuscaMed Birdman 300 g](https://buscamed.com/productos/vitaminas-y-suplementos/nGGTTd9-birdman-creatine-300-g-1-envase) |
+
+Walmart y Sanborns: no se consultaron por falta de tiempo [NO VERIFICADO]. «Nutrition Depot» y «Proteína MX» no aparecieron como sitios relevantes en las búsquedas hechas [NO VERIFICADO].
+
+### 1.2 Precios de referencia (MXN, IVA incluido según cada sitio)
+
+| Producto | GNC | Amazon MX | Farmacias del Ahorro | Marca o especializada | Fuente |
+|---|---|---|---|---|---|
+| **Proteína whey 2 lb** (Optimum Nutrition Gold Standard, ~907 g) | $1,299.90 regular; especiales entre $1,013.92 (vainilla) y $1,169.91 (chocolate) | $999.00 (vainilla; vende FITSTORE; la ficha mostraba «Entrega GRATIS el martes, 27 de octubre») | $1,267.00 (chocolate) | Supplab $879 (oferta); Panther Shop $847 | [GNC listado](https://gnc.com.mx/nuevos-optimum-nutrition/gold-standard-100-suero-de-leche.html), [GNC vainilla](https://gnc.com.mx/gold-standard-100-whey-proteina-de-suero-de-leche-optimum-nutrition-vainilla-2-libras.html), [Amazon](https://www.amazon.com.mx/Optimum-Nutrition-Prote%C3%ADnas-Amino%C3%A1cidos-Standard/dp/B073D7FG88), [FAhorro](https://www.fahorro.com/optimum-nutrition-gold-standard-proteina-whey-sabor-chocolate-907-gr.html), [Supplab](https://supplab.com.mx/collections/proteinas-whey), [Panther](https://panthershop.com.mx/producto/gold-standard-whey-2-lbs-on/) |
+| **Creatina 300 g** | Mutant Creakong 300 g: $699.90 (especial $594.91). Birdman Creatine Refreshers 300 g: $479.90 | ON Micronized 300 g: $409.00 (lista $519.70; «Entrega GRATIS el miércoles, 28 de octubre»). Birdman Refresher 300 g: entre $318.25 y $395 según la copia | — | GN Creatine 300 g en Maximizarte: $430; Birdman 300 g en BuscaMed: $458 | [GNC creatinas](https://gnc.com.mx/nutricion-deportiva/creatinas.html), [GNC Mutant](https://gnc.com.mx/mutant-creatina-monohidratada-creakong-sin-sabor-300-gr.html), [GNC Birdman](https://gnc.com.mx/marcas/birdman.html), [Amazon ON](https://www.amazon.com.mx/Creatine-Powder-300g-Creatina-monohidratada/dp/B0CM1HYPJ3), [Amazon Birdman](https://www.amazon.com.mx/BIRDMAN-Monohidratada-Electrolitos-Saborizantes-Endulzantes/dp/B0DYRD4TWM) |
+| Creatina Birdman 450 g (90 porciones) | $599.90 ($6.67/porción) | $491.00–$491.15 (lista $599.90); «Planea y ahorra» $466.59 | — | Sitio Birdman: $491 (antes $559) | [GNC](https://gnc.com.mx/creatina-monohidratada-birdman-450-gramos.html), [Amazon](https://www.amazon.com.mx/dp/B089ZWVJ2K), [Birdman](https://mx.birdman.com/collections/creatina) |
+
+**Lectura [INFERIDO]:** el mismo producto de marca de terceros cuesta en Amazon entre 20 % y 40 % menos que el precio regular de GNC (ON Whey 2 lb: $999 contra $1,299.90; ON Creatine 300 g: $409). Una tienda nueva que revenda marcas de terceros compite contra ese piso de precio, con entrega gratis al día siguiente.
+
+### 1.3 Experiencia móvil
+No se midió la experiencia móvil de los competidores: la herramienta de navegación remota no conectó y el contenedor no tiene salida a esos dominios [NO VERIFICADO]. Lo único medido es la tienda de Pruva en local: Lighthouse móvil 91–99 en rendimiento y 100 en accesibilidad ([`docs/plan/ESTADO-CALIDAD-2026-10-27.md`](../../plan/ESTADO-CALIDAD-2026-10-27.md)). **No se puede afirmar que Pruva sea más rápida que GNC, Birdman o B Life** sin medirlos con la misma herramienta.
+
+---
+
+## 2. Plataformas para comercios (competencia del SaaS)
+
+| Plataforma | Precio mensual | Comisión por transacción | Pagos integrados en MX | CFDI | Envíos integrados | Soporte en español | Fuente (consulta 2026-10-27) |
+|---|---|---|---|---|---|---|---|
+| **Shopify** | Basic USD 14 (anual) / 19 (mensual); Grow 39/52; Advanced 299/399; Plus desde USD 2,300. Promoción: 3 días gratis y luego USD 1/mes durante 3 meses | Con Shopify Payments: tarjeta 3.5 % + $3 MXN (Basic) hasta 3.1 % + $3 (Plus); AmEx 4 % + $3 (Basic). **Con pasarela externa: 2 % (Basic), 1 %, 0.6 %, 0.2 %** | Shopify Payments con **OXXO** ($10–$10,000) y **MSI** a 3/6/9/12 meses (mínimos de $300 a $1,200) | **No nativo**: apps de terceros, p. ej. CFDI Express desde USD 15/mes + USD 0.10 por factura; Sellu gratis hasta 15 facturas al mes y USD 12/mes por 150 | Tarifas en tiempo real de terceros desde Advanced; apps | 24/7 en español (chat) | [Precios](https://www.shopify.com/mx/precios), [Métodos de pago MX](https://help.shopify.com/es/manual/payments/shopify-payments/supported-countries/mexico/payment-methods), [MSI](https://help.shopify.com/en/manual/payments/shopify-payments/local-payment-methods/installments-with-msi), [CFDI Express](https://apps.shopify.com/cfdi-express?locale=es), [Sellu](https://apps.shopify.com/sellu?locale=es) |
+| **Tiendanube** | Gratis; Básico **$149 MXN**; Tiendanube **$374**; Avanzado **$999**; Evolución a cotizar. 7 días de prueba | **0 % con Pago Nube**. Pago Nube procesa desde 3.99 % + $3 + IVA (plan Gratis) hasta 3.29 % + $3 + IVA (Avanzado). **Con otros medios: 2 %, 1 %, 0.7 %** | Pago Nube (métodos exactos [NO VERIFICADO]); apps de pago | **No nativo**: «debe realizarse externamente»; apps Bind ERP, Ecomm-app, Yuju, Bsale (actualizado 15/04/2026). La app de Facturama ya no está disponible | **Envío Nube**: FedEx, DHL, Estafeta vía Envia.com, guías desde el panel; además Skydropx, 99minutos, etc. | Chat y correo; WhatsApp desde el plan Tiendanube | [Planes](https://www.tiendanube.com/mx/planes-y-precios), [Facturación](https://ayuda.tiendanube.com/es_MX/123288-mis-ventas/como-facturar-las-ventas-de-mi-tiendanube), [Envío Nube](https://ayuda.tiendanube.com/es_MX/envio-nube-mx/preguntas-frecuentes-sobre-envio-nube), [Opciones de envío](https://ayuda.tiendanube.com/es_MX/informacion/cuales-son-las-opciones-de-envio-disponibles) |
+| **WooCommerce** | Núcleo gratis; hosting USD 25–350/mes «para la mayoría»; extensiones USD 29–299/año cada una | 0 % de la plataforma; solo la pasarela | Cualquier pasarela por plugin (Mercado Pago tiene plugin, según su blog) | Plugins de terceros [NO VERIFICADO] | Plugins | Comunidad, agencias | [Precios](https://woocommerce.com/pricing/), [Blog Mercado Pago (2026-05-05)](https://www.mercadopago.com.mx/blog/hot-sale-integra-mercado-pago) |
+| **Wix** | Light USD 17.77; Core 29.77; Business 39.77; Business Elite 159.77 (anual, en USD «solo como referencia»; el precio varía por país). El comercio empieza en Core | [NO VERIFICADO] | Mercado Pago por integración (blog de MP) | [NO VERIFICADO] | [NO VERIFICADO] | 24/7 (en inglés en la página leída) | [Planes](https://www.wix.com/plans) |
+| **Jumpseller** | BASIC **$161.50**, PLUS $323, PRO $646, PREMIUM $1,292, ADVANCED $4,250 MXN/mes (pago anual, −15 %). Mensual según blog de Tiendanube: $190 / $380 / $760 / $1,520 / $5,000 | **0 %** | Varias [NO VERIFICADO] | [NO VERIFICADO] | [NO VERIFICADO] | Sí | [Planes](https://jumpseller.mx/sign-up/), [Comparativo Tiendanube](https://www.tiendanube.com/blog/jumpseller-vs-shopify/) |
+| **Mercado Shops** | **Cerró el 31-dic-2025** en toda LatAm (sin altas nuevas desde el 16-ene-2025). La sustituye «**Mi Página**» dentro de Mercado Libre: 3 meses gratis y luego **MX$437/mes** | — | — | — | — | — | [Nubimetrics (2025-08-28)](https://academia.nubimetrics.com/cambios-mercado-libre?hs_amp=true), [Enviame (2025-04-30)](https://enviame.io/mercado-shops/), [Nubimetrics: tienda oficial](https://academia.nubimetrics.com/tienda-oficial-mercado-libre). *Un artículo de Tiendanube dice a la vez que «cerró a finales de 2025» y que «estará activa hasta el 31 de diciembre de 2026»: se toma la fecha de 2025, que repiten tres fuentes. No se consiguió leer la nota oficial de Mercado Libre [NO VERIFICADO]* |
+
+**Mercado Pago como pasarela** (la que usa Pruva, ADR-028). Comisión por liberación del dinero: al instante **3.49 %**, a 7 o 14 días **3.19 %**, a 30 días **2.95 %**, más **$4 + IVA** por venta. OXXO y efectivo: 3.79 % + $4 en la página de Link de pago (la de Checkout dice 3.19 %: las páginas no coinciden). MSI con costo adicional para el vendedor: 3 MSI **+4.69 %**, 6 MSI +7.69 %, 12 MSI +12.89 % (+ IVA). Fuentes: [Checkout](https://www.mercadopago.com.mx/herramientas-para-vender/check-out), [Link de pago](https://www.mercadopago.com.mx/herramientas-para-vender/link-de-pago), [Blog Hot Sale 2026](https://www.mercadopago.com.mx/blog/hot-sale-integra-mercado-pago).
+
+**Lectura [INFERIDO]:**
+- El precio de entrada en México es muy bajo: Tiendanube tiene un plan gratis y otro de $149/mes; Jumpseller empieza en $161.50; Shopify cuesta USD 1/mes los primeros 3 meses.
+- **Ninguna de las grandes trae CFDI nativo.** En las tres hay que pagar o instalar una app aparte.
+- **Ninguna trae un módulo regulatorio de suplementos** en lo leído: ficha sanitaria estructurada, leyendas obligatorias que bloquean la publicación o términos prohibidos. Ese es el hueco que Pruva ya cubre.
+- Tiendanube y Shopify **castigan con 0.6–2 % extra** a quien use una pasarela que no sea la suya. Un SaaS que cobre 0 % y deje usar Mercado Pago directo es un argumento de venta real (Jumpseller y WooCommerce ya lo usan).
+
+---
+
+## 3. Tamaño y tendencia del mercado
+
+| Dato | Cifra | Fuente | Nota |
+|---|---|---|---|
+| Comercio electrónico minorista en México, 2025 | **$941 mil millones MXN**, **+19.2 %** anual, **17.7 %** de las ventas minoristas | AMVO, *Estudio de Venta Online 2026* (marzo 2026), citado por [AMVO](https://amvo.org.mx/descarga-evo-2026), [El Economista (2026-03-12)](https://www.eleconomista.com.mx/el-empresario/comercio-electronico-mexico-crece-19-alcanza-valor-941-000-millones-pesos-20260311-803815.html), [Forbes México (2026-03-11)](https://forbes.com.mx/mexico-octavo-lugar-mundial-en-penetracion-de-comercio-electronico/) | Versión pública gratuita; la de afiliados es de pago |
+| Compradores digitales | **77.2 millones** en 2025 (72.5 M en 2024); 88.2 % de los internautas de 18 años o más | AMVO EVO 2026 vía [ADIN Market Radar](https://www.adin.ai/marketing-radar/reports/library/estudio-de-venta-online-2026-version-publica/) y [blog AMVO (2026-09-22)](https://blog.amvo.org.mx/blog/10-hallazgos-clave-de-los-estudios-de-amvo-del-2026) | — |
+| Mercado de suplementos alimenticios en México | **$58,192 millones MXN (2023)**; proyección de ~$91,633–92,000 millones para 2028 | ANAISA (asociación de la industria) en conferencia, [El Financiero (2025-08-21)](https://www.elfinanciero.com.mx/empresas/2025/08/21/ya-te-tomaste-la-prote-esto-buscan-los-consumidores-de-suplementos-alimenticios-segun-su-edad/), [La Jornada (2025-08-22)](https://www.jornada.com.mx/noticia/2025/08/22/politica/mercado-de-suplementos-alimenticios-tuvo-ventas-en-2023-por-mas-de-58-mil-mdp) | Cifra de la industria; no se publica la metodología. Los medios citan el crecimiento a 2028 como 45 % y como 58 % |
+| Canales de venta de suplementos | Farmacias **45.4 %**, venta directa **41.5 %**, **e-commerce 5.7 %**, especialistas 4.7 %, súper 2.5 %. El e-commerce llegaría a ~**15 %** en 2028 | ANAISA vía [El Universal (2025-08-22)](https://www.eluniversal.com.mx/cartera/suplementos-alimenticios-duplicaran-sus-ventas-en-2028-preven-crece-la-compra-de-productos-naturales/) y La Jornada | — |
+| Mezcla por categoría (2023) | Digestivos 26 %, inmunidad 12 %, control de peso 11 %, **desarrollo muscular 6 %** | ANAISA vía El Universal | — |
+| Suplementos dietéticos en México (otra fuente) | USD 2.9 mil millones (2025), CAGR 7.38 % a 2034 | [IMARC](https://www.imarcgroup.com/report/es/mexico-dietary-supplements-market) | **Reporte de pago**: solo se ve el resumen; metodología no verificable |
+| Euromonitor «Dietary Supplements in Mexico» | Sin cifra pública | [Research and Markets](https://www.researchandmarkets.com/reports/227275/dietary_supplements_in_mexico) | **De pago**; solo cualitativo: venta directa lidera y las farmacias crecen más rápido |
+
+**Estimación derivada [INFERIDO, no es cifra publicada]:**
+- 5.7 % × $58,192 millones ≈ **$3,300 millones MXN** de suplementos vendidos en línea en 2023.
+- El segmento muscular (6 %) ≈ **$3,500 millones MXN** en todos los canales.
+- Es un nicho real pero pequeño, y lo dominan los marketplaces (Amazon y Mercado Libre, según ANAISA en [Forbes (2025-08-21)](https://forbes.com.mx/covid-19-y-el-ecommerce-disparan-la-venta-de-suplementos-alimenticios-en-mexico/)) y las cadenas (GNC, farmacias).
+
+**Marco regulatorio (orientación informativa; validar con asesor regulatorio):**
+- La publicidad de suplementos requiere **permiso de COFEPRIS** (Reglamento de la LGS en Materia de Publicidad, art. 79 fr. II), según [Rivenza (2026-09-02)](https://www.rivenza.com.mx/blog/publicidad-de-productos-y-permisos-cofepris) y [ANCE Salud (2026-06-04)](https://salud.ance-connect.org/suplementos-alimenticios-cumplimiento-regulatorio-en-mexico/).
+- Las leyendas «Este producto no es un medicamento» y «El consumo de este producto es responsabilidad de quien lo recomienda y de quien lo usa» aparecen en la [Guía de etiquetado de COPRISEM](https://ssm.gob.mx/portal/descargables/tramites_coprisem/PRODUCTOS_SERVICIOS/GUIA/GUIA_AUTOVERIFICACION_SUPLEMENTOS.pdf).
+- B Life muestra su número de permiso de publicidad en la ficha. GNC y Amazon muestran la leyenda.
+
+---
+
+## 4. Lo que Pruva ya tiene frente a la competencia (repo)
+
+Fuentes: `docs/DECISIONS.md` (ADR-021, 025, 026, 028, 029, 034, 037), `docs/plan/PROJECT-BRIEF.md`, `docs/plan/PLAN-LANZAMIENTO.md` y el código de `src/`.
+
+### 4.1 Diferenciales defendibles
+
+| Diferencial | Evidencia en el repo | ¿Lo tiene la competencia? | Defendible porque… |
+|---|---|---|---|
+| **Cumplimiento sanitario dentro de la plataforma**: ficha estructurada (porción, tabla nutrimental, ingredientes, advertencias, alérgenos, aviso o registro sanitario), reglas por jurisdicción que **bloquean la publicación** si falta una leyenda, términos prohibidos | ADR-021; migraciones `20261016000100_regulatory_model.sql`…`20261018000200_compliance_mx_proposed_rules.sql`; `src/app/platform/cumplimiento` | Las tiendas lo resuelven a mano en la descripción. Ni Shopify ni Tiendanube lo traen nativo (no aparece en sus páginas de precios ni de funciones) [INFERIDO] | Lo valida la base de datos, no una plantilla de tema. Es difícil de copiar con una app encima de otra plataforma |
+| **Precio por porción por presentación** | ADR-026; `src/server/storefront/catalog.ts`, `product-card.tsx` | GNC, Birdman y Maximizarte ya lo muestran | **No es diferencial**: es paridad con lo mejor del sector |
+| **Opiniones solo de compradores con pedido entregado**; sin `AggregateRating` inventado | ADR-029; `20261018001300_product_reviews.sql` | Birdman («cliente verificado»), Amazon (compra verificada) | Paridad, con garantía técnica. Hoy hay 0 pedidos reales, así que no hay reseñas que mostrar |
+| **Proveedores y despacho directo** con disponibilidad por proveedor | ADR-025; `20261018000700_suppliers.sql` | Tiendanube y Jumpseller anuncian dropshipping | Paridad en el SaaS; ayuda a la tienda propia a vender sin inventario |
+| **Multitienda en un panel + marca blanca + dominio propio verificado** | ADR-034, ADR-037, sección 26 de DECISIONS | Shopify Plus («tiendas adicionales gratis», desde USD 2,300); Tiendanube [NO VERIFICADO] | Diferencial frente a los planes de entrada; útil para agencias o grupos con varias marcas |
+| **0 % de comisión de la plataforma con Mercado Pago directo** | ADR-028 (no hay `application_fee`; `grep` sin resultados) | Jumpseller 0 %; Tiendanube 0 % solo con Pago Nube; Shopify 0.2–2 % con pasarela externa | Argumento de precio, mientras el modelo de cobro (pendiente D1) no lo cambie |
+| **Seguridad y aislamiento** (RLS forzado, roles de mínimo privilegio, 2,348 pgTAP) | GATE0, ESTADO-CALIDAD | Invisible para el comprador | Es una condición necesaria, no un argumento de venta para la pyme |
+
+### 4.2 Lo que falta para la paridad mínima (tienda de suplementos)
+
+| Brecha | Quién la tiene | Estado en Pruva |
+|---|---|---|
+| **Meses sin intereses** | Amazon, Mercado Libre, Shopify Payments, FAhorro, B Life (PayPal) | Sin implementar: `grep "meses sin"` no da resultados en `src/` ni en las migraciones. ADR-024 (Stripe) no se hizo. Con Mercado Pago Checkout Pro, las cuotas dependen de la cuenta de MP [INFERIDO] |
+| **Suscripción o autoenvío con descuento** | Birdman (−10 %), Amazon «Planea y ahorra», FAhorro | No existe (D-S-11 la pospuso) |
+| **Lealtad, puntos o monedero** | GNC Rewards, Birdman Plumas, Monedero del Ahorro | No existe |
+| **Recuperación de carrito abandonado** | Tiendanube (de serie), Jumpseller PLUS+ | Solo hay un flag `abandoned_cart` y el estado `abandoned`; no hay correo de recuperación (Etapa 4 del plan) |
+| **«Avísame cuando haya inventario»** | B Life, Jumpseller | No existe (Etapa 4 del plan) |
+| **Entrega rápida o pickup** | GNC (< 60 min, pickup), FAhorro (2 h) | No existe; solo envíos por zona y tarifa |
+| **Guías de paquetería integradas** | Envío Nube, Skydropx, Envia.com | No existe: `estafeta` solo aparece como texto en el formulario de rastreo (`pedidos/order-forms.tsx`) |
+| **Contenido: blog o guías** | GNC y B Life tienen blog | No se encontró un módulo de blog (hay páginas por bloques, ADR-034) [INFERIDO] |
+| **Presencia en marketplaces** | Birdman y B Life venden en Amazon | Sin integración |
+
+### 4.3 Lo que falta para la paridad mínima (SaaS)
+
+| Brecha | Evidencia |
+|---|---|
+| **Cobro a las tiendas** (planes y facturación) | F10 pendiente; decisión D1 abierta (`PROJECT-BRIEF.md` §6) |
+| **Registro público con prueba gratis** | No hay ruta de registro en `src/app` (solo `(acceso)`, `admin`, `platform`); decisión D2 abierta |
+| **Mercado Pago por tienda (OAuth)** | ADR-028 §1: «una credencial de plataforma… para más tiendas: OAuth de Mercado Pago (marketplace)… fuera del alcance de hoy» |
+| **CFDI** | Fuera de alcance (`PROJECT-BRIEF.md` §5.7.5) |
+| **Ecosistema de apps, POS, canales sociales** | No existe; los competidores lo incluyen |
+| **Soporte y operación humana** (chat, WhatsApp, migración asistida) | No existe; Tiendanube lo vende por plan |
+
+---
+
+## 5. Evaluación por separado
+
+### 5.1 (a) La tienda PRUVA de suplementos como negocio propio
+
+- **Mercado.**
+  - Suplementos en México: ~$58 mil millones MXN (ANAISA, 2023), pero solo **5.7 % se vende en línea**.
+  - Desarrollo muscular es 6 % del total.
+  - El comercio electrónico en general crece 19.2 % (AMVO).
+- **Cliente ideal [INFERIDO].** Persona de 18 a 44 años que entrena y compra proteína o creatina cada 30–60 días, sensible al precio y que lee la etiqueta.
+- **Propuesta de valor posible.** Información sanitaria completa y verificable (ficha, leyendas, porción, lote y caducidad si se aprueba ADR-027), precio por porción claro y opiniones reales. Es una propuesta de **confianza**, no de precio.
+- **Modelo de ingresos.**
+  - Margen de reventa menos la pasarela: con Mercado Pago, 3.49 % + $4 + IVA al instante, y 3 MSI le cuestan al vendedor +4.69 %.
+  - Menos el envío absorbido: el umbral de envío gratis de la competencia está en $399–$799.
+  - Los márgenes de reventa no se conocen: no hay catálogo ni costos en el repo [NO VERIFICADO].
+- **Competidores principales.** Amazon y Mercado Libre (precio y entrega al día siguiente), GNC (más de 500 tiendas, pickup y express) y las marcas con canal propio (Birdman, B Life) con suscripción y lealtad.
+- **Barreras de entrada.**
+  - Precio: Amazon vende ON Creatine 300 g a $409 y ON Whey 2 lb a $999.
+  - Logística: entrega en 1 día y envío gratis desde $399 en GNC.
+  - Reseñas: los marketplaces acumulan miles.
+  - Requisitos sanitarios: aviso de funcionamiento, permiso de publicidad.
+  - Adquisición de clientes: la publicidad de suplementos tiene restricciones en las plataformas digitales.
+- **Riesgos.**
+  - Revender marcas de terceros sin precio ni logística competitivos.
+  - Arrancar con 0 reseñas.
+  - Publicar sin los textos sanitarios aprobados por un asesor (bloqueo R0 del plan de lanzamiento).
+  - Depender de una sola pasarela que aún no se ha probado con credenciales reales.
+- **Qué tendría que ser cierto para que funcione.**
+  1. Un costo de adquisición de producto que permita estar a no más de ~10 % del precio de Amazon en los productos de entrada, o tener una **marca o surtido exclusivo** que no esté en Amazon.
+  2. Envío gratis desde un umbral parecido al mercado ($399–$499) sin perder margen. Exige un ticket promedio mayor a eso.
+  3. Una **razón para volver**: suscripción o autoenvío, puntos o contenido útil. Hoy no existe.
+  4. Textos sanitarios aprobados y permiso de publicidad COFEPRIS (como lo muestra B Life) antes de pagar anuncios.
+  5. Un canal de adquisición barato: comunidad, gimnasios o nutriólogos. Los anuncios pagados de suplementos tienen restricciones.
+
+### 5.2 (b) La plataforma multitienda como SaaS para comercios mexicanos
+
+- **Mercado.**
+  - 77.2 millones de compradores digitales y 21 % que compran por redes sociales directo al vendedor (AMVO 2026).
+  - El hueco que dejó **Mercado Shops (cerrado el 31-dic-2025)** lo están cubriendo Tiendanube y Shopify con herramientas de migración.
+- **Cliente ideal [INFERIDO].** Comercio mexicano de **categorías reguladas** (suplementos, herbolarios, cosméticos, alimentos) o **grupos o agencias con varias marcas**. Necesita cumplimiento sanitario verificable, multitienda y cobrar con su propia cuenta de Mercado Pago sin comisión extra. Para la pyme genérica, la oferta de Tiendanube (gratis o $149/mes) es difícil de superar.
+- **Propuesta de valor.** «La plataforma para vender productos regulados en México sin miedo a COFEPRIS»: ficha sanitaria estructurada, leyendas obligatorias que bloquean la publicación, auditoría y multitienda. Ningún competidor revisado lo ofrece nativo.
+- **Modelo de ingresos (por decidir, D1).** Mensualidad por plan (referencias: $149–$999 MXN en Tiendanube; USD 14–399 en Shopify), comisión por venta (Shopify cobra 0.2–2 % con pasarelas externas) o ambas. Con un nicho regulado podría sostener un precio mayor que Tiendanube [INFERIDO; requiere validar con clientes].
+- **Competidores principales.** Tiendanube (local, barata, Envío Nube, Pago Nube), Shopify (ecosistema, Shopify Payments con OXXO y MSI), WooCommerce (agencias), Jumpseller (0 %), Mi Página de Mercado Libre.
+- **Barreras de entrada.**
+  - Paridad funcional: CFDI por app, guías de paquetería, MSI, carrito abandonado, apps, POS.
+  - Confianza en una marca nueva.
+  - Soporte humano.
+  - Costo de adquisición de comerciantes.
+  - Sin cobro, sin registro público y sin Mercado Pago por tienda **no se puede vender hoy a terceros**.
+- **Riesgos.**
+  - Construir un SaaS genérico contra competidores con miles de desarrolladores.
+  - Un nicho demasiado pequeño: el e-commerce de suplementos ronda los $3,300 millones MXN y el número de comercios no se conoce [NO VERIFICADO].
+  - Responsabilidad percibida: si la plataforma «valida» cumplimiento, el comercio puede creer que ya cumple. El texto legal es del comercio o de su asesor (D-S-01), y eso debe quedar claro en el contrato.
+  - Costo de operar (Supabase, Vercel y soporte) frente a precios de entrada de $0–$150 MXN.
+- **Qué tendría que ser cierto para que funcione.**
+  1. Que existan al menos **10–20 comercios regulados** dispuestos a pagar más que Tiendanube por el módulo regulatorio. Es una hipótesis que se valida con entrevistas antes de construir F10.
+  2. Mercado Pago por tienda (OAuth marketplace) funcionando, y MSI.
+  3. CFDI resuelto, aunque sea con integración a un PAC.
+  4. Guías de paquetería (Envia.com o Skydropx) o un convenio.
+  5. Operación de soporte en español.
+  6. Que la tienda propia PRUVA demuestre ventas reales como caso de éxito.
+
+---
+
+## 6. Conclusiones
+
+1. **El diferencial real y difícil de copiar es el cumplimiento sanitario integrado** (ADR-021). Precio por porción, reseñas verificadas y dropshipping son paridad, no diferencial.
+2. **Como tienda propia**, Pruva compite en una categoría donde el comprador en línea ya tiene Amazon y Mercado Libre con precios entre 20 % y 40 % menores que el regular de GNC y entrega al día siguiente. Sin surtido exclusivo, suscripción o lealtad, la tecnología sola no gana la venta.
+3. **Como SaaS**, hoy no es vendible a terceros: no hay cobro, ni registro, ni Mercado Pago por tienda, ni CFDI. Para la pyme genérica no hay argumento frente a Tiendanube gratis o $149/mes. El nicho «productos regulados y multimarca» sí tiene un hueco claro y nadie lo atiende de forma nativa.
+4. **Secuencia recomendada [INFERIDO]:**
+   - Primero, lanzar PRUVA con la paridad mínima: MSI, autoenvío, carrito abandonado, «vuelve a estar disponible» y envío gratis desde un umbral de mercado.
+   - Medir conversión y recompra.
+   - En paralelo, validar con 10–20 entrevistas a comercios regulados antes de invertir en F10.
+
+---
+
+## 7. Hallazgos
+
+| ID | Severidad | Título | Evidencia | Etiqueta | Impacto | Recomendación |
+|---|---|---|---|---|---|---|
+| MER-01 | Alta | La tienda propia compite contra un piso de precio de marketplace muy bajo | ON Whey 2 lb: Amazon $999, GNC $1,299.90 regular; ON Creatine 300 g: Amazon $409 (sección 1.2) | [VERIFICADO] (precios en copia indexada) | Si PRUVA revende las mismas marcas sin ventaja de costo, perderá en precio | Definir surtido exclusivo o de nicho y una política de precios contra Amazon y Mercado Libre antes de cargar el catálogo |
+| MER-02 | Alta | El SaaS no se puede vender a terceros: falta cobro, registro y Mercado Pago por tienda | `PROJECT-BRIEF.md` §6 (D1 y D2 abiertas); ADR-028 §1 («OAuth… fuera del alcance»); no hay ruta de registro en `src/app` | [VERIFICADO] (repo) | Sin esto no hay ingresos SaaS | Decidir D1 y D2; ADR para Mercado Pago OAuth marketplace; F10 solo después de validar demanda (MER-12) |
+| MER-03 | Alta | El cumplimiento sanitario integrado es el único diferencial fuerte y aún no se comunica ni se valida con comercios | ADR-021 + migraciones regulatorias; en lo revisado, ningún competidor lo trae nativo | [INFERIDO] | Es la base del posicionamiento del SaaS | Posicionar el SaaS como «productos regulados en México»; preparar una demo y entrevistar comercios |
+| MER-04 | Alta | Falta meses sin intereses | `grep "meses sin"` = 0 en `src/` y migraciones; el mercado lo ofrece (Amazon, ML, Shopify, FAhorro) | [VERIFICADO] (repo) / [INFERIDO] (efecto) | Menos conversión en tickets de $1,000 o más (proteínas) | Habilitar cuotas de Mercado Pago (costo 3 MSI +4.69 %, según MP) y mostrarlas en ficha y checkout |
+| MER-05 | Media | No hay razón para volver: sin suscripción ni lealtad | Birdman (−10 % y Plumas), GNC Rewards, Monedero del Ahorro, Amazon «Planea y ahorra»; Pruva no los tiene | [VERIFICADO] | Recompra baja en un producto de consumo cíclico | ADR de autoenvío (recordatorio por correo como primer paso) y, más adelante, puntos |
+| MER-06 | Media | Falta recuperación de carrito abandonado y «avísame cuando haya inventario» | Flag `abandoned_cart` sin flujo; Tiendanube, Jumpseller y B Life los tienen | [VERIFICADO] | Ventas perdidas | Ya está en la Etapa 4 del plan de lanzamiento: priorizarla |
+| MER-07 | Media | La política de envío no está definida frente a umbrales de $399–$799 | GNC $399, Birdman $499, B Life $799, FAhorro gratis sin mínimo; Pruva espera la tabla del propietario (punto 1.8 del plan) | [VERIFICADO] | El envío cobrado es una causa común de abandono [INFERIDO] | Definir un umbral con base en ticket y margen; considerar la integración con Envia.com o Skydropx |
+| MER-08 | Media | Falta CFDI | Fuera de alcance (`PROJECT-BRIEF` §5.7.5); en Shopify y Tiendanube se resuelve con apps (CFDI Express desde USD 15, Sellu gratis hasta 15 facturas) | [VERIFICADO] | Clientes con RFC no compran; un comercio B2B no adopta el SaaS | Integrar un PAC (ADR) o permitir una app externa por webhook |
+| MER-09 | Media | Sin permiso de publicidad COFEPRIS visible ni plan de publicidad | B Life muestra su número de permiso; la publicidad de suplementos requiere permiso (RLGSMP art. 79 fr. II, según Rivenza y ANCE) | [VERIFICADO] (fuentes) / orientación informativa | Riesgo sanitario al lanzar anuncios | Validar con el asesor regulatorio; agregar un campo opcional «permiso de publicidad» a la ficha (ADR) |
+| MER-10 | Media | No hay contenido ni SEO de largo plazo (blog o guías) | GNC y B Life tienen blog; no se encontró un módulo de blog en Pruva | [INFERIDO] | Dependencia de anuncios pagados restringidos | Usar páginas por bloques (ADR-034) como guías, con textos revisados por el asesor (sin afirmaciones de salud) |
+| MER-11 | Baja | Velocidad móvil frente a competidores sin comparar | Solo se midió Pruva en local (91–99); los competidores no | [NO VERIFICADO] | No se puede usar «más rápida» como argumento | Correr Lighthouse móvil de GNC, Birdman y B Life con la misma configuración |
+| MER-12 | Alta | La demanda del nicho SaaS no está validada | El e-commerce de suplementos ronda los $3,300 millones MXN (derivado de ANAISA 5.7 % × $58,192 millones); número de comercios desconocido | [INFERIDO] | Riesgo de construir F10 sin clientes | 10–20 entrevistas con comercios regulados y una carta de intención antes de F10 |
+| MER-13 | Baja | Ventana de oportunidad por el cierre de Mercado Shops | Cerró el 31-dic-2025; Mi Página cuesta MX$437/mes tras 3 meses gratis | [VERIFICADO] (fuentes secundarias; la nota oficial de ML no cargó) | Comercios buscando alternativa (Tiendanube ya ofrece migración) | Si se abre el SaaS, ofrecer importación desde Mercado Libre (catálogo por CSV ya existe) |
+| MER-14 | Baja | Sin entrega rápida ni pickup | GNC: < 60 min y pickup en más de 500 tiendas; FAhorro: 2 h | [VERIFICADO] | Desventaja en la gran ciudad; no es crítica para una tienda nueva | Evaluar última milla local (99minutos o Treggo) solo en la zona de origen |
+
+---
+
+## 8. Formato de respuesta al orquestador
+
+1. **Archivo:** `/home/user/pruva/docs/audit/AUDITORIA-2026-10-27/08-MERCADO-COMPETENCIA.md`
+2. **Hallazgos:** ver la tabla de la sección 7 (MER-01 a MER-14).
+3. **Top 3 riesgos:**
+   - Piso de precio de Amazon y Mercado Libre en marcas de terceros (MER-01).
+   - SaaS sin cobro, registro ni Mercado Pago por tienda (MER-02).
+   - Nicho SaaS sin validar (MER-12).
+4. **Top 3 oportunidades:**
+   - Cumplimiento sanitario nativo como posicionamiento (MER-03).
+   - 0 % de comisión con Mercado Pago directo frente al 0.6–2 % de Shopify y Tiendanube con pasarela externa.
+   - Hueco de Mercado Shops (MER-13).
+5. **No verificado:**
+   - `WebFetch` falló por DNS: todo se leyó en copias indexadas de Exa, que pueden ser anteriores al 2026-10-27.
+   - No se midió la experiencia móvil de los competidores.
+   - No se leyeron la nota oficial de Mercado Libre sobre Mercado Shops, los métodos de pago de Birdman y B Life, Walmart ni Sanborns.
+   - IMARC y Euromonitor son reportes de pago.
