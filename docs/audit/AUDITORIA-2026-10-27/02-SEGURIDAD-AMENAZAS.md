@@ -32,21 +32,21 @@ Los huecos están en **defensa en profundidad** y en **operación**:
 
 ## Hallazgos
 
-| ID     | Sev.  | Título |
-| ------ | ----- | ------ |
+| ID     | Sev.  | Título                                                                                                                  |
+| ------ | ----- | ----------------------------------------------------------------------------------------------------------------------- |
 | SEC-01 | Media | El login del panel por código no tiene límite de tasa propio; los límites de Auth son por la IP compartida del servidor |
-| SEC-02 | Media | Enlace de pedido de invitado sin caducidad ni revocación, con PII y viajando en la URL |
-| SEC-03 | Media | Protección de contraseñas filtradas desactivada en Auth (staging), aunque ADR-031 permite contraseña al staff |
+| SEC-02 | Media | Enlace de pedido de invitado sin caducidad ni revocación, con PII y viajando en la URL                                  |
+| SEC-03 | Media | Protección de contraseñas filtradas desactivada en Auth (staging), aunque ADR-031 permite contraseña al staff           |
 | SEC-04 | Media | Los metatests no garantizan que cada RPC pública verifique permisos; todo comprador tiene JWT válido contra la Data API |
-| SEC-05 | Baja  | Sin límite de tasa en carrito, búsqueda y listados de la tienda (DoS y crecimiento de `carts`) |
-| SEC-06 | Baja  | La IP para límites sale del primer `x-forwarded-for`; solo es confiable detrás de Vercel |
-| SEC-07 | Baja  | El límite de cuerpo de webhooks y del hook de email depende de `content-length` |
-| SEC-08 | Baja  | El metatest 5 acepta cualquier `search_path`, no exige `''` |
-| SEC-09 | Baja  | El redactor de logs no cubre nombres, IP ni tokens dentro de URLs (`?t=`) |
-| SEC-10 | Baja  | `app.lock_media` bloquea la fila y distingue `not_found`/`forbidden` antes de verificar el permiso |
-| SEC-11 | Baja  | Staging permite pagos simulados en la demo pública (`payments.allow_fake=true`) |
-| SEC-12 | Baja  | CSP sin `report-to`/`report-uri` y HSTS sin `preload` |
-| SEC-13 | Baja  | Reutilización de secretos para varios propósitos (`ORDER_LINK_SECRET`, `PREVIEW_HMAC_SECRET`) |
+| SEC-05 | Baja  | Sin límite de tasa en carrito, búsqueda y listados de la tienda (DoS y crecimiento de `carts`)                          |
+| SEC-06 | Baja  | La IP para límites sale del primer `x-forwarded-for`; solo es confiable detrás de Vercel                                |
+| SEC-07 | Baja  | El límite de cuerpo de webhooks y del hook de email depende de `content-length`                                         |
+| SEC-08 | Baja  | El metatest 5 acepta cualquier `search_path`, no exige `''`                                                             |
+| SEC-09 | Baja  | El redactor de logs no cubre nombres, IP ni tokens dentro de URLs (`?t=`)                                               |
+| SEC-10 | Baja  | `app.lock_media` bloquea la fila y distingue `not_found`/`forbidden` antes de verificar el permiso                      |
+| SEC-11 | Baja  | Staging permite pagos simulados en la demo pública (`payments.allow_fake=true`)                                         |
+| SEC-12 | Baja  | CSP sin `report-to`/`report-uri` y HSTS sin `preload`                                                                   |
+| SEC-13 | Baja  | Reutilización de secretos para varios propósitos (`ORDER_LINK_SECRET`, `PREVIEW_HMAC_SECRET`)                           |
 
 ### SEC-01 · Media · El login del panel por código no tiene límite de tasa propio [INFERIDO]
 
@@ -141,7 +141,7 @@ No lo llaman `storefront.cart_add_item`, que crea carritos, ni `list_products`/`
 - `src/app/api/webhooks/payments/{mercadopago,stripe}/route.ts:25` y `src/app/api/auth/email-hook/route.ts` comparan `content-length` y después llaman a `request.text()`.
 - `handleMercadoPagoWebhook` vuelve a comparar `rawBody.length > 262_144`, pero cuando el cuerpo ya está en memoria.
 
-**Impacto:** una petición *chunked* (enviada en trozos, sin `content-length`) se lee completa antes de rechazarse. Vercel corta en 4.5 MB, así que el impacto es menor.
+**Impacto:** una petición _chunked_ (enviada en trozos, sin `content-length`) se lee completa antes de rechazarse. Vercel corta en 4.5 MB, así que el impacto es menor.
 
 **Recomendación:** leer el stream con un tope de bytes.
 
@@ -215,84 +215,84 @@ Leyenda de riesgo residual: **B** = bajo, **M** = medio.
 
 ### Storefront (tienda pública, `src/app/%5Fstore/[storeId]`, rol `storefront_gateway`)
 
-| Amenaza | Control existente (ruta) | Riesgo residual |
-| --- | --- | --- |
-| S: falsificar la tienda con la cabecera `x-store-id`/`x-store-route` o entrando por `/_store/...` | El proxy borra las cabeceras internas y responde 404 en `/_store` (`src/proxy.ts`, `INTERNAL_HEADERS`). `getStorefront` verifica la firma HMAC de la ruta (`src/server/storefront/context.ts`, `route-signature.ts`). Probado: `/_store/x` → 404, también con la cabecera falsificada | B |
-| T: alterar precio, total, descuento o stock desde el cliente | `place_order` recalcula todo en la base; `expected_total` solo sirve para detectar cambios (`price_changed`); el stock pasa por reservas | B |
-| T: activar la vista previa de un borrador | Token HMAC de 15 min (`preview.ts`) canjeado por una cookie host-only; la firma de ruta incluye el modo | B |
-| I: IDOR de pedido o pago de invitado | `get_order_for_guest`, `retry_payment`, `order_reviewables` y `submit_review` exigen el hash del token. `payment_for_checkout`/`record_checkout_result`/`fake_payment_result` filtran por `store_id`, se llaman solo desde el servidor y el pago simulado exige una firma | M (SEC-02) |
-| I: XSS con HTML del comerciante o JSON-LD | `SafeHtml` + `sanitize-html` con lista blanca (`src/server/security/sanitize.ts`), filtro en la RPC `content_save_page_blocks`, JSON-LD con `<` escapado; un único `dangerouslySetInnerHTML` (`src/ui/safe-html.tsx`); CSP con nonce | B |
-| D: abuso de carrito, búsqueda o checkout | `checkout_guard` (IP + email), `discount_guard`, `place_order` (20 pedidos por email al día) | M (SEC-05) |
-| R: negar haber hecho un pedido | Pedido inmutable con snapshot, `order_events`, auditoría | B |
-| E: comprador → staff | El staff exige AAL2 + membresía (`app.has_store_permission`) | B |
+| Amenaza                                                                                           | Control existente (ruta)                                                                                                                                                                                                                                                              | Riesgo residual |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| S: falsificar la tienda con la cabecera `x-store-id`/`x-store-route` o entrando por `/_store/...` | El proxy borra las cabeceras internas y responde 404 en `/_store` (`src/proxy.ts`, `INTERNAL_HEADERS`). `getStorefront` verifica la firma HMAC de la ruta (`src/server/storefront/context.ts`, `route-signature.ts`). Probado: `/_store/x` → 404, también con la cabecera falsificada | B               |
+| T: alterar precio, total, descuento o stock desde el cliente                                      | `place_order` recalcula todo en la base; `expected_total` solo sirve para detectar cambios (`price_changed`); el stock pasa por reservas                                                                                                                                              | B               |
+| T: activar la vista previa de un borrador                                                         | Token HMAC de 15 min (`preview.ts`) canjeado por una cookie host-only; la firma de ruta incluye el modo                                                                                                                                                                               | B               |
+| I: IDOR de pedido o pago de invitado                                                              | `get_order_for_guest`, `retry_payment`, `order_reviewables` y `submit_review` exigen el hash del token. `payment_for_checkout`/`record_checkout_result`/`fake_payment_result` filtran por `store_id`, se llaman solo desde el servidor y el pago simulado exige una firma             | M (SEC-02)      |
+| I: XSS con HTML del comerciante o JSON-LD                                                         | `SafeHtml` + `sanitize-html` con lista blanca (`src/server/security/sanitize.ts`), filtro en la RPC `content_save_page_blocks`, JSON-LD con `<` escapado; un único `dangerouslySetInnerHTML` (`src/ui/safe-html.tsx`); CSP con nonce                                                  | B               |
+| D: abuso de carrito, búsqueda o checkout                                                          | `checkout_guard` (IP + email), `discount_guard`, `place_order` (20 pedidos por email al día)                                                                                                                                                                                          | M (SEC-05)      |
+| R: negar haber hecho un pedido                                                                    | Pedido inmutable con snapshot, `order_events`, auditoría                                                                                                                                                                                                                              | B               |
+| E: comprador → staff                                                                              | El staff exige AAL2 + membresía (`app.has_store_permission`)                                                                                                                                                                                                                          | B               |
 
 ### Panel (`src/app/admin`) y consola de plataforma (`src/app/platform`)
 
-| Amenaza | Control existente (ruta) | Riesgo residual |
-| --- | --- | --- |
-| S: robo o adivinación de credenciales | Código por email o contraseña de 12 a 72 caracteres + TOTP obligatorio (`src/app/(acceso)/actions.ts`); `requireStaffSession` (`src/server/auth/guards.ts`); `getClaims()` valida la firma del JWT | M (SEC-01, SEC-03) |
-| E: miembro de la tienda A actúa sobre la tienda B (IDOR) | RLS `has_store_permission(store_id, …)` en todas las tablas; las RPC validan permiso y AAL2; FK compuestas `(store_id, …)`; trigger `prevent_tenant_change` | B |
-| E: escalar de rol o aceptar una invitación ajena | `access_accept_invitation` exige el email exacto, un token de 64 hex (hash), sin caducar ni revocar, y no deja tomar la propiedad si ya hay dueño | B |
-| E: soporte de plataforma entra sin permiso | `support_access_grants` con AAL2, caducidad y revocación del dueño (`app.revoke_support_grant`); auditoría `support_session.*` | B |
-| T: CSRF en Server Actions | Next verifica Origin contra Host en las Server Actions (comportamiento por defecto; `next.config.ts` no agrega `allowedOrigins`), cookies `SameSite=Lax`, `form-action 'self'` | B [INFERIDO] |
-| R: acciones sensibles sin rastro | `audit.record(...)` en las RPC; `audit.audit_logs` es append-only (trigger `audit_logs_append_only` en cada partición); `security_events` | B |
-| I: PII visible para roles sin permiso | Grants por columna: `orders.email/phone/customer_name/shipping_address` no se otorgan; los costos están detrás de `products.cost.read`; `payment_accounts.secret_ref` no se otorga | B |
-| D: clickjacking | `frame-ancestors 'none'` + `X-Frame-Options: DENY` | B |
+| Amenaza                                                  | Control existente (ruta)                                                                                                                                                                           | Riesgo residual    |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| S: robo o adivinación de credenciales                    | Código por email o contraseña de 12 a 72 caracteres + TOTP obligatorio (`src/app/(acceso)/actions.ts`); `requireStaffSession` (`src/server/auth/guards.ts`); `getClaims()` valida la firma del JWT | M (SEC-01, SEC-03) |
+| E: miembro de la tienda A actúa sobre la tienda B (IDOR) | RLS `has_store_permission(store_id, …)` en todas las tablas; las RPC validan permiso y AAL2; FK compuestas `(store_id, …)`; trigger `prevent_tenant_change`                                        | B                  |
+| E: escalar de rol o aceptar una invitación ajena         | `access_accept_invitation` exige el email exacto, un token de 64 hex (hash), sin caducar ni revocar, y no deja tomar la propiedad si ya hay dueño                                                  | B                  |
+| E: soporte de plataforma entra sin permiso               | `support_access_grants` con AAL2, caducidad y revocación del dueño (`app.revoke_support_grant`); auditoría `support_session.*`                                                                     | B                  |
+| T: CSRF en Server Actions                                | Next verifica Origin contra Host en las Server Actions (comportamiento por defecto; `next.config.ts` no agrega `allowedOrigins`), cookies `SameSite=Lax`, `form-action 'self'`                     | B [INFERIDO]       |
+| R: acciones sensibles sin rastro                         | `audit.record(...)` en las RPC; `audit.audit_logs` es append-only (trigger `audit_logs_append_only` en cada partición); `security_events`                                                          | B                  |
+| I: PII visible para roles sin permiso                    | Grants por columna: `orders.email/phone/customer_name/shipping_address` no se otorgan; los costos están detrás de `products.cost.read`; `payment_accounts.secret_ref` no se otorga                 | B                  |
+| D: clickjacking                                          | `frame-ancestors 'none'` + `X-Frame-Options: DENY`                                                                                                                                                 | B                  |
 
 ### API/RPC (PostgREST + funciones)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| E: llamada directa a PostgREST con JWT de comprador | `anon` sin grants ni USAGE en los esquemas internos (metatests 2, 3, 6); RPC con guardas; esquemas `app/audit/private/storefront/system` no expuestos | M (SEC-04) |
-| T: escritura directa a tablas | `authenticated` solo tiene UPDATE por columna en `customers(first_name,last_name,phone)`, `profiles(locale,full_name,avatar_path)` y `stores(nombre, contacto, fiscal…)`, siempre bajo RLS; ningún INSERT/DELETE (consulta a `information_schema`) | B |
-| E: secuestro de `search_path` | Las 384 funciones SECURITY DEFINER tienen `search_path=""` | B (SEC-08) |
-| I: secretos en las respuestas | `payment_events.payload` y `payment_accounts.*secret_ref` sin grant | B |
+| Amenaza                                             | Control existente                                                                                                                                                                                                                                  | Riesgo residual |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| E: llamada directa a PostgREST con JWT de comprador | `anon` sin grants ni USAGE en los esquemas internos (metatests 2, 3, 6); RPC con guardas; esquemas `app/audit/private/storefront/system` no expuestos                                                                                              | M (SEC-04)      |
+| T: escritura directa a tablas                       | `authenticated` solo tiene UPDATE por columna en `customers(first_name,last_name,phone)`, `profiles(locale,full_name,avatar_path)` y `stores(nombre, contacto, fiscal…)`, siempre bajo RLS; ningún INSERT/DELETE (consulta a `information_schema`) | B               |
+| E: secuestro de `search_path`                       | Las 384 funciones SECURITY DEFINER tienen `search_path=""`                                                                                                                                                                                         | B (SEC-08)      |
+| I: secretos en las respuestas                       | `payment_events.payload` y `payment_accounts.*secret_ref` sin grant                                                                                                                                                                                | B               |
 
 ### Webhooks de pago (Mercado Pago y Stripe)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| S: webhook falso que confirma un pago | MP: firma `x-signature` (±5 min) que cubre `data.id` + `x-request-id`; **se vuelve a consultar el cobro a MP** y se valida el collector, la referencia, el monto y la moneda (`mercadopago-webhook.ts`). Stripe: `verifyStripeSignature` (±300 s, tiempo constante). Probado: un POST sin firma → 404/401 | B |
-| T/R: replay o eventos duplicados | `record_payment_event` deduplica por `(cuenta, event_id)`; idempotencia en `apply_*` | B |
-| D: cuerpos grandes | 256 KB por `content-length` | B (SEC-07) |
-| I: PII en el payload | `sanitize()` guarda solo id, tipo, acción, user_id y data.id | B |
+| Amenaza                               | Control existente                                                                                                                                                                                                                                                                                         | Riesgo residual |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| S: webhook falso que confirma un pago | MP: firma `x-signature` (±5 min) que cubre `data.id` + `x-request-id`; **se vuelve a consultar el cobro a MP** y se valida el collector, la referencia, el monto y la moneda (`mercadopago-webhook.ts`). Stripe: `verifyStripeSignature` (±300 s, tiempo constante). Probado: un POST sin firma → 404/401 | B               |
+| T/R: replay o eventos duplicados      | `record_payment_event` deduplica por `(cuenta, event_id)`; idempotencia en `apply_*`                                                                                                                                                                                                                      | B               |
+| D: cuerpos grandes                    | 256 KB por `content-length`                                                                                                                                                                                                                                                                               | B (SEC-07)      |
+| I: PII en el payload                  | `sanitize()` guarda solo id, tipo, acción, user_id y data.id                                                                                                                                                                                                                                              | B               |
 
 ### Jobs (`/api/jobs/run`, Vercel Cron, pg_cron + pg_net)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| S: ejecutar el runner sin autorización | Bearer `CRON_SECRET` (≥32) o HMAC `JOBS_HMAC_SECRET` con ±60 s, tiempo constante (`src/server/jobs/authorize.ts`). Probado: GET sin credencial → 401 | B |
-| E: el worker toca tablas | `system_worker` sin grants de tabla (metatest 8), solo `EXECUTE system.*` | B |
-| D: disparos repetidos | Claim con lock y timeout (`system.claim_jobs`), `maxDuration` 60 s | B |
+| Amenaza                                | Control existente                                                                                                                                    | Riesgo residual |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| S: ejecutar el runner sin autorización | Bearer `CRON_SECRET` (≥32) o HMAC `JOBS_HMAC_SECRET` con ±60 s, tiempo constante (`src/server/jobs/authorize.ts`). Probado: GET sin credencial → 401 | B               |
+| E: el worker toca tablas               | `system_worker` sin grants de tabla (metatest 8), solo `EXECUTE system.*`                                                                            | B               |
+| D: disparos repetidos                  | Claim con lock y timeout (`system.claim_jobs`), `maxDuration` 60 s                                                                                   | B               |
 
 ### Storage (subidas y buckets)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| T/I: subir SVG o HTML ejecutable | Buckets limitados a jpeg/png/webp/avif y 10 MB; política `media_upload_insert` con `app.media_upload_allowed(name)`; validación por *magic bytes* (los primeros bytes del archivo) + decodificador de sharp + `limitInputPixels`, y recodificación (`src/server/media/image.ts`) | B |
-| I: leer originales de otra tienda | `store-uploads` es privado; solo `store-media` (ya procesado) es público | B |
-| SSRF al importar fotos remotas | Solo https:443; bloqueo de IP privada, loopback, link-local, metadatos, NAT64, 6to4 y Teredo; conexión a la IP ya validada (evita DNS rebinding); 3 redirecciones al mismo host; tope de bytes y de tiempo (`src/server/media/remote-fetch.ts`); el origen de pruebas está prohibido en preview y producción | B |
+| Amenaza                           | Control existente                                                                                                                                                                                                                                                                                            | Riesgo residual |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| T/I: subir SVG o HTML ejecutable  | Buckets limitados a jpeg/png/webp/avif y 10 MB; política `media_upload_insert` con `app.media_upload_allowed(name)`; validación por _magic bytes_ (los primeros bytes del archivo) + decodificador de sharp + `limitInputPixels`, y recodificación (`src/server/media/image.ts`)                             | B               |
+| I: leer originales de otra tienda | `store-uploads` es privado; solo `store-media` (ya procesado) es público                                                                                                                                                                                                                                     | B               |
+| SSRF al importar fotos remotas    | Solo https:443; bloqueo de IP privada, loopback, link-local, metadatos, NAT64, 6to4 y Teredo; conexión a la IP ya validada (evita DNS rebinding); 3 redirecciones al mismo host; tope de bytes y de tiempo (`src/server/media/remote-fetch.ts`); el origen de pruebas está prohibido en preview y producción | B               |
 
 ### Auth (Supabase Auth, 2FA, sesiones, códigos)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| S: enumerar cuentas | La misma respuesta exista o no la cuenta (`requestLoginCode`, `signInWithPassword`) | B |
-| S: fuerza bruta de código o contraseña | Contraseña: límite propio por email e IP. Código del panel: solo el límite de Auth. Código de la tienda: `take_code_attempt` | M (SEC-01) |
-| E: el comprador usa la sesión de otra tienda | Cookies host-only por tienda; `account_customer` exige un cliente de ESA tienda, email igual al de la cuenta y una sesión por código (`amr` otp) | B |
-| I: permisos en el JWT | No hay: los permisos se calculan en la base en cada llamada | B |
+| Amenaza                                      | Control existente                                                                                                                                | Riesgo residual |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| S: enumerar cuentas                          | La misma respuesta exista o no la cuenta (`requestLoginCode`, `signInWithPassword`)                                                              | B               |
+| S: fuerza bruta de código o contraseña       | Contraseña: límite propio por email e IP. Código del panel: solo el límite de Auth. Código de la tienda: `take_code_attempt`                     | M (SEC-01)      |
+| E: el comprador usa la sesión de otra tienda | Cookies host-only por tienda; `account_customer` exige un cliente de ESA tienda, email igual al de la cuenta y una sesión por código (`amr` otp) | B               |
+| I: permisos en el JWT                        | No hay: los permisos se calculan en la base en cada llamada                                                                                      | B               |
 
 ### Correos (Resend, Send Email Hook)
 
-| Amenaza | Control existente | Riesgo residual |
-| --- | --- | --- |
-| S: hook falso | Sin `SEND_EMAIL_HOOK_SECRET` → 404 (probado); con secreto, Standard Webhooks (`src/server/security/standard-webhooks.ts`) | B |
-| I: correos a destinatarios reales desde la demo | `EMAIL_PROVIDER=fake` solo se permite en preview; producción exige Resend (`src/config/env.ts`) | B |
-| Spoofing del remitente | SPF/DKIM/DMARC pendientes del propietario | [NO VERIFICADO] |
+| Amenaza                                         | Control existente                                                                                                         | Riesgo residual |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| S: hook falso                                   | Sin `SEND_EMAIL_HOOK_SECRET` → 404 (probado); con secreto, Standard Webhooks (`src/server/security/standard-webhooks.ts`) | B               |
+| I: correos a destinatarios reales desde la demo | `EMAIL_PROVIDER=fake` solo se permite en preview; producción exige Resend (`src/config/env.ts`)                           | B               |
+| Spoofing del remitente                          | SPF/DKIM/DMARC pendientes del propietario                                                                                 | [NO VERIFICADO] |
 
 ## Controles verificados (lo que está bien, con evidencia)
 
-1. **RLS forzado en todas las tablas propias**: public 77/77, audit 28/28 y system 4/4 tienen `relrowsecurity` y `relforcerowsecurity`. Hay 73 políticas en `public`, ninguna `USING (true)`. Las 9 tablas de `public` sin política (carts, cart_items, compliance_*, feature_flag*, notification_deliveries, platform_settings, store_counters) quedan cerradas por defecto (*deny-all*) y solo se accede a ellas por funciones. [VERIFICADO, `pg_class`/`pg_policies` en `pruva_dev`]
+1. **RLS forzado en todas las tablas propias**: public 77/77, audit 28/28 y system 4/4 tienen `relrowsecurity` y `relforcerowsecurity`. Hay 73 políticas en `public`, ninguna `USING (true)`. Las 9 tablas de `public` sin política (carts, cart_items, compliance__, feature_flag_, notification_deliveries, platform_settings, store_counters) quedan cerradas por defecto (_deny-all_) y solo se accede a ellas por funciones. [VERIFICADO, `pg_class`/`pg_policies` en `pruva_dev`]
 2. **Grants mínimos**: `anon` no tiene grants en los esquemas propios; `service_role`, `storefront_gateway` y `system_worker` tampoco tienen grants de tabla. Cada rol solo tiene USAGE en su esquema. [VERIFICADO, `information_schema.role_table_grants` y `has_schema_privilege`]
 3. **PII y secretos excluidos por columna**: los grants de SELECT no incluyen `orders.email/phone/customer_name/shipping_address/billing_address/guest_access_token_hash`, ni `payment_accounts.secret_ref/webhook_secret_ref`, ni `payment_events.payload`, ni `customers.note`. [VERIFICADO]
 4. **SECURITY DEFINER**: 384 funciones, todas con `search_path=""`; ninguna ejecutable por PUBLIC (metatest 4). [VERIFICADO]
@@ -304,6 +304,7 @@ Leyenda de riesgo residual: **B** = bajo, **M** = medio.
    - Stripe: ±300 s; MP: ±5 min.
 
    Todos comparan con `constantTimeEqual`, que compara los SHA-256 para no filtrar la longitud del valor (`src/server/security/hmac.ts`). Los secretos exigen ≥32 caracteres (`src/config/env.ts`). [VERIFICADO]
+
 7. **Cabeceras** medidas con curl en el panel y en `demo.localhost`: CSP con nonce por request + `strict-dynamic`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, nosniff, Referrer-Policy, Permissions-Policy, COOP, HSTS 2 años, `Cache-Control: no-store` en páginas dinámicas, y `x-request-id` generado por el servidor. [VERIFICADO]
 8. **Rutas internas inaccesibles**: `/_store/...` → 404, incluso con la cabecera `x-store-route` falsificada. `/api/jobs/run` sin credencial → 401 con un error `AppError` uniforme. [VERIFICADO con curl]
 9. **XSS**: un único `dangerouslySetInnerHTML` (`src/ui/safe-html.tsx`), que sanitiza siempre al renderizar. JSON-LD sin `dangerouslySetInnerHTML`. [VERIFICADO con grep]
@@ -315,15 +316,16 @@ Leyenda de riesgo residual: **B** = bajo, **M** = medio.
     - en el cliente solo existen `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, ambos públicos por diseño.
 
     [VERIFICADO con grep. El escaneo del historial de git es de la línea base: en este árbol `git log` solo dio los encabezados.]
+
 13. **Auditoría inmutable**: trigger `audit_logs_append_only` en cada partición de `audit.audit_logs`; también hay `security_events`. [VERIFICADO]
 14. **Webhook MP**: no confía en el cuerpo. Vuelve a consultar el cobro y compara el collector. Una cuenta desconocida queda registrada como evento de seguridad. [VERIFICADO por lectura]
 
 ## Tareas propuestas (priorizadas)
 
-1. **(SEC-01)** Límite propio por email e IP en `requestLoginCode` y `verifyLoginCode` del panel, con prueba de integración. *Esfuerzo bajo.*
-2. **(SEC-03)** Activar la protección de contraseñas filtradas en Auth (staging y producción) y agregarla al checklist de lanzamiento. *Configuración.*
-3. **(SEC-04)** Metatest «toda SECURITY DEFINER de `public` llama a una guarda o está en la lista de excepciones» y una prueba pgTAP de cruce A→B para todas las RPC con un comprador AAL2. *Esfuerzo medio, alto valor.*
-4. **(SEC-02)** Política de caducidad del enlace de invitado y redacción de `?t=` en los logs. *Requiere decisión (ADR), porque toca un contrato del checkout (§43).*
+1. **(SEC-01)** Límite propio por email e IP en `requestLoginCode` y `verifyLoginCode` del panel, con prueba de integración. _Esfuerzo bajo._
+2. **(SEC-03)** Activar la protección de contraseñas filtradas en Auth (staging y producción) y agregarla al checklist de lanzamiento. _Configuración._
+3. **(SEC-04)** Metatest «toda SECURITY DEFINER de `public` llama a una guarda o está en la lista de excepciones» y una prueba pgTAP de cruce A→B para todas las RPC con un comprador AAL2. _Esfuerzo medio, alto valor._
+4. **(SEC-02)** Política de caducidad del enlace de invitado y redacción de `?t=` en los logs. _Requiere decisión (ADR), porque toca un contrato del checkout (§43)._
 5. **(SEC-11)** Comprobación en `/api/health/ready` y en el checklist: `allow_fake=false` en producción.
 6. **(SEC-05)** Límites de tasa en `cart_add_item`/búsqueda, o reglas de firewall en Vercel.
 7. **(SEC-08, SEC-09, SEC-10)** Endurecer el metatest 5, el redactor y el orden de verificación en `lock_media`.

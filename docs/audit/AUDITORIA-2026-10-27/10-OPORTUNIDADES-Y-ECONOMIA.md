@@ -27,36 +27,36 @@ Cambia los valores de esta tabla y vuelve a aplicar las fórmulas de la §3. Eti
 
 ### 0.1 Generales
 
-| # | Supuesto | Conservador | Base | Optimista | Tipo |
-|---|---|---|---|---|---|
-| G1 | Tipo de cambio USD→MXN | 18.5 | 18.5 | 18.5 | [Supuesto]: usa el FIX de Banxico del día |
-| G2 | IVA sobre comisiones | 16 % | 16 % | 16 % | [Fuente F1] (las comisiones de MP son «+IVA») |
-| G3 | Comisión MP, tarjeta o saldo, dinero al instante | 3.49 % + $4.00 | 3.49 % + $4.00 | 3.49 % + $4.00 | [Fuente F1/F2] |
-| G4 | Correos transaccionales por pedido | 4 | 4 | 4 | [Supuesto]: confirmación, pago, envío y entrega |
-| G5 | Costo por correo (Resend Pro: USD 20 por 50,000) | USD 0.0004 | USD 0.0004 | USD 0.0004 | [Fuente F5] |
-| G6 | Infraestructura fija al mes: Supabase Pro + PITR 7 días + Vercel Pro (1 asiento) + Resend Pro | USD 165 | USD 165 | USD 165 | [Fuente F4, F6, F5] (25 + 100 + 20 + 20) |
+| #   | Supuesto                                                                                      | Conservador    | Base           | Optimista      | Tipo                                            |
+| --- | --------------------------------------------------------------------------------------------- | -------------- | -------------- | -------------- | ----------------------------------------------- |
+| G1  | Tipo de cambio USD→MXN                                                                        | 18.5           | 18.5           | 18.5           | [Supuesto]: usa el FIX de Banxico del día       |
+| G2  | IVA sobre comisiones                                                                          | 16 %           | 16 %           | 16 %           | [Fuente F1] (las comisiones de MP son «+IVA»)   |
+| G3  | Comisión MP, tarjeta o saldo, dinero al instante                                              | 3.49 % + $4.00 | 3.49 % + $4.00 | 3.49 % + $4.00 | [Fuente F1/F2]                                  |
+| G4  | Correos transaccionales por pedido                                                            | 4              | 4              | 4              | [Supuesto]: confirmación, pago, envío y entrega |
+| G5  | Costo por correo (Resend Pro: USD 20 por 50,000)                                              | USD 0.0004     | USD 0.0004     | USD 0.0004     | [Fuente F5]                                     |
+| G6  | Infraestructura fija al mes: Supabase Pro + PITR 7 días + Vercel Pro (1 asiento) + Resend Pro | USD 165        | USD 165        | USD 165        | [Fuente F4, F6, F5] (25 + 100 + 20 + 20)        |
 
 ### 0.2 Tienda PRUVA
 
-| # | Supuesto | Conservador | Base | Optimista | Tipo |
-|---|---|---|---|---|---|
-| P1 | Ticket promedio, neto | $600 | $900 | $1,200 | [Supuesto] |
-| P2 | Margen bruto del producto (% del ticket) | 30 % | 40 % | 50 % | [Supuesto]: depende del costo del proveedor |
-| P3 | Pedidos al mes | 30 | 150 | 500 | [Supuesto] |
-| P4 | Costo de la guía (1 kg, nacional, económico) | $160 | $120 | $90 | [Fuente F8], rango de $75 a $204 del 2026-10-16 |
-| P5 | Parte del envío que absorbe la tienda | 100 % | 60 % | 40 % | [Supuesto]: depende del umbral de envío gratis |
-| P6 | Empaque por pedido | $25 | $20 | $15 | [Supuesto]: sin cotización |
+| #   | Supuesto                                     | Conservador | Base | Optimista | Tipo                                            |
+| --- | -------------------------------------------- | ----------- | ---- | --------- | ----------------------------------------------- |
+| P1  | Ticket promedio, neto                        | $600        | $900 | $1,200    | [Supuesto]                                      |
+| P2  | Margen bruto del producto (% del ticket)     | 30 %        | 40 % | 50 %      | [Supuesto]: depende del costo del proveedor     |
+| P3  | Pedidos al mes                               | 30          | 150  | 500       | [Supuesto]                                      |
+| P4  | Costo de la guía (1 kg, nacional, económico) | $160        | $120 | $90       | [Fuente F8], rango de $75 a $204 del 2026-10-16 |
+| P5  | Parte del envío que absorbe la tienda        | 100 %       | 60 % | 40 %      | [Supuesto]: depende del umbral de envío gratis  |
+| P6  | Empaque por pedido                           | $25         | $20  | $15       | [Supuesto]: sin cotización                      |
 
 ### 0.3 SaaS
 
-| # | Supuesto | Conservador | Base | Optimista | Tipo |
-|---|---|---|---|---|---|
-| S1 | Precio por tienda al mes, neto | $299 | $499 | $799 | [Supuesto]: el repo no tiene precios (la tabla `plans` existe sin datos de precio) |
-| S2 | Tiendas de pago | 5 | 25 | 100 | [Supuesto] |
-| S3 | Infraestructura al mes | USD 165 (Micro) | USD 170 (Small: +USD 5) | USD 280 (Medium USD 60 + Vercel por uso USD 50 + Resend USD 35) | [Fuente F4–F6] + [Supuesto] para el uso variable |
-| S4 | Horas de soporte por tienda al mes | 1.0 | 0.75 | 0.5 | [Supuesto] |
-| S5 | Costo de la hora de soporte | $200 | $200 | $200 | [Supuesto] |
-| S6 | Cobro de la suscripción con Stripe, tarjeta nacional | 3.6 % + $3 + IVA | igual | igual | [Fuente F3] |
+| #   | Supuesto                                             | Conservador      | Base                    | Optimista                                                       | Tipo                                                                               |
+| --- | ---------------------------------------------------- | ---------------- | ----------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| S1  | Precio por tienda al mes, neto                       | $299             | $499                    | $799                                                            | [Supuesto]: el repo no tiene precios (la tabla `plans` existe sin datos de precio) |
+| S2  | Tiendas de pago                                      | 5                | 25                      | 100                                                             | [Supuesto]                                                                         |
+| S3  | Infraestructura al mes                               | USD 165 (Micro)  | USD 170 (Small: +USD 5) | USD 280 (Medium USD 60 + Vercel por uso USD 50 + Resend USD 35) | [Fuente F4–F6] + [Supuesto] para el uso variable                                   |
+| S4  | Horas de soporte por tienda al mes                   | 1.0              | 0.75                    | 0.5                                                             | [Supuesto]                                                                         |
+| S5  | Costo de la hora de soporte                          | $200             | $200                    | $200                                                            | [Supuesto]                                                                         |
+| S6  | Cobro de la suscripción con Stripe, tarjeta nacional | 3.6 % + $3 + IVA | igual                   | igual                                                           | [Fuente F3]                                                                        |
 
 ---
 
@@ -64,15 +64,15 @@ Cambia los valores de esta tabla y vuelve a aplicar las fórmulas de la §3. Eti
 
 ### Resumen
 
-| ID | Riesgo | Proveedor | Qué tan aislado está en el código | Costo de cambiar (estimado) |
-|---|---|---|---|---|
-| DEP-01 | **Alto** | Todos (MP, Stripe, Vercel, Supabase) | No aplica: es un riesgo de contenido y de cuenta | Bajo en código; alto si llega la suspensión |
-| DEP-02 | **Alto** | Mercado Pago | Alto: interfaz `PaymentProvider` (GATE0 §18.2) | 2–3 semanas por adaptador nuevo |
-| DEP-03 | Medio | Vercel | Medio: `DomainProvider` aislado; cron en `vercel.json` | 1–3 semanas |
-| DEP-04 | Medio | Supabase | Bajo en Auth y Storage; alto en Postgres (portable) | 4–8 semanas |
-| DEP-05 | Medio | Resend | Alto: `EmailChannel`, HTTP sin SDK | 1–3 días |
-| DEP-06 | Bajo | Paqueterías | Sin integración (todo manual) | No aplica hoy |
-| DEP-07 | Bajo | WhatsApp (si se adopta) | No existe la integración | No aplica hoy |
+| ID     | Riesgo   | Proveedor                            | Qué tan aislado está en el código                      | Costo de cambiar (estimado)                 |
+| ------ | -------- | ------------------------------------ | ------------------------------------------------------ | ------------------------------------------- |
+| DEP-01 | **Alto** | Todos (MP, Stripe, Vercel, Supabase) | No aplica: es un riesgo de contenido y de cuenta       | Bajo en código; alto si llega la suspensión |
+| DEP-02 | **Alto** | Mercado Pago                         | Alto: interfaz `PaymentProvider` (GATE0 §18.2)         | 2–3 semanas por adaptador nuevo             |
+| DEP-03 | Medio    | Vercel                               | Medio: `DomainProvider` aislado; cron en `vercel.json` | 1–3 semanas                                 |
+| DEP-04 | Medio    | Supabase                             | Bajo en Auth y Storage; alto en Postgres (portable)    | 4–8 semanas                                 |
+| DEP-05 | Medio    | Resend                               | Alto: `EmailChannel`, HTTP sin SDK                     | 1–3 días                                    |
+| DEP-06 | Bajo     | Paqueterías                          | Sin integración (todo manual)                          | No aplica hoy                               |
+| DEP-07 | Bajo     | WhatsApp (si se adopta)              | No existe la integración                               | No aplica hoy                               |
 
 ---
 
@@ -278,23 +278,23 @@ Cambia los valores de esta tabla y vuelve a aplicar las fórmulas de la §3. Eti
 
 Las ★ marcan las **5 mejores**. El orden combina tres cosas: que destrabe ingresos, lo que ya existe en el repo y el riesgo.
 
-| ID | Oportunidad | Impacto | Esfuerzo (semanas) | Prioridad | ¿ADR? | Ya existe en el repo |
-|---|---|---|---|---|---|---|
-| ★ OPO-14 | Cobro de la suscripción SaaS y OAuth de MP por tienda | Muy alto: sin esto el SaaS no cobra ni admite una 2.ª tienda con MP | 3–5 | **Alta** | Sí | `plans`, `plan_entitlements`, `subscriptions`, overrides (GATE0 §19); `AccessMode` |
-| ★ OPO-01 | Envíos con cotización en vivo y guías (Skydropx o Envía) | Alto: costo por pedido y conversión | 3–5 | **Alta** | Sí (cálculo del checkout, §43) | `shipping_rates`, peso de envío en el catálogo, `supplier_orders.tracking_*`, cola de jobs, patrón de adaptador |
-| ★ OPO-04 | Recuperación de carritos abandonados | Alto | 2–3 | **Alta** | Sí (datos de contacto y consentimiento) | Entitlement `abandoned_cart` (GATE0 §19.2); `carts.status='abandoned'`; job de expiración; `marketing_consent` |
-| ★ OPO-05a | Recordatorio de recompra por porciones | Alto en suplementos | 1–2 | **Alta** | Probable (job y plantilla nuevos; sin tablas, quizá no) | ADR-026 porciones por variante; plantillas de pedido; jobs |
-| ★ OPO-12 | Analítica de conversión propia (embudo) | Alto: sin medir no se priorizan las demás | 2–3 | **Alta** | Sí si agrega una tabla de eventos | Entitlement `advanced_analytics`; `request_id`; inicio del panel |
-| OPO-03 | WhatsApp con estado del pedido | Medio-alto | 2–3 | Media | Sí (canal nuevo, consentimiento, teléfono = PII) | Abstracción `EmailChannel`; plantillas de pedido; WhatsApp solo como enlace de contacto |
-| OPO-02 | CFDI automático | Medio: lo piden los clientes con RFC | 3–4 | Media | Sí (datos fiscales = PII, tablas nuevas) | Nada específico; jobs y patrón de adaptador |
-| OPO-07 | Reseñas: recordatorio por correo y fotos | Medio | 1 (recordatorio) | Media | No (está fuera del alcance v1 de ADR-029, que ya lo anticipa) | ADR-029 completo: verificadas y moderadas |
-| OPO-11 | Más plantillas por giro | Medio para la venta del SaaS | 0.5–1 por giro | Media | No (ADR-034 lo cubre) | 6 plantillas: suplementos, ropa, belleza, abarrotes, genérica, blanco (`src/lib/templates/store-templates.ts:519`) |
-| OPO-13 | SEO de contenido (guías y blog) | Medio a largo plazo | 2–3 | Media | Probable (tipo de contenido nuevo) | Páginas por bloques (ADR-034); Lighthouse SEO 100; JSON-LD |
-| OPO-10 | Segunda tienda con inventario sincronizado | Medio | 3–5 | Media | Sí (inventario §43; ADR-038 está propuesto) | ADR-025: el proveedor es una ubicación de inventario con `supplier_sync` |
-| OPO-05b | Suscripción con cobro recurrente | Alto, pero caro | 6–10 | Baja (por ahora) | Sí (pagos y pedidos §43) | Nada de cobro recurrente |
-| OPO-06 | Programa de lealtad | Medio | 4–6 | Baja | Sí (afecta descuentos y totales) | Motor de descuentos D-F6-02 |
-| OPO-08 | Afiliados | Bajo-medio | 4–6 | Baja | Sí | Nada |
-| OPO-09 | Marketplace de marcas | Incierto | 10+ | Baja | Sí (cambia el modelo de tenencia y los pagos divididos) | Nada |
+| ID        | Oportunidad                                              | Impacto                                                             | Esfuerzo (semanas) | Prioridad        | ¿ADR?                                                         | Ya existe en el repo                                                                                               |
+| --------- | -------------------------------------------------------- | ------------------------------------------------------------------- | ------------------ | ---------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| ★ OPO-14  | Cobro de la suscripción SaaS y OAuth de MP por tienda    | Muy alto: sin esto el SaaS no cobra ni admite una 2.ª tienda con MP | 3–5                | **Alta**         | Sí                                                            | `plans`, `plan_entitlements`, `subscriptions`, overrides (GATE0 §19); `AccessMode`                                 |
+| ★ OPO-01  | Envíos con cotización en vivo y guías (Skydropx o Envía) | Alto: costo por pedido y conversión                                 | 3–5                | **Alta**         | Sí (cálculo del checkout, §43)                                | `shipping_rates`, peso de envío en el catálogo, `supplier_orders.tracking_*`, cola de jobs, patrón de adaptador    |
+| ★ OPO-04  | Recuperación de carritos abandonados                     | Alto                                                                | 2–3                | **Alta**         | Sí (datos de contacto y consentimiento)                       | Entitlement `abandoned_cart` (GATE0 §19.2); `carts.status='abandoned'`; job de expiración; `marketing_consent`     |
+| ★ OPO-05a | Recordatorio de recompra por porciones                   | Alto en suplementos                                                 | 1–2                | **Alta**         | Probable (job y plantilla nuevos; sin tablas, quizá no)       | ADR-026 porciones por variante; plantillas de pedido; jobs                                                         |
+| ★ OPO-12  | Analítica de conversión propia (embudo)                  | Alto: sin medir no se priorizan las demás                           | 2–3                | **Alta**         | Sí si agrega una tabla de eventos                             | Entitlement `advanced_analytics`; `request_id`; inicio del panel                                                   |
+| OPO-03    | WhatsApp con estado del pedido                           | Medio-alto                                                          | 2–3                | Media            | Sí (canal nuevo, consentimiento, teléfono = PII)              | Abstracción `EmailChannel`; plantillas de pedido; WhatsApp solo como enlace de contacto                            |
+| OPO-02    | CFDI automático                                          | Medio: lo piden los clientes con RFC                                | 3–4                | Media            | Sí (datos fiscales = PII, tablas nuevas)                      | Nada específico; jobs y patrón de adaptador                                                                        |
+| OPO-07    | Reseñas: recordatorio por correo y fotos                 | Medio                                                               | 1 (recordatorio)   | Media            | No (está fuera del alcance v1 de ADR-029, que ya lo anticipa) | ADR-029 completo: verificadas y moderadas                                                                          |
+| OPO-11    | Más plantillas por giro                                  | Medio para la venta del SaaS                                        | 0.5–1 por giro     | Media            | No (ADR-034 lo cubre)                                         | 6 plantillas: suplementos, ropa, belleza, abarrotes, genérica, blanco (`src/lib/templates/store-templates.ts:519`) |
+| OPO-13    | SEO de contenido (guías y blog)                          | Medio a largo plazo                                                 | 2–3                | Media            | Probable (tipo de contenido nuevo)                            | Páginas por bloques (ADR-034); Lighthouse SEO 100; JSON-LD                                                         |
+| OPO-10    | Segunda tienda con inventario sincronizado               | Medio                                                               | 3–5                | Media            | Sí (inventario §43; ADR-038 está propuesto)                   | ADR-025: el proveedor es una ubicación de inventario con `supplier_sync`                                           |
+| OPO-05b   | Suscripción con cobro recurrente                         | Alto, pero caro                                                     | 6–10               | Baja (por ahora) | Sí (pagos y pedidos §43)                                      | Nada de cobro recurrente                                                                                           |
+| OPO-06    | Programa de lealtad                                      | Medio                                                               | 4–6                | Baja             | Sí (afecta descuentos y totales)                              | Motor de descuentos D-F6-02                                                                                        |
+| OPO-08    | Afiliados                                                | Bajo-medio                                                          | 4–6                | Baja             | Sí                                                            | Nada                                                                                                               |
+| OPO-09    | Marketplace de marcas                                    | Incierto                                                            | 10+                | Baja             | Sí (cambia el modelo de tenencia y los pagos divididos)       | Nada                                                                                                               |
 
 ### 2.2 Detalle por oportunidad
 
@@ -414,20 +414,20 @@ Supuestos en la §0. Cifras en MXN.
 
 ### 3.1 Tienda PRUVA: por pedido
 
-| Concepto | Fórmula | Conservador | Base | Optimista |
-|---|---|---|---|---|
-| Margen bruto | P1 × P2 | 180.00 | 360.00 | 600.00 |
-| Comisión MP con IVA | (G3 % × P1 + $4) × 1.16 | 28.93 | 41.08 | 53.22 |
-| Comisión efectiva | comisión ÷ P1 | 4.82 % | 4.56 % | 4.44 % |
-| Envío absorbido | P4 × P5 | 160.00 | 72.00 | 36.00 |
-| Empaque | P6 | 25.00 | 20.00 | 15.00 |
-| Correo | G4 × G5 × G1 | 0.03 | 0.03 | 0.03 |
-| **Margen de contribución por pedido** | bruto − comisión − envío − empaque − correo | **−33.96** | **226.89** | **495.75** |
-| Infraestructura prorrateada (si PRUVA la paga sola) | G6 × G1 ÷ P3 | 101.75 | 20.35 | 6.11 |
-| Contribución al mes | contribución × P3 | −1,018.80 | 34,034.22 | 247,874.80 |
-| Infraestructura al mes | G6 × G1 | 3,052.50 | 3,052.50 | 3,052.50 |
-| **Resultado antes de publicidad y sueldos** | contribución al mes − infraestructura | **−4,071.30** | **30,981.72** | **244,822.30** |
-| Pedidos para cubrir la infraestructura | infraestructura ÷ contribución por pedido | no se alcanza (contribución negativa) | 13.5 | 6.2 |
+| Concepto                                            | Fórmula                                     | Conservador                           | Base          | Optimista      |
+| --------------------------------------------------- | ------------------------------------------- | ------------------------------------- | ------------- | -------------- |
+| Margen bruto                                        | P1 × P2                                     | 180.00                                | 360.00        | 600.00         |
+| Comisión MP con IVA                                 | (G3 % × P1 + $4) × 1.16                     | 28.93                                 | 41.08         | 53.22          |
+| Comisión efectiva                                   | comisión ÷ P1                               | 4.82 %                                | 4.56 %        | 4.44 %         |
+| Envío absorbido                                     | P4 × P5                                     | 160.00                                | 72.00         | 36.00          |
+| Empaque                                             | P6                                          | 25.00                                 | 20.00         | 15.00          |
+| Correo                                              | G4 × G5 × G1                                | 0.03                                  | 0.03          | 0.03           |
+| **Margen de contribución por pedido**               | bruto − comisión − envío − empaque − correo | **−33.96**                            | **226.89**    | **495.75**     |
+| Infraestructura prorrateada (si PRUVA la paga sola) | G6 × G1 ÷ P3                                | 101.75                                | 20.35         | 6.11           |
+| Contribución al mes                                 | contribución × P3                           | −1,018.80                             | 34,034.22     | 247,874.80     |
+| Infraestructura al mes                              | G6 × G1                                     | 3,052.50                              | 3,052.50      | 3,052.50       |
+| **Resultado antes de publicidad y sueldos**         | contribución al mes − infraestructura       | **−4,071.30**                         | **30,981.72** | **244,822.30** |
+| Pedidos para cubrir la infraestructura              | infraestructura ÷ contribución por pedido   | no se alcanza (contribución negativa) | 13.5          | 6.2            |
 
 **Lectura** (según los supuestos, no es pronóstico):
 
@@ -438,17 +438,17 @@ Supuestos en la §0. Cifras en MXN.
 
 ### 3.2 SaaS: por tienda y total al mes
 
-| Concepto | Fórmula | Conservador | Base | Optimista |
-|---|---|---|---|---|
-| MRR | S1 × S2 | 1,495 | 12,475 | 79,900 |
-| Infraestructura | S3 × G1 | 3,052.50 | 3,145.00 | 5,180.00 |
-| Soporte | S4 × S5 × S2 | 1,000 | 3,750 | 10,000 |
-| Comisión por cobrar la suscripción | (3.6 % × S1 + $3) × 1.16 × S2 | 79.83 | 607.96 | 3,684.62 |
-| Costo total | infraestructura + soporte + comisión | 4,132.33 | 7,502.96 | 18,864.62 |
-| **Costo por tienda** | costo total ÷ S2 | **826.47** | **300.12** | **188.65** |
-| **Margen al mes** | MRR − costo total | **−2,637.33** | **4,972.04** | **61,035.38** |
-| Margen % | margen ÷ MRR | −176.4 % | 39.9 % | 76.4 % |
-| Tiendas para cubrir la infraestructura (base) | S3 × G1 ÷ (S1 − S4 × S5 − comisión por tienda) | — | 3,145 ÷ (499 − 150 − 24.32) ≈ **9.7** | — |
+| Concepto                                      | Fórmula                                        | Conservador   | Base                                  | Optimista     |
+| --------------------------------------------- | ---------------------------------------------- | ------------- | ------------------------------------- | ------------- |
+| MRR                                           | S1 × S2                                        | 1,495         | 12,475                                | 79,900        |
+| Infraestructura                               | S3 × G1                                        | 3,052.50      | 3,145.00                              | 5,180.00      |
+| Soporte                                       | S4 × S5 × S2                                   | 1,000         | 3,750                                 | 10,000        |
+| Comisión por cobrar la suscripción            | (3.6 % × S1 + $3) × 1.16 × S2                  | 79.83         | 607.96                                | 3,684.62      |
+| Costo total                                   | infraestructura + soporte + comisión           | 4,132.33      | 7,502.96                              | 18,864.62     |
+| **Costo por tienda**                          | costo total ÷ S2                               | **826.47**    | **300.12**                            | **188.65**    |
+| **Margen al mes**                             | MRR − costo total                              | **−2,637.33** | **4,972.04**                          | **61,035.38** |
+| Margen %                                      | margen ÷ MRR                                   | −176.4 %      | 39.9 %                                | 76.4 %        |
+| Tiendas para cubrir la infraestructura (base) | S3 × G1 ÷ (S1 − S4 × S5 − comisión por tienda) | —             | 3,145 ÷ (499 − 150 − 24.32) ≈ **9.7** | —             |
 
 **Lectura:**
 
@@ -461,55 +461,55 @@ Supuestos en la §0. Cifras en MXN.
 
 ## 4. Lista compacta de hallazgos
 
-| ID | Severidad | Título | Evidencia corta | Etiqueta |
-|---|---|---|---|---|
-| DEP-01 | Alto | Productos con nombres asociados con THC o vapeadores en una tienda pública de staging: riesgo de suspender las cuentas de MP, Stripe, Vercel y Supabase de toda la plataforma | AUP de Vercel («illegal goods»), lista de prohibidos de Stripe (cannabis), AUP de Supabase §1.2, DOF 17-01-2025 art. 5o.; credencial única de MP (ADR-028) | VERIFICADO (políticas y datos según el orquestador) / INFERIDO (contenido) |
-| DEP-02 | Alto | Concentración en una sola credencial de MP; solo 1 tienda puede cobrar con MP; liberación a 7 días y revisión manual | ADR-028 «Limitación conocida»; `registry.ts:27-35`; páginas de MP | VERIFICADO (código) / NO VERIFICADO (MP real) |
-| DEP-03 | Medio | Vercel Hobby prohíbe el uso comercial; producción requiere Pro; `DomainProvider` y cron atados a Vercel | Fair Use Guidelines; `vercel.json`; `domains/provider.ts` | VERIFICADO / NO VERIFICADO (plan real) |
-| DEP-04 | Medio | Supabase: staging gratuito (se pausa, sin respaldos); Auth y Storage caros de reemplazar | supabase.com/pricing; D-F9-17; `privileged/*` | VERIFICADO |
-| DEP-05 | Medio | Resend: el acceso al panel y los avisos dependen de él; el plan gratuito permite 100 correos al día | `notifications/channel.ts`, `channels.ts`; resend.com/pricing | VERIFICADO |
-| DEP-06 | Bajo | Paqueterías sin integración; variación de costo por auditoría de peso | `checkout_tables.sql:61-86`; Cubbo; Skydropx | VERIFICADO / fuente secundaria |
-| DEP-07 | Bajo | Precios de WhatsApp cambiantes (subieron el 2026-10-01) | goeva.ai con la tabla de Meta | VERIFICADO (fuente secundaria) |
-| OPO-14 ★ | Alta | Cobro de la suscripción SaaS y OAuth de MP por tienda | GATE0 §19; ADR-028 | INFERIDO |
-| OPO-01 ★ | Alta | Envíos con cotización en vivo y guías | API de Skydropx; `shipping_rates` | INFERIDO |
-| OPO-04 ★ | Alta | Recuperación de carritos | entitlement `abandoned_cart`; `carts.status` | INFERIDO |
-| OPO-05a ★ | Alta | Recordatorio de recompra por porciones | ADR-026 | INFERIDO |
-| OPO-12 ★ | Alta | Analítica de conversión propia | entitlement `advanced_analytics` | INFERIDO |
-| OPO-03 | Media | WhatsApp con estado del pedido | MXN 0.1565 por plantilla de utilidad | INFERIDO |
-| OPO-02 | Media | CFDI automático | Facturapi: $299 al mes, multi-RFC | INFERIDO |
-| OPO-07 | Media | Recordatorio para opinar (reseñas) | ADR-029, fuera del alcance v1 | VERIFICADO |
-| OPO-11 | Media | Más plantillas por giro | 6 plantillas existentes | VERIFICADO |
-| OPO-13 | Media | SEO de contenido | ADR-034 | INFERIDO |
-| OPO-10 | Media | 2.ª tienda con inventario sincronizado vía «proveedor» | ADR-025, ADR-038 | INFERIDO |
-| OPO-05b | Baja | Suscripción con cobro recurrente | — | INFERIDO |
-| OPO-06 | Baja | Lealtad | — | INFERIDO |
-| OPO-08 | Baja | Afiliados | — | INFERIDO |
-| OPO-09 | Baja | Marketplace de marcas | — | INFERIDO |
+| ID        | Severidad | Título                                                                                                                                                                        | Evidencia corta                                                                                                                                            | Etiqueta                                                                   |
+| --------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| DEP-01    | Alto      | Productos con nombres asociados con THC o vapeadores en una tienda pública de staging: riesgo de suspender las cuentas de MP, Stripe, Vercel y Supabase de toda la plataforma | AUP de Vercel («illegal goods»), lista de prohibidos de Stripe (cannabis), AUP de Supabase §1.2, DOF 17-01-2025 art. 5o.; credencial única de MP (ADR-028) | VERIFICADO (políticas y datos según el orquestador) / INFERIDO (contenido) |
+| DEP-02    | Alto      | Concentración en una sola credencial de MP; solo 1 tienda puede cobrar con MP; liberación a 7 días y revisión manual                                                          | ADR-028 «Limitación conocida»; `registry.ts:27-35`; páginas de MP                                                                                          | VERIFICADO (código) / NO VERIFICADO (MP real)                              |
+| DEP-03    | Medio     | Vercel Hobby prohíbe el uso comercial; producción requiere Pro; `DomainProvider` y cron atados a Vercel                                                                       | Fair Use Guidelines; `vercel.json`; `domains/provider.ts`                                                                                                  | VERIFICADO / NO VERIFICADO (plan real)                                     |
+| DEP-04    | Medio     | Supabase: staging gratuito (se pausa, sin respaldos); Auth y Storage caros de reemplazar                                                                                      | supabase.com/pricing; D-F9-17; `privileged/*`                                                                                                              | VERIFICADO                                                                 |
+| DEP-05    | Medio     | Resend: el acceso al panel y los avisos dependen de él; el plan gratuito permite 100 correos al día                                                                           | `notifications/channel.ts`, `channels.ts`; resend.com/pricing                                                                                              | VERIFICADO                                                                 |
+| DEP-06    | Bajo      | Paqueterías sin integración; variación de costo por auditoría de peso                                                                                                         | `checkout_tables.sql:61-86`; Cubbo; Skydropx                                                                                                               | VERIFICADO / fuente secundaria                                             |
+| DEP-07    | Bajo      | Precios de WhatsApp cambiantes (subieron el 2026-10-01)                                                                                                                       | goeva.ai con la tabla de Meta                                                                                                                              | VERIFICADO (fuente secundaria)                                             |
+| OPO-14 ★  | Alta      | Cobro de la suscripción SaaS y OAuth de MP por tienda                                                                                                                         | GATE0 §19; ADR-028                                                                                                                                         | INFERIDO                                                                   |
+| OPO-01 ★  | Alta      | Envíos con cotización en vivo y guías                                                                                                                                         | API de Skydropx; `shipping_rates`                                                                                                                          | INFERIDO                                                                   |
+| OPO-04 ★  | Alta      | Recuperación de carritos                                                                                                                                                      | entitlement `abandoned_cart`; `carts.status`                                                                                                               | INFERIDO                                                                   |
+| OPO-05a ★ | Alta      | Recordatorio de recompra por porciones                                                                                                                                        | ADR-026                                                                                                                                                    | INFERIDO                                                                   |
+| OPO-12 ★  | Alta      | Analítica de conversión propia                                                                                                                                                | entitlement `advanced_analytics`                                                                                                                           | INFERIDO                                                                   |
+| OPO-03    | Media     | WhatsApp con estado del pedido                                                                                                                                                | MXN 0.1565 por plantilla de utilidad                                                                                                                       | INFERIDO                                                                   |
+| OPO-02    | Media     | CFDI automático                                                                                                                                                               | Facturapi: $299 al mes, multi-RFC                                                                                                                          | INFERIDO                                                                   |
+| OPO-07    | Media     | Recordatorio para opinar (reseñas)                                                                                                                                            | ADR-029, fuera del alcance v1                                                                                                                              | VERIFICADO                                                                 |
+| OPO-11    | Media     | Más plantillas por giro                                                                                                                                                       | 6 plantillas existentes                                                                                                                                    | VERIFICADO                                                                 |
+| OPO-13    | Media     | SEO de contenido                                                                                                                                                              | ADR-034                                                                                                                                                    | INFERIDO                                                                   |
+| OPO-10    | Media     | 2.ª tienda con inventario sincronizado vía «proveedor»                                                                                                                        | ADR-025, ADR-038                                                                                                                                           | INFERIDO                                                                   |
+| OPO-05b   | Baja      | Suscripción con cobro recurrente                                                                                                                                              | —                                                                                                                                                          | INFERIDO                                                                   |
+| OPO-06    | Baja      | Lealtad                                                                                                                                                                       | —                                                                                                                                                          | INFERIDO                                                                   |
+| OPO-08    | Baja      | Afiliados                                                                                                                                                                     | —                                                                                                                                                          | INFERIDO                                                                   |
+| OPO-09    | Baja      | Marketplace de marcas                                                                                                                                                         | —                                                                                                                                                          | INFERIDO                                                                   |
 
 ---
 
 ## 5. Fuentes (consultadas el 2026-10-27)
 
-| ID | Fuente | URL | Dato usado |
-|---|---|---|---|
-| F1 | Mercado Pago · Checkout en tu sitio web | https://www.mercadopago.com.mx/herramientas-para-vender/check-out | «Tu dinero al instante 3,49% +IVA»; 14 días 3.19 %; 30 días 2.95 %. **Nota:** esta página no muestra el cargo fijo de $4; F2 sí. Se usó el valor más caro. |
-| F2 | Mercado Pago · Link de pago | https://www.mercadopago.com.mx/herramientas-para-vender/link-de-pago | 3.49 % + $4.00 al instante; efectivo/OXXO 3.79 % + $4.00; liberación a 7 días para vendedores nuevos |
-| F2b | Mercado Pago · Blog Hot Sale 2026 (2026-05-05) | https://www.mercadopago.com.mx/blog/hot-sale-integra-mercado-pago | Confirma 3.49 % + $4.00 al instante |
-| F2c | Mercado Pago · Blog Checkout Pro (2026-09-03) | https://www.mercadopago.com.mx/blog/checkout-pro-mercado-pago | Plazos de acreditación y revisión manual por riesgo |
-| — | Mercado Pago · Sección de costos | https://www.mercadopago.com.mx/costs-section | **No cargó** (error de crawl): [NO VERIFICADO] |
-| F3 | Stripe México · Tarifas | https://stripe.com/mx/pricing , https://stripe.com/mx/pricing/local-payment-methods | 3.6 % + MXN 3.00 tarjeta nacional; OXXO 4 % + MXN 3.00; sin IVA |
-| F3b | Stripe · Prohibited and Restricted Businesses (2026-09-22) | https://stripe.com/legal/restricted-businesses | Cannabis prohibido; nutracéuticos con afirmaciones dañinas prohibidos; tabaco y cigarros electrónicos restringidos |
-| F4 | Supabase · Pricing | https://supabase.com/pricing | Pro USD 25 con USD 10 de cómputo; Micro USD 10, Small USD 15, Medium USD 60; PITR USD 100 al mes por 7 días; el plan gratuito se pausa tras 1 semana |
-| F4b | Supabase · AUP v1 (2026-06-01) | https://supabase.com/aup | §1.2 actividades ilegales; suspensión inmediata |
-| F5 | Resend · Pricing | https://resend.com/pricing | Gratuito: 3,000 al mes y 100 al día; Pro USD 20 por 50,000; USD 0.90 por 1,000 adicionales |
-| F6 | Vercel · Pricing; Fair Use Guidelines (2026-09-14); ToS §4 (2026-10-19); AUP (2026-04-21) | https://vercel.com/pricing , https://vercel.com/docs/limits/fair-use-guidelines , https://vercel.com/legal/terms , https://vercel.com/legal/acceptable-use-policy | Pro USD 20 al mes; Hobby no comercial; Hobby se puede apagar sin aviso; «illegal goods» prohibido |
-| F7 | Skydropx · API y tarifa de gestión | https://pro.skydropx.com/es-MX/api-docs , https://help.skydropx.com/subcategorias-cda/api | Endpoints de cotización y envío; 2.5 % de gestión o $199 + IVA al mes |
-| F8 | Envío Fácil · Comparativa (precios del 16-oct-2026) | https://enviofacil.com.mx/comparativa | 1 kg desde CDMX: FedEx Express Saver $75 (promocional), Estafeta Terrestre $141.53–$204.44, DHL Standard $186.37–$255.62 |
-| F8b | Cubbo · Precios Skydropx (2026-04-28) | https://www.cubbo.com/posts/precios-skydropx | Variación del 15–30 % por auditoría de peso (fuente secundaria) |
-| F9 | Facturapi · Pricing; Radar Contable (verificado el 17-oct-2026) | https://www.facturapi.io/pricing , https://radarcontable.mx/herramienta/facturapi/ | API $299 MXN al mes con IVA, multi-RFC; $0.60 por timbre (secundaria) |
-| F10 | WhatsApp: tarifas de México desde el 2026-10-01 | https://www.goeva.ai/en/resources/whatsapp-business-api-pricing-mexico , https://www.fiscoclic.mx/asistencia/meta-precios-whatsapp-mxn-2026-10-01.pdf | Marketing MXN 0.7298; utilidad y autenticación MXN 0.1565 |
-| F11 | DOF 17-01-2025, reforma a los arts. 4o. y 5o. | https://www.diariooficial.gob.mx/nota_detalle.php?codigo=5747305&fecha=17%2F01%2F2025 | Prohibición del comercio de vapeadores y dispositivos análogos |
-| F12 | El Planteo (2025-06-12): política de MP sobre cannabis | https://elplanteo.com/mercado-pago-productos-prohibidos-cannabis/ | Secundaria; la página oficial de MP no cargó |
+| ID  | Fuente                                                                                    | URL                                                                                                                                                               | Dato usado                                                                                                                                                 |
+| --- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | Mercado Pago · Checkout en tu sitio web                                                   | https://www.mercadopago.com.mx/herramientas-para-vender/check-out                                                                                                 | «Tu dinero al instante 3,49% +IVA»; 14 días 3.19 %; 30 días 2.95 %. **Nota:** esta página no muestra el cargo fijo de $4; F2 sí. Se usó el valor más caro. |
+| F2  | Mercado Pago · Link de pago                                                               | https://www.mercadopago.com.mx/herramientas-para-vender/link-de-pago                                                                                              | 3.49 % + $4.00 al instante; efectivo/OXXO 3.79 % + $4.00; liberación a 7 días para vendedores nuevos                                                       |
+| F2b | Mercado Pago · Blog Hot Sale 2026 (2026-05-05)                                            | https://www.mercadopago.com.mx/blog/hot-sale-integra-mercado-pago                                                                                                 | Confirma 3.49 % + $4.00 al instante                                                                                                                        |
+| F2c | Mercado Pago · Blog Checkout Pro (2026-09-03)                                             | https://www.mercadopago.com.mx/blog/checkout-pro-mercado-pago                                                                                                     | Plazos de acreditación y revisión manual por riesgo                                                                                                        |
+| —   | Mercado Pago · Sección de costos                                                          | https://www.mercadopago.com.mx/costs-section                                                                                                                      | **No cargó** (error de crawl): [NO VERIFICADO]                                                                                                             |
+| F3  | Stripe México · Tarifas                                                                   | https://stripe.com/mx/pricing , https://stripe.com/mx/pricing/local-payment-methods                                                                               | 3.6 % + MXN 3.00 tarjeta nacional; OXXO 4 % + MXN 3.00; sin IVA                                                                                            |
+| F3b | Stripe · Prohibited and Restricted Businesses (2026-09-22)                                | https://stripe.com/legal/restricted-businesses                                                                                                                    | Cannabis prohibido; nutracéuticos con afirmaciones dañinas prohibidos; tabaco y cigarros electrónicos restringidos                                         |
+| F4  | Supabase · Pricing                                                                        | https://supabase.com/pricing                                                                                                                                      | Pro USD 25 con USD 10 de cómputo; Micro USD 10, Small USD 15, Medium USD 60; PITR USD 100 al mes por 7 días; el plan gratuito se pausa tras 1 semana       |
+| F4b | Supabase · AUP v1 (2026-06-01)                                                            | https://supabase.com/aup                                                                                                                                          | §1.2 actividades ilegales; suspensión inmediata                                                                                                            |
+| F5  | Resend · Pricing                                                                          | https://resend.com/pricing                                                                                                                                        | Gratuito: 3,000 al mes y 100 al día; Pro USD 20 por 50,000; USD 0.90 por 1,000 adicionales                                                                 |
+| F6  | Vercel · Pricing; Fair Use Guidelines (2026-09-14); ToS §4 (2026-10-19); AUP (2026-04-21) | https://vercel.com/pricing , https://vercel.com/docs/limits/fair-use-guidelines , https://vercel.com/legal/terms , https://vercel.com/legal/acceptable-use-policy | Pro USD 20 al mes; Hobby no comercial; Hobby se puede apagar sin aviso; «illegal goods» prohibido                                                          |
+| F7  | Skydropx · API y tarifa de gestión                                                        | https://pro.skydropx.com/es-MX/api-docs , https://help.skydropx.com/subcategorias-cda/api                                                                         | Endpoints de cotización y envío; 2.5 % de gestión o $199 + IVA al mes                                                                                      |
+| F8  | Envío Fácil · Comparativa (precios del 16-oct-2026)                                       | https://enviofacil.com.mx/comparativa                                                                                                                             | 1 kg desde CDMX: FedEx Express Saver $75 (promocional), Estafeta Terrestre $141.53–$204.44, DHL Standard $186.37–$255.62                                   |
+| F8b | Cubbo · Precios Skydropx (2026-04-28)                                                     | https://www.cubbo.com/posts/precios-skydropx                                                                                                                      | Variación del 15–30 % por auditoría de peso (fuente secundaria)                                                                                            |
+| F9  | Facturapi · Pricing; Radar Contable (verificado el 17-oct-2026)                           | https://www.facturapi.io/pricing , https://radarcontable.mx/herramienta/facturapi/                                                                                | API $299 MXN al mes con IVA, multi-RFC; $0.60 por timbre (secundaria)                                                                                      |
+| F10 | WhatsApp: tarifas de México desde el 2026-10-01                                           | https://www.goeva.ai/en/resources/whatsapp-business-api-pricing-mexico , https://www.fiscoclic.mx/asistencia/meta-precios-whatsapp-mxn-2026-10-01.pdf             | Marketing MXN 0.7298; utilidad y autenticación MXN 0.1565                                                                                                  |
+| F11 | DOF 17-01-2025, reforma a los arts. 4o. y 5o.                                             | https://www.diariooficial.gob.mx/nota_detalle.php?codigo=5747305&fecha=17%2F01%2F2025                                                                             | Prohibición del comercio de vapeadores y dispositivos análogos                                                                                             |
+| F12 | El Planteo (2025-06-12): política de MP sobre cannabis                                    | https://elplanteo.com/mercado-pago-productos-prohibidos-cannabis/                                                                                                 | Secundaria; la página oficial de MP no cargó                                                                                                               |
 
 ## 6. Lo que no se pudo verificar
 

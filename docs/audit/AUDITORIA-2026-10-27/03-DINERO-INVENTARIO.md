@@ -8,6 +8,7 @@ Etiquetas: **[VERIFICADO]** = lo comprobé leyendo el código final o ejecutando
 sin ejecutarlo; **[NO VERIFICADO]** = depende de Mercado Pago, Resend o Vercel reales, que no están disponibles.
 
 Glosario breve:
+
 - **Reserva**: unidades apartadas para un pedido sin pagar; vencen a los `reservation_ttl_minutes` (10–120, por omisión 30).
 - **Webhook**: aviso que el proveedor de pago envía al servidor cuando cambia un cobro.
 - **Reconciliación**: tarea periódica que vuelve a preguntar al proveedor por los cobros abiertos, por si un webhook se perdió.
@@ -67,6 +68,7 @@ stateDiagram-v2
   cancelled --> open: SOLO actor system (pago tardío con stock)
   completed --> [*]
 ```
+
 No permitidas (bloqueadas por trigger): `completed → *`, `cancelled → open` por staff/cliente, `open → pending_payment`.
 **No controlada por diseño:** `cancelled` con `payment_status = paid` (pago tras cancelación o pago tardío sin stock): queda
 en `needs_attention` con reembolso automático; correcto, pero depende de que el webhook llegue (DIN-01).
@@ -95,6 +97,7 @@ stateDiagram-v2
   paid --> refunded
   partially_refunded --> refunded
 ```
+
 Intento (`payments`): `created → pending|authorized|succeeded|failed|cancelled|expired`; `expired|failed|cancelled →
 succeeded` (realidad del proveedor). Índice único `payments_one_succeeded_uq`: **a lo más un intento `succeeded` por pedido**.
 **Hueco:** no existe transición para contracargo/reembolso externo: `paid` nunca regresa por acción del proveedor (DIN-03).
@@ -112,6 +115,7 @@ stateDiagram-v2
   fulfilled --> returned
   partially_returned --> returned
 ```
+
 Envío: `shipped → delivered` (`orders_mark_delivered`). El trigger `orders_guard` impide surtir algo no pagado
 (`fulfillment_requires_payment`). **No controlado:** un pedido `open/paid` con contracargo sigue siendo surtible (DIN-03).
 
@@ -123,31 +127,33 @@ stateDiagram-v2
   pending --> succeeded: proveedor aprueba → refunded_total, reposición
   pending --> failed: proveedor rechaza → needs_attention
 ```
+
 Despacho de proveedor: `pending → requested → confirmed → shipped → delivered`, `failed → pending|cancelled`; se cancela
 solo si está `pending` al cancelar el pedido (`app.supplier_orders_on_order_cancel`). Un despacho ya `requested` no se
 cancela solo al cancelar el pedido: queda para gestión manual [VERIFICADO, por diseño].
 
 ## 3. Hallazgos
 
-| ID | Sev. | Título | Etiqueta |
-|---|---|---|---|
-| DIN-01 | Alta | Cobro de Mercado Pago aprobado tras el vencimiento local y con webhook perdido: nadie lo detecta | [VERIFICADO] código / [NO VERIFICADO] MP real |
-| DIN-02 | Media | OXXO/SPEI vs reserva de 30 min: casi todo pago en efectivo será «pago tardío» | [INFERIDO] / [NO VERIFICADO] |
-| DIN-03 | Alta | Contracargos y reembolsos hechos fuera de la plataforma se ignoran (contra GATE0 §18) | [VERIFICADO] |
-| DIN-04 | Alta | Runner de jobs diario (Vercel Hobby): vencimientos, reconciliación, correos, reembolsos y ofertas con hasta 24 h de retraso | [VERIFICADO] repo / [NO VERIFICADO] Vercel |
-| DIN-05 | Media | Cobro duplicado: se detecta, pero no hay forma correcta de reembolsarlo desde el panel | [VERIFICADO] |
-| DIN-06 | Media | «Cerrar no enviadas» reembolsa sin IVA (si precios sin impuesto), sin envío y con truncamiento | [INFERIDO] |
-| DIN-07 | Media | Tolerancia de firma ±5 min podría rechazar reintentos de MP | [NO VERIFICADO] |
-| DIN-08 | Media | Anomalías de pago (duplicado, monto distinto) sin aviso activo al comercio | [VERIFICADO] |
-| DIN-09 | Baja | Pago tardío reabierto no vuelve a contar el cupón: el límite de usos se puede rebasar | [VERIFICADO] |
-| DIN-10 | Baja | La reposición por reembolso siempre va a la ubicación principal | [VERIFICADO] |
-| DIN-11 | Baja | pgTAP 29_payments_expiry no es hermética (falla con datos residuales) | [VERIFICADO] ejecutando |
-| DIN-12 | Baja | Pago simulado depende de un ajuste de base; sin candado de entorno en la base | [VERIFICADO] |
-| DIN-13 | Baja | Oferta programada + cupón porcentual se acumulan sin decisión escrita | [VERIFICADO] |
+| ID     | Sev.  | Título                                                                                                                      | Etiqueta                                      |
+| ------ | ----- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| DIN-01 | Alta  | Cobro de Mercado Pago aprobado tras el vencimiento local y con webhook perdido: nadie lo detecta                            | [VERIFICADO] código / [NO VERIFICADO] MP real |
+| DIN-02 | Media | OXXO/SPEI vs reserva de 30 min: casi todo pago en efectivo será «pago tardío»                                               | [INFERIDO] / [NO VERIFICADO]                  |
+| DIN-03 | Alta  | Contracargos y reembolsos hechos fuera de la plataforma se ignoran (contra GATE0 §18)                                       | [VERIFICADO]                                  |
+| DIN-04 | Alta  | Runner de jobs diario (Vercel Hobby): vencimientos, reconciliación, correos, reembolsos y ofertas con hasta 24 h de retraso | [VERIFICADO] repo / [NO VERIFICADO] Vercel    |
+| DIN-05 | Media | Cobro duplicado: se detecta, pero no hay forma correcta de reembolsarlo desde el panel                                      | [VERIFICADO]                                  |
+| DIN-06 | Media | «Cerrar no enviadas» reembolsa sin IVA (si precios sin impuesto), sin envío y con truncamiento                              | [INFERIDO]                                    |
+| DIN-07 | Media | Tolerancia de firma ±5 min podría rechazar reintentos de MP                                                                 | [NO VERIFICADO]                               |
+| DIN-08 | Media | Anomalías de pago (duplicado, monto distinto) sin aviso activo al comercio                                                  | [VERIFICADO]                                  |
+| DIN-09 | Baja  | Pago tardío reabierto no vuelve a contar el cupón: el límite de usos se puede rebasar                                       | [VERIFICADO]                                  |
+| DIN-10 | Baja  | La reposición por reembolso siempre va a la ubicación principal                                                             | [VERIFICADO]                                  |
+| DIN-11 | Baja  | pgTAP 29_payments_expiry no es hermética (falla con datos residuales)                                                       | [VERIFICADO] ejecutando                       |
+| DIN-12 | Baja  | Pago simulado depende de un ajuste de base; sin candado de entorno en la base                                               | [VERIFICADO]                                  |
+| DIN-13 | Baja  | Oferta programada + cupón porcentual se acumulan sin decisión escrita                                                       | [VERIFICADO]                                  |
 
 ### DIN-01 · Alta · Cobro de MP aprobado tras el vencimiento local y con webhook perdido: nadie lo detecta
 
 **Evidencia** [VERIFICADO por lectura del código final]:
+
 - `system.expire_orders` (`20261013000400_payments_expiry.sql:291`) pasa los intentos `created|pending|authorized` a
   `expired` **sin consultar a Mercado Pago**. La consulta al proveedor antes de vencer solo existe para Stripe:
   `system.payment_for_expiry` filtra `p.provider = 'stripe'` (`20261014000600_phase7_gate_fixes.sql:348`).
@@ -187,6 +193,7 @@ preferencia). Probar con credenciales de prueba de MP.
 ### DIN-03 · Alta · Contracargos y reembolsos externos se ignoran
 
 **Evidencia** [VERIFICADO]:
+
 - `mercadopago.ts:82-84`: `refunded` y `charged_back` → estado normalizado `refunded`; `in_mediation` → `pending` (`:86`).
 - `system.apply_payment_status` (`20261014000600_phase7_gate_fixes.sql:99`): si el intento ya está `succeeded` devuelve
   `ignored` antes de mirar el estado; y para `refunded/partially_refunded` el final es `return 'ignored'` («los aplica el flujo
@@ -211,15 +218,16 @@ webhook, cancelación ni reembolso. Documentado como provisional en `docs/runboo
 (`docs/DECISIONS.md:25`). Configuración real de Vercel: [NO VERIFICADO] (403).
 
 **Impacto mientras siga así:**
+
 - Reservas vencidas no se liberan hasta la siguiente pasada → stock «apartado» hasta 24 h (ventas perdidas).
 - Reconciliación cada 10 min por diseño → en la práctica, 1 vez al día.
 - Correos `order.paid`, `order.shipped`, `payment.failed`, `refund.succeeded` con hasta 24 h de retraso.
 - Reembolsos (`refund.execute`) ejecutados hasta 24 h después de pedirlos.
 - Ofertas programadas (`catalog.apply_sales`) empiezan y terminan con hasta 24 h de desfase (el precio cobrado sí es el
   vigente en la base en el momento del pago, ver controles).
-**Recomendación:** bloqueo de lanzamiento: plan Pro con cron cada minuto o `pg_cron` + `pg_net` llamando al runner firmado;
-además, llamar `processQueueSoon` tras `place_order`, webhook y `orders_request_refund`. Agregar al checklist de salida una
-verificación de que `orders.expire` corrió en los últimos 5 min.
+  **Recomendación:** bloqueo de lanzamiento: plan Pro con cron cada minuto o `pg_cron` + `pg_net` llamando al runner firmado;
+  además, llamar `processQueueSoon` tras `place_order`, webhook y `orders_request_refund`. Agregar al checklist de salida una
+  verificación de que `orders.expire` corrió en los últimos 5 min.
 
 ### DIN-05 · Media · Cobro duplicado sin reembolso dirigido
 
@@ -307,27 +315,27 @@ decisión escrita sobre acumulación (búsqueda de «acumul» en `docs/DECISIONS
 
 ## 4. Riesgos pedidos y su estado
 
-| Riesgo | Defensa encontrada | Pruebas que lo cubren | ¿Suficiente? |
-|---|---|---|---|
-| Doble cobro | Un intento `succeeded` por pedido (índice único); duplicado → atención | `mercadopago-webhook.test.ts:247,254`; 36_phase7_gate | Detección sí; reembolso no (DIN-05) |
-| Pedido pagado sin stock | `confirm_order_payment` exige reserva activa; pago tardío re-reserva o reembolsa | stripe-webhook (late_paid, late_without_stock); 29 #32 | Sí con webhook; no sin él (DIN-01) |
-| Sobreventa | `FOR UPDATE` en niveles en orden fijo; `CHECK on_hand/reserved >= 0`; con `deny` disponible ≥ 0 | inventory-concurrency (20 compradores/1 unidad, sin deadlocks, ledger cuadra); checkout-concurrency (última unidad, proveedor) | Sí [VERIFICADO 19/19] |
-| Totales manipulables | Cliente solo manda variante/cantidad; `expected_total` solo detecta cambios; `orders_total` CHECK | 27_calculate_cart, 28_place_order, golden-cart | Sí |
-| Redondeo | `bigint` centavos; `div_half_even`; asignación por mayor residuo; IVA incluido `x·r/(10000+r)` | 27_calculate_cart, golden-cart | Sí (salvo DIN-06) |
-| Webhooks duplicados | `payment_events` único (cuenta, evento) + intento monótono | mercadopago-webhook «evento repetido» | Sí |
-| Webhooks fuera de orden | `pending` no retrocede un `succeeded`; `failed → succeeded` permitido | mercadopago-webhook «rechazado y reintento», «OXXO pendiente y después aprobado» | Sí |
-| Pago tardío | Re-reserva o reembolso automático | stripe-webhook; 36_phase7_gate | MP sin webhook: no (DIN-01) |
-| Reconciliación | Cada 10 min por diseño; >15 min de antigüedad | 68_mercadopago:74; mercadopago-webhook:275 | Frecuencia real diaria (DIN-04); no cubre `expired` (DIN-01) |
-| Expiración de reservas | `expire_orders` con `SKIP LOCKED`, orden de bloqueo pedido→pago | 29_payments_expiry; checkout-concurrency «expiración contra confirmación» | Sí (frecuencia: DIN-04) |
-| Cupones | Bloqueo del cupón en `place_order`; `CHECK times_reserved+times_used <= usage_limit`; límite por cliente; rate limit 10/h por carrito y 30/h por IP | checkout-concurrency «el último cupón» | Sí (DIN-09 menor) |
-| Ofertas programadas | Precio se recalcula al pagar → `price_changed`; zona horaria de la tienda en el formulario | checkout-concurrency:240; 77_scheduled_sales | Sí (desfase por DIN-04) |
-| Correos duplicados / antes del pago | `notification_deliveries.dedupe_key` único + `idempotency-key` a Resend; confirmación solo con `order.paid`; «recibido» solo para pago manual | order-notifications.test.ts; 33_order_notifications | Sí [NO VERIFICADO con Resend real] |
-| Estados inconsistentes | Triggers de transición en 3 ejes; surtir exige pago; CHECKs de contadores | order-chaos.test.ts («cero estados inconsistentes») | Sí, salvo contracargos (DIN-03) |
-| Reembolsos parciales/totales | Monto ≤ disponible; partidas solo enviadas; idempotencia por clave; reposición idempotente | 32_fulfillment_refunds; refunds-job.test.ts | Sí (DIN-06, DIN-10) |
-| Monto MP vs total | `transaction_amount` a centavos (más de 2 decimales → discrepancia) comparado con `payments.amount`, moneda MXN y `external_reference` | mercadopago-webhook «monto alterado» | Sí con simulador; comisiones/cuotas [NO VERIFICADO] |
-| `external_reference` | = `payments.id` (UUID), búsqueda por cuenta; `provider_payment_id` único por proveedor | 68_mercadopago | Sí |
-| Firma del webhook | HMAC-SHA256, manifiesto `id;request-id;ts`, `data.id` de la URL = firmado, ±5 min, comparación en tiempo constante (`constantTimeEqual`) | mercadopago-webhook (firma inválida, replay, data.id distinto); mercadopago.test.ts | Sí (DIN-07 por verificar) |
-| MP caído en checkout | Llamada fuera de la transacción, timeout 10 s; fallo → `record_checkout_result(false)`, pedido pendiente con su reserva, botón de reintento (`retry_payment`, máx. 5 intentos) | e2e checkout.spec.ts (simulado) | Sí [NO VERIFICADO con MP real] |
+| Riesgo                              | Defensa encontrada                                                                                                                                                             | Pruebas que lo cubren                                                                                                          | ¿Suficiente?                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Doble cobro                         | Un intento `succeeded` por pedido (índice único); duplicado → atención                                                                                                         | `mercadopago-webhook.test.ts:247,254`; 36_phase7_gate                                                                          | Detección sí; reembolso no (DIN-05)                          |
+| Pedido pagado sin stock             | `confirm_order_payment` exige reserva activa; pago tardío re-reserva o reembolsa                                                                                               | stripe-webhook (late_paid, late_without_stock); 29 #32                                                                         | Sí con webhook; no sin él (DIN-01)                           |
+| Sobreventa                          | `FOR UPDATE` en niveles en orden fijo; `CHECK on_hand/reserved >= 0`; con `deny` disponible ≥ 0                                                                                | inventory-concurrency (20 compradores/1 unidad, sin deadlocks, ledger cuadra); checkout-concurrency (última unidad, proveedor) | Sí [VERIFICADO 19/19]                                        |
+| Totales manipulables                | Cliente solo manda variante/cantidad; `expected_total` solo detecta cambios; `orders_total` CHECK                                                                              | 27_calculate_cart, 28_place_order, golden-cart                                                                                 | Sí                                                           |
+| Redondeo                            | `bigint` centavos; `div_half_even`; asignación por mayor residuo; IVA incluido `x·r/(10000+r)`                                                                                 | 27_calculate_cart, golden-cart                                                                                                 | Sí (salvo DIN-06)                                            |
+| Webhooks duplicados                 | `payment_events` único (cuenta, evento) + intento monótono                                                                                                                     | mercadopago-webhook «evento repetido»                                                                                          | Sí                                                           |
+| Webhooks fuera de orden             | `pending` no retrocede un `succeeded`; `failed → succeeded` permitido                                                                                                          | mercadopago-webhook «rechazado y reintento», «OXXO pendiente y después aprobado»                                               | Sí                                                           |
+| Pago tardío                         | Re-reserva o reembolso automático                                                                                                                                              | stripe-webhook; 36_phase7_gate                                                                                                 | MP sin webhook: no (DIN-01)                                  |
+| Reconciliación                      | Cada 10 min por diseño; >15 min de antigüedad                                                                                                                                  | 68_mercadopago:74; mercadopago-webhook:275                                                                                     | Frecuencia real diaria (DIN-04); no cubre `expired` (DIN-01) |
+| Expiración de reservas              | `expire_orders` con `SKIP LOCKED`, orden de bloqueo pedido→pago                                                                                                                | 29_payments_expiry; checkout-concurrency «expiración contra confirmación»                                                      | Sí (frecuencia: DIN-04)                                      |
+| Cupones                             | Bloqueo del cupón en `place_order`; `CHECK times_reserved+times_used <= usage_limit`; límite por cliente; rate limit 10/h por carrito y 30/h por IP                            | checkout-concurrency «el último cupón»                                                                                         | Sí (DIN-09 menor)                                            |
+| Ofertas programadas                 | Precio se recalcula al pagar → `price_changed`; zona horaria de la tienda en el formulario                                                                                     | checkout-concurrency:240; 77_scheduled_sales                                                                                   | Sí (desfase por DIN-04)                                      |
+| Correos duplicados / antes del pago | `notification_deliveries.dedupe_key` único + `idempotency-key` a Resend; confirmación solo con `order.paid`; «recibido» solo para pago manual                                  | order-notifications.test.ts; 33_order_notifications                                                                            | Sí [NO VERIFICADO con Resend real]                           |
+| Estados inconsistentes              | Triggers de transición en 3 ejes; surtir exige pago; CHECKs de contadores                                                                                                      | order-chaos.test.ts («cero estados inconsistentes»)                                                                            | Sí, salvo contracargos (DIN-03)                              |
+| Reembolsos parciales/totales        | Monto ≤ disponible; partidas solo enviadas; idempotencia por clave; reposición idempotente                                                                                     | 32_fulfillment_refunds; refunds-job.test.ts                                                                                    | Sí (DIN-06, DIN-10)                                          |
+| Monto MP vs total                   | `transaction_amount` a centavos (más de 2 decimales → discrepancia) comparado con `payments.amount`, moneda MXN y `external_reference`                                         | mercadopago-webhook «monto alterado»                                                                                           | Sí con simulador; comisiones/cuotas [NO VERIFICADO]          |
+| `external_reference`                | = `payments.id` (UUID), búsqueda por cuenta; `provider_payment_id` único por proveedor                                                                                         | 68_mercadopago                                                                                                                 | Sí                                                           |
+| Firma del webhook                   | HMAC-SHA256, manifiesto `id;request-id;ts`, `data.id` de la URL = firmado, ±5 min, comparación en tiempo constante (`constantTimeEqual`)                                       | mercadopago-webhook (firma inválida, replay, data.id distinto); mercadopago.test.ts                                            | Sí (DIN-07 por verificar)                                    |
+| MP caído en checkout                | Llamada fuera de la transacción, timeout 10 s; fallo → `record_checkout_result(false)`, pedido pendiente con su reserva, botón de reintento (`retry_payment`, máx. 5 intentos) | e2e checkout.spec.ts (simulado)                                                                                                | Sí [NO VERIFICADO con MP real]                               |
 
 ## 5. Controles verificados (no son hallazgos)
 
@@ -351,18 +359,18 @@ decisión escrita sobre acumulación (búsqueda de «acumul» en `docs/DECISIONS
 
 ## 6. Tareas propuestas (no implementadas)
 
-| # | Tarea | Hallazgo | Prioridad |
-|---|---|---|---|
-| T1 | Reconciliar intentos de MP `expired`/`cancelled` hasta N días; prueba pgTAP + integración «pago tardío MP sin webhook» | DIN-01 | Antes de cobrar real |
-| T2 | Contracargos/disputas/reembolsos externos: evento, `needs_attention`, aviso, bloqueo de surtido; pruebas | DIN-03 | Antes de cobrar real |
-| T3 | Cron cada minuto (Pro o pg_cron) + `processQueueSoon` en checkout/webhook/reembolso; monitoreo de «último `orders.expire`» | DIN-04 | Bloqueo de lanzamiento |
-| T4 | ADR sobre OXXO/SPEI: excluirlos o extender la reserva con `date_of_expiration`; probar con MP de prueba | DIN-02 | Antes de cobrar real |
-| T5 | Registrar cobros duplicados y botón «Reembolsar cobro duplicado» | DIN-05 | Media |
-| T6 | Corregir prorrateo de «cerrar no enviadas» (IVA, half-even) y prueba con IVA excluido | DIN-06 | Media |
-| T7 | Correo/alerta al staff para `payment.mismatch` y `payment.duplicate` | DIN-08 | Media |
-| T8 | Verificar con MP real: reintentos y `ts`, formato de `charged_back`/`in_mediation`, `transaction_amount` con cuotas y cupones de MP | DIN-07, DIN-03 | Antes de cobrar real |
-| T9 | Prueba 29 hermética; reposición a la ubicación de origen; conteo del cupón en pago tardío; decisión de acumulación | DIN-09…11, 13 | Baja |
-| T10 | Checklist de producción: `payments.allow_fake = false`, sin cuentas `fake` activas | DIN-12 | Baja |
+| #   | Tarea                                                                                                                               | Hallazgo       | Prioridad              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------- |
+| T1  | Reconciliar intentos de MP `expired`/`cancelled` hasta N días; prueba pgTAP + integración «pago tardío MP sin webhook»              | DIN-01         | Antes de cobrar real   |
+| T2  | Contracargos/disputas/reembolsos externos: evento, `needs_attention`, aviso, bloqueo de surtido; pruebas                            | DIN-03         | Antes de cobrar real   |
+| T3  | Cron cada minuto (Pro o pg_cron) + `processQueueSoon` en checkout/webhook/reembolso; monitoreo de «último `orders.expire`»          | DIN-04         | Bloqueo de lanzamiento |
+| T4  | ADR sobre OXXO/SPEI: excluirlos o extender la reserva con `date_of_expiration`; probar con MP de prueba                             | DIN-02         | Antes de cobrar real   |
+| T5  | Registrar cobros duplicados y botón «Reembolsar cobro duplicado»                                                                    | DIN-05         | Media                  |
+| T6  | Corregir prorrateo de «cerrar no enviadas» (IVA, half-even) y prueba con IVA excluido                                               | DIN-06         | Media                  |
+| T7  | Correo/alerta al staff para `payment.mismatch` y `payment.duplicate`                                                                | DIN-08         | Media                  |
+| T8  | Verificar con MP real: reintentos y `ts`, formato de `charged_back`/`in_mediation`, `transaction_amount` con cuotas y cupones de MP | DIN-07, DIN-03 | Antes de cobrar real   |
+| T9  | Prueba 29 hermética; reposición a la ubicación de origen; conteo del cupón en pago tardío; decisión de acumulación                  | DIN-09…11, 13  | Baja                   |
+| T10 | Checklist de producción: `payments.allow_fake = false`, sin cuentas `fake` activas                                                  | DIN-12         | Baja                   |
 
 ## 7. Qué no se pudo verificar
 
