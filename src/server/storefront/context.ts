@@ -8,6 +8,7 @@ import { serverEnv } from "@/server/env";
 
 import { STORE_ROUTE_HEADER, verifyStoreRoute } from "./route-signature";
 import { getStorePreview } from "./preview-reads";
+import { setMediaVariantsReady } from "./media-variants";
 import { getStorePublic, type StorePublic } from "./store-public";
 
 /**
@@ -27,6 +28,7 @@ export const getStorefront = cache(
     const store = route.preview ? await getStorePreview(storeId) : await getStorePublic(storeId);
     if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
       notFound();
+    setMediaVariantsReady(store.media_variants === true);
     return { store, preview: route.preview };
   },
 );

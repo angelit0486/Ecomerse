@@ -96,6 +96,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["media.copy", lazy("media.copy", media)],
   ["media.fetch_remote", lazy("media.fetch_remote", media)],
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
+  ["media.backfill_variants", lazy("media.backfill_variants", media)],
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
   ["payments.reconcile", lazy("payments.reconcile", orders)],

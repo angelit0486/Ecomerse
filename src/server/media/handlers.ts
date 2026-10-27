@@ -1,8 +1,11 @@
 import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
-import { processImage, sniffImageMime } from "./image";
+import { variantPath, VARIANT_WIDTHS } from "@/lib/media/variants";
+
+import { makeVariants, processImage, sniffImageMime } from "./image";
 import { fetchRemoteImage, type RemoteFetchResult } from "./remote-fetch";
 import {
+  isMediaPath,
   isStorePrefixedPath,
   ObjectTooLargeError,
   type MediaBucket,
@@ -80,8 +83,12 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     }
 
     await deps.storage.upload("store-media", row.storage_path, result.data, result.mime);
+    // Paso 8: las copias en varios tamaños se suben ANTES de marcarla lista, así una
+    // foto lista siempre las tiene (si fallan, el job se reintenta completo).
+    await uploadVariants(deps, row.storage_path, result.data, result.width);
     await deps.db`select system.media_mark_ready(${id}::uuid, ${result.width}, ${result.height},
                                                  ${result.data.length})`;
+    await markVariantsDone(deps, id);
     await deps.storage.remove("store-uploads", [row.storage_path]);
     deps.onPublished?.(row.store_id);
     log.info("Medio publicado", { media_id: id, width: result.width, height: result.height });
@@ -99,7 +106,17 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
         log.warn("Objeto con ruta no canónica omitido en la purga", { bucket: candidate.bucket });
         continue;
       }
-      byBucket.set(candidate.bucket, [...(byBucket.get(candidate.bucket) ?? []), candidate.path]);
+      // En store-media también se van sus copias en varios tamaños (paso 8); borrar
+      // una que no existe no falla.
+      const extra =
+        candidate.bucket === "store-media"
+          ? VARIANT_WIDTHS.map((w) => variantPath(candidate.path, w))
+          : [];
+      byBucket.set(candidate.bucket, [
+        ...(byBucket.get(candidate.bucket) ?? []),
+        candidate.path,
+        ...extra,
+      ]);
     }
     for (const [bucket, paths] of byBucket) {
       for (let i = 0; i < paths.length; i += 100)
@@ -209,7 +226,42 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
     await processMedia(job, ctx);
   };
 
+  // Paso 8: copias para las fotos publicadas antes de que existieran. Tandas
+  // pequeñas hasta el plazo del runner; el mantenimiento lo vuelve a encolar
+  // mientras falten. Una foto cuyo archivo ya no está se marca igual (no hay
+  // nada que copiar y la tienda no debe quedarse sin srcset por ella).
+  const backfillVariants: JobHandler = async (_job, { log }) => {
+    const deadline = Date.now() + 30_000;
+    let done = 0;
+    while (Date.now() < deadline) {
+      const batch = await deps.db<
+        { id: string; store_id: string; storage_path: string; width: number | null }[]
+      >`select id, store_id, storage_path, width from system.media_variants_pending(10)`;
+      if (batch.length === 0) break;
+      for (const media of batch) {
+        if (Date.now() >= deadline) break;
+        // Solo rutas canónicas: otras formas no reciben copias (ni srcset en la tienda).
+        if (isMediaPath(media.storage_path) && media.width) {
+          const published = await deps.storage
+            .download("store-media", media.storage_path, BACKFILL_MAX_BYTES)
+            .catch((error: unknown) => {
+              if (error instanceof ObjectTooLargeError) return null;
+              throw error;
+            });
+          if (published) await uploadVariants(deps, media.storage_path, published, media.width);
+        }
+        await markVariantsDone(deps, media.id);
+        deps.onPublished?.(media.store_id);
+        done += 1;
+      }
+    }
+    // Si se acabó el plazo con fotos pendientes, sigue en la próxima pasada.
+    await deps.db`select system.media_backfill_requeue()`;
+    log.info("Copias de fotos generadas", { media: done });
+  };
+
   return [
+    ["media.backfill_variants", backfillVariants],
     ["media.process", processMedia],
     ["media.copy", copyMedia],
     ["media.fetch_remote", fetchRemote],
@@ -220,4 +272,36 @@ export function createMediaHandlers(deps: MediaDeps): Array<[string, JobHandler]
 async function reject(deps: MediaDeps, id: string, path: string, reason: string): Promise<void> {
   await deps.db`select system.media_mark_rejected(${id}::uuid, ${reason})`;
   await deps.storage.remove("store-uploads", [path]);
+}
+
+/** Tope de lectura de un archivo ya publicado (≤ 4096 px por lado, re-codificado). */
+const BACKFILL_MAX_BYTES = 50 * 1024 * 1024;
+
+async function uploadVariants(
+  deps: MediaDeps,
+  path: string,
+  published: Buffer,
+  width: number,
+): Promise<void> {
+  for (const variant of await makeVariants(published, width)) {
+    await deps.storage.upload(
+      "store-media",
+      variantPath(path, variant.width),
+      variant.data,
+      "image/webp",
+    );
+  }
+}
+
+/**
+ * Marca las copias como hechas. Con una base anterior a la migración del paso 8
+ * la función no existe: se ignora (la tienda simplemente no usa srcset) en vez de
+ * romper la publicación de fotos mientras se aplica la migración.
+ */
+async function markVariantsDone(deps: MediaDeps, id: string): Promise<void> {
+  try {
+    await deps.db`select system.media_set_variants_done(${id}::uuid)`;
+  } catch (error) {
+    if ((error as { code?: string }).code !== "42883") throw error;
+  }
 }

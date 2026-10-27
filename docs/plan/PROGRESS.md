@@ -30,7 +30,7 @@
   - **Pasos 15 y 17 (hechos; migraciones pendientes de aplicar en staging):**
     - 15 (ADR-040): «Importar solo los productos sin errores»; un producto con cualquier fila mala se salta completo. Migración `20261027000200`, pgTAP 101, E2E en `imports.spec`.
     - 17: Consola → Trabajos, con los trabajos fallidos y «Reintentar» (sin mostrar su contenido). Migración `20261027000100`, pgTAP 100, E2E en `platform.spec`.
-  - **Paso 8 (en curso):** variantes de imagen con `srcset`.
+  - **Paso 8 (hecho; migración pendiente de aplicar en staging):** fotos en 320–1280 px con `srcset` (D-PRO-02). Migración `20261027000300`, pgTAP 102. Tras aplicarla, el mantenimiento genera las copias de las fotos existentes y la tienda activa `srcset` sola al terminar.
 
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.

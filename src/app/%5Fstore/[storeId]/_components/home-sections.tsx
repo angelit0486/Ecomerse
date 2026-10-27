@@ -8,6 +8,7 @@ import {
   type HomeSectionData,
   type ImageRef,
 } from "@/server/storefront/catalog";
+import { srcSetFor } from "@/server/storefront/media-variants";
 import { brandInitialsOf } from "@/lib/catalog/brand-initials";
 import { sectionCss } from "@/lib/theme/resolve-theme";
 import { SafeHtml } from "@/ui/safe-html";
@@ -155,9 +156,17 @@ function HeroPicture({
   const mobile = slide.mobile_image && slide.image ? slide.mobile_image : null;
   return (
     <picture className="contents">
-      {mobile ? <source media="(max-width: 639px)" srcSet={mediaUrl(mobile.path)} /> : null}
+      {mobile ? (
+        <source
+          media="(max-width: 639px)"
+          srcSet={srcSetFor(mobile.path, mobile.width) ?? mediaUrl(mobile.path)}
+          sizes="100vw"
+        />
+      ) : null}
       <img
         src={mediaUrl(image.path)}
+        srcSet={srcSetFor(image.path, image.width)}
+        sizes="100vw"
         alt={image.alt ?? ""}
         width={image.width ?? 1600}
         height={image.height ?? 640}
@@ -290,6 +299,8 @@ async function CategoryCircles({
                     // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
                     <img
                       src={mediaUrl(image.path)}
+                      srcSet={srcSetFor(image.path, image.width)}
+                      sizes="160px"
                       alt=""
                       width={image.width ?? 320}
                       height={image.height ?? 320}
@@ -445,6 +456,8 @@ export async function HomeSections({
             {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
             <img
               src={mediaUrl(section.image.path)}
+              srcSet={srcSetFor(section.image.path, section.image.width)}
+              sizes="100vw"
               alt={section.image.alt ?? ""}
               width={section.image.width ?? 1600}
               height={section.image.height ?? 500}
@@ -494,6 +507,8 @@ export async function HomeSections({
             {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
             <img
               src={mediaUrl(section.image.path)}
+              srcSet={srcSetFor(section.image.path, section.image.width)}
+              sizes="(min-width: 768px) 50vw, 100vw"
               alt={section.image.alt ?? ""}
               width={section.image.width ?? 800}
               height={section.image.height ?? 600}

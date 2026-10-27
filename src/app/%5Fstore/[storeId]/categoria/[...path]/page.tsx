@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getCategory, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 
 import { Breadcrumb } from "../../_components/breadcrumb";
@@ -74,6 +75,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada; LCP de la categoría
           <img
             src={mediaUrl(category.cover.path)}
+            srcSet={srcSetFor(category.cover.path, category.cover.width)}
+            sizes="100vw"
             alt=""
             width={category.cover.width ?? 1600}
             height={category.cover.height ?? 600}

@@ -20,9 +20,13 @@ export class ObjectTooLargeError extends Error {
   }
 }
 
-/** Ruta generada por media_create_upload; cualquier otra forma se rechaza. */
+/**
+ * Ruta generada por media_create_upload, o una de sus copias en varios tamaños
+ * (paso 8: `{ruta}.w{ancho}.webp`, solo los anchos de VARIANT_WIDTHS); cualquier
+ * otra forma se rechaza.
+ */
 const MEDIA_PATH_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z_]{1,20}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/original\.(jpg|png|webp|avif)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z_]{1,20}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/original\.(jpg|png|webp|avif)(\.w(320|640|960|1280)\.webp)?$/;
 
 export function isMediaPath(path: string): boolean {
   return MEDIA_PATH_RE.test(path);

@@ -7,6 +7,7 @@ import {
   type ProductCard as Card,
   type RatingSummaries,
 } from "@/server/storefront/catalog";
+import { srcSetFor } from "@/server/storefront/media-variants";
 
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
@@ -142,6 +143,9 @@ function ProductCard({
             // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage
             <img
               src={mediaUrl(product.image.path)}
+              srcSet={srcSetFor(product.image.path, product.image.width)}
+              // Rejilla de 2 columnas en el celular y hasta 4 en escritorio.
+              sizes="(min-width: 1024px) 280px, (min-width: 640px) 33vw, 50vw"
               alt={product.image.alt ?? product.title}
               width={product.image.width ?? 640}
               height={product.image.height ?? 640}

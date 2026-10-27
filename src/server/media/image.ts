@@ -3,6 +3,7 @@ import "server-only";
 import sharp, { type Metadata } from "sharp";
 
 import type { ImageMime } from "@/lib/media/constants";
+import { variantWidthsFor } from "@/lib/media/variants";
 
 /**
  * Validación y re-codificación de imágenes subidas (GATE0 §25.3.4). Nunca se
@@ -124,4 +125,25 @@ export async function processImage(
   } catch (error) {
     return { ok: false, reason: pixelLimitError(error) ? "too_many_pixels" : "decode_failed" };
   }
+}
+
+/**
+ * Copias más chicas de una foto YA re-codificada (paso 8): WebP en los anchos de
+ * `variantWidthsFor`. Entra el archivo publicado, no el del usuario, así que no
+ * repite las validaciones; conserva el tope de tiempo de sharp.
+ */
+export async function makeVariants(
+  published: Buffer,
+  width: number,
+): Promise<{ width: number; data: Buffer }[]> {
+  const out: { width: number; data: Buffer }[] = [];
+  for (const w of variantWidthsFor(width)) {
+    const data = await sharp(published, { limitInputPixels: MAX_INPUT_PIXELS, failOn: "error" })
+      .timeout({ seconds: SHARP_TIMEOUT_SECONDS })
+      .resize({ width: w, withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer();
+    out.push({ width: w, data });
+  }
+  return out;
 }

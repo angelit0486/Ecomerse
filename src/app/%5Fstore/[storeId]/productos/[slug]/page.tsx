@@ -20,6 +20,7 @@ import {
   type ProductDetail,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
 import { ThemeSettingsV2, type PaymentMethod } from "@/lib/theme/schema";
@@ -267,6 +268,7 @@ export default async function ProductPage({ params }: Props) {
   };
   const gallery = product.images.map((image) => ({
     src: mediaUrl(image.path),
+    srcSet: srcSetFor(image.path, image.width),
     alt: image.alt ?? product.title,
     width: image.width ?? 1024,
     height: image.height ?? 1024,

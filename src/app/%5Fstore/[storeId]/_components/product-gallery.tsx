@@ -13,6 +13,8 @@ export const VARIANT_IMAGE_EVENT = "sf:variant-image";
  */
 export interface GalleryImage {
   src: string;
+  /** Copias en varios tamaños (paso 8); sin ellas, solo `src`. */
+  srcSet?: string | undefined;
   alt: string;
   width: number;
   height: number;
@@ -76,6 +78,9 @@ export function ProductGallery({
         {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage */}
         <img
           src={current.src}
+          srcSet={current.srcSet}
+          // Media pantalla en escritorio (dos columnas); todo el ancho en el celular.
+          sizes="(min-width: 768px) 50vw, 100vw"
           alt={current.alt}
           width={current.width}
           height={current.height}
@@ -150,6 +155,8 @@ export function ProductGallery({
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura re-codificada */}
                 <img
                   src={image.src}
+                  srcSet={image.srcSet}
+                  sizes="96px"
                   alt=""
                   width={image.width}
                   height={image.height}

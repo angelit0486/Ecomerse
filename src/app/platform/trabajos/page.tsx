@@ -24,6 +24,7 @@ const TYPE_LABELS: Record<string, string> = {
   "media.process": "Procesar foto",
   "media.copy": "Copiar fotos",
   "media.fetch_remote": "Traer foto de un enlace",
+  "media.backfill_variants": "Fotos en varios tamaños",
   "import.commit": "Importación de productos",
   "orders.expire": "Vencer reservas",
   "orders.complete": "Completar pedidos",

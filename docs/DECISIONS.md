@@ -1056,3 +1056,10 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
 - **Implementación.** Migración `20261027000200_import_skip_errors` (anti-join por `handle`, una pasada; sigue rápido con 5,000 filas), pgTAP `101_import_skip_errors`, botón «Importar solo los productos sin errores» en la pantalla de la importación.
 
 - **D-PRO-01. Trabajos fallidos en la consola.** `platform_list_dead_jobs` (dueño, administración y soporte; nunca el payload, error recortado a 300 caracteres) y `platform_retry_dead_job` (dueño y administración; solo jobs `dead`; vuelve a `queued` con intentos en cero; auditoría `job.retried`). Los handlers son idempotentes (§43, Job). Migración `20261027000100`, pgTAP `100`, pantalla Consola → Trabajos.
+
+- **D-PRO-02. Fotos en varios tamaños (paso 8, auditoría REN-01).**
+  - El worker genera copias WebP de 320, 640, 960 y 1280 px (solo anchos menores que el original) junto al archivo publicado: `{ruta}.w{ancho}.webp`. El contrato de rutas de Storage (§43) no cambia; el adaptador acepta solo ese sufijo exacto.
+  - Una foto nueva se marca lista **después** de subir sus copias (`media.variants_done`). Las de antes las genera el job `media.backfill_variants`, que encola el mantenimiento y se reencola solo mientras falten.
+  - La tienda usa `srcset` solo si TODAS sus fotos listas tienen copias (`media_variants` en los datos públicos) y solo en rutas canónicas: nunca pide un tamaño que no existe.
+  - La purga de huérfanos reconoce las copias como parte de su foto; al borrar una foto, el worker borra también sus copias.
+  - Migración `20261027000300`, pgTAP `102`, pruebas unitarias de `variants.ts`. En local: 0 imágenes rotas y las tarjetas cargan la copia de 320–640 px en el celular.
