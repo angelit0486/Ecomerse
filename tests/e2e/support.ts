@@ -129,7 +129,14 @@ export async function enrollTotp(page: Page): Promise<string> {
  */
 export async function asFreshClient(page: Page): Promise<void> {
   const octet = () => Math.floor(Math.random() * 254) + 1;
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` });
+  const ip = `10.${octet()}.${octet()}.${octet()}`;
+  // Solo hacia la app: un encabezado extra en las subidas directas a Storage rompe
+  // su preflight CORS. `unroute` deja una sola regla aunque se llame varias veces.
+  const pattern = `${new URL(process.env.E2E_BASE_URL ?? "http://localhost:3000").origin}/**`;
+  await page.unroute(pattern);
+  await page.route(pattern, (route) =>
+    route.continue({ headers: { ...route.request().headers(), "x-forwarded-for": ip } }),
+  );
 }
 
 /** Acceso completo de un staff nuevo (código por email + enrolamiento TOTP). */

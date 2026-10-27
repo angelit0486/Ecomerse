@@ -209,8 +209,9 @@ test("trabajos fallidos: se ven sin su contenido y se vuelven a la cola (paso 17
   await expect(
     page.getByRole("status").filter({ hasText: "Trabajo de vuelta en la cola." }),
   ).toBeVisible();
-  const [after] = await admin<{ status: string }[]>`
-    select status from system.jobs where id = ${job!.id}`;
-  // De vuelta en la cola (o ya tomado por la pasada inmediata): nunca sigue «dead».
-  expect(after!.status).not.toBe("dead");
+  const [after] = await admin<{ attempts: number }[]>`
+    select attempts from system.jobs where id = ${job!.id}`;
+  // Volvió a la cola con los intentos en cero. La pasada inmediata puede tomarlo y,
+  // como su payload es de prueba, fallar de nuevo: por eso se miran los intentos.
+  expect(after!.attempts).toBeLessThan(8);
 });

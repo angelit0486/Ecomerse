@@ -29,7 +29,7 @@ const FIELD_TEXT: Record<string, string> = {
 
 async function attempt(
   work: () => Promise<string>,
-  revalidate: string,
+  revalidate: string | null,
   options: { fieldText?: Record<string, string>; conflictMessage?: string } = {},
 ): Promise<ConsoleState> {
   let message: string;
@@ -50,7 +50,7 @@ async function attempt(
         : appError.message;
     return { error: errorMessage, ...(fields ? { fields } : {}) };
   }
-  revalidatePath(revalidate);
+  if (revalidate) revalidatePath(revalidate);
   return { ok: true, message };
 }
 
@@ -189,7 +189,8 @@ export async function retryDeadJob(jobId: string): Promise<ConsoleState> {
       processQueueSoon("platform.retry_job");
       return "Trabajo de vuelta en la cola.";
     },
-    "/platform/trabajos",
+    // Sin refrescar: el trabajo sale de la lista y se llevaría su propia confirmación.
+    null,
     { conflictMessage: "Ese trabajo ya no está fallido." },
   );
 }
