@@ -170,7 +170,10 @@ export class EnvValidationError extends Error {
  * pero NUNCA incluye sus valores.
  */
 export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  const result = serverEnvRules.safeParse(source);
+  // `KEY=` (como en .env.example) llega como "": para el esquema es ausente, así
+  // una opcional vacía no rompe el arranque y una requerida vacía sigue fallando.
+  const present = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ""));
+  const result = serverEnvRules.safeParse(present);
   if (result.success) return result.data;
   const issues = result.error.issues.map((issue) => {
     const key = issue.path.join(".") || "(raíz)";

@@ -36,6 +36,12 @@ describe("parseServerEnv", () => {
     );
   });
 
+  it("una opcional vacía (KEY= de la plantilla) cuenta como ausente", () => {
+    const env = parseServerEnv({ ...valid, STRIPE_SECRET_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "" });
+    expect(env.STRIPE_SECRET_KEY).toBeUndefined();
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
+  });
+
   it("rechaza secretos cortos y URLs que no son de Postgres", () => {
     expect(() => parseServerEnv({ ...valid, JOBS_HMAC_SECRET: "corto" })).toThrow(
       /JOBS_HMAC_SECRET: valor inválido/,
