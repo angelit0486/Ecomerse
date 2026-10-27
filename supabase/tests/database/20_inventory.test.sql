@@ -12,11 +12,14 @@ select tests.add_store_member('a', 'cat', 'catalog_manager');
 select tests.create_user('owner_b', 'owner@b.io');
 select tests.create_tenant('b', 'owner_b');
 
+-- stable + tienda fija: en un WHERE se evalúan una vez, no por fila (en una base
+-- con datos de otras suites, la versión volatile tardaba minutos).
 create function tests.variant(p_sku text) returns uuid
-language sql security definer set search_path = '' as
-  $$ select id from public.product_variants where sku = p_sku and deleted_at is null $$;
+language sql stable security definer set search_path = '' as
+  $$ select id from public.product_variants
+     where store_id = tests.fx('store_a') and sku = p_sku and deleted_at is null $$;
 create function tests.level(p_sku text) returns public.inventory_levels
-language sql security definer set search_path = '' as
+language sql stable security definer set search_path = '' as
   $$ select l.* from public.inventory_levels l where l.variant_id = tests.variant(p_sku) $$;
 create function tests.adjust(p_sku text, p_type text, p_qty int, p_reason text default 'Conteo físico',
                              p_mode text default 'delta', p_key text default null) returns jsonb
@@ -67,10 +70,10 @@ select is((tests.adjust('BAG-1', 'adjustment', 5, 'Inicial', 'delta', 'clave-aju
 select throws_ok($$ select tests.adjust('BAG-1', 'adjustment', 6, 'Inicial', 'delta', 'clave-ajuste-1') $$,
   'P0001', 'conflict', 'la misma clave con otra cantidad es un conflicto');
 select tests.logout();
-select is((select count(*)::int from public.inventory_movements where level_id = (tests.level('BAG-1')).id), 1,
+select is((select count(*)::int from public.inventory_movements where level_id = (select (tests.level('BAG-1')).id)), 1,
   'un solo movimiento por clave');
 select is((select actor_type || ':' || (actor_user_id = tests.fx('owner')) from public.inventory_movements
-            where level_id = (tests.level('DENY-1')).id and type = 'damage'), 'user:true', 'el ledger registra al actor');
+            where level_id = (select (tests.level('DENY-1')).id) and type = 'damage'), 'user:true', 'el ledger registra al actor');
 select is((select count(*)::int from audit.audit_logs where action = 'inventory.adjusted'
             and store_id = tests.fx('store_a')), 4, 'ajustes auditados');
 select throws_ok($$ update public.inventory_movements set on_hand_delta = 1000 where store_id = tests.fx('store_a') $$,
