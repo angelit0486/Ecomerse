@@ -258,7 +258,7 @@ Todos desde `7549db7` (Gate 1) hasta el cierre de la Fase R. Bundle de respaldo:
   - **Rol de plataforma en staging:** `almanzaangel164@gmail.com` (dueña de `demo`, con verificación en dos pasos) es `platform_owner` en `pruva-staging` (fila en `public.platform_staff`). Ve la consola `/platform` y «Agregar otra tienda».
   - **ADR-038 implementado:** la dueña o administradora de la organización crea tiendas desde «Tus tiendas» → «Nueva tienda en …». Migración `20261025000100_org_create_store` (pendiente de aplicar en staging), pgTAP `99_org_create_store`, E2E `org-create-store`. verify 941, pgTAP 2348 (101 archivos), integración 355, E2E completa 97/97.
 - **Nombre de la tienda abierta:** Ajustes → «Datos de la tienda» (`/admin/[tienda]/ajustes/tienda`) cambia nombre, email, teléfono y zona horaria también después del lanzamiento («Configurar tienda» solo se ve en el menú mientras es borrador). E2E `store-rename`.
-- Sin cambiar: `demo2` sigue a nombre de `demo2@example.test` y `maranahomyr@gmail.com` no tiene tiendas ni rol.
+- **demo2 transferida (pedido del propietario, 2026-10-27):** `almanzaangel164@gmail.com` es `org_owner` de «Organización demo2»; la cuenta de ejemplo `demo2@example.test` quedó como `org_admin`. `maranahomyr@gmail.com` sigue sin tiendas ni rol.
 
 ## Despliegue del 2026-10-21 (multitienda y pulido)
 
