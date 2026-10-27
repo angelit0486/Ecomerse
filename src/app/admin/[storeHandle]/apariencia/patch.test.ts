@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeLink, normalizeWhatsapp, sectionPatch, validatePatch } from "./patch";
+import {
+  normalizeLink,
+  normalizeWhatsapp,
+  SECTION_KEYS,
+  sectionPatch,
+  THEME_SECTIONS,
+  validatePatch,
+} from "./patch";
 
 function form(values: Record<string, string | string[]>) {
   return {
@@ -43,6 +50,15 @@ describe("enlaces y WhatsApp escritos por una persona", () => {
 });
 
 describe("parche de cada pestaña", () => {
+  it("cada pestaña manda completas sus claves y solo las suyas (no pisa las de otra)", () => {
+    const { get, getAll } = form({});
+    for (const section of THEME_SECTIONS) {
+      expect(Object.keys(sectionPatch(section, get, getAll)).sort()).toEqual(
+        [...SECTION_KEYS[section]].sort(),
+      );
+    }
+  });
+
   it("encabezado y pie: sin texto de anuncio no hay barra; vacío = null", () => {
     const { get, getAll } = form({ logo_position: "center", announcement_text: "  " });
     expect(sectionPatch("encabezado", get, getAll)).toEqual({
