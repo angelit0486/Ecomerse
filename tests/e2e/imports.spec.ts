@@ -60,6 +60,10 @@ test("importar productos: errores por fila, confirmación y producto en el catá
     page.getByText("Se ignoraron columnas que no son de la plantilla: store_id."),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirmar importación" })).toHaveCount(0);
+  // Sin ningún producto bien, tampoco se ofrece importar «solo lo bueno» (ADR-040).
+  await expect(
+    page.getByRole("button", { name: "Importar solo los productos sin errores" }),
+  ).toHaveCount(0);
   // CSV de errores para corregir y volver a subir (§26.1 paso 3).
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -120,6 +124,42 @@ test("importar productos: errores por fila, confirmación y producto en el catá
     multipart: { mode: "upsert" },
   });
   expect(forged.status()).toBe(403);
+});
+
+test("archivo con errores: importar solo los productos que están bien (ADR-040)", async ({
+  page,
+}) => {
+  const email = `parcial-${run}@example.test`;
+  const other = await createTenant(`ip${run}`, await createAuthUser(email));
+  await loginNewStaff(page, email);
+  await page.goto(`/admin/${other.handle}/productos/importar`);
+  const mixed = [
+    HEADER,
+    line({ 0: "vaso-azul", 1: "Vaso azul", 13: `VAS-${run}`, 15: "89.00", 17: "4" }),
+    line({ 0: "plato-hondo", 1: "Plato hondo", 13: `PLA-${run}`, 15: "precio" }),
+  ].join("\n");
+  await page.getByLabel(/Archivo CSV/).setInputFiles({
+    name: "mixto.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(mixed),
+  });
+  await page.getByRole("button", { name: "Validar archivo" }).click();
+  await expect(page.getByRole("heading", { name: "mixto.csv" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirmar importación" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Importar solo los productos sin errores" }).click();
+  await expect(async () => {
+    await runJobs();
+    await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
+  await expect(page.getByText(/Se saltaron 1 fila con error/)).toBeVisible();
+  // La fila con error sigue a la mano para corregirla.
+  await expect(
+    page.getByRole("link", { name: "Descargar las filas con error (CSV)" }),
+  ).toBeVisible();
+
+  const products = await admin<{ slug: string }[]>`
+    select slug from public.products where store_id = ${other.storeId} order by slug`;
+  expect(products.map((p) => p.slug)).toEqual(["vaso-azul"]);
 });
 
 test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia e importa", async ({

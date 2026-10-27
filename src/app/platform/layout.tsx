@@ -39,6 +39,9 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           <Link href="/platform/cumplimiento" className={navLink}>
             Cumplimiento
           </Link>
+          <Link href="/platform/trabajos" className={navLink}>
+            Trabajos
+          </Link>
         </nav>
         <div className="flex items-center gap-3 text-[13px] text-fg-muted">
           <span>{ROLE[role]}</span>

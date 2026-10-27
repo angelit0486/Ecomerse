@@ -1038,3 +1038,21 @@ Ninguna de estas decisiones toca un contrato crítico de GATE0 §43: amplían el
   - «Nuestras marcas» acepta marcas sin logo (iniciales). Migración `20261024000200`, pgTAP 97, paridad Zod/SQL.
 - **D-POR-05. Fotos de categorías.** Foto cuadrada y banner con el pipeline de medios de siempre; `catalog_set_category_media` y `storefront.category_thumbs` (migración `20261024000100`, pgTAP 96).
 - **D-POR-06. Versión del esquema.** `public.app_schema_version()` (migración `20261024000300`, pgTAP 98) devuelve la última migración que la redefine; el panel la compara con `EXPECTED_SCHEMA_VERSION` y avisa si faltan migraciones. Regla: cuando un cambio de código dependa de una migración nueva, esa migración redefine la función con su versión y se sube la constante (una prueba unitaria lo comprueba). Las zonas con colores propios conservan los tonos de oferta y de estado solo si se leen sobre su fondo (revisión A–D, hallazgo 2).
+
+## 28. Panel y tienda más profesionales (2026-10-27)
+
+Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los pasos sin migración están en los commits `6d1b61f` y `75a7c86`; aquí van las decisiones que tocan la base o el contrato.
+
+### ADR-040 — Importar solo los productos sin errores · **aprobado por el propietario el 2026-10-27 («Continue», en respuesta a la propuesta de los pasos 8, 15 y 17)**
+
+- **Contexto.** GATE0 §26.1 (pasos 3–5) exige un plan sin errores para confirmar: una fila mala bloqueaba todo el archivo y la dueña tenía que corregir antes de importar nada.
+- **Decisión.**
+  - `imports_commit` acepta `p_skip_errors` (por defecto `false`). Sin él, el comportamiento es el de siempre.
+  - Con él, el worker salta **completo** todo producto (mismo `handle`) con alguna fila con error: nunca se crea un producto a medias.
+  - Lo demás sigue en **una sola transacción** (§26.1 paso 5, sin cambio): si algo falla al aplicarlo, no se escribe nada.
+  - Si ningún producto está bien, se rechaza con `import_nothing_valid`.
+  - Las filas saltadas se cuentan en `totals.skipped` y en la auditoría `import.committed`, y siguen en el CSV de errores.
+- **Desviación declarada.** Amplía §26.1 paso 3 («nada se escribe hasta confirmar»: se mantiene; lo nuevo es que se puede confirmar con errores, de forma expresa). No es un contrato crítico de §43.
+- **Implementación.** Migración `20261027000200_import_skip_errors` (anti-join por `handle`, una pasada; sigue rápido con 5,000 filas), pgTAP `101_import_skip_errors`, botón «Importar solo los productos sin errores» en la pantalla de la importación.
+
+- **D-PRO-01. Trabajos fallidos en la consola.** `platform_list_dead_jobs` (dueño, administración y soporte; nunca el payload, error recortado a 300 caracteres) y `platform_retry_dead_job` (dueño y administración; solo jobs `dead`; vuelve a `queued` con intentos en cero; auditoría `job.retried`). Los handlers son idempotentes (§43, Job). Migración `20261027000100`, pgTAP `100`, pantalla Consola → Trabajos.

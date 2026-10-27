@@ -8,6 +8,7 @@ import {
   createTenant,
   enrollTotp,
   enterEmailCode,
+  expectNoSeriousA11yViolations,
   loginNewStaff,
   MAIL,
   readInvitationLink,
@@ -50,7 +51,7 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.setViewportSize({ width: 375, height: 812 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   const consoleNav = page.getByRole("navigation", { name: "Consola de plataforma" });
-  for (const name of ["Organizaciones", "Soporte", "Cumplimiento"]) {
+  for (const name of ["Organizaciones", "Soporte", "Cumplimiento", "Trabajos"]) {
     const box = (await consoleNav.getByRole("link", { name }).boundingBox())!;
     expect(box.height, name).toBeGreaterThanOrEqual(44);
   }
@@ -181,4 +182,35 @@ test("un tenant no ve la consola", async ({ page }) => {
   await loginNewStaff(page, email);
   await expect(page.getByRole("link", { name: "Ir a la consola de plataforma" })).toHaveCount(0);
   expect((await page.goto("/platform"))?.status()).toBe(404);
+});
+
+test("trabajos fallidos: se ven sin su contenido y se vuelven a la cola (paso 17)", async ({
+  page,
+}) => {
+  const email = `padmin2-${run}@platform.test`;
+  await admin`insert into public.platform_staff (user_id, role)
+              values (${await createAuthUser(email)}, 'platform_admin')`;
+  // Tienda propia: las pruebas anteriores suspenden o cierran la de arriba.
+  const shop = await createTenant(`j${run}`, await createAuthUser(`duena-j-${run}@example.test`));
+  const [job] = await admin<{ id: string }[]>`
+    insert into system.jobs (store_id, type, payload, status, attempts, max_attempts, last_error, finished_at)
+    values (${shop.storeId}, 'order.paid', '{"to":"privado@cliente.test"}', 'dead', 8, 8,
+            'Resend respondió 401', now())
+    returning id`;
+  await loginNewStaff(page, email);
+  await page.goto("/platform/trabajos");
+  const row = page.getByRole("row").filter({ hasText: "Resend respondió 401" });
+  await expect(row).toContainText("Correo: pedido pagado");
+  await expect(row).toContainText(shop.name);
+  await expect(page.getByText("privado@cliente.test")).toHaveCount(0);
+  await expectNoSeriousA11yViolations(page);
+
+  await row.getByRole("button", { name: "Reintentar" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Trabajo de vuelta en la cola." }),
+  ).toBeVisible();
+  const [after] = await admin<{ status: string }[]>`
+    select status from system.jobs where id = ${job!.id}`;
+  // De vuelta en la cola (o ya tomado por la pasada inmediata): nunca sigue «dead».
+  expect(after!.status).not.toBe("dead");
 });

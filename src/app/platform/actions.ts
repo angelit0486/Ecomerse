@@ -6,6 +6,7 @@ import { requirePlatformRole } from "@/server/auth/platform";
 import { formValues } from "@/lib/form-values";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /** Acciones de la consola de plataforma. La autorización real está en las RPC. */
@@ -177,4 +178,18 @@ export async function revokeSupport(grantId: string): Promise<ConsoleState> {
     await callRpc(supabase, "platform_revoke_support_access", { p_grant_id: grantId });
     return "Acceso revocado.";
   }, "/platform/soporte");
+}
+
+/** Vuelve a la cola un trabajo fallido (paso 17). La base exige rol de dueño o administración. */
+export async function retryDeadJob(jobId: string): Promise<ConsoleState> {
+  return attempt(
+    async () => {
+      const supabase = await createSupabaseServerClient();
+      await callRpc(supabase, "platform_retry_dead_job", { p_job_id: jobId });
+      processQueueSoon("platform.retry_job");
+      return "Trabajo de vuelta en la cola.";
+    },
+    "/platform/trabajos",
+    { conflictMessage: "Ese trabajo ya no está fallido." },
+  );
 }

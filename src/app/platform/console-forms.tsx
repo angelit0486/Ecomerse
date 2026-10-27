@@ -13,6 +13,7 @@ import {
   addStore,
   createTenant,
   grantSupport,
+  retryDeadJob,
   revokeSupport,
   setOrganizationStatus,
   type ConsoleState,
@@ -224,6 +225,34 @@ export function RevokeButton({ grantId }: { grantId: string }) {
       {error ? (
         <p role="alert" className="text-[13px] text-danger">
           {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function RetryJobButton({ jobId }: { jobId: string }) {
+  const [pending, start] = useTransition();
+  const [result, setResult] = useState<ConsoleState>({});
+  if (result.ok)
+    return (
+      <p role="status" className="text-[13px] text-success">
+        {result.message}
+      </p>
+    );
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={pending}
+        onClick={() => start(async () => setResult(await retryDeadJob(jobId)))}
+      >
+        {pending ? "Reintentando…" : "Reintentar"}
+      </Button>
+      {result.error ? (
+        <p role="alert" className="text-[13px] text-danger">
+          {result.error}
         </p>
       ) : null}
     </div>

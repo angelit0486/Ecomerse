@@ -23,6 +23,8 @@ type Props = {
 
 const NOTICES: Record<string, string> = {
   "no-listo": "Esta importación no se puede confirmar (tiene errores o ya se procesó).",
+  "nada-valido":
+    "Todos los productos del archivo tienen algún error: no hay nada que importar todavía.",
   permiso:
     "Tu rol no permite aplicar este archivo (crear, editar o publicar productos, o ajustar existencias).",
 };
@@ -36,6 +38,8 @@ interface Totals {
   errors?: number;
   created?: number;
   updated?: number;
+  /** ADR-040: filas con error que se saltaron al importar solo lo bueno. */
+  skipped?: number;
   /** ADR-033: fotos reservadas para descargar desde sus enlaces. */
   remote_images?: number;
 }
@@ -175,6 +179,13 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {done ? (
         <p role="status" className="rounded-md border border-success p-3 text-sm">
           Importación terminada.{" "}
+          {totals.skipped ? (
+            <>
+              Se saltaron{" "}
+              {totals.skipped === 1 ? "1 fila con error" : `${totals.skipped} filas con error`}:
+              descárgalas abajo, corrígelas y súbelas en otro archivo.{" "}
+            </>
+          ) : null}
           {totals.remote_images ? (
             <>
               {totals.remote_images === 1
@@ -264,11 +275,32 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         </p>
       ) : null}
       {ready ? (
-        <form action={commitImport.bind(null, ctx.store.handle, job.id)} className="space-y-2">
+        <form
+          action={commitImport.bind(null, ctx.store.handle, job.id, false)}
+          className="space-y-2"
+        >
           <p className="text-sm">
             Sin errores. Al confirmar se aplica todo junto: si algo falla, no se cambia nada.
           </p>
           <CommitButton label="Confirmar importación" />
+        </form>
+      ) : null}
+
+      {errors > 0 &&
+      job.status === "validated" &&
+      twin?.status !== "committing" &&
+      (totals.create ?? 0) + (totals.update ?? 0) > 0 ? (
+        <form
+          action={commitImport.bind(null, ctx.store.handle, job.id, true)}
+          className="space-y-2 rounded-md border border-border p-4"
+        >
+          <h2 className="text-sm font-semibold">¿Importar ya lo que está bien?</h2>
+          <p className="text-sm">
+            Se importan solo los productos sin errores. Un producto con un error en cualquiera de
+            sus filas se salta completo, para no dejarlo a medias. Después corriges las filas con
+            error (descárgalas abajo) y las subes en otro archivo.
+          </p>
+          <CommitButton label="Importar solo los productos sin errores" />
         </form>
       ) : null}
 

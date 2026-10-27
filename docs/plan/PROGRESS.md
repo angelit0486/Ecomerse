@@ -27,11 +27,10 @@
     - fechas del panel con la zona de la tienda;
     - la cola corre al instante tras pedido, pago, webhook y acciones de pedidos (DIN-04, parcial);
     - límite propio de intentos en el ingreso por código (SEC-01).
-  - **Pasos 8, 15 y 17 (propuestos, sin hacer):** necesitan migración y, la 15, cambiar GATE0 §26 («todo o nada»).
-    - 8: variantes de imagen con `srcset`.
-    - 15: importar las filas buenas y reportar las malas.
-    - 17: pantalla de trabajos fallidos con «reintentar».
-    - Esperan la aprobación del propietario.
+  - **Pasos 15 y 17 (hechos; migraciones pendientes de aplicar en staging):**
+    - 15 (ADR-040): «Importar solo los productos sin errores»; un producto con cualquier fila mala se salta completo. Migración `20261027000200`, pgTAP 101, E2E en `imports.spec`.
+    - 17: Consola → Trabajos, con los trabajos fallidos y «Reintentar» (sin mostrar su contenido). Migración `20261027000100`, pgTAP 100, E2E en `platform.spec`.
+  - **Paso 8 (en curso):** variantes de imagen con `srcset`.
 
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.
