@@ -5,6 +5,20 @@
 
 ## Ahora
 
+- **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
+  - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.
+    - Línea base sobre `f503304`: verify 941, pgTAP 2,348, integración 355, E2E 98/98.
+    - Cierre sobre `1c69d45`: verify 945, pgTAP 2,348, integración 355, E2E 98/98 con next 16.4.1.
+    - Arreglos:
+      - dependencias: `pnpm audit` pasó de 2 críticas y 4 altas a 0 (`8120444`);
+      - `.env.example` ya se puede copiar tal cual (`0faf60b`);
+      - pgTAP 20 sobre una base usada pasó de más de 16 min a menos de 1 s (`c155254`);
+      - prueba de `SECTION_KEYS` (`c7002a5`);
+      - selector nativo sin errores de CSP en el panel (`1c69d45`).
+    - axe: 0 problemas en las 24 pantallas de las tiendas.
+    - Lighthouse en móvil: tiendas entre 91 y 99; panel en Buenas prácticas 100.
+    - Pendiente: portada de demo por debajo de 95 (fotos sin `srcset`, Paso 3) y portada del panel en 86–88 (Paso 4).
+
 - **Portada, marcas y personalización (2026-10-21):** fotos y logos de marcas, editor completo de la portada y personalización de la tienda, corrigiendo los errores del camino. Pasos 0–5.
   - **Paso 0 (hecho):** línea base sobre `0045646`: verify 870, `db:test` en verde (pgTAP 93 archivos + integración 326), E2E 84/84. Staging tiene las 113 migraciones del repo, con huellas idénticas a las de las 9 de hoy.
   - **Paso 1 (hecho):** diagnóstico en `docs/plan/DIAGNOSTICO-PORTADA.md`.
