@@ -22,17 +22,17 @@ Lo técnico que falta son unas 3 a 4 semanas de trabajo. Lo demás son decisione
 
 ## Semáforo por área
 
-| Área                    | Estado | Por qué (una línea)                                                                                                                 | Documento |
-| ----------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| Pruebas y código        | 🟢     | 945 unitarias, 2,348 pgTAP, 355 de integración y 98 E2E en local; pero el CI está en rojo por el formato de un documento            | 01, 04    |
-| Seguridad y aislamiento | 🟢     | 0 críticas y 0 altas; RLS en 109 de 109 tablas; 4 medias (login por código sin límite, entre otras)                                 | 02        |
-| Dinero e inventario     | 🟡     | Sin sobreventa ni doble cobro, pero se ignoran los contracargos y se pierde el pago tardío con webhook perdido                      | 03        |
-| Operación y respaldos   | 🔴     | La cola de mantenimiento nunca corre; sin alertas, sin respaldos, un solo operador                                                  | 06        |
-| Rendimiento y escala    | 🟡     | Lighthouse 91–99, pero las fotos no tienen variantes y el cron diario está en un plan no comercial                                  | 05        |
-| Datos y arquitectura    | 🟡     | Purgas y retención sin programar; la anonimización no alcanza pedidos                                                               | 04        |
-| UX y conversión         | 🟡     | Ver `07`                                                                                                                            | 07        |
-| Regulación              | 🔴     | Productos asociados con THC y vapeadores en línea; perfil sanitario sin firma; falta aviso de privacidad en el checkout y domicilio | 09        |
-| Mercado y negocio       | 🟡     | Diferencial real (cumplimiento nativo), pero el SaaS aún no se puede vender y el precio de marketplace es muy bajo                  | 08, 10    |
+| Área                    | Estado | Por qué (una línea)                                                                                                                        | Documento |
+| ----------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| Pruebas y código        | 🟢     | 945 unitarias, 2,348 pgTAP, 355 de integración y 98 E2E en local; pero el CI está en rojo por el formato de un documento                   | 01, 04    |
+| Seguridad y aislamiento | 🟢     | 0 críticas y 0 altas; RLS en 109 de 109 tablas; 4 medias (login por código sin límite, entre otras)                                        | 02        |
+| Dinero e inventario     | 🟡     | Sin sobreventa ni doble cobro, pero se ignoran los contracargos y se pierde el pago tardío con webhook perdido                             | 03        |
+| Operación y respaldos   | 🔴     | La cola de mantenimiento nunca corre; sin alertas, sin respaldos, un solo operador                                                         | 06        |
+| Rendimiento y escala    | 🟡     | Lighthouse 91–99, pero las fotos no tienen variantes y el cron diario está en un plan no comercial                                         | 05        |
+| Datos y arquitectura    | 🟡     | Purgas y retención sin programar; la anonimización no alcanza pedidos                                                                      | 04        |
+| UX y conversión         | 🟡     | 0 desbordes y 0 problemas de axe en 130 vistas; pero las políticas no se ven en la tienda ni en el pago, y el envío se suma tarde al total | 07        |
+| Regulación              | 🔴     | Productos asociados con THC y vapeadores en línea; perfil sanitario sin firma; falta aviso de privacidad en el checkout y domicilio        | 09        |
+| Mercado y negocio       | 🟡     | Diferencial real (cumplimiento nativo), pero el SaaS aún no se puede vender y el precio de marketplace es muy bajo                         | 08, 10    |
 
 ## 5 amenazas principales
 

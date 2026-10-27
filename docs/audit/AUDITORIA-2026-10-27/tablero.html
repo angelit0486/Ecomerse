@@ -1,0 +1,2390 @@
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Auditoría Pruva 2026-10-27</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;800&family=Spline+Sans+Mono:wght@500&display=swap"
+    />
+    <style>
+      /* Layout: una columna de lectura en celular; semáforo arriba, luego pestañas Hallazgos / Backlog / Riesgos / Go-No-Go. */
+      :root {
+        --bg: #f5f7f8;
+        --surface: #ffffff;
+        --ink: #14212b;
+        --muted: #55656f;
+        --line: #d7dee2;
+        --accent: #0f6e78;
+        --crit: #b3261e;
+        --high: #c45c00;
+        --med: #9a7b00;
+        --low: #4d6b57;
+        --ok: #2e7d4f;
+        --crit-bg: #fbe9e7;
+        --high-bg: #fff1e3;
+        --med-bg: #fbf5dc;
+        --low-bg: #eaf2ec;
+        --display: "Public Sans", "Segoe UI", system-ui, sans-serif;
+        --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+        --mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #0f171c;
+          --surface: #172229;
+          --ink: #e4ebee;
+          --muted: #9aabb4;
+          --line: #2a3a43;
+          --accent: #4fb8c2;
+          --crit: #ff8a80;
+          --high: #ffb066;
+          --med: #e6c94d;
+          --low: #9cc7a8;
+          --ok: #7fd3a0;
+          --crit-bg: #3a1714;
+          --high-bg: #3a2614;
+          --med-bg: #332c10;
+          --low-bg: #19291e;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #0f171c;
+        --surface: #172229;
+        --ink: #e4ebee;
+        --muted: #9aabb4;
+        --line: #2a3a43;
+        --accent: #4fb8c2;
+        --crit: #ff8a80;
+        --high: #ffb066;
+        --med: #e6c94d;
+        --low: #9cc7a8;
+        --ok: #7fd3a0;
+        --crit-bg: #3a1714;
+        --high-bg: #3a2614;
+        --med-bg: #332c10;
+        --low-bg: #19291e;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.5 var(--body);
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        padding-block: max(16px, env(safe-area-inset-top, 0px)) 48px;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+      }
+      header h1 {
+        font: 800 1.6rem/1.15 var(--display);
+        margin: 0;
+        text-wrap: balance;
+      }
+      header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        max-width: 65ch;
+      }
+      .verdict {
+        background: var(--crit-bg);
+        border-left: 4px solid var(--crit);
+        padding: 12px 14px;
+        border-radius: 6px;
+      }
+      .verdict strong {
+        color: var(--crit);
+      }
+      .lights {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+        gap: 8px;
+      }
+      .light {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: 14px 1fr;
+        gap: 4px 10px;
+        min-width: 0;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-top: 5px;
+      }
+      .dot.r {
+        background: var(--crit);
+      }
+      .dot.a {
+        background: var(--med);
+      }
+      .dot.v {
+        background: var(--ok);
+      }
+      .light b {
+        font-weight: 600;
+      }
+      .light span {
+        grid-column: 2;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .count {
+        font: 600 0.85rem var(--body);
+        padding: 4px 10px;
+        border-radius: 999px;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line);
+        overflow-x: auto;
+      }
+      .tabs button {
+        font: 600 0.95rem var(--body);
+        background: none;
+        border: 0;
+        color: var(--muted);
+        padding: 10px 12px;
+        min-height: 44px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+      }
+      .tabs button[aria-selected="true"] {
+        color: var(--ink);
+        border-bottom-color: var(--accent);
+      }
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .chip {
+        font: 600 0.85rem var(--body);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 6px 12px;
+        min-height: 36px;
+        cursor: pointer;
+      }
+      .chip[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--bg);
+        border-color: var(--ink);
+      }
+      select,
+      input[type="search"] {
+        font: 0.9rem var(--body);
+        background: var(--surface);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        min-height: 40px;
+        min-width: 0;
+      }
+      input[type="search"] {
+        flex: 1 1 200px;
+      }
+      .list {
+        display: grid;
+        gap: 8px;
+      }
+      .item {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--line);
+        border-radius: 6px;
+        padding: 10px 12px;
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+      .item[data-sev="Crítica"] {
+        border-left-color: var(--crit);
+      }
+      .item[data-sev="Alta"] {
+        border-left-color: var(--high);
+      }
+      .item[data-sev="Media"] {
+        border-left-color: var(--med);
+      }
+      .item[data-sev="Baja"] {
+        border-left-color: var(--low);
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        align-items: baseline;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      .id {
+        font: 500 0.82rem var(--mono);
+        color: var(--ink);
+      }
+      .sev {
+        font-weight: 700;
+        padding: 1px 8px;
+        border-radius: 4px;
+      }
+      .sev.c {
+        color: var(--crit);
+        background: var(--crit-bg);
+      }
+      .sev.h {
+        color: var(--high);
+        background: var(--high-bg);
+      }
+      .sev.m {
+        color: var(--med);
+        background: var(--med-bg);
+      }
+      .sev.l {
+        color: var(--low);
+        background: var(--low-bg);
+      }
+      .item .t {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+      .item .e {
+        font-size: 0.85rem;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+      .tag {
+        font: 500 0.75rem var(--mono);
+      }
+      .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 640px;
+        font-size: 0.88rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+      }
+      td.num {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+      h2 {
+        font: 800 1.15rem/1.2 var(--display);
+        margin: 8px 0 4px;
+      }
+      .group {
+        display: grid;
+        gap: 6px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 0.85rem;
+        max-width: 70ch;
+      }
+      .empty {
+        color: var(--muted);
+        padding: 16px;
+        text-align: center;
+      }
+      footer {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Auditoría Pruva · 27 de octubre de 2026</h1>
+        <p>
+          Auditoría de solo lectura de la plataforma y de las tiendas demo y demo2. Cada hallazgo
+          indica dónde está la evidencia y si se comprobó (VERIFICADO), se dedujo del código
+          (INFERIDO) o requiere un servicio real (NO VERIFICADO). Lo legal es orientativo: validar
+          con un abogado o asesor regulatorio.
+        </p>
+      </header>
+      <div class="verdict">
+        <strong>Veredicto: No-Go para vender hoy.</strong> Base técnica sólida, pero hay 3 críticos
+        abiertos: productos asociados con THC y vapeadores en una tienda pública, mantenimiento de
+        la cola que nunca corre y perfil sanitario sin firma.
+      </div>
+      <section aria-label="Semáforo por área"><div class="lights" id="lights"></div></section>
+      <div class="counts" id="counts"></div>
+      <nav class="tabs" role="tablist" aria-label="Secciones">
+        <button role="tab" id="tab-hallazgos" aria-selected="true" data-view="hallazgos">
+          Hallazgos
+        </button>
+        <button role="tab" id="tab-backlog" aria-selected="false" data-view="backlog">
+          Backlog
+        </button>
+        <button role="tab" id="tab-riesgos" aria-selected="false" data-view="riesgos">
+          Riesgos
+        </button>
+        <button role="tab" id="tab-gonogo" aria-selected="false" data-view="gonogo">
+          Go/No-Go
+        </button>
+      </nav>
+      <section id="view-hallazgos" role="tabpanel" aria-labelledby="tab-hallazgos" class="group">
+        <div class="filters" id="sevchips" aria-label="Filtrar por severidad"></div>
+        <div class="filters">
+          <label for="area" class="note">Área</label
+          ><select id="area"></select>
+          <input
+            type="search"
+            id="q"
+            placeholder="Buscar por ID o texto"
+            aria-label="Buscar hallazgo"
+          />
+        </div>
+        <p class="note" id="shown"></p>
+        <div class="list" id="list"></div>
+      </section>
+      <section
+        id="view-backlog"
+        role="tabpanel"
+        aria-labelledby="tab-backlog"
+        class="group"
+        hidden
+      ></section>
+      <section
+        id="view-riesgos"
+        role="tabpanel"
+        aria-labelledby="tab-riesgos"
+        class="group"
+        hidden
+      ></section>
+      <section
+        id="view-gonogo"
+        role="tabpanel"
+        aria-labelledby="tab-gonogo"
+        class="group"
+        hidden
+      ></section>
+      <footer>
+        Fuente: docs/audit/AUDITORIA-2026-10-27/ (documentos 00 a 14). Tablero generado a partir de
+        esos documentos; si difieren, mandan los documentos.
+      </footer>
+    </div>
+    <script id="data" type="application/json">
+      {
+        "findings": [
+          {
+            "id": "EST-01",
+            "sev": "Crítica",
+            "area": "Regulación",
+            "t": "Tienda «demo» publica 19 productos con nombres asociados con THC/vapeadores",
+            "e": "SELECT products (demo); pruva-tienda-demo.vercel.app/productos",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-01",
+            "sev": "Crítica",
+            "area": "Operación",
+            "t": "El mantenimiento de la cola (vencer reservas, conciliar pagos) nunca ha corrido en staging",
+            "e": "system.jobs sin orders.expire ni payments.reconcile; vercel.json cron diario",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-03",
+            "sev": "Crítica",
+            "area": "Regulación",
+            "t": "Perfil sanitario MX activo sin revisión del asesor",
+            "e": "compliance_profiles: reviewed_by «Demostración (sin revisión real)»",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-02",
+            "sev": "Alta",
+            "area": "Regulación",
+            "t": "Sin filtro de bienes prohibidos ni política de uso aceptable",
+            "e": "compliance_store_legend.sql:319-328; demo sin categoría declarada",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-01",
+            "sev": "Alta",
+            "area": "Dinero",
+            "t": "Pago tardío de MP con webhook perdido nunca se detecta",
+            "e": "mercadopago.sql:53-73 excluye expired; payment_for_expiry solo Stripe",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-03",
+            "sev": "Alta",
+            "area": "Dinero",
+            "t": "Contracargos, disputas y reembolsos externos de MP se ignoran",
+            "e": "mercadopago.ts:82-87; apply_payment_status devuelve ignored",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-02",
+            "sev": "Alta",
+            "area": "Operación",
+            "t": "Sin Sentry, alertas ni monitor externo",
+            "e": "package.json sin Sentry; sin instrumentation.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-03",
+            "sev": "Alta",
+            "area": "Operación",
+            "t": "/api/health/ready no ve jobs muertos ni cola detenida",
+            "e": "ready/route.ts:36",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-04",
+            "sev": "Alta",
+            "area": "Operación",
+            "t": "Sin respaldos (plan Free) ni restauración probada",
+            "e": "Documentación Supabase; sin runbook",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-07",
+            "sev": "Alta",
+            "area": "Operación",
+            "t": "CI en rojo desde be5541d y rama sin protección",
+            "e": "Run 40477420785 falla format:check",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-10",
+            "sev": "Alta",
+            "area": "Operación",
+            "t": "Un solo operador, sin acceso de emergencia",
+            "e": "1 platform_owner, 1 TOTP, sin códigos de recuperación",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-01",
+            "sev": "Alta",
+            "area": "Rendimiento",
+            "t": "Imágenes sin variantes ni srcset (original hasta 4096 px)",
+            "e": "image.ts:16; storage.ts:25; catalog.ts:834",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-03",
+            "sev": "Alta",
+            "area": "Negocio",
+            "t": "Vercel Hobby es solo uso no comercial; cron diario",
+            "e": "Fair Use de Vercel; vercel.json",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-04",
+            "sev": "Alta",
+            "area": "Regulación",
+            "t": "Lista de términos prohibidos incompleta",
+            "e": "Guía COFEPRIS vs reglas propuestas",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-05",
+            "sev": "Alta",
+            "area": "Regulación",
+            "t": "Sin decisión sobre permiso de publicidad de suplementos",
+            "e": "RLGSMP art. 79-II",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "REG-08",
+            "sev": "Alta",
+            "area": "Regulación",
+            "t": "Abrir tienda no exige domicilio ni teléfono",
+            "e": "store_launch.sql:79-82",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-12",
+            "sev": "Alta",
+            "area": "Regulación",
+            "t": "Riesgo con pasarelas por categorías restringidas",
+            "e": "Términos de Stripe; MP sin leer completo",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-01",
+            "sev": "Alta",
+            "area": "Negocio",
+            "t": "Riesgo de suspensión de toda la plataforma por EST-01",
+            "e": "AUP Vercel, Stripe, Supabase; DOF 17-01-2025",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-01",
+            "sev": "Alta",
+            "area": "Negocio",
+            "t": "Precio de marketplace 20–40 % por debajo",
+            "e": "Amazon $999 vs GNC $1,299.90 (whey 2 lb)",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-02",
+            "sev": "Alta",
+            "area": "Negocio",
+            "t": "El SaaS no se puede vender: sin cobro, registro ni MP por tienda",
+            "e": "PROJECT-BRIEF §6; ADR-028",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-12",
+            "sev": "Alta",
+            "area": "Negocio",
+            "t": "Demanda del nicho SaaS sin validar",
+            "e": "Cálculo propio con ANAISA",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "EST-09",
+            "sev": "Alta",
+            "area": "Estado",
+            "t": "CI rojo por formato de ESTADO-CALIDAD (sesión anterior)",
+            "e": "prettier --check",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-02",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Una sola credencial de MP para toda la plataforma",
+            "e": "registry.ts:27-35; ADR-028",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-01",
+            "sev": "Media",
+            "area": "Seguridad",
+            "t": "Login por código sin límite de tasa propio",
+            "e": "(acceso)/actions.ts:39-98",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-02",
+            "sev": "Media",
+            "area": "Seguridad",
+            "t": "Enlace de pedido de invitado no caduca ni se revoca",
+            "e": "storefront_checkout.sql:570-606",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-03",
+            "sev": "Media",
+            "area": "Seguridad",
+            "t": "Protección de contraseñas filtradas apagada",
+            "e": "Advisor Supabase",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-04",
+            "sev": "Media",
+            "area": "Seguridad",
+            "t": "Ningún metatest exige guarda en cada RPC SECURITY DEFINER",
+            "e": "00_schema_security (13 metatests)",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-02",
+            "sev": "Media",
+            "area": "Dinero",
+            "t": "OXXO/SPEI frente a reserva de 30 min",
+            "e": "TTL en checkout_tables.sql:18",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "DIN-05",
+            "sev": "Media",
+            "area": "Dinero",
+            "t": "Reembolsar cobro duplicado devuelve el original",
+            "e": "request_refund",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-06",
+            "sev": "Media",
+            "area": "Dinero",
+            "t": "Cerrar no enviadas reembolsa sin IVA/envío",
+            "e": "orders_close_unshipped",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "DIN-07",
+            "sev": "Media",
+            "area": "Dinero",
+            "t": "Tolerancia de firma ±5 min podría rechazar reintentos",
+            "e": "mercadopago.ts:141-145",
+            "tag": "NO VERIFICADO"
+          },
+          {
+            "id": "DIN-08",
+            "sev": "Media",
+            "area": "Dinero",
+            "t": "Monto distinto y cobro duplicado no avisan al comercio",
+            "e": "order-handlers.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-03",
+            "sev": "Media",
+            "area": "Rendimiento",
+            "t": "18–24 prefetch dinámicos por página",
+            "e": "Lighthouse ?_rsc=",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-05",
+            "sev": "Media",
+            "area": "Rendimiento",
+            "t": "Caché con claves no acotadas (búsqueda/filtros)",
+            "e": "catalog.ts:302,333",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "REN-06",
+            "sev": "Media",
+            "area": "Rendimiento",
+            "t": "CLS 0.198 en Inicio del panel (fuente)",
+            "e": "layout.tsx:24-30",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-07",
+            "sev": "Media",
+            "area": "Rendimiento",
+            "t": "Presupuesto de producción sin cerrar",
+            "e": "DECISIONS D-F9-17",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-02",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "system.jobs crece sin límite (purga sin programar)",
+            "e": "foundation_jobs:250",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-03",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Retención GATE0 §36.3 sin implementar",
+            "e": "Sin delete de carts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-04",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Anonimización no alcanza pedidos ni carritos",
+            "e": "customers_anonymize",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-05",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "74 FKs sin índice (≈12 con impacto real)",
+            "e": "pg_constraint/pg_index",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-06",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "list_products O(n) por página",
+            "e": "CTE base",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "DAT-07",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Sin plan de capacidad (~12+3N filas por pedido)",
+            "e": "Conteo en dev",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-01",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Sin snapshot del esquema; list_products redefinida 8 veces",
+            "e": "713 create function",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-02",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "migrate.mjs en cada build sin lock ni filtro",
+            "e": "package.json:12",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-03",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Acceso a datos disperso en src/app",
+            "e": "41.5k vs 13.9k líneas",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-04",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Cobertura sin medir; sin E2E de pago real",
+            "e": "Sin @vitest/coverage",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-05",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Sin README raíz; PROGRESS 80 KB; pocos runbooks",
+            "e": "Árbol docs/",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-08",
+            "sev": "Media",
+            "area": "Datos",
+            "t": "Salida más cara: Supabase Auth",
+            "e": "69 auth.uid(); 20 FK a auth.users",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-05",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Restaurar no repone contraseñas de roles propios",
+            "e": "Docs Supabase",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-06",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Fotos de Storage fuera de respaldos",
+            "e": "Docs Supabase",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-08",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Migraciones sin advisory lock",
+            "e": "migrate.mjs",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "OPS-09",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Reversa limitada y sin runbook",
+            "e": "Docs Vercel Hobby",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-11",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Jobs muertos sin pantalla ni reintento",
+            "e": "Consola sin cola",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-12",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Caída de Resend: correos mueren en ~2 h, sin timeout",
+            "e": "channels.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-13",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Sin modo degradado ante caídas de MP/Supabase",
+            "e": "Webhook 500 + reintento",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "OPS-14",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Faltan 8 runbooks",
+            "e": "docs/runbooks",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-15",
+            "sev": "Media",
+            "area": "Operación",
+            "t": "Errores de Server Components sin logger ni request_id",
+            "e": "Sin onRequestError",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "REG-06",
+            "sev": "Media",
+            "area": "Regulación",
+            "t": "Faltan campos de etiqueta en la ficha",
+            "e": "regulatory.ts:28-40",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-07",
+            "sev": "Media",
+            "area": "Regulación",
+            "t": "Checkout sin enlace al aviso de privacidad",
+            "e": "checkout-form.tsx",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-09",
+            "sev": "Media",
+            "area": "Regulación",
+            "t": "Políticas de devolución con plazo en blanco",
+            "e": "Borrador; LFPC art. 56",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-10",
+            "sev": "Media",
+            "area": "Regulación",
+            "t": "Sin facturación CFDI",
+            "e": "Sin módulo",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-13",
+            "sev": "Media",
+            "area": "Regulación",
+            "t": "Aviso de funcionamiento, lote y caducidad pendientes",
+            "e": "ADR-027 propuesto",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "EST-04",
+            "sev": "Media",
+            "area": "Estado",
+            "t": "Sin acceso a Vercel (403)",
+            "e": "list_deployments",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "EST-05",
+            "sev": "Media",
+            "area": "Estado",
+            "t": "PROGRESS con bloqueos desactualizados",
+            "e": "Tabla Bloqueos",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "EST-07",
+            "sev": "Media",
+            "area": "Estado",
+            "t": "brands.spec sensible a la carga",
+            "e": "E2E corrida 2",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "EST-08",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Nombre de tienda con letras Unicode decorativas",
+            "e": "public.stores",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-04",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Faltan meses sin intereses",
+            "e": "grep 0 resultados",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-05",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Sin suscripción ni lealtad",
+            "e": "Competidores sí",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-06",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Sin recuperación de carrito ni «avísame»",
+            "e": "Flag sin flujo",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-07",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Política de envío vs umbrales $399–$799",
+            "e": "GNC, Birdman, B Life",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-09",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Sin permiso de publicidad COFEPRIS visible",
+            "e": "B Life lo muestra",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-10",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Sin blog ni guías (SEO)",
+            "e": "Sin módulo",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "DEP-04",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Supabase Free: pausa y sin respaldos",
+            "e": "supabase.com/pricing",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-05",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Correo depende de Resend (100/día gratis)",
+            "e": "channel.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-05",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "Sin límite de tasa en carrito y búsqueda",
+            "e": "rate_limit_take en 9 funciones",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-06",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "IP del primer x-forwarded-for",
+            "e": "cart.ts:212-217",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "SEC-07",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "Tope de cuerpo de webhooks por content-length",
+            "e": "request.text()",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "SEC-08",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "Metatest acepta cualquier search_path",
+            "e": "00_schema_security:54-63",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-09",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "Redactor no cubre nombres, IP, ?t=",
+            "e": "redact.ts:6-19",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-10",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "lock_media distingue not_found antes del permiso",
+            "e": "pg_proc",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-11",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "allow_fake activo en staging; sin candado en BD para producción",
+            "e": "platform_settings",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-12",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "CSP sin report-to; HSTS sin preload",
+            "e": "curl -D",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "SEC-13",
+            "sev": "Baja",
+            "area": "Seguridad",
+            "t": "Un secreto para varios propósitos",
+            "e": "order-links.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-09",
+            "sev": "Baja",
+            "area": "Dinero",
+            "t": "Cupón: pago tardío no recuenta el uso",
+            "e": "expire_orders",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-10",
+            "sev": "Baja",
+            "area": "Dinero",
+            "t": "Reposición de reembolso siempre a ubicación principal",
+            "e": "apply_refund_result",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-11",
+            "sev": "Baja",
+            "area": "Dinero",
+            "t": "pgTAP 29 depende de base vacía",
+            "e": "Corrida de hoy",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-12",
+            "sev": "Baja",
+            "area": "Dinero",
+            "t": "Candado del pago simulado solo por ajuste",
+            "e": "registry.ts:80",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DIN-13",
+            "sev": "Baja",
+            "area": "Dinero",
+            "t": "Oferta + cupón se acumulan sin decisión escrita",
+            "e": "cart_totals",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-08",
+            "sev": "Baja",
+            "area": "Rendimiento",
+            "t": "Fuentes pesan más que imágenes del listado",
+            "e": "Lighthouse",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-09",
+            "sev": "Baja",
+            "area": "Rendimiento",
+            "t": "Conexiones en picos vs pooler Micro",
+            "e": "role-clients.ts",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "REN-10",
+            "sev": "Baja",
+            "area": "Rendimiento",
+            "t": "Runner secuencial (batch 1)",
+            "e": "run-now.ts:17-29",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "REN-11",
+            "sev": "Baja",
+            "area": "Rendimiento",
+            "t": "Páginas 100 % dinámicas sin caché de HTML",
+            "e": "cache.ts:7-10",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REN-12",
+            "sev": "Baja",
+            "area": "Rendimiento",
+            "t": "Checkout no medido en Lighthouse",
+            "e": "finalDisplayedUrl",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-08",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "Particiones de auditoría solo hasta 2028-10",
+            "e": "maintain_audit_partitions",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-09",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "auth_login_intents sin PK; políticas múltiples",
+            "e": "pg_catalog",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-10",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "CASCADE vs append-only en notification_deliveries",
+            "e": "FK + trigger",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DAT-11",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "105 índices sin uso (sin tráfico)",
+            "e": "Advisor",
+            "tag": "NO VERIFICADO"
+          },
+          {
+            "id": "ARQ-06",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "Código muerto según knip",
+            "e": "38 exportaciones",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-07",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "URL de Storage duplicada en 4 lugares",
+            "e": "grep",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-09",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "Reconciliaciones en serie con red en runner de 60 s",
+            "e": "mercadopago-webhook.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "ARQ-10",
+            "sev": "Baja",
+            "area": "Datos",
+            "t": "Prueba de schema_version compara con migración incorrecta",
+            "e": "schema-version.test.ts:44-56",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-16",
+            "sev": "Baja",
+            "area": "Operación",
+            "t": "Acciones de CI por etiqueta; Node 20 deprecado",
+            "e": "ci.yml",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-17",
+            "sev": "Baja",
+            "area": "Operación",
+            "t": "purge_finished_jobs nunca se programa",
+            "e": "foundation_jobs:250",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-18",
+            "sev": "Baja",
+            "area": "Operación",
+            "t": "Redacción no cubre teléfonos en texto libre",
+            "e": "redact.ts",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "OPS-19",
+            "sev": "Baja",
+            "area": "Operación",
+            "t": "Staging Free se pausa a los 7 días",
+            "e": "Docs Supabase",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-11",
+            "sev": "Baja",
+            "area": "Regulación",
+            "t": "Retenciones a plataformas sin evaluar",
+            "e": "LISR 113-A",
+            "tag": "NO VERIFICADO"
+          },
+          {
+            "id": "REG-14",
+            "sev": "Baja",
+            "area": "Regulación",
+            "t": "robots.txt no es control de acceso",
+            "e": "Disallow: /",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "REG-15",
+            "sev": "Baja",
+            "area": "Regulación",
+            "t": "Falta runbook de vulneración de datos",
+            "e": "LFPDPPP art. 19",
+            "tag": "INFERIDO"
+          },
+          {
+            "id": "EST-06",
+            "sev": "Baja",
+            "area": "Estado",
+            "t": "Tablas auxiliares en supabase_migrations (staging)",
+            "e": "SELECT",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-08",
+            "sev": "Media",
+            "area": "Negocio",
+            "t": "Falta facturación CFDI (paridad)",
+            "e": "PROJECT-BRIEF §5.7.5",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-11",
+            "sev": "Baja",
+            "area": "Negocio",
+            "t": "Velocidad vs competidores sin comparar",
+            "e": "Solo Pruva medido",
+            "tag": "NO VERIFICADO"
+          },
+          {
+            "id": "MER-13",
+            "sev": "Baja",
+            "area": "Negocio",
+            "t": "Ventana por cierre de Mercado Shops",
+            "e": "Fuentes secundarias",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "MER-14",
+            "sev": "Baja",
+            "area": "Negocio",
+            "t": "Sin entrega rápida ni recoger en tienda",
+            "e": "GNC <60 min",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-06",
+            "sev": "Baja",
+            "area": "Negocio",
+            "t": "Sin integración con paqueterías",
+            "e": "checkout_tables.sql",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "DEP-07",
+            "sev": "Baja",
+            "area": "Negocio",
+            "t": "Precios de WhatsApp cambian (oct-2026)",
+            "e": "Fuente secundaria",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-01",
+            "sev": "Alta",
+            "area": "UX",
+            "t": "Políticas (privacidad, términos, devoluciones, envíos) no visibles en tienda ni checkout",
+            "e": "Staging demo: 0 páginas publicadas; pie sin menú; checkout sin enlaces legales",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-02",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Nombre Unicode decorativo de la tienda demo",
+            "e": "Buscar «alien» no lo encuentra; fuente de respaldo",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-03",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Errores del checkout no se borran al corregir",
+            "e": "stale-errores-375.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-04",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Con autocompletado, el primer «Confirmar pedido» elige envío y sube el total",
+            "e": "flow-demo-375-06b-confirm0.png ($499 → $598)",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-05",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Carrito dice «se calcula con tu dirección» aunque la tarifa plana ya se conoce",
+            "e": "flow-demo-375-03-carrito.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-06",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Se anuncian Visa, Mastercard, OXXO pero solo hay «Tarjeta (prueba)»",
+            "e": "header.tsx:215 (texto de la dueña)",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-07",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Estado como texto libre; zonas por estado comparan texto exacto sin acentos",
+            "e": "calculate_cart.sql:200",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-08",
+            "sev": "Media",
+            "area": "UX",
+            "t": "El 404 de la tienda muestra la marca de la plataforma",
+            "e": "src/app/layout.tsx:11",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-09",
+            "sev": "Media",
+            "area": "UX",
+            "t": "Editor de portada: imagen subida aparte, ~11 clics para cambiar el hero",
+            "e": "portada-1280-02-bloque.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-10",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Importación todo o nada; columna stock ignorada",
+            "e": "importar/[jobId]/page.tsx:269",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-11",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Objetivos táctiles menores de 44 px (cumplen 24 px AA)",
+            "e": "crawl.json",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-12",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Checkout conserva buscador, categorías y pie completo",
+            "e": "flow-demo-375-04-checkout.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-13",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "«Gracias» no menciona el correo de confirmación",
+            "e": "flow-demo-375-08-gracias.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-14",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Producto nuevo dice «Agrega imágenes» aunque tiene foto",
+            "e": "crear-1280-03-creado.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-15",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Formularios de reembolso y cancelación siempre abiertos en el pedido",
+            "e": "ped-1280-02-detalle.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-16",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Checkout ofrece 7 países pero solo se envía a México",
+            "e": "Zonas {MX}",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-17",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "En la ficha a 375 px título y precio bajo el pliegue",
+            "e": "flow-demo-375-01-ficha.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-18",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "El panel usa «PRUVA» como nombre de formato y estilo",
+            "e": "productos/importar/page.tsx:111,173",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-19",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Gráfica de ventas vacía deja un hueco en Inicio",
+            "e": "panel_inicio-375.png",
+            "tag": "VERIFICADO"
+          },
+          {
+            "id": "UX-20",
+            "sev": "Baja",
+            "area": "UX",
+            "t": "Zonas horarias mezcladas entre portada y productos",
+            "e": "Textos del editor",
+            "tag": "VERIFICADO"
+          }
+        ],
+        "backlog": [
+          {
+            "group": "Bloqueadores de lanzamiento",
+            "items": [
+              {
+                "id": "BL-01",
+                "task": "Decidir y ejecutar qué pasa con la tienda «demo» y sus 19 productos asociados con THC y vapeadores: despublicar o archivar, y consultar a un abogado",
+                "i": "A",
+                "e": "B",
+                "who": "🧑 decisión del propietario"
+              },
+              {
+                "id": "BL-02",
+                "task": "Disparador confiable de la cola: cron por minuto (Vercel Pro, pg_cron + pg_net firmado, o cron externo) más processQueueSoon tras checkout y webhook. Prueba E2E de que vence una reserva y de que se concilia un pago",
+                "i": "A",
+                "e": "M",
+                "who": "Plan de hosting (BL-05)"
+              },
+              {
+                "id": "BL-03",
+                "task": "Regresar el perfil MX a pending en producción. Lista de términos prohibidos completa. Firma del asesor regulatorio",
+                "i": "A",
+                "e": "B (técnico)",
+                "who": "⚖️ asesor"
+              },
+              {
+                "id": "BL-04",
+                "task": "Credenciales reales de Mercado Pago y prueba de pago, webhook, reembolso y contracargo en modo prueba. Decidir OXXO/SPEI frente a la reserva de 30 min",
+                "i": "A",
+                "e": "M",
+                "who": "🧑 cuenta MP"
+              },
+              {
+                "id": "BL-05",
+                "task": "Hosting de producción en planes comerciales: Vercel Pro y Supabase Pro con PITR",
+                "i": "A",
+                "e": "B",
+                "who": "🧑 pago"
+              },
+              {
+                "id": "BL-06",
+                "task": "Respaldos: simulacro de restauración documentado (incluye contraseñas de roles y Storage) y runbook",
+                "i": "A",
+                "e": "M",
+                "who": "BL-05"
+              },
+              {
+                "id": "BL-07",
+                "task": "Monitoreo y alertas: Sentry o equivalente (instrumentation.ts, onRequestError), monitor externo de /api/health/ready (que vea la cola y los jobs muertos) y aviso al celular",
+                "i": "A",
+                "e": "M",
+                "who": "—"
+              },
+              {
+                "id": "BL-08",
+                "task": "Correo transaccional: Resend con dominio propio y SPF, DKIM y DMARC; timeout en la llamada",
+                "i": "A",
+                "e": "B",
+                "who": "🧑 dominio"
+              },
+              {
+                "id": "BL-09",
+                "task": "Aviso de privacidad enlazado en el checkout; exigir domicilio y teléfono para abrir la tienda; políticas de devolución con plazo",
+                "i": "M",
+                "e": "B",
+                "who": "⚖️ textos"
+              },
+              {
+                "id": "BL-10",
+                "task": "CI en verde y rama protegida con los 4 checks; migraciones solo después del CI",
+                "i": "A",
+                "e": "B",
+                "who": "Autorización para corregir el formato de ESTADO-CALIDAD"
+              },
+              {
+                "id": "BL-11",
+                "task": "payments.allow_fake = false en producción, verificado en /api/health/ready y en el checklist",
+                "i": "A",
+                "e": "B",
+                "who": "—"
+              },
+              {
+                "id": "BL-12",
+                "task": "Proceso de facturación CFDI, aunque sea manual al inicio con un PAC o el portal del SAT",
+                "i": "M",
+                "e": "B (proceso)",
+                "who": "🧑 contador"
+              }
+            ]
+          },
+          {
+            "group": "Seguridad",
+            "items": [
+              {
+                "id": "SG-01",
+                "task": "Política de uso aceptable aceptada al crear una tienda, más una lista de bloqueo de términos de bienes prohibidos para toda la plataforma",
+                "i": "A",
+                "e": "M",
+                "who": "Sí (nuevo contrato de plataforma)"
+              },
+              {
+                "id": "SG-02",
+                "task": "Metatest: toda función SECURITY DEFINER de public llama a una guarda. Prueba pgTAP de cruce de tienda A a tienda B con un comprador AAL2",
+                "i": "A",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-03",
+                "task": "Límite de intentos propio en el login por código (por email e IP)",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-04",
+                "task": "Activar la protección contra contraseñas filtradas en Supabase Auth",
+                "i": "M",
+                "e": "B (🧑, 1 minuto)",
+                "who": "No"
+              },
+              {
+                "id": "SG-05",
+                "task": "Vigencia o revocación del enlace de pedido de invitado",
+                "i": "B",
+                "e": "M",
+                "who": "Sí (GATE0 §16.5)"
+              },
+              {
+                "id": "SG-06",
+                "task": "Límites de tasa en carrito, búsqueda y facetas; tope real de cuerpo en webhooks",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-07",
+                "task": "Redacción de logs: nombres, IP, ?t=, teléfonos y tokens de invitación",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-08",
+                "task": "Separar secretos por propósito (ORDER_LINK_SECRET y PREVIEW_HMAC_SECRET)",
+                "i": "B",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-09",
+                "task": "CSP con report-to; HSTS con preload cuando haya dominio propio",
+                "i": "B",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "SG-10",
+                "task": "Metatest que exija search_path = '' exacto",
+                "i": "B",
+                "e": "B",
+                "who": "No"
+              }
+            ]
+          },
+          {
+            "group": "Confiabilidad",
+            "items": [
+              {
+                "id": "CF-01",
+                "task": "Conciliar también los intentos de MP vencidos o cancelados de los últimos 7 días",
+                "i": "A",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-02",
+                "task": "Manejar contracargos, disputas y reembolsos externos de MP (y Stripe): evento, alerta y bloqueo del surtido",
+                "i": "A",
+                "e": "M",
+                "who": "Sí (GATE0 diferido en :2227)"
+              },
+              {
+                "id": "CF-03",
+                "task": "Avisar activamente al staff de cobros duplicados y montos distintos; reembolsar el cobro duplicado correcto",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-04",
+                "task": "Job diario de mantenimiento de datos: purgar jobs, carritos y security_events, mantener particiones de auditoría y aplicar la retención de GATE0 §36.3",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-05",
+                "task": "Anonimizar también pedidos, carritos y auth.users (respetando la retención fiscal)",
+                "i": "M",
+                "e": "M",
+                "who": "Sí (snapshots inmutables, regla 9)"
+              },
+              {
+                "id": "CF-06",
+                "task": "Pantalla de jobs muertos con reintento manual en la consola de plataforma",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-07",
+                "task": "Runbooks faltantes (8): despliegue y reversa, restauración, rotación de claves, incidente de pagos, incidente de seguridad, caída de correo, operador de emergencia y cola atascada",
+                "i": "A",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CF-08",
+                "task": "Acceso de emergencia: segundo administrador, códigos de recuperación y procedimiento si se pierde el celular",
+                "i": "A",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-09",
+                "task": "Reembolso de «Cerrar no enviadas» con IVA y envío correctos",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CF-10",
+                "task": "Hacer la prueba brands.spec independiente de la carga (esperar el job y no un tiempo fijo)",
+                "i": "B",
+                "e": "B",
+                "who": "No"
+              }
+            ]
+          },
+          {
+            "group": "Crecimiento",
+            "items": [
+              {
+                "id": "CR-01",
+                "task": "Variantes de imagen (AVIF/WebP en 3 a 4 tamaños) con srcset y sizes, antes de cargar el catálogo real",
+                "i": "A",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-02",
+                "task": "prefetch={false} en enlaces masivos (reduce unas 5 veces las peticiones y el costo)",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CR-03",
+                "task": "Cotización de envío y guías (Skydropx o Envía); umbral de envío gratis basado en datos",
+                "i": "A",
+                "e": "A",
+                "who": "Sí (envíos, GATE0 §43)"
+              },
+              {
+                "id": "CR-04",
+                "task": "Recuperación de carritos abandonados (con consentimiento)",
+                "i": "A",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-05",
+                "task": "Recordatorio de recompra calculado con las porciones",
+                "i": "A",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-06",
+                "task": "Analítica de embudo propia (vista, carrito, checkout, pago)",
+                "i": "A",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-07",
+                "task": "Meses sin intereses vía Mercado Pago",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              },
+              {
+                "id": "CR-08",
+                "task": "SaaS vendible: cobro de suscripción, registro público y Mercado Pago por tienda (OAuth)",
+                "i": "A",
+                "e": "A",
+                "who": "Sí (ADR-028)"
+              },
+              {
+                "id": "CR-09",
+                "task": "Estado del pedido por WhatsApp (mensajes de utilidad)",
+                "i": "M",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-10",
+                "task": "CFDI automático (API de un PAC)",
+                "i": "M",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-11",
+                "task": "Blog y guías para SEO de contenido",
+                "i": "M",
+                "e": "M",
+                "who": "No"
+              },
+              {
+                "id": "CR-12",
+                "task": "«Avísame cuando haya inventario»",
+                "i": "M",
+                "e": "B",
+                "who": "No"
+              }
+            ]
+          },
+          {
+            "group": "Deuda técnica",
+            "items": [
+              {
+                "id": "DT-01",
+                "task": "README raíz y PROGRESS.md al día (quitar bloqueos viejos); snapshot schema.sql generado en CI",
+                "i": "M",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-02",
+                "task": "Unos 12 índices de FKs calientes con create index concurrently",
+                "i": "M",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-03",
+                "task": "Cobertura medida (@vitest/coverage-v8, dependencia nueva con justificación) y E2E de pago y reembolso",
+                "i": "M",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-04",
+                "task": "Mover el acceso a datos de src/app a src/server; dividir home-editor.tsx (1,925 líneas)",
+                "i": "M",
+                "e": "A",
+                "who": ""
+              },
+              {
+                "id": "DT-05",
+                "task": "CLS de la portada del panel (fuente Inter)",
+                "i": "B",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-06",
+                "task": "Limpiar tablas auxiliares supabase_migrations.pruva_ en staging",
+                "i": "B",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-07",
+                "task": "Fijar las acciones de CI por SHA y subir a Node 22 en CI",
+                "i": "B",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-08",
+                "task": "Prueba de app_schema_version contra la última migración",
+                "i": "B",
+                "e": "B",
+                "who": ""
+              },
+              {
+                "id": "DT-09",
+                "task": "Caché con claves acotadas en búsqueda y filtros",
+                "i": "B",
+                "e": "B",
+                "who": ""
+              }
+            ]
+          }
+        ],
+        "risks": [
+          {
+            "id": "R-01",
+            "r": "Suspensión de cuentas (Vercel, Supabase, pasarela) o acción legal por la tienda demo con productos asociados a THC y vapeadores",
+            "p": "3",
+            "i": "5",
+            "s": 15,
+            "o": "🧑 + ⚖️",
+            "m": "Despublicar o archivar esos productos o la tienda; consultar a un abogado; aceptar una política de uso aceptable"
+          },
+          {
+            "id": "R-02",
+            "r": "Reservas que nunca vencen y pagos sin conciliar en producción: productos «agotados» falsos y dinero cobrado sin pedido",
+            "p": "5",
+            "i": "4",
+            "s": 20,
+            "o": "🤖",
+            "m": "Disparador por minuto (Vercel Pro, pg_cron o un cron externo firmado); processQueueSoon tras checkout y webhook; alerta si la cola no avanza"
+          },
+          {
+            "id": "R-03",
+            "r": "Pérdida de datos sin respaldo ni restauración probada",
+            "p": "2",
+            "i": "5",
+            "s": 10,
+            "o": "🧑 + 🤖",
+            "m": "Supabase Pro con PITR; simulacro de restauración y runbook; respaldo de Storage"
+          },
+          {
+            "id": "R-04",
+            "r": "Incidente sin detección (webhook falla, cola muerta)",
+            "p": "4",
+            "i": "4",
+            "s": 16,
+            "o": "🤖",
+            "m": "Sentry o equivalente; monitor externo de /api/health/ready con aviso al celular"
+          },
+          {
+            "id": "R-05",
+            "r": "Contracargo o disputa ignorados: se envía mercancía ya disputada",
+            "p": "3",
+            "i": "3",
+            "s": 9,
+            "o": "🤖",
+            "m": "Manejar los estados charged_back y refunded de MP; bloquear el surtido y avisar"
+          },
+          {
+            "id": "R-06",
+            "r": "Pago tardío de MP con webhook perdido: dinero sin pedido",
+            "p": "2",
+            "i": "4",
+            "s": 8,
+            "o": "🤖",
+            "m": "Conciliar también los intentos vencidos de los últimos días"
+          },
+          {
+            "id": "R-07",
+            "r": "Venta de suplementos sin revisión regulatoria (perfil activo sin firma)",
+            "p": "3",
+            "i": "5",
+            "s": 15,
+            "o": "🧑 + ⚖️",
+            "m": "Regresar el perfil a pending en producción; firma del asesor; lista de términos completa"
+          },
+          {
+            "id": "R-08",
+            "r": "Operador único no disponible o celular perdido (2FA)",
+            "p": "2",
+            "i": "5",
+            "s": 10,
+            "o": "🧑",
+            "m": "Segundo administrador de confianza; códigos de recuperación guardados; runbook de emergencia"
+          },
+          {
+            "id": "R-09",
+            "r": "Cambios que rompen producción porque el CI no bloquea y las migraciones corren en cada build",
+            "p": "3",
+            "i": "4",
+            "s": 12,
+            "o": "🤖",
+            "m": "Proteger la rama; migrar después de que el CI pase; advisory lock en migrate.mjs"
+          },
+          {
+            "id": "R-10",
+            "r": "Retención o suspensión de fondos de Mercado Pago (categoría salud y cuenta nueva)",
+            "p": "3",
+            "i": "4",
+            "s": 12,
+            "o": "🧑",
+            "m": "Validar la categoría con MP antes de lanzar; tener una pasarela alterna lista"
+          },
+          {
+            "id": "R-11",
+            "r": "Una tienda del SaaS publica bienes prohibidos (sin moderación)",
+            "p": "3",
+            "i": "5",
+            "s": 15,
+            "o": "🤖 + 🧑",
+            "m": "Política de uso aceptable aceptada al crear la tienda; lista de bloqueo de términos; revisión de tiendas nuevas"
+          },
+          {
+            "id": "R-12",
+            "r": "LCP alto y egress caro con fotos reales sin variantes",
+            "p": "4",
+            "i": "3",
+            "s": 12,
+            "o": "🤖",
+            "m": "Variantes con sharp y srcset antes de cargar el catálogo"
+          },
+          {
+            "id": "R-13",
+            "r": "Margen negativo en el escenario conservador por el envío gratis absorbido",
+            "p": "3",
+            "i": "3",
+            "s": 9,
+            "o": "🧑",
+            "m": "Umbral de envío gratis basado en datos; cotización real"
+          },
+          {
+            "id": "R-14",
+            "r": "Fuga de PII por un enlace de pedido de invitado reenviado",
+            "p": "2",
+            "i": "2",
+            "s": 4,
+            "o": "🤖",
+            "m": "Vigencia del enlace o verificación por código"
+          },
+          {
+            "id": "R-15",
+            "r": "Denegación de servicio del login por código (cuota de Auth compartida)",
+            "p": "2",
+            "i": "3",
+            "s": 6,
+            "o": "🤖",
+            "m": "Límite propio por email e IP; firewall"
+          }
+        ],
+        "gonogo": [
+          {
+            "id": "G-01",
+            "c": "Ningún producto prohibido o asociado con THC o vapeadores en ninguna tienda de la plataforma",
+            "st": "❌ (EST-01: 19 productos activos en demo)"
+          },
+          {
+            "id": "G-02",
+            "c": "Política de uso aceptable publicada y aceptada por cada tienda",
+            "st": "❌ (REG-02)"
+          },
+          {
+            "id": "G-03",
+            "c": "Pagos reales probados de punta a punta con Mercado Pago: aprobado, rechazado, webhook duplicado, pago tardío, reembolso y contracargo",
+            "st": "❌ [NO VERIFICADO]: no hay credenciales"
+          },
+          {
+            "id": "G-04",
+            "c": "Mantenimiento de la cola corriendo: vence reservas y concilia pagos al menos cada 5 minutos",
+            "st": "❌ (OPS-01: nunca ha corrido en staging)"
+          },
+          {
+            "id": "G-05",
+            "c": "Correos entregados con SPF, DKIM y DMARC en verde, uno solo por pedido y solo después del pago",
+            "st": "❌ [NO VERIFICADO] (sin Resend ni dominio)"
+          },
+          {
+            "id": "G-06",
+            "c": "Respaldos activos (PITR) y una restauración probada con su tiempo medido",
+            "st": "❌ (OPS-04)"
+          },
+          {
+            "id": "G-07",
+            "c": "0 hallazgos Críticos abiertos y Altos de seguridad o dinero cerrados o aceptados por escrito",
+            "st": "❌ (3 críticos abiertos: EST-01, OPS-01, REG-03)"
+          },
+          {
+            "id": "G-08",
+            "c": "Cumplimiento aprobado: perfil MX firmado por el asesor real, leyendas y términos prohibidos completos",
+            "st": "❌ (REG-03, REG-04)"
+          },
+          {
+            "id": "G-09",
+            "c": "Requisitos al consumidor: aviso de privacidad en el checkout, domicilio, teléfono y políticas de devolución con plazo",
+            "st": "❌ (REG-07, REG-08, REG-09)"
+          },
+          {
+            "id": "G-10",
+            "c": "CI en verde en el commit desplegado y rama protegida",
+            "st": "❌ (EST-09, OPS-07)"
+          },
+          {
+            "id": "G-11",
+            "c": "Monitoreo activo: errores en Sentry o equivalente y alerta de salud y cola en el celular",
+            "st": "❌ (OPS-02)"
+          },
+          {
+            "id": "G-12",
+            "c": "Hosting en planes comerciales (Vercel Pro y Supabase Pro)",
+            "st": "❌ [NO VERIFICADO] (403); staging en planes gratuitos"
+          },
+          {
+            "id": "G-13",
+            "c": "payments.allow_fake = false en producción",
+            "st": "❌ en staging (true); producción no existe"
+          },
+          { "id": "G-14", "c": "Dominio propio con HTTPS", "st": "❌ [NO VERIFICADO]" },
+          { "id": "G-15", "c": "Proceso de CFDI listo (aunque sea manual)", "st": "❌ (REG-10)" },
+          {
+            "id": "G-16",
+            "c": "Acceso de emergencia: segundo administrador y códigos de recuperación guardados",
+            "st": "❌ (OPS-10)"
+          },
+          {
+            "id": "G-17",
+            "c": "Rendimiento de la ficha con fotos reales: LCP móvil ≤ 2.5 s",
+            "st": "⚠️ (91–99 con fotos demo; sin variantes, REN-01)"
+          },
+          {
+            "id": "G-18",
+            "c": "Pruebas en verde: verify, db:test y E2E",
+            "st": "✅ en local (945 / 2,348 / 355 / 98)"
+          },
+          {
+            "id": "G-19",
+            "c": "Aislamiento entre tiendas",
+            "st": "✅ (02: RLS en 109/109 tablas, sin IDOR encontrado)"
+          }
+        ],
+        "lights": [
+          {
+            "area": "Pruebas y código",
+            "c": "v",
+            "label": "verde",
+            "why": "945 unit, 2,348 pgTAP, 355 integración, 98 E2E en local; CI en rojo por formato de un documento"
+          },
+          {
+            "area": "Seguridad y aislamiento",
+            "c": "v",
+            "label": "verde",
+            "why": "0 críticas y 0 altas; RLS en 109/109 tablas"
+          },
+          {
+            "area": "Dinero e inventario",
+            "c": "a",
+            "label": "amarillo",
+            "why": "Sin sobreventa ni doble cobro; contracargos y pago tardío sin manejar"
+          },
+          {
+            "area": "Operación y respaldos",
+            "c": "r",
+            "label": "rojo",
+            "why": "La cola nunca corre; sin alertas ni respaldos; un solo operador"
+          },
+          {
+            "area": "Rendimiento y escala",
+            "c": "a",
+            "label": "amarillo",
+            "why": "Lighthouse 91–99; fotos sin variantes; plan no comercial"
+          },
+          {
+            "area": "Datos y arquitectura",
+            "c": "a",
+            "label": "amarillo",
+            "why": "Purgas y retención sin programar; anonimización incompleta"
+          },
+          {
+            "area": "UX y conversión",
+            "c": "a",
+            "label": "amarillo",
+            "why": "0 desbordes, 0 axe en 130 vistas; faltan políticas visibles y el envío aparece tarde en el total"
+          },
+          {
+            "area": "Regulación",
+            "c": "r",
+            "label": "rojo",
+            "why": "Productos asociados con THC/vapeadores; perfil sin firma; faltan aviso y domicilio"
+          },
+          {
+            "area": "Mercado y negocio",
+            "c": "a",
+            "label": "amarillo",
+            "why": "Diferencial real (cumplimiento); SaaS aún no vendible; precio de marketplace bajo"
+          }
+        ]
+      }
+    </script>
+    <script>
+      (function () {
+        var D = JSON.parse(document.getElementById("data").textContent);
+        var SEV = ["Crítica", "Alta", "Media", "Baja"],
+          CLS = { Crítica: "c", Alta: "h", Media: "m", Baja: "l" };
+        function el(t, a, kids) {
+          var e = document.createElement(t);
+          for (var k in a || {}) {
+            if (k === "text") e.textContent = a[k];
+            else e.setAttribute(k, a[k]);
+          }
+          (kids || []).forEach(function (c) {
+            e.appendChild(c);
+          });
+          return e;
+        }
+        var lights = document.getElementById("lights");
+        D.lights.forEach(function (l) {
+          var d = el("div", { class: "light" }, [
+            el("i", { class: "dot " + l.c, "aria-label": l.label }),
+            el("b", { text: l.area }),
+            el("span", { text: l.why }),
+          ]);
+          lights.appendChild(d);
+        });
+        var counts = document.getElementById("counts");
+        SEV.forEach(function (s) {
+          var n = D.findings.filter(function (f) {
+            return f.sev === s;
+          }).length;
+          counts.appendChild(el("span", { class: "count sev " + CLS[s], text: s + ": " + n }));
+        });
+        var active = new Set(SEV),
+          chips = document.getElementById("sevchips");
+        SEV.forEach(function (s) {
+          var b = el("button", { class: "chip", "aria-pressed": "true", type: "button", text: s });
+          b.addEventListener("click", function () {
+            if (active.has(s)) active.delete(s);
+            else active.add(s);
+            b.setAttribute("aria-pressed", active.has(s));
+            render();
+          });
+          chips.appendChild(b);
+        });
+        var areaSel = document.getElementById("area"),
+          q = document.getElementById("q");
+        ["Todas"]
+          .concat(
+            Array.from(
+              new Set(
+                D.findings.map(function (f) {
+                  return f.area;
+                }),
+              ),
+            ).sort(),
+          )
+          .forEach(function (a) {
+            areaSel.appendChild(el("option", { value: a, text: a }));
+          });
+        areaSel.addEventListener("change", render);
+        q.addEventListener("input", render);
+        function render() {
+          var list = document.getElementById("list");
+          list.textContent = "";
+          var term = q.value.trim().toLowerCase(),
+            area = areaSel.value;
+          var rows = D.findings.filter(function (f) {
+            return (
+              active.has(f.sev) &&
+              (area === "Todas" || f.area === area) &&
+              (!term || (f.id + " " + f.t + " " + f.e).toLowerCase().indexOf(term) >= 0)
+            );
+          });
+          rows.sort(function (a, b) {
+            return SEV.indexOf(a.sev) - SEV.indexOf(b.sev);
+          });
+          document.getElementById("shown").textContent =
+            rows.length + " de " + D.findings.length + " hallazgos";
+          if (!rows.length) {
+            list.appendChild(
+              el("p", { class: "empty", text: "Ningún hallazgo con estos filtros." }),
+            );
+            return;
+          }
+          rows.forEach(function (f) {
+            list.appendChild(
+              el("article", { class: "item", "data-sev": f.sev }, [
+                el("div", { class: "meta" }, [
+                  el("span", { class: "id", text: f.id }),
+                  el("span", { class: "sev " + CLS[f.sev], text: f.sev }),
+                  el("span", { text: f.area }),
+                  el("span", { class: "tag", text: "[" + f.tag + "]" }),
+                ]),
+                el("div", { class: "t", text: f.t }),
+                el("div", { class: "e", text: "Evidencia: " + f.e }),
+              ]),
+            );
+          });
+        }
+        function table(cols, rows) {
+          var t = el("table"),
+            h = el("tr");
+          cols.forEach(function (c) {
+            h.appendChild(el("th", { scope: "col", text: c[1] }));
+          });
+          t.appendChild(el("thead", {}, [h]));
+          var b = el("tbody");
+          rows.forEach(function (r) {
+            var tr = el("tr");
+            cols.forEach(function (c) {
+              tr.appendChild(el("td", { class: c[2] || "", text: r[c[0]] }));
+            });
+            b.appendChild(tr);
+          });
+          t.appendChild(b);
+          return el("div", { class: "scroll" }, [t]);
+        }
+        var bl = document.getElementById("view-backlog");
+        D.backlog.forEach(function (g) {
+          bl.appendChild(el("h2", { text: g.group }));
+          bl.appendChild(
+            table(
+              [
+                ["id", "ID"],
+                ["task", "Tarea"],
+                ["i", "Impacto"],
+                ["e", "Esfuerzo"],
+                ["who", "Depende de"],
+              ],
+              g.items,
+            ),
+          );
+        });
+        var rk = document.getElementById("view-riesgos");
+        rk.appendChild(
+          el("p", {
+            class: "note",
+            text: "Probabilidad (P) e impacto (I) de 1 a 5; puntaje = P × I. Es juicio del auditor con la evidencia citada, no una medición.",
+          }),
+        );
+        rk.appendChild(
+          table(
+            [
+              ["id", "ID"],
+              ["r", "Riesgo"],
+              ["p", "P", "num"],
+              ["i", "I", "num"],
+              ["s", "Puntaje", "num"],
+              ["o", "Dueño"],
+              ["m", "Mitigación"],
+            ],
+            D.risks.slice().sort(function (a, b) {
+              return b.s - a.s;
+            }),
+          ),
+        );
+        var gg = document.getElementById("view-gonogo");
+        gg.appendChild(
+          el("p", {
+            class: "note",
+            text: "Se vende solo si todas las líneas están en ✅. Hoy: No-Go.",
+          }),
+        );
+        gg.appendChild(
+          table(
+            [
+              ["id", "#"],
+              ["c", "Criterio"],
+              ["st", "Hoy"],
+            ],
+            D.gonogo,
+          ),
+        );
+        var tabs = document.querySelectorAll('[role="tab"]');
+        function show(v) {
+          tabs.forEach(function (t) {
+            var on = t.dataset.view === v;
+            t.setAttribute("aria-selected", on);
+            document.getElementById("view-" + t.dataset.view).hidden = !on;
+          });
+        }
+        tabs.forEach(function (t) {
+          t.addEventListener("click", function () {
+            show(t.dataset.view);
+            try {
+              history.replaceState(null, "", "#" + t.dataset.view);
+            } catch (e) {}
+          });
+        });
+        var h = (location.hash || "").slice(1);
+        if (["hallazgos", "backlog", "riesgos", "gonogo"].indexOf(h) >= 0) show(h);
+        window.addEventListener("hashchange", function () {
+          var v = location.hash.slice(1);
+          if (document.getElementById("view-" + v)) show(v);
+        });
+        render();
+      })();
+    </script>
+  </body>
+</html>
