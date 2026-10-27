@@ -6,6 +6,7 @@ import type { FormState } from "../_shared/action-state";
 import { FormFeedback } from "../_shared/form-feedback";
 import { restoreThemeVersion } from "./actions";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
+import { useStoreTimeZone } from "../_shared/store-time-zone";
 
 export interface ThemeVersionRow {
   id: string;
@@ -29,6 +30,7 @@ export function ThemeHistory({
   versions: ThemeVersionRow[];
   hasDraft: boolean;
 }) {
+  const timeZone = useStoreTimeZone();
   const [state, action, pending] = useSafeActionState<FormState, FormData>(
     restoreThemeVersion.bind(null, storeHandle),
     {},
@@ -42,7 +44,7 @@ export function ThemeHistory({
     );
   }
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
+    new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short", timeZone });
   return (
     <div className="space-y-4">
       <p className="text-sm text-fg-muted">

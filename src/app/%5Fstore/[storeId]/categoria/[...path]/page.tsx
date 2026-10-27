@@ -110,6 +110,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {category.children.map((child) => (
               <li key={child.path}>
                 <Link
+                  prefetch={false}
                   href={`/categoria/${child.path}`}
                   className="inline-block rounded-[var(--sf-radius-btn)] border border-[var(--sf-border)] px-3 py-1 hover:bg-[var(--sf-surface)]"
                 >

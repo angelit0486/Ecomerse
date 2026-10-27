@@ -123,6 +123,7 @@ function ProductCard({
     // carrusel; sin él escapaban al viewport y abrían scroll horizontal en móvil.
     <article className="sf-el-card group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
       <Link
+        prefetch={false}
         href={href}
         className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"
       >
@@ -222,6 +223,7 @@ function ProductCard({
         // Mismo destino que el enlace de la tarjeta: para el lector de pantalla y el
         // teclado sería un enlace repetido, así que solo es una ayuda visual.
         <Link
+          prefetch={false}
           href={href}
           aria-hidden="true"
           tabIndex={-1}

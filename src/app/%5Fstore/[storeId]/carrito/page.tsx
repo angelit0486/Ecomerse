@@ -53,6 +53,7 @@ export default async function CartPage({ params }: Props) {
         </h1>
         <p className="text-[var(--sf-muted)]">Encuentra lo que necesitas para tu objetivo.</p>
         <Link
+          prefetch={false}
           href="/productos"
           className="inline-flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-8 font-bold text-[var(--sf-btn-fg)]"
         >
@@ -117,6 +118,7 @@ export default async function CartPage({ params }: Props) {
                 <div className="flex justify-between gap-3">
                   <div className="min-w-0">
                     <Link
+                      prefetch={false}
                       href={`/productos/${line.product_slug}`}
                       className="font-semibold leading-snug hover:underline"
                     >
@@ -174,6 +176,7 @@ export default async function CartPage({ params }: Props) {
           <p className="text-sm">Quita los productos no disponibles para continuar.</p>
         ) : (
           <Link
+            prefetch={false}
             href="/checkout"
             className="flex h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] font-bold text-[var(--sf-btn-fg)]"
           >

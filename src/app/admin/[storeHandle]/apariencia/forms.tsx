@@ -36,6 +36,7 @@ import type { NavPick } from "./home-options";
 import { NavBarEditor } from "./nav-bar-editor";
 import type { ThemeSection } from "./patch";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
+import { useStoreTimeZone } from "../_shared/store-time-zone";
 
 /** Formularios de Apariencia (F9-T01, F9-DESIGN §7). Controlados: un error no borra nada. */
 
@@ -1032,6 +1033,7 @@ export function PublishBar({
   /** La publicación anterior a la vigente, para «Deshacer la última publicación». */
   previous: { id: string; number: number } | null;
 }) {
+  const timeZone = useStoreTimeZone();
   const [publishState, publish, publishing] = useSafeActionState<FormState, FormData>(
     publishTheme.bind(null, storeHandle),
     {},
@@ -1058,7 +1060,7 @@ export function PublishBar({
         {hasDraft
           ? "Tus clientes siguen viendo la versión publicada hasta que publiques."
           : publishedAt
-            ? `Última publicación: ${new Date(publishedAt).toLocaleString("es-MX")}.`
+            ? `Última publicación: ${new Date(publishedAt).toLocaleString("es-MX", { timeZone })}.`
             : "Todavía no has publicado una apariencia propia."}
       </p>
       <div className="flex flex-wrap items-center gap-3">

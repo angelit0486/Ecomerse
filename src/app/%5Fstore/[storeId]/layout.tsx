@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { navBarItems } from "@/lib/theme/nav-bar";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
-import { getCart } from "@/server/storefront/cart";
+import { getCart, paymentMethods } from "@/server/storefront/cart";
 import {
   getCategoryThumbs,
   getDiscoverySummary,
   getMenus,
+  getPolicyLinks,
   mediaUrl,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
@@ -17,7 +18,13 @@ import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
 import { CheckoutChrome } from "./_components/checkout-chrome";
-import { AnnouncementBar, CheckoutHeader, StoreFooter, StoreHeader } from "./_components/header";
+import {
+  AnnouncementBar,
+  CheckoutFooter,
+  CheckoutHeader,
+  StoreFooter,
+  StoreHeader,
+} from "./_components/header";
 import { NavBar } from "./_components/nav-bar";
 import { CartToast } from "./_components/quick-add";
 
@@ -63,7 +70,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { store } = await getStorefront((await params).storeId);
   const v = iconVersion(store);
   return {
-    title: { default: store.name, template: `%s · ${store.name}` },
+    // `absolute`: sin la plantilla raíz «%s · PRUVA», ni siquiera en el 404 (auditoría UX-08).
+    title: { absolute: store.name, template: `%s · ${store.name}` },
     icons: {
       icon: [{ url: `/icon.svg?v=${v}`, type: "image/svg+xml" }],
       apple: [{ url: `/apple-touch-icon.png?v=${v}`, sizes: "180x180" }],
@@ -78,13 +86,15 @@ export default async function StoreLayout({ children, params }: Props) {
   // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
   // el principio adelanta la imagen principal (LCP) en el celular.
   const mediaOrigin = new URL(mediaUrl("")).origin;
-  const [menus, nonce, cart, discovery, categoryThumbs] = await Promise.all([
+  const [menus, nonce, cart, discovery, categoryThumbs, policies, methods] = await Promise.all([
     getMenus(store.id),
     headers().then((h) => h.get("x-nonce") ?? undefined),
     // Sin caché: depende de la cookie del comprador (§44.7).
     getCart(store.id).catch(() => null),
     getDiscoverySummary(store.id),
     getCategoryThumbs(store.id),
+    getPolicyLinks(store.id),
+    paymentMethods(store.id).catch(() => []),
   ]);
   // Foto de cada categoría por enlace (misión Panel, Paso A): menú y barra.
   const thumbs = Object.fromEntries(
@@ -186,11 +196,18 @@ export default async function StoreLayout({ children, params }: Props) {
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>
-      <StoreFooter
-        store={store}
-        menu={menus.footer}
-        settings={settings}
-        discovery={discoveryLinks}
+      <CheckoutChrome
+        checkout={<CheckoutFooter store={store} policies={policies} />}
+        regular={
+          <StoreFooter
+            store={store}
+            menu={menus.footer}
+            settings={settings}
+            discovery={discoveryLinks}
+            policies={policies}
+            providers={methods.map((m) => m.provider)}
+          />
+        }
       />
       {/* Botón flotante de WhatsApp solo si la tienda lo configuró (las tres tiendas
           de referencia lo tienen; pulido visual). Sube cuando hay barra de compra. */}

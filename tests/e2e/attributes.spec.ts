@@ -9,6 +9,7 @@ import {
   freshTotp,
   loginNewStaff,
   uniq,
+  asFreshClient,
 } from "./support";
 
 /**
@@ -27,6 +28,7 @@ const store = () => `http://${tenant.handle}.localhost:3000`;
 
 async function loginAgain(page: Page, email: string, secret: string) {
   const sentAt = Date.now() - 1000;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Enviarme un código" }).click();

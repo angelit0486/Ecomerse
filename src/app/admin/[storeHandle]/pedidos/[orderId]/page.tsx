@@ -446,39 +446,43 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       ) : null}
 
       {canRefund ? (
-        <section
-          aria-labelledby="reembolsar"
-          className="space-y-2 rounded-md border border-border p-4"
-        >
-          <h2 id="reembolsar" className="font-semibold">
-            Reembolsar
-          </h2>
-          <RefundForm
-            storeHandle={ctx.store.handle}
-            orderId={orderId}
-            idempotencyKey={formKey()}
-            maxAmount={centsToInput(refundable)}
-            maxLabel={m(refundable)}
-            lines={returnLines}
-          />
-        </section>
+        // Plegados (paso 13): acciones de dinero que se usan poco no empujan el
+        // resto del pedido; se abren con un toque y siguen pidiendo confirmación.
+        <details className="rounded-md border border-border p-4">
+          <summary className="flex min-h-11 cursor-pointer items-center md:min-h-0">
+            <h2 id="reembolsar" className="font-semibold">
+              Reembolsar dinero
+            </h2>
+          </summary>
+          <div className="mt-3 space-y-2">
+            <RefundForm
+              storeHandle={ctx.store.handle}
+              orderId={orderId}
+              idempotencyKey={formKey()}
+              maxAmount={centsToInput(refundable)}
+              maxLabel={m(refundable)}
+              lines={returnLines}
+            />
+          </div>
+        </details>
       ) : null}
 
       {canCancel ? (
-        <section
-          aria-labelledby="cancelar"
-          className="space-y-2 rounded-md border border-danger p-4"
-        >
-          <h2 id="cancelar" className="font-semibold">
-            Cancelar pedido
-          </h2>
-          <CancelForm
-            storeHandle={ctx.store.handle}
-            orderId={orderId}
-            idempotencyKey={formKey()}
-            willRefund={isPaid && refundable > 0}
-          />
-        </section>
+        <details className="rounded-md border border-danger p-4">
+          <summary className="flex min-h-11 cursor-pointer items-center md:min-h-0">
+            <h2 id="cancelar" className="font-semibold">
+              Cancelar el pedido
+            </h2>
+          </summary>
+          <div className="mt-3 space-y-2">
+            <CancelForm
+              storeHandle={ctx.store.handle}
+              orderId={orderId}
+              idempotencyKey={formKey()}
+              willRefund={isPaid && refundable > 0}
+            />
+          </div>
+        </details>
       ) : null}
 
       {contact ? (

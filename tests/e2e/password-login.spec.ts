@@ -8,6 +8,7 @@ import {
   freshTotp,
   loginNewStaff,
   uniq,
+  asFreshClient,
 } from "./support";
 
 /**
@@ -51,6 +52,7 @@ test("crear la contraseña y entrar con ella más el código de la app", async (
   // Salir y volver a entrar con la contraseña.
   await page.goto("/admin");
   await page.getByRole("button", { name: "Salir" }).click();
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByRole("link", { name: "Entrar con contraseña" }).click();
   await expect(page).toHaveURL(/\/ingresar\/contrasena$/);
@@ -74,6 +76,7 @@ test("crear la contraseña y entrar con ella más el código de la app", async (
 test("un email sin cuenta recibe el mismo mensaje que una contraseña incorrecta", async ({
   page,
 }) => {
+  await asFreshClient(page);
   await page.goto("/ingresar/contrasena");
   await page.getByLabel("Email").fill(`nadie-${run}@example.test`);
   await page.getByLabel("Contraseña").fill("cualquier cosa larga");

@@ -112,7 +112,11 @@ export function CartToast() {
             <span className="line-clamp-1 font-semibold">{item.title}</span>
             Se agregó a tu carrito.
           </p>
-          <Link href="/carrito" className="shrink-0 font-semibold underline underline-offset-2">
+          <Link
+            prefetch={false}
+            href="/carrito"
+            className="shrink-0 font-semibold underline underline-offset-2"
+          >
             Ver carrito{item.count ? ` (${item.count})` : ""}
           </Link>
         </div>

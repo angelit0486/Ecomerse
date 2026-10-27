@@ -11,6 +11,7 @@ import { STORE_STATUS_SHORT } from "../_shared/store-status";
 import { AdminNav } from "./_shared/admin-nav";
 import { GlobalSearch } from "./_shared/global-search";
 import { NoticesButton } from "./_shared/notices-button";
+import { StoreTimeZoneProvider } from "./_shared/store-time-zone";
 
 type Props = { children: ReactNode; params: Promise<{ storeHandle: string }> };
 
@@ -136,72 +137,74 @@ export default async function StoreLayout({ children, params }: Props) {
   ].filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex flex-col gap-5 md:flex-row md:gap-8">
-      <aside className="md:w-56 md:shrink-0">
-        <details className="mb-3 rounded-md border border-border md:mb-4">
-          <summary className="flex min-h-11 cursor-pointer flex-col justify-center px-3 py-1 text-sm font-medium md:min-h-10">
-            {ctx.store.name}
-            {stores.length > 1 ? (
-              <span className="text-[12px] font-normal text-fg-muted">
-                Cambiar de tienda ({stores.length})
-              </span>
-            ) : null}
-          </summary>
-          <ul className="border-t border-border py-1" aria-label="Cambiar de tienda">
-            {stores.map((s) => (
-              <li key={s.store_id}>
+    <StoreTimeZoneProvider timeZone={ctx.store.timezone}>
+      <div className="flex flex-col gap-5 md:flex-row md:gap-8">
+        <aside className="md:w-56 md:shrink-0">
+          <details className="mb-3 rounded-md border border-border md:mb-4">
+            <summary className="flex min-h-11 cursor-pointer flex-col justify-center px-3 py-1 text-sm font-medium md:min-h-10">
+              {ctx.store.name}
+              {stores.length > 1 ? (
+                <span className="text-[12px] font-normal text-fg-muted">
+                  Cambiar de tienda ({stores.length})
+                </span>
+              ) : null}
+            </summary>
+            <ul className="border-t border-border py-1" aria-label="Cambiar de tienda">
+              {stores.map((s) => (
+                <li key={s.store_id}>
+                  <Link
+                    href={`/admin/${s.handle}`}
+                    aria-current={s.handle === ctx.store.handle ? "page" : undefined}
+                    className="flex min-h-11 items-center justify-between gap-2 px-3 py-1.5 text-sm hover:bg-canvas aria-[current=page]:font-semibold md:min-h-0"
+                  >
+                    <span>{s.name}</span>
+                    <span className="text-[12px] font-normal text-fg-muted">
+                      {STORE_STATUS_SHORT[s.status] ?? s.status}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              <li className="border-t border-border">
                 <Link
-                  href={`/admin/${s.handle}`}
-                  aria-current={s.handle === ctx.store.handle ? "page" : undefined}
-                  className="flex min-h-11 items-center justify-between gap-2 px-3 py-1.5 text-sm hover:bg-canvas aria-[current=page]:font-semibold md:min-h-0"
+                  href="/admin"
+                  className="flex min-h-11 items-center px-3 py-1.5 text-[13px] underline md:min-h-0"
                 >
-                  <span>{s.name}</span>
-                  <span className="text-[12px] font-normal text-fg-muted">
-                    {STORE_STATUS_SHORT[s.status] ?? s.status}
-                  </span>
+                  Todas mis tiendas
                 </Link>
               </li>
-            ))}
-            <li className="border-t border-border">
-              <Link
-                href="/admin"
-                className="flex min-h-11 items-center px-3 py-1.5 text-[13px] underline md:min-h-0"
-              >
-                Todas mis tiendas
-              </Link>
-            </li>
-          </ul>
-        </details>
-        <AdminNav
-          groups={groups}
-          base={base}
-          primary={[base, `${base}/pedidos`, `${base}/productos`]}
-        />
-      </aside>
-      <div className="min-w-0 flex-1 space-y-4">
-        <div className="flex items-start gap-2">
-          <GlobalSearch storeHandle={ctx.store.handle} />
-          <NoticesButton storeHandle={ctx.store.handle} />
+            </ul>
+          </details>
+          <AdminNav
+            groups={groups}
+            base={base}
+            primary={[base, `${base}/pedidos`, `${base}/productos`]}
+          />
+        </aside>
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex items-start gap-2">
+            <GlobalSearch storeHandle={ctx.store.handle} />
+            <NoticesButton storeHandle={ctx.store.handle} />
+          </div>
+          {schema.ok ? null : (
+            <p role="alert" className="rounded-md border border-danger px-3 py-2 text-sm">
+              Faltan actualizaciones de la base de datos (migraciones). Algunas pantallas pueden
+              fallar hasta que se apliquen; avisa a quien administra la plataforma.
+            </p>
+          )}
+          {ctx.supportGrantId ? (
+            <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
+              Acceso de soporte: solo lectura y con tiempo limitado. Todo lo que abres queda
+              registrado.
+            </p>
+          ) : null}
+          {ctx.accessMode === "read_only" ? (
+            <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
+              La cuenta está en modo de solo lectura. Revisa la facturación para volver a editar.
+            </p>
+          ) : null}
+          {children}
         </div>
-        {schema.ok ? null : (
-          <p role="alert" className="rounded-md border border-danger px-3 py-2 text-sm">
-            Faltan actualizaciones de la base de datos (migraciones). Algunas pantallas pueden
-            fallar hasta que se apliquen; avisa a quien administra la plataforma.
-          </p>
-        )}
-        {ctx.supportGrantId ? (
-          <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
-            Acceso de soporte: solo lectura y con tiempo limitado. Todo lo que abres queda
-            registrado.
-          </p>
-        ) : null}
-        {ctx.accessMode === "read_only" ? (
-          <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
-            La cuenta está en modo de solo lectura. Revisa la facturación para volver a editar.
-          </p>
-        ) : null}
-        {children}
       </div>
-    </div>
+    </StoreTimeZoneProvider>
   );
 }

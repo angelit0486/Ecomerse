@@ -260,7 +260,7 @@ export async function ProductListing({
                       <h2 className="font-semibold">Ningún producto coincide con estos filtros</h2>
                       <p className="mt-1 text-sm text-[var(--sf-muted)]">
                         Prueba con menos filtros o{" "}
-                        <Link href={href(baseParams)} className="underline">
+                        <Link prefetch={false} href={href(baseParams)} className="underline">
                           quítalos todos
                         </Link>
                         .
@@ -315,6 +315,7 @@ async function NoResults({ store }: { store: StorePublic }) {
             {goals.map((g) => (
               <li key={g.key}>
                 <Link
+                  prefetch={false}
                   href={`/productos?${new URLSearchParams([[GOAL_KEY, g.key]])}`}
                   className="inline-flex min-h-11 items-center rounded-full border border-[var(--sf-border-strong)] px-4 text-sm font-semibold hover:border-[var(--sf-primary)]"
                 >
@@ -325,7 +326,11 @@ async function NoResults({ store }: { store: StorePublic }) {
           </ul>
         ) : null}
         <p className="pt-2 text-sm">
-          <Link href="/productos" className="font-medium underline underline-offset-4">
+          <Link
+            prefetch={false}
+            href="/productos"
+            className="font-medium underline underline-offset-4"
+          >
             Ver todos los productos
           </Link>
         </p>

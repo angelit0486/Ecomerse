@@ -2,13 +2,18 @@ import Link from "next/link";
 
 export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   return (
-    <nav aria-label="Ruta de navegación" className="text-sm text-[var(--sf-muted)]">
+    // Enlaces de 44 px de alto para el dedo; el margen negativo conserva el espacio visual.
+    <nav aria-label="Ruta de navegación" className="-my-3 text-sm text-[var(--sf-muted)]">
       <ol className="flex flex-wrap gap-1">
         {items.map((item, index) => (
-          <li key={`${item.label}-${index}`} className="flex gap-1">
+          <li key={`${item.label}-${index}`} className="flex items-center gap-1">
             {index > 0 ? <span aria-hidden="true">/</span> : null}
             {item.href && index < items.length - 1 ? (
-              <Link href={item.href} className="hover:underline">
+              <Link
+                prefetch={false}
+                href={item.href}
+                className="inline-flex min-h-11 items-center hover:underline"
+              >
                 {item.label}
               </Link>
             ) : (

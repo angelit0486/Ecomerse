@@ -146,7 +146,7 @@ export function AddToCart({
         {state.ok ? (
           <p role="status">
             {state.message}{" "}
-            <Link href="/carrito" className="font-medium underline">
+            <Link prefetch={false} href="/carrito" className="font-medium underline">
               Ver carrito ({state.count})
             </Link>
           </p>

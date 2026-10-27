@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
 import {
@@ -29,6 +29,7 @@ import {
   type HomeFormState,
 } from "./home-actions";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
+import { useStoreTimeZone } from "../_shared/store-time-zone";
 
 /**
  * Editor de la portada (F9-T02 y ADR-034): agregar, editar, ocultar, duplicar,
@@ -222,7 +223,9 @@ function ImagePicker({
         {required ? " (obligatoria)" : " (opcional)"}
       </legend>
       {banners.length === 0 ? (
-        <p className="text-[13px] text-fg-muted">Sube una imagen abajo para usarla aquí.</p>
+        <p className="text-[13px] text-fg-muted">
+          Aún no hay imágenes: sube una aquí mismo para usarla en este bloque.
+        </p>
       ) : null}
       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {required ? null : (
@@ -250,6 +253,7 @@ function ImagePicker({
           </label>
         ))}
       </div>
+      <InlineUpload banners={banners} onReady={onChange} />
     </fieldset>
   );
 }
@@ -1328,34 +1332,33 @@ function SectionDisplay({
 }
 
 /** Resumen de una línea de dónde y cuándo se ve, para la lista. */
-function displaySummary(section: EditorSection): string | null {
+function displaySummary(section: EditorSection, timeZone?: string): string | null {
   const parts: string[] = [];
   if (section.visibility === "mobile") parts.push("solo celular");
   if (section.visibility === "desktop") parts.push("solo computadora");
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
+    new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short", timeZone });
   if (section.starts_at) parts.push(`desde ${fmt(section.starts_at)}`);
   if (section.ends_at) parts.push(`hasta ${fmt(section.ends_at)}`);
   return parts.length ? parts.join(", ") : null;
 }
 
-function BannerUpload({ storeHandle }: { storeHandle: string }) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [alt, setAlt] = useState("");
-  const [status, setStatus] = useState<{ error?: string; message?: string }>({});
-  const [busy, setBusy] = useState(false);
+/** Tienda del editor, para subir imágenes desde cada bloque (sin pasarla por todas las props). */
+const UploadStore = createContext<string | null>(null);
 
-  async function upload() {
-    const file = inputRef.current?.files?.[0];
-    setStatus({});
-    if (!file) return setStatus({ error: "Elige una imagen." });
-    if (!alt.trim()) return setStatus({ error: "Describe la imagen (texto alternativo)." });
+type UploadResult = { ok: true; mediaId: string } | { ok: false; error: string };
+
+/** Subida de una imagen de portada: valida, sube directo a Storage y la manda a procesar. */
+function useBannerUploader(storeHandle: string) {
+  const [busy, setBusy] = useState(false);
+  async function upload(file: File | undefined, alt: string): Promise<UploadResult> {
+    if (!file) return { ok: false, error: "Elige una imagen." };
+    if (!alt.trim()) return { ok: false, error: "Describe la imagen (texto alternativo)." };
     if (
       !(ALLOWED_IMAGE_MIME as readonly string[]).includes(file.type) ||
       file.size > MAX_UPLOAD_BYTES
     ) {
-      return setStatus({ error: "Usa una imagen JPG, PNG, WebP o AVIF de hasta 10 MB." });
+      return { ok: false, error: "Usa una imagen JPG, PNG, WebP o AVIF de hasta 10 MB." };
     }
     setBusy(true);
     try {
@@ -1363,22 +1366,147 @@ function BannerUpload({ storeHandle }: { storeHandle: string }) {
         mimeType: file.type,
         bytes: file.size,
       });
-      if (!ticket.ok) return setStatus({ error: ticket.error });
+      if (!ticket.ok) return { ok: false, error: ticket.error };
       const put = await fetch(ticket.signedUrl, {
         method: "PUT",
         headers: { "content-type": file.type },
         body: file,
       }).catch(() => null);
-      if (!put?.ok) return setStatus({ error: "No se pudo subir la imagen. Inténtalo de nuevo." });
+      if (!put?.ok) return { ok: false, error: "No se pudo subir la imagen. Inténtalo de nuevo." };
       const done = await finalizeBannerUpload(storeHandle, ticket.mediaId, alt);
-      if (!done.ok) return setStatus({ error: done.error ?? "No pudimos procesar la imagen." });
-      setStatus({ message: "Imagen subida. En unos segundos aparece para elegirla." });
-      setAlt("");
-      if (inputRef.current) inputRef.current.value = "";
-      setTimeout(() => router.refresh(), 2500);
+      if (!done.ok) return { ok: false, error: done.error ?? "No pudimos procesar la imagen." };
+      return { ok: true, mediaId: ticket.mediaId };
     } finally {
       setBusy(false);
     }
+  }
+  return { upload, busy };
+}
+
+/** Pide la página de nuevo hasta que la imagen recién subida ya esté procesada (o se agote). */
+const READY_POLL_MS = 2500;
+const READY_POLL_TRIES = 8;
+
+/**
+ * Subir una imagen sin salir del bloque (paso 12): al quedar lista se elige
+ * sola en este bloque. Mientras se procesa, el resto del editor sigue igual.
+ */
+function InlineUpload({
+  banners,
+  onReady,
+}: {
+  banners: HomeEditorOptions["banners"];
+  onReady: (mediaId: string) => void;
+}) {
+  const storeHandle = useContext(UploadStore);
+  const router = useRouter();
+  const id = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [alt, setAlt] = useState("");
+  const [status, setStatus] = useState<{ error?: string; message?: string }>({});
+  const [pending, setPending] = useState<{ id: string; tries: number } | null>(null);
+  const uploader = useBannerUploader(storeHandle ?? "");
+  const ready = pending ? banners.some((b) => b.id === pending.id) : false;
+
+  useEffect(() => {
+    if (!pending) return;
+    // Todo dentro del temporizador: el efecto solo agenda (sin setState directo).
+    const timer = window.setTimeout(
+      () => {
+        if (ready) {
+          onReady(pending.id);
+          setPending(null);
+          setStatus({ message: "Imagen lista y elegida para este bloque." });
+        } else if (pending.tries >= READY_POLL_TRIES) {
+          setPending(null);
+          setStatus({
+            message: "La imagen se sigue procesando; en un momento aparece para elegirla.",
+          });
+        } else {
+          router.refresh();
+          setPending({ ...pending, tries: pending.tries + 1 });
+        }
+      },
+      ready ? 0 : READY_POLL_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [pending, ready, onReady, router]);
+
+  if (!storeHandle) return null;
+
+  async function send() {
+    setStatus({});
+    const result = await uploader.upload(fileRef.current?.files?.[0], alt);
+    if (!result.ok) return setStatus({ error: result.error });
+    setAlt("");
+    if (fileRef.current) fileRef.current.value = "";
+    setStatus({ message: "Imagen subida; se elige sola en cuanto esté lista." });
+    setPending({ id: result.mediaId, tries: 0 });
+  }
+
+  return (
+    <details className="mt-2 rounded-md border border-dashed border-border p-3 text-sm">
+      <summary className="min-h-11 cursor-pointer py-2 font-medium md:min-h-0 md:py-0">
+        Subir una imagen nueva
+      </summary>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${id}-file`} className={label}>
+            Imagen (JPG, PNG, WebP o AVIF, hasta 10 MB)
+          </label>
+          <input
+            id={`${id}-file`}
+            ref={fileRef}
+            type="file"
+            accept={ALLOWED_IMAGE_MIME.join(",")}
+            className="block min-h-11 text-sm"
+          />
+        </div>
+        <TextField
+          id={`${id}-alt`}
+          text="Texto alternativo"
+          value={alt}
+          maxLength={250}
+          hint="Describe lo que se ve, para quien no puede verla."
+          onChange={setAlt}
+        />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          loading={uploader.busy || pending !== null}
+          onClick={send}
+        >
+          Subir y usar aquí
+        </Button>
+        <FormFeedback
+          state={{
+            ...(status.error ? { error: status.error } : {}),
+            ...(status.message ? { ok: true, message: status.message } : {}),
+          }}
+        />
+      </div>
+    </details>
+  );
+}
+
+function BannerUpload({ storeHandle }: { storeHandle: string }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [alt, setAlt] = useState("");
+  const [status, setStatus] = useState<{ error?: string; message?: string }>({});
+  const uploader = useBannerUploader(storeHandle);
+  const busy = uploader.busy;
+
+  async function upload() {
+    setStatus({});
+    const result = await uploader.upload(inputRef.current?.files?.[0], alt);
+    if (!result.ok) return setStatus({ error: result.error });
+    setStatus({ message: "Imagen subida. En unos segundos aparece para elegirla." });
+    setAlt("");
+    if (inputRef.current) inputRef.current.value = "";
+    setTimeout(() => router.refresh(), 2500);
   }
 
   return (
@@ -1558,6 +1686,7 @@ export function HomeEditor({
   saveLabel?: string;
   emptyText?: string;
 }) {
+  const timeZone = useStoreTimeZone();
   const withDefaults = (list: EditorSection[]) =>
     list.map((s) => ({ ...s, props: { ...DEFAULTS[s.type], ...s.props } }));
   const [sections, setSections] = useState<EditorSection[]>(() => withDefaults(initial));
@@ -1683,243 +1812,248 @@ export function HomeEditor({
   }
 
   return (
-    <div className="space-y-6">
-      <p aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
-      {storeName !== undefined ? (
-        <HomeLayoutPicker applied={layoutApplied} onApply={applyLayout} onReset={resetLayout} />
-      ) : null}
-      {layoutApplied ? (
-        <p role="status" className="rounded-md border border-border p-3 text-sm">
-          Plantilla «{layoutApplied}» lista. Cambia los textos por los tuyos, revisa la vista previa
-          y guarda: tus clientes no la ven hasta que publiques.
+    <UploadStore.Provider value={storeHandle}>
+      <div className="space-y-6">
+        <p aria-live="polite" className="sr-only">
+          {announcement}
         </p>
-      ) : null}
-      <form
-        ref={formRef}
-        action={action}
-        onSubmit={(e) => {
-          setSavedJson(json);
-          submitKeepingState(action)(e);
-        }}
-        className="space-y-4"
-        noValidate
-      >
-        <input type="hidden" name="revision" value={revision} />
-        <input type="hidden" name="sections" value={json} />
-        <LinkTargetList links={options.links} />
-        {sections.length === 0 ? (
-          <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
-            {emptyText}
+        {storeName !== undefined ? (
+          <HomeLayoutPicker applied={layoutApplied} onApply={applyLayout} onReset={resetLayout} />
+        ) : null}
+        {layoutApplied ? (
+          <p role="status" className="rounded-md border border-border p-3 text-sm">
+            Plantilla «{layoutApplied}» lista. Cambia los textos por los tuyos, revisa la vista
+            previa y guarda: tus clientes no la ven hasta que publiques.
           </p>
         ) : null}
-        <HeroNotice
-          sections={sections}
-          onShow={(id) =>
-            setSections((all) => all.map((s) => (s.id === id ? { ...s, enabled: true } : s)))
-          }
-        />
-        <ol className="space-y-3" aria-label="Bloques de la portada">
-          {sections.map((section, index) => {
-            const name = SECTION_LABELS[section.type];
-            const errors = state.sections?.[section.id];
-            const expanded = open === section.id;
-            const summary = displaySummary(section);
-            return (
-              <li
-                key={section.id}
-                className={`rounded-md border ${
-                  dragging === index
-                    ? "border-accent opacity-60"
-                    : section.enabled
-                      ? "border-border"
-                      : "border-dashed border-border bg-canvas"
-                }`}
-                onDragOver={(e) => {
-                  if (dragging !== null) e.preventDefault();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  drop(index);
-                }}
-              >
-                <div className="flex flex-wrap items-center gap-2 p-3">
-                  <span
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = "move";
-                      setDragging(index);
-                    }}
-                    onDragEnd={() => setDragging(null)}
-                    className="cursor-grab select-none px-1 text-fg-muted"
-                    title="Arrastra para cambiar el orden"
-                    aria-hidden="true"
-                  >
-                    ⠿
-                  </span>
-                  <h3 className="mr-auto text-sm font-semibold">
-                    {index + 1}. {name}
-                    {section.enabled ? null : (
-                      <span className="ml-2 font-normal text-fg-muted"> (oculta)</span>
-                    )}
-                    {summary ? (
-                      <span className="ml-2 font-normal text-fg-muted"> ({summary})</span>
-                    ) : null}
-                  </h3>
-                  <Button
-                    id={`${section.id}-up`}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={index === 0}
-                    onClick={() => move(index, -1)}
-                    aria-label={`Subir ${name} (posición ${index + 1})`}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    id={`${section.id}-down`}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={index === sections.length - 1}
-                    onClick={() => move(index, 1)}
-                    aria-label={`Bajar ${name} (posición ${index + 1})`}
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={section.enabled ? "ghost" : "primary"}
-                    size="sm"
-                    onClick={() =>
-                      setSections((all) =>
-                        all.map((s) => (s.id === section.id ? { ...s, enabled: !s.enabled } : s)),
-                      )
-                    }
-                  >
-                    {section.enabled ? `Ocultar ${name}` : `Mostrar ${name}`}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    aria-expanded={expanded}
-                    aria-controls={`panel-${section.id}`}
-                    onClick={() => setOpen(expanded ? null : section.id)}
-                  >
-                    {expanded ? `Cerrar ${name}` : `Editar ${name}`}
-                  </Button>
-                </div>
-                {section.enabled ? null : (
-                  <p className="mx-3 mb-3 text-sm text-fg-muted">
-                    Oculto: tus clientes no ven este bloque. Usa «Mostrar {name}» para que vuelva a
-                    aparecer.
-                  </p>
-                )}
-                {errors ? (
-                  <ul role="alert" className="mx-3 mb-3 list-disc pl-5 text-sm text-danger">
-                    {errors.map((e, i) => (
-                      <li key={i}>{e}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {state.warnings?.[section.id] && !edited.has(section.id) ? (
-                  <ul role="status" className="mx-3 mb-3 list-disc pl-5 text-sm text-warning">
-                    {state.warnings[section.id]!.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {expanded ? (
-                  <div id={`panel-${section.id}`} className="space-y-4 border-t border-border p-3">
-                    <SectionFields
-                      section={section}
-                      options={options}
-                      update={(props) => patch(section.id, { props })}
-                    />
-                    <SectionDisplay
-                      section={section}
-                      onChange={(change) => patch(section.id, change)}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={full}
-                        onClick={() => duplicate(index)}
-                      >
-                        Duplicar {name}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSections((all) => all.filter((s) => s.id !== section.id));
-                          setAnnouncement(`${name} eliminada.`);
-                        }}
-                      >
-                        Eliminar {name}
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-        <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-border p-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="add-type" className={label}>
-              Nuevo bloque
-            </label>
-            <select
-              id="add-type"
-              value={adding}
-              onChange={(e) => setAdding(e.target.value as HomeSectionType)}
-              className={nativeControl}
-            >
-              {Object.entries(SECTION_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button type="button" variant="secondary" onClick={add} disabled={full || productsFull}>
-            Agregar bloque
-          </Button>
-          <p className="text-[13px] text-fg-muted">
-            {full
-              ? `La portada admite hasta ${MAX_SECTIONS} bloques.`
-              : productsFull
-                ? `Hasta ${MAX_PRODUCT_SECTIONS} bloques de productos.`
-                : `${sections.length} de ${MAX_SECTIONS} bloques.`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" loading={pending}>
-            {saveLabel}
-          </Button>
-          {autosave ? (
-            <p className="text-[13px] text-fg-muted" aria-live="polite">
-              {pending
-                ? "Guardando en el borrador…"
-                : dirty
-                  ? "Cambios sin guardar; se guardan solos en unos segundos."
-                  : savedAt && state.ok
-                    ? `Guardado en el borrador a las ${savedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}.`
-                    : null}
+        <form
+          ref={formRef}
+          action={action}
+          onSubmit={(e) => {
+            setSavedJson(json);
+            submitKeepingState(action)(e);
+          }}
+          className="space-y-4"
+          noValidate
+        >
+          <input type="hidden" name="revision" value={revision} />
+          <input type="hidden" name="sections" value={json} />
+          <LinkTargetList links={options.links} />
+          {sections.length === 0 ? (
+            <p className="rounded-md border border-dashed border-border p-4 text-sm text-fg-muted">
+              {emptyText}
             </p>
           ) : null}
-          <FormFeedback state={state} />
-        </div>
-      </form>
-      <HomePreview sections={sections} labels={SECTION_LABELS} />
-      <BannerUpload storeHandle={storeHandle} />
-    </div>
+          <HeroNotice
+            sections={sections}
+            onShow={(id) =>
+              setSections((all) => all.map((s) => (s.id === id ? { ...s, enabled: true } : s)))
+            }
+          />
+          <ol className="space-y-3" aria-label="Bloques de la portada">
+            {sections.map((section, index) => {
+              const name = SECTION_LABELS[section.type];
+              const errors = state.sections?.[section.id];
+              const expanded = open === section.id;
+              const summary = displaySummary(section, timeZone);
+              return (
+                <li
+                  key={section.id}
+                  className={`rounded-md border ${
+                    dragging === index
+                      ? "border-accent opacity-60"
+                      : section.enabled
+                        ? "border-border"
+                        : "border-dashed border-border bg-canvas"
+                  }`}
+                  onDragOver={(e) => {
+                    if (dragging !== null) e.preventDefault();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    drop(index);
+                  }}
+                >
+                  <div className="flex flex-wrap items-center gap-2 p-3">
+                    <span
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragging(index);
+                      }}
+                      onDragEnd={() => setDragging(null)}
+                      className="cursor-grab select-none px-1 text-fg-muted"
+                      title="Arrastra para cambiar el orden"
+                      aria-hidden="true"
+                    >
+                      ⠿
+                    </span>
+                    <h3 className="mr-auto text-sm font-semibold">
+                      {index + 1}. {name}
+                      {section.enabled ? null : (
+                        <span className="ml-2 font-normal text-fg-muted"> (oculta)</span>
+                      )}
+                      {summary ? (
+                        <span className="ml-2 font-normal text-fg-muted"> ({summary})</span>
+                      ) : null}
+                    </h3>
+                    <Button
+                      id={`${section.id}-up`}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={index === 0}
+                      onClick={() => move(index, -1)}
+                      aria-label={`Subir ${name} (posición ${index + 1})`}
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      id={`${section.id}-down`}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={index === sections.length - 1}
+                      onClick={() => move(index, 1)}
+                      aria-label={`Bajar ${name} (posición ${index + 1})`}
+                    >
+                      ↓
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={section.enabled ? "ghost" : "primary"}
+                      size="sm"
+                      onClick={() =>
+                        setSections((all) =>
+                          all.map((s) => (s.id === section.id ? { ...s, enabled: !s.enabled } : s)),
+                        )
+                      }
+                    >
+                      {section.enabled ? `Ocultar ${name}` : `Mostrar ${name}`}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-expanded={expanded}
+                      aria-controls={`panel-${section.id}`}
+                      onClick={() => setOpen(expanded ? null : section.id)}
+                    >
+                      {expanded ? `Cerrar ${name}` : `Editar ${name}`}
+                    </Button>
+                  </div>
+                  {section.enabled ? null : (
+                    <p className="mx-3 mb-3 text-sm text-fg-muted">
+                      Oculto: tus clientes no ven este bloque. Usa «Mostrar {name}» para que vuelva
+                      a aparecer.
+                    </p>
+                  )}
+                  {errors ? (
+                    <ul role="alert" className="mx-3 mb-3 list-disc pl-5 text-sm text-danger">
+                      {errors.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {state.warnings?.[section.id] && !edited.has(section.id) ? (
+                    <ul role="status" className="mx-3 mb-3 list-disc pl-5 text-sm text-warning">
+                      {state.warnings[section.id]!.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {expanded ? (
+                    <div
+                      id={`panel-${section.id}`}
+                      className="space-y-4 border-t border-border p-3"
+                    >
+                      <SectionFields
+                        section={section}
+                        options={options}
+                        update={(props) => patch(section.id, { props })}
+                      />
+                      <SectionDisplay
+                        section={section}
+                        onChange={(change) => patch(section.id, change)}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={full}
+                          onClick={() => duplicate(index)}
+                        >
+                          Duplicar {name}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSections((all) => all.filter((s) => s.id !== section.id));
+                            setAnnouncement(`${name} eliminada.`);
+                          }}
+                        >
+                          Eliminar {name}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+          <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-border p-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="add-type" className={label}>
+                Nuevo bloque
+              </label>
+              <select
+                id="add-type"
+                value={adding}
+                onChange={(e) => setAdding(e.target.value as HomeSectionType)}
+                className={nativeControl}
+              >
+                {Object.entries(SECTION_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="button" variant="secondary" onClick={add} disabled={full || productsFull}>
+              Agregar bloque
+            </Button>
+            <p className="text-[13px] text-fg-muted">
+              {full
+                ? `La portada admite hasta ${MAX_SECTIONS} bloques.`
+                : productsFull
+                  ? `Hasta ${MAX_PRODUCT_SECTIONS} bloques de productos.`
+                  : `${sections.length} de ${MAX_SECTIONS} bloques.`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" loading={pending}>
+              {saveLabel}
+            </Button>
+            {autosave ? (
+              <p className="text-[13px] text-fg-muted" aria-live="polite">
+                {pending
+                  ? "Guardando en el borrador…"
+                  : dirty
+                    ? "Cambios sin guardar; se guardan solos en unos segundos."
+                    : savedAt && state.ok
+                      ? `Guardado en el borrador a las ${savedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone })}.`
+                      : null}
+              </p>
+            ) : null}
+            <FormFeedback state={state} />
+          </div>
+        </form>
+        <HomePreview sections={sections} labels={SECTION_LABELS} />
+        <BannerUpload storeHandle={storeHandle} />
+      </div>
+    </UploadStore.Provider>
   );
 }

@@ -2,7 +2,15 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { totp } from "../support/totp";
 
-import { admin, createAuthUser, createTenant, emailCount, readEmailCode, uniq } from "./support";
+import {
+  admin,
+  createAuthUser,
+  createTenant,
+  emailCount,
+  readEmailCode,
+  uniq,
+  asFreshClient,
+} from "./support";
 
 /**
  * F2-T07: acceso del staff con código por email → TOTP obligatorio → AAL2.
@@ -21,6 +29,7 @@ test.beforeAll(async () => {
 
 async function loginWithEmailCode(page: Page, email: string) {
   const sentAt = Date.now() - 1000;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Enviarme un código" }).click();
@@ -83,6 +92,7 @@ test("siguientes accesos: piden el código de la app, sin volver a enrolar", asy
 
 test("código incorrecto: mensaje de error, sin sesión", async ({ page }) => {
   const sentAt = Date.now() - 1000;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(ownerEmail);
   await page.getByRole("button", { name: "Enviarme un código" }).click();
@@ -96,6 +106,7 @@ test("código incorrecto: mensaje de error, sin sesión", async ({ page }) => {
 
 test("email sin cuenta: misma respuesta y ningún correo (sin autorregistro)", async ({ page }) => {
   const stranger = `nadie-${run}@example.test`;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(stranger);
   await page.getByRole("button", { name: "Enviarme un código" }).click();
@@ -118,4 +129,23 @@ test("eventos de seguridad registrados sin PII", async () => {
     ]),
   );
   expect(JSON.stringify(events)).not.toContain(ownerEmail);
+});
+
+test("pedir códigos sin parar se frena con un límite propio (auditoría SEC-01)", async ({
+  page,
+}) => {
+  const target = `limite-${run}@example.test`;
+  await asFreshClient(page);
+  // 10 intentos por email cada 15 minutos: el 11.º ya no envía nada.
+  for (let i = 0; i < 10; i++) {
+    await page.goto("/ingresar");
+    await page.getByLabel("Email").fill(target);
+    await page.getByRole("button", { name: "Enviarme un código" }).click();
+    await expect(page).toHaveURL(/\/ingresar\/codigo$/);
+  }
+  await page.goto("/ingresar");
+  await page.getByLabel("Email").fill(target);
+  await page.getByRole("button", { name: "Enviarme un código" }).click();
+  await expect(page.getByText("Demasiados intentos. Espera unos minutos.")).toBeVisible();
+  await expect(page).toHaveURL(/\/ingresar$/);
 });

@@ -91,6 +91,15 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
   await expect(page.getByText("Borrador A")).toHaveCount(0);
   await expectNoSeriousA11yViolations(page);
   await shots(page, "inicio");
+  // El pie enlaza las políticas publicadas una sola vez, aunque el menú ya traiga
+  // alguna (auditoría REG-07): envíos sí, privacidad (sin publicar) no.
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByRole("link", { name: "Envíos" })).toHaveCount(1);
+  await expect(footer.getByRole("link", { name: "Envíos" })).toHaveAttribute(
+    "href",
+    "/paginas/envios",
+  );
+  await expect(footer.getByRole("link", { name: "Aviso de privacidad" })).toHaveCount(0);
 
   // Ficha con selector de variantes.
   await page.getByRole("link", { name: "Playera A de algodón" }).click();
@@ -119,6 +128,8 @@ test("dos tiendas en dos hosts: catálogo, ficha, categoría, marca, búsqueda y
   await expect(page.getByRole("link", { name: "Playera A de algodón" })).toBeVisible();
   await page.goto(`${origin(a)}/marca/marca-b`);
   await expect(page.getByRole("heading", { name: "No encontramos esta página" })).toBeVisible();
+  // El 404 también es white-label: título con el nombre de la tienda (auditoría UX-08).
+  await expect(page).toHaveTitle(`Página no encontrada · ${a.name}`);
 
   // Búsqueda sin acentos; nunca devuelve productos de B.
   await page.goto(`${origin(a)}/`);

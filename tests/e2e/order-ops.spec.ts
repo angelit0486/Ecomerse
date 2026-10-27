@@ -83,6 +83,7 @@ test("surtir parcial → entregar → reembolso parcial confirmado", async ({ pa
   ).toBeVisible();
   await expect(page.getByText(/^Entregado · Estafeta/)).toBeVisible();
 
+  await page.getByText("Reembolsar dinero").click();
   await page.getByLabel(/Monto a reembolsar/).fill("400");
   await page.getByRole("button", { name: "Solicitar reembolso" }).click();
   await page.getByRole("button", { name: "Sí, solicitar reembolso" }).click();
@@ -110,6 +111,7 @@ test("cancelar un pedido pagado: confirma, libera existencias y reembolsa todo",
   const orderId = await paidOrder(2);
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}/pedidos/${orderId}`);
+  await page.getByText("Cancelar el pedido").click();
   await page.getByRole("button", { name: "Cancelar pedido" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Confirma" })).toBeVisible();
   await page.getByLabel(/Entiendo que se cancelará y se reembolsará/).check();

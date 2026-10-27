@@ -9,6 +9,7 @@ import {
   freshTotp,
   loginNewStaff,
   uniq,
+  asFreshClient,
 } from "./support";
 
 /**
@@ -38,6 +39,7 @@ let profileBefore: {
 /** Acceso de un staff que ya activó la verificación en dos pasos. */
 async function loginAgain(page: Page, email: string, secret: string) {
   const sentAt = Date.now() - 1000;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Enviarme un código" }).click();

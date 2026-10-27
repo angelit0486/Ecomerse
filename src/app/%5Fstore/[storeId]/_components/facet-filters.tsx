@@ -114,7 +114,11 @@ export function FacetFilters({
           Filtrar
         </NoJsSubmit>
         {clearHref ? (
-          <Link href={clearHref} className="inline-flex min-h-11 items-center underline">
+          <Link
+            prefetch={false}
+            href={clearHref}
+            className="inline-flex min-h-11 items-center underline"
+          >
             Quitar filtros
           </Link>
         ) : null}
@@ -136,6 +140,7 @@ export function ActiveFilters({
         {items.map((item) => (
           <li key={item.href}>
             <Link
+              prefetch={false}
               href={item.href}
               aria-label={`Quitar el filtro ${item.facet}: ${item.label}`}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--sf-surface)] px-4 font-semibold hover:bg-[var(--sf-border)]"

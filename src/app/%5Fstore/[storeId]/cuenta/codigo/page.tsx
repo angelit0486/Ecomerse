@@ -27,7 +27,7 @@ export default async function AccountCodePage({ params }: Props) {
       </p>
       <CodeForm storeId={store.id} />
       <p className="text-sm">
-        <Link href="/cuenta" className="underline">
+        <Link prefetch={false} href="/cuenta" className="underline">
           Usar otro email
         </Link>
       </p>

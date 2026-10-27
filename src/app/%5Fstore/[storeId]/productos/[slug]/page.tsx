@@ -299,6 +299,7 @@ export default async function ProductPage({ params }: Props) {
             {product.brand ? (
               <p className="text-sm font-semibold text-[var(--sf-muted)]">
                 <Link
+                  prefetch={false}
                   href={`/marca/${encodeURIComponent(product.brand.slug)}`}
                   className="underline-offset-4 hover:underline"
                 >

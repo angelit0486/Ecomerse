@@ -58,6 +58,7 @@ export function GoalTiles({
         {goals.slice(0, 8).map((goal, i) => (
           <li key={goal.key}>
             <Link
+              prefetch={false}
               href={goalHref(goal.key)}
               className={`group relative flex flex-col overflow-hidden rounded-[var(--sf-radius-panel)] p-4 focus-visible:outline-offset-4 sm:p-5 ${tileClass(colors[i]!)} ${compact ? "min-h-24 text-left" : "h-48 sm:h-56"}`}
             >

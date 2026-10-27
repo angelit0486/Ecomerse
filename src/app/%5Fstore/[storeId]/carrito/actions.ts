@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { preferredRate } from "@/lib/checkout/shipping";
 import { formatMoney } from "@/lib/money/format";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { reportActionError } from "@/server/actions/report";
 import { toAppError } from "@/server/db/errors";
 import { AppError } from "@/server/errors";
@@ -303,6 +304,8 @@ export async function checkout(
     }
     return failure(e);
   }
+  // Correos y avisos del pedido sin esperar al cron (auditoría DIN-04).
+  processQueueSoon("checkout.placed");
   redirect(target);
 }
 
@@ -347,5 +350,6 @@ export async function simulatePayment(
     if (e.code === "conflict") return { error: "Este pedido ya no se puede pagar." };
     return failure(e);
   }
+  processQueueSoon("payment.simulated");
   redirect(returnPath);
 }

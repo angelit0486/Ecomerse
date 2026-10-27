@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { paymentBadges } from "@/lib/checkout/payment-badges";
 import type { SocialNetwork } from "@/lib/theme/links";
 import { announcementActive, type ResolvedTheme } from "@/lib/theme/resolve-theme";
 import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
-import { mediaUrl, type MenuEntry } from "@/server/storefront/catalog";
+import { mediaUrl, type MenuEntry, type PolicyLink } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
 import { MainNav, MenuButton, MobileMenu, NavProvider } from "./main-nav";
@@ -61,7 +62,7 @@ export function CheckoutHeader({ store }: { store: StorePublic }) {
   return (
     <header className="sf-el-header border-b border-[var(--sf-border)] bg-[var(--sf-bg)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="flex min-w-0 items-center">
+        <Link prefetch={false} href="/" className="flex min-h-11 min-w-0 items-center">
           {store.logo ? (
             // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
             <img
@@ -87,6 +88,7 @@ export function CheckoutHeader({ store }: { store: StorePublic }) {
           </span>
           {/* En el celular cabe el nombre de la tienda; el resumen ya enlaza al carrito. */}
           <Link
+            prefetch={false}
             href="/carrito"
             className="hidden min-h-11 items-center underline underline-offset-2 sm:inline-flex"
           >
@@ -128,8 +130,9 @@ export function StoreHeader({
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-2 px-2 pb-2.5 pt-1.5 sm:gap-x-5 sm:px-4 sm:py-3">
           <MenuButton />
           <Link
+            prefetch={false}
             href="/"
-            className={`flex min-w-0 flex-1 items-center gap-2 ${
+            className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 ${
               centered ? "justify-center sm:w-full sm:flex-none" : "sm:flex-none"
             }`}
           >
@@ -152,6 +155,7 @@ export function StoreHeader({
           </Link>
           <SearchBox />
           <Link
+            prefetch={false}
             href="/cuenta"
             className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--sf-radius-control)] text-sm font-semibold sm:px-1"
           >
@@ -162,6 +166,7 @@ export function StoreHeader({
             <span className="sr-only lg:not-sr-only">Mi cuenta</span>
           </Link>
           <Link
+            prefetch={false}
             href="/carrito"
             className="relative inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--sf-radius-control)] text-sm font-semibold sm:px-1"
           >
@@ -246,20 +251,27 @@ export function StoreFooter({
   menu,
   settings,
   discovery = [],
+  policies = [],
+  providers = [],
 }: {
   store: StorePublic;
   menu: MenuEntry[];
   settings: ThemeSettings;
   discovery?: { label: string; href: string }[];
+  policies?: PolicyLink[];
+  /** Pasarelas activas: suman su insignia a las elegidas en Apariencia. */
+  providers?: string[];
 }) {
   const contact = settings.contact ?? {};
   const email = store.contact?.email;
   const phone = store.contact?.phone;
   const hasContact = Boolean(email || phone || contact.address || contact.hours);
   const social = settings.social ?? [];
-  const payments = settings.footer?.payment_methods ?? [];
+  const payments = paymentBadges(settings.footer?.payment_methods ?? [], providers);
   const legal = settings.footer?.legal_text;
   const help = menu.flatMap((item) => [item, ...item.children]);
+  // Las políticas publicadas siempre quedan a la mano, aunque el menú no las tenga.
+  const legalLinks = policies.filter((p) => !help.some((item) => item.href === p.href));
   const heading = "text-sm font-bold";
   return (
     <footer className="mt-16 bg-[var(--sf-footer-bg)] text-[var(--sf-footer-fg)] [--sf-footer-rule:color-mix(in_srgb,var(--sf-footer-fg)_28%,var(--sf-footer-bg))] [&_:focus-visible]:outline-[var(--sf-footer-fg)]">
@@ -296,26 +308,42 @@ export function StoreFooter({
             <h2 id="sf-pie-comprar" className={heading}>
               Comprar
             </h2>
-            <ul className="flex flex-col gap-2.5">
+            <ul className="flex flex-col">
               <li>
-                <Link href="/productos" className="hover:underline">
+                <Link
+                  prefetch={false}
+                  href="/productos"
+                  className="inline-flex min-h-11 items-center hover:underline"
+                >
                   Ver el catálogo
                 </Link>
               </li>
               {discovery.map((d) => (
                 <li key={d.href}>
-                  <Link href={d.href} className="hover:underline">
+                  <Link
+                    prefetch={false}
+                    href={d.href}
+                    className="inline-flex min-h-11 items-center hover:underline"
+                  >
                     {d.label}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link href="/cuenta" className="hover:underline">
+                <Link
+                  prefetch={false}
+                  href="/cuenta"
+                  className="inline-flex min-h-11 items-center hover:underline"
+                >
                   Tus pedidos
                 </Link>
               </li>
               <li>
-                <Link href="/carrito" className="hover:underline">
+                <Link
+                  prefetch={false}
+                  href="/carrito"
+                  className="inline-flex min-h-11 items-center hover:underline"
+                >
                   Tu carrito
                 </Link>
               </li>
@@ -326,10 +354,14 @@ export function StoreFooter({
               <h2 id="sf-pie-ayuda" className={heading}>
                 Ayuda
               </h2>
-              <ul className="flex flex-col gap-2.5">
+              <ul className="flex flex-col">
                 {help.map((item) => (
                   <li key={item.href + item.label}>
-                    <Link href={item.href} className="hover:underline">
+                    <Link
+                      prefetch={false}
+                      href={item.href}
+                      className="inline-flex min-h-11 items-center hover:underline"
+                    >
                       {item.label}
                     </Link>
                   </li>
@@ -344,12 +376,18 @@ export function StoreFooter({
               </h2>
               <address className="flex flex-col gap-1.5 not-italic">
                 {email ? (
-                  <a href={`mailto:${email}`} className="break-all hover:underline">
+                  <a
+                    href={`mailto:${email}`}
+                    className="inline-flex min-h-11 items-center break-all hover:underline"
+                  >
                     {email}
                   </a>
                 ) : null}
                 {phone ? (
-                  <a href={`tel:${phone.replace(/[^+0-9]/g, "")}`} className="hover:underline">
+                  <a
+                    href={`tel:${phone.replace(/[^+0-9]/g, "")}`}
+                    className="inline-flex min-h-11 items-center hover:underline"
+                  >
                     {phone}
                   </a>
                 ) : null}
@@ -377,7 +415,7 @@ export function StoreFooter({
                     <a
                       href={s.url}
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-10 items-center rounded-full border border-[var(--sf-footer-rule)] px-4 hover:border-[var(--sf-footer-fg)]"
+                      className="inline-flex min-h-11 items-center rounded-full border border-[var(--sf-footer-rule)] px-4 hover:border-[var(--sf-footer-fg)]"
                     >
                       {NETWORK_LABELS[s.network]}
                       <span className="sr-only"> de {store.name}</span>
@@ -409,6 +447,7 @@ export function StoreFooter({
       </div>
       <div className="border-t border-[var(--sf-footer-rule)]">
         <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs leading-relaxed">
+          <PolicyNav links={legalLinks} />
           {legal ? (
             <p>
               <Lines text={legal} />
@@ -418,6 +457,47 @@ export function StoreFooter({
             © {new Date().getFullYear()} {store.name}
           </p>
         </div>
+      </div>
+    </footer>
+  );
+}
+
+function PolicyNav({ links }: { links: PolicyLink[] }) {
+  if (links.length === 0) return null;
+  return (
+    <nav aria-label="Políticas de la tienda">
+      <ul className="flex flex-wrap gap-x-4">
+        {links.map((p) => (
+          <li key={p.href}>
+            <Link
+              prefetch={false}
+              href={p.href}
+              className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+            >
+              {p.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** Pie del pago: solo las políticas y el nombre de la tienda (menos salidas, auditoría UX-12). */
+export function CheckoutFooter({
+  store,
+  policies,
+}: {
+  store: StorePublic;
+  policies: PolicyLink[];
+}) {
+  return (
+    <footer className="mt-12 border-t border-[var(--sf-border)]">
+      <div className="mx-auto max-w-6xl space-y-1 px-4 py-6 text-xs leading-relaxed text-[var(--sf-muted)]">
+        <PolicyNav links={policies} />
+        <p>
+          © {new Date().getFullYear()} {store.name}
+        </p>
       </div>
     </footer>
   );

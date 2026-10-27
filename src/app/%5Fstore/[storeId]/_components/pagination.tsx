@@ -13,6 +13,7 @@ export function Pagination({
     <nav aria-label="Paginación" className="flex flex-wrap justify-center gap-3 text-sm">
       {firstHref ? (
         <Link
+          prefetch={false}
           href={firstHref}
           className="inline-flex h-12 items-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-6 font-semibold"
         >
@@ -21,6 +22,7 @@ export function Pagination({
       ) : null}
       {nextHref ? (
         <Link
+          prefetch={false}
           href={nextHref}
           className="inline-flex h-12 items-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-6 font-bold text-[var(--sf-link)]"
         >

@@ -125,6 +125,7 @@ export function GoalsBlock({ section, headingId }: { section: Block<"goals">; he
         {section.goals.map((g) => (
           <li key={`${g.attribute}:${g.value}`}>
             <Link
+              prefetch={false}
               href={`/productos?${encodeURIComponent(g.attribute)}=${encodeURIComponent(g.value)}`}
               className="inline-flex min-h-11 items-center rounded-full border-2 border-[var(--sf-fg)] px-5 font-semibold hover:bg-[var(--sf-fg)] hover:text-[var(--sf-bg)]"
             >
@@ -162,6 +163,7 @@ export function ReviewsBlock({
                 <span className="block text-[var(--sf-muted)]">
                   Compra verificada ·{" "}
                   <Link
+                    prefetch={false}
                     href={`/productos/${encodeURIComponent(r.product.slug)}`}
                     className="underline underline-offset-2"
                   >

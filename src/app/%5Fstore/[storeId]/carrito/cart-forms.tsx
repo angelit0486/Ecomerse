@@ -5,9 +5,9 @@ import { useActionState, useRef, useSyncExternalStore } from "react";
 import { applyDiscount, updateLine, type CartActionState } from "./actions";
 
 const control =
-  "h-10 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm";
+  "h-11 rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] bg-[var(--sf-bg)] px-3 text-sm";
 const secondary =
-  "h-10 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium disabled:opacity-60";
+  "h-11 rounded-[var(--sf-radius-btn)] border border-[var(--sf-border-strong)] px-4 text-sm font-medium disabled:opacity-60";
 
 const noSubscribe = () => () => {};
 

@@ -36,6 +36,13 @@ function secureCookies(): boolean {
   return env === "production" || env === "preview";
 }
 
+/** Un intento de entrar del staff (código o contraseña): 10 por email y 30 por IP cada 15 min. */
+async function takeLoginAttempt(email: string): Promise<boolean> {
+  const [attempt] = await workerDb()<{ ok: boolean }[]>`
+    select system.take_staff_login_attempt(${email}, ${await clientIpHash()}) as ok`;
+  return attempt?.ok === true;
+}
+
 export async function requestLoginCode(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = emailSchema.safeParse(
     String(formData.get("email") ?? "")
@@ -49,6 +56,12 @@ export async function requestLoginCode(_: FormState, formData: FormData): Promis
     };
   }
 
+  // Límite propio por email y por IP también para el código (auditoría SEC-01): los
+  // de Supabase Auth son por la IP del servidor, compartida por todo el staff. Se
+  // comparte el presupuesto con la contraseña: son intentos de entrar a la misma cuenta.
+  if (!(await takeLoginAttempt(parsed.data))) {
+    return { error: "Demasiados intentos. Espera unos minutos.", values: { email: parsed.data } };
+  }
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signInWithOtp({
     email: parsed.data,
@@ -75,6 +88,9 @@ export async function verifyLoginCode(_: FormState, formData: FormData): Promise
   if (!email) redirect("/ingresar");
   const code = codeSchema.safeParse(String(formData.get("code") ?? "").replace(/\s/g, ""));
   if (!code.success) return { error: "El código tiene 6 dígitos." };
+  if (!(await takeLoginAttempt(email))) {
+    return { error: "Demasiados intentos. Espera unos minutos y pide un código nuevo." };
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.verifyOtp({
@@ -115,9 +131,7 @@ export async function signInWithPassword(_: FormState, formData: FormData): Prom
   }
   // Límite propio por email y por IP: los de Supabase Auth son por la IP del
   // servidor, compartida por todos los inicios de sesión.
-  const [attempt] = await workerDb()<{ ok: boolean }[]>`
-    select system.take_staff_login_attempt(${email.data}, ${await clientIpHash()}) as ok`;
-  if (attempt?.ok !== true) {
+  if (!(await takeLoginAttempt(email.data))) {
     return { error: "Demasiados intentos. Espera unos minutos.", values };
   }
   const supabase = await createSupabaseServerClient();

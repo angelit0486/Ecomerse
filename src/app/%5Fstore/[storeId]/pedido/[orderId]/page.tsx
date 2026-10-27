@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { deliveryEstimate } from "@/lib/orders/delivery-estimate";
+import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
+import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestOrder } from "@/server/storefront/checkout";
 import { mediaUrl } from "@/server/storefront/catalog";
@@ -42,6 +44,11 @@ export default async function OrderPage({ params, searchParams }: Props) {
   // Un fallo al leer las opiniones no tumba la página del pedido.
   const reviewables = await orderReviewables(store.id, order.id, t).catch(() => []);
   const label = visibleStatus(order);
+  const steps = orderProgress(order);
+  const settings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
+  const whatsapp = settings.success ? settings.data.contact?.whatsapp : undefined;
+  const email = store.contact?.email;
+  const phone = store.contact?.phone;
   const minutesLeft = order.minutes_left;
   const payment = order.payment;
   const canRetry =
@@ -82,6 +89,35 @@ export default async function OrderPage({ params, searchParams }: Props) {
           Guarda esta página: el enlace es tu acceso al pedido.
         </p>
       </header>
+
+      {steps ? (
+        <ol aria-label="Avance del pedido" className="grid grid-cols-4 gap-2 text-xs sm:text-sm">
+          {steps.map((step) => (
+            <li
+              key={step.label}
+              aria-current={step.current ? "step" : undefined}
+              className={`space-y-2 ${step.done || step.current ? "" : "text-[var(--sf-muted)]"}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`block h-1.5 rounded-full ${
+                  step.done
+                    ? "bg-[var(--sf-btn-bg)]"
+                    : step.current
+                      ? "bg-[color-mix(in_srgb,var(--sf-btn-bg)_35%,transparent)]"
+                      : "bg-[var(--sf-border)]"
+                }`}
+              />
+              <span className={`block ${step.current ? "font-semibold" : ""}`}>
+                {step.label}
+                <span className="sr-only">
+                  {step.done ? " (listo)" : step.current ? " (siguiente)" : " (pendiente)"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
       {order.status === "pending_payment" && payment ? (
         <section
@@ -169,8 +205,51 @@ export default async function OrderPage({ params, searchParams }: Props) {
         reviewables={reviewables}
         actionFor={(productId) => sendReview.bind(null, store.id, order.id, t, productId)}
       />
+      {email || phone || whatsapp ? (
+        <section aria-labelledby="ayuda" className="space-y-1 text-sm">
+          <h2 id="ayuda" className="font-semibold">
+            ¿Dudas con tu pedido?
+          </h2>
+          <p>Menciona el pedido {order.display_number} al escribirnos.</p>
+          <ul className="flex flex-wrap gap-x-5">
+            {whatsapp ? (
+              <li>
+                <a
+                  href={`https://wa.me/${whatsapp.slice(1)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center underline underline-offset-2"
+                >
+                  WhatsApp {whatsapp}
+                </a>
+              </li>
+            ) : null}
+            {email ? (
+              <li>
+                <a
+                  href={`mailto:${email}`}
+                  className="inline-flex min-h-11 items-center break-all underline underline-offset-2"
+                >
+                  {email}
+                </a>
+              </li>
+            ) : null}
+            {phone ? (
+              <li>
+                <a
+                  href={`tel:${phone.replace(/[^+0-9]/g, "")}`}
+                  className="inline-flex min-h-11 items-center underline underline-offset-2"
+                >
+                  {phone}
+                </a>
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
       <p className="border-t border-[var(--sf-border)] pt-5">
         <Link
+          prefetch={false}
           href="/productos"
           className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
         >

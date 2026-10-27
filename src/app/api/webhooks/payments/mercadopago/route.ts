@@ -1,4 +1,5 @@
 import { workerDb } from "@/server/db/role-clients";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { serverEnv } from "@/server/env";
 import { log } from "@/server/observability/logger";
 import { requestIdFrom } from "@/server/observability/request-id";
@@ -35,6 +36,8 @@ export async function POST(request: Request): Promise<Response> {
     log: reqLog,
     requireLivemode: serverEnv().APP_ENV === "production",
   });
+  // Lo que encadena el pago (correos, despachos) corre ya, no en la pasada del cron (DIN-04).
+  if (result.status === 200) processQueueSoon("webhook.payment");
   return Response.json(result.body, {
     status: result.status,
     headers: { "cache-control": "no-store" },

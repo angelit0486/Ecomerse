@@ -58,10 +58,18 @@ export default async function AccountPage({ params }: Props) {
                 key={o.id}
                 className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
               >
-                <Link href={`/cuenta/pedidos/${o.id}`} className="font-medium underline">
+                <Link
+                  prefetch={false}
+                  href={`/cuenta/pedidos/${o.id}`}
+                  className="font-medium underline"
+                >
                   Pedido {o.display_number}
                 </Link>
-                <span>{new Date(o.placed_at).toLocaleDateString(store.locale)}</span>
+                <span>
+                  {new Date(o.placed_at).toLocaleDateString(store.locale, {
+                    timeZone: store.timezone,
+                  })}
+                </span>
                 <span>{visibleStatus(o)}</span>
                 <span>{money(o.total, store)}</span>
               </li>

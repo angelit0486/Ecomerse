@@ -350,58 +350,68 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
               <figcaption className="text-[13px] text-fg-muted">
                 Ventas por día (antes de reembolsos)
               </figcaption>
-              {/* Una sola serie: sin leyenda. SVG (no estilos en línea: la CSP los bloquea);
-                  tooltip nativo por barra y la misma información en la tabla. */}
-              <svg
-                viewBox={`0 0 ${kpis.series.length * 10} 100`}
-                preserveAspectRatio="none"
-                className="h-36 w-full border-b border-border"
-                role="img"
-                aria-label={`Ventas por día del ${dayLabel(kpis.from)} al ${dayLabel(kpis.to)}. Detalle en la tabla.`}
-              >
-                {kpis.series.map((s, i) => {
-                  const h = s.sales > 0 ? Math.max(1.5, (s.sales / max) * 100) : 0;
-                  const x = i * 10 + 1;
-                  return (
-                    <g key={s.day} className="group">
-                      <title>{`${dayLabel(s.day)}: ${m(s.sales)} · ${s.orders} pedidos`}</title>
-                      {/* Área de cursor más grande que la barra. */}
-                      <rect x={i * 10} y={0} width={10} height={100} fill="transparent" />
-                      {h > 0 ? (
-                        <path
-                          d={`M${x},100 V${100 - h + 2} Q${x},${100 - h} ${x + 2},${100 - h} H${x + 6} Q${x + 8},${100 - h} ${x + 8},${100 - h + 2} V100 Z`}
-                          className="fill-accent group-hover:fill-accent-hover"
-                        />
-                      ) : null}
-                    </g>
-                  );
-                })}
-              </svg>
-              <details className="text-sm">
-                <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-[13px] text-fg-muted">
-                  Ver como tabla
-                </summary>
-                <table className="mt-2 w-full max-w-md text-left">
-                  <thead className="text-[13px] text-fg-muted">
-                    <tr>
-                      <th className="py-1 font-medium">Día</th>
-                      <th className="py-1 font-medium">Ventas</th>
-                      <th className="py-1 font-medium">Pedidos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kpis.series
-                      .filter((s) => s.orders > 0)
-                      .map((s) => (
-                        <tr key={s.day}>
-                          <td className="py-1">{dayLabel(s.day)}</td>
-                          <td className="py-1">{m(s.sales)}</td>
-                          <td className="py-1">{s.orders}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </details>
+              {/* Sin ventas: un aviso del mismo alto en lugar de una gráfica en blanco. */}
+              {kpis.series.every((s) => s.sales === 0) ? (
+                <p className="flex h-36 items-center justify-center rounded-md border border-dashed border-border px-4 text-center text-sm text-fg-muted">
+                  Aún no hay ventas en este periodo. Cuando cobres un pedido, aquí verás cuánto
+                  vendes cada día.
+                </p>
+              ) : (
+                /* Una sola serie: sin leyenda. SVG (no estilos en línea: la CSP los bloquea);
+                  tooltip nativo por barra y la misma información en la tabla. */
+                <svg
+                  viewBox={`0 0 ${kpis.series.length * 10} 100`}
+                  preserveAspectRatio="none"
+                  className="h-36 w-full border-b border-border"
+                  role="img"
+                  aria-label={`Ventas por día del ${dayLabel(kpis.from)} al ${dayLabel(kpis.to)}. Detalle en la tabla.`}
+                >
+                  {kpis.series.map((s, i) => {
+                    const h = s.sales > 0 ? Math.max(1.5, (s.sales / max) * 100) : 0;
+                    const x = i * 10 + 1;
+                    return (
+                      <g key={s.day} className="group">
+                        <title>{`${dayLabel(s.day)}: ${m(s.sales)} · ${s.orders} pedidos`}</title>
+                        {/* Área de cursor más grande que la barra. */}
+                        <rect x={i * 10} y={0} width={10} height={100} fill="transparent" />
+                        {h > 0 ? (
+                          <path
+                            d={`M${x},100 V${100 - h + 2} Q${x},${100 - h} ${x + 2},${100 - h} H${x + 6} Q${x + 8},${100 - h} ${x + 8},${100 - h + 2} V100 Z`}
+                            className="fill-accent group-hover:fill-accent-hover"
+                          />
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </svg>
+              )}
+              {kpis.orders > 0 ? (
+                <details className="text-sm">
+                  <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-[13px] text-fg-muted">
+                    Ver como tabla
+                  </summary>
+                  <table className="mt-2 w-full max-w-md text-left">
+                    <thead className="text-[13px] text-fg-muted">
+                      <tr>
+                        <th className="py-1 font-medium">Día</th>
+                        <th className="py-1 font-medium">Ventas</th>
+                        <th className="py-1 font-medium">Pedidos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kpis.series
+                        .filter((s) => s.orders > 0)
+                        .map((s) => (
+                          <tr key={s.day}>
+                            <td className="py-1">{dayLabel(s.day)}</td>
+                            <td className="py-1">{m(s.sales)}</td>
+                            <td className="py-1">{s.orders}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </details>
+              ) : null}
             </figure>
           </section>
 

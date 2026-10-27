@@ -156,6 +156,7 @@ function TemplateHome({
             {categories.map((category) => (
               <li key={category.path}>
                 <Link
+                  prefetch={false}
                   href={`/categoria/${category.path}`}
                   className="flex h-full flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 font-semibold hover:border-[var(--sf-primary)]"
                 >

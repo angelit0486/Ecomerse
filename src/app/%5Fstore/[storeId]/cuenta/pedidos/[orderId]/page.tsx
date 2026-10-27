@@ -30,7 +30,7 @@ export default async function AccountOrderPage({ params }: Props) {
   return (
     <section className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-1">
-        <Link href="/cuenta" className="text-sm underline">
+        <Link prefetch={false} href="/cuenta" className="text-sm underline">
           ← Mi cuenta
         </Link>
         <h1 className="text-2xl font-semibold">Pedido {order.display_number}</h1>

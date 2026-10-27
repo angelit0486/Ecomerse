@@ -147,6 +147,9 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   await page.getByRole("button", { name: "Aprobar pago" }).click();
   await expect(page.getByRole("heading", { name: "Gracias por tu compra" })).toBeVisible();
   await expect(page.getByRole("status")).toContainText("Pagado — por preparar");
+  // «Qué sigue»: pagado, lo siguiente es el envío.
+  await expect(page.getByRole("list", { name: "Avance del pedido" })).toBeVisible();
+  await expect(page.locator('[aria-current="step"]')).toContainText("Enviado");
   await expect(page.getByText("$549.00").first()).toBeVisible();
   await expectNoSeriousA11yViolations(page);
   const orderUrl = page.url();

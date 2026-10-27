@@ -1,3 +1,4 @@
+import localFont from "next/font/local";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -5,10 +6,20 @@ import { requireStaffSession } from "@/server/auth/guards";
 import { PruvaLogo } from "@/ui/brand/pruva-logo";
 import { Button } from "@/ui/primitives/button";
 
+// Inter con precarga solo en el panel (auditoría REN-06): sin ella, el cambio de
+// fuente movía «Por atender» en Inicio (CLS 0.198). Mismo archivo que la del
+// layout raíz, que no la precarga para que la tienda no la descargue.
+const inter = localFont({
+  src: "../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+  weight: "100 900",
+  display: "swap",
+  preload: true,
+});
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   await requireStaffSession();
   return (
-    <div className="min-h-dvh">
+    <div className={`${inter.className} min-h-dvh`}>
       <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
         <PruvaLogo title="PRUVA · Panel" className="h-6 w-auto text-accent" />
         <div className="flex items-center gap-2">

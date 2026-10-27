@@ -75,8 +75,9 @@ export function SectionHeading({
 export function ViewAll({ href, title }: { href: string; title: string }) {
   return (
     <Link
+      prefetch={false}
       href={href}
-      className="shrink-0 pb-1 text-sm font-semibold text-[var(--sf-link)] underline-offset-4 hover:underline"
+      className="inline-flex min-h-11 shrink-0 items-end pb-1 text-sm font-semibold text-[var(--sf-link)] underline-offset-4 hover:underline"
     >
       Ver todos<span className="sr-only"> de {title}</span>
     </Link>
@@ -280,6 +281,7 @@ async function CategoryCircles({
           return (
             <li key={category.path} className="w-[5.5rem] shrink-0 sm:w-auto">
               <Link
+                prefetch={false}
                 href={`/categoria/${category.path}`}
                 className="group flex flex-col items-center gap-2 text-center"
               >
@@ -526,6 +528,7 @@ export async function HomeSections({
               {section.brands.map((brand) => (
                 <li key={brand.slug}>
                   <Link
+                    prefetch={false}
                     href={`/marca/${encodeURIComponent(brand.slug)}`}
                     className="flex h-20 items-center justify-center rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-primary)]"
                   >

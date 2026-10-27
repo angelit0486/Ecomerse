@@ -181,7 +181,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </p>
         {sp.creado === "1" ? (
           <p role="status" className="mt-2 text-sm text-success">
-            Producto creado como borrador. Agrega imágenes y publícalo cuando esté listo.
+            {/* Solo pide fotos si no tiene (auditoría UX-14: ya con foto, el aviso confundía). */}
+            {product.media.length > 0
+              ? "Producto creado como borrador. Publícalo cuando esté listo."
+              : "Producto creado como borrador. Agrega imágenes y publícalo cuando esté listo."}
           </p>
         ) : null}
         {sp.copiado === "1" ? (

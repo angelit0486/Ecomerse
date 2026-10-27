@@ -38,7 +38,7 @@ export default async function BrandsPage({ params }: Props) {
         <section className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-6">
           <h2 className="font-semibold">Aún no hay marcas</h2>
           <p className="mt-1 text-sm text-[var(--sf-muted)]">
-            <Link href="/productos" className="underline">
+            <Link prefetch={false} href="/productos" className="underline">
               Ver todos los productos
             </Link>
           </p>

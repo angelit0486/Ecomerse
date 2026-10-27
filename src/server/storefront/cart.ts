@@ -83,7 +83,7 @@ export interface CartView {
 
 export interface PaymentMethod {
   id: string;
-  provider: "manual" | "fake";
+  provider: "manual" | "fake" | "stripe" | "mercadopago";
   display_name: string;
   instructions: string | null;
 }

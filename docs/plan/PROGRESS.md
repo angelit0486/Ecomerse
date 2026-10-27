@@ -5,6 +5,34 @@
 
 ## Ahora
 
+- **Panel y tienda más profesionales (2026-10-27):** lista de 20 pasos que se pueden hacer sin tocar productos ni tiendas.
+  - **Pasos 0–3 (hechos, `6d1b61f`):**
+    - CI en verde (formato);
+    - envío estimado y «Total sin envío» desde el carrito;
+    - estado de México en lista y propuesto por el CP;
+    - país fijo cuando hay uno solo;
+    - checkout con encabezado mínimo «Pago seguro».
+  - **Pasos 4–7, 9–14, 16, 18 y 19 (hechos en código):**
+    - pie y pago enlazan solo las políticas publicadas (sin crear textos);
+    - insignia de Mercado Pago cuando está activo;
+    - «Gracias» con avance del pedido y contacto real;
+    - 404 con buscador y título de la tienda (sin «PRUVA», UX-08);
+    - 44 px en enlaces y botones de la tienda;
+    - `prefetch={false}` fuera del menú principal (REN-03);
+    - Inter precargada solo en el panel (REN-06);
+    - gráfica vacía con mensaje;
+    - subir imagen dentro de cada bloque de la portada;
+    - reembolso y cancelación plegados;
+    - mensajes sin «PRUVA» como formato;
+    - fechas del panel con la zona de la tienda;
+    - la cola corre al instante tras pedido, pago, webhook y acciones de pedidos (DIN-04, parcial);
+    - límite propio de intentos en el ingreso por código (SEC-01).
+  - **Pasos 8, 15 y 17 (propuestos, sin hacer):** necesitan migración y, la 15, cambiar GATE0 §26 («todo o nada»).
+    - 8: variantes de imagen con `srcset`.
+    - 15: importar las filas buenas y reportar las malas.
+    - 17: pantalla de trabajos fallidos con «reintentar».
+    - Esperan la aprobación del propietario.
+
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.
     - Línea base sobre `f503304`: verify 941, pgTAP 2,348, integración 355, E2E 98/98.

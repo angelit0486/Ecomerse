@@ -122,9 +122,20 @@ export async function enrollTotp(page: Page): Promise<string> {
   return secret;
 }
 
+/**
+ * Cada acceso del staff cuenta contra un límite por IP (SEC-01). Todas las pruebas
+ * salen de la misma máquina: cada inicio de sesión se presenta como un cliente
+ * distinto, como en la vida real, para no agotar el cupo compartido.
+ */
+export async function asFreshClient(page: Page): Promise<void> {
+  const octet = () => Math.floor(Math.random() * 254) + 1;
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` });
+}
+
 /** Acceso completo de un staff nuevo (código por email + enrolamiento TOTP). */
 export async function loginNewStaff(page: Page, email: string): Promise<string> {
   const sentAt = Date.now() - 1000;
+  await asFreshClient(page);
   await page.goto("/ingresar");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Enviarme un código" }).click();

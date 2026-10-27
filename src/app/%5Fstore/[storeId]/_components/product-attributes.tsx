@@ -27,6 +27,7 @@ export function ProductAttributes({ attributes }: { attributes: ProductAttribute
           {goals.values.map((value) => (
             <li key={value.key}>
               <Link
+                prefetch={false}
                 href={`/productos?${new URLSearchParams([[GOAL_KEY, value.key]])}`}
                 className="inline-flex min-h-11 items-center font-semibold text-[var(--sf-link)] underline underline-offset-4"
               >

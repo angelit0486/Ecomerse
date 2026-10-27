@@ -66,6 +66,7 @@ export function BrandFilter({ brands, searchable }: { brands: Brand[]; searchabl
           {shown.map((brand) => (
             <li key={brand.slug}>
               <Link
+                prefetch={false}
                 href={`/marca/${brand.slug}`}
                 className="group flex h-full flex-col gap-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-3 hover:border-[var(--sf-fg)]"
               >

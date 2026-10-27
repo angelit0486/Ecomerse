@@ -158,7 +158,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {origin && job.status === "validated" ? (
         <div role="status" className="space-y-1 rounded-md border border-border p-3 text-sm">
           <p>
-            Leímos tu archivo de {origin} y lo pasamos al formato de PRUVA: nombre, descripción,
+            Leímos tu archivo de {origin} y lo pasamos al formato de tu tienda: nombre, descripción,
             marca, etiquetas, presentaciones, precios, existencias, peso y SEO. Las categorías no se
             copian: asígnalas después en bloque desde Productos.
           </p>

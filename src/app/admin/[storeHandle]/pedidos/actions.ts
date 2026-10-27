@@ -7,6 +7,7 @@ import { z } from "zod";
 import { reportActionError } from "@/server/actions/report";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { callRpc } from "@/server/db/rpc";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { invalidateStore } from "@/server/storefront/cache";
 
 import { failureFrom, storeClient, type FormState } from "../_shared/action-state";
@@ -14,6 +15,8 @@ import { failureFrom, storeClient, type FormState } from "../_shared/action-stat
 const failure = failureFrom("orders", { staff_note: "La nota puede tener hasta 4000 caracteres." });
 const uuid = z.uuid();
 
+// Tras cada acción que encola trabajo (correos al comprador, reembolsos con la
+// pasarela), la cola se procesa al terminar la respuesta (auditoría DIN-04).
 export async function confirmManualPayment(
   storeHandle: string,
   orderId: string,
@@ -36,6 +39,7 @@ export async function confirmManualPayment(
       return { error: "Este pedido ya no está pendiente de pago (o su reserva venció)." };
     return { error: e.message };
   }
+  processQueueSoon("orders.confirmManualPayment");
   revalidatePath(`/admin/${storeHandle}/pedidos/${orderId}`);
   return { ok: true, message: "Pago confirmado. El pedido está listo para prepararse." };
 }
@@ -71,6 +75,7 @@ const CANCEL_REASONS = new Set(["customer", "staff", "fraud", "out_of_stock", "o
 
 /** Tras el éxito el aviso vive en la página: la sección del formulario puede desaparecer. */
 function done(storeHandle: string, orderId: string, notice: string): never {
+  processQueueSoon(`orders.${notice}`);
   const path = `/admin/${storeHandle}/pedidos/${orderId}`;
   revalidatePath(path);
   redirect(`${path}?aviso=${notice}`);
@@ -235,11 +240,13 @@ export async function bulkFulfillOrders(
     }
   } catch (error) {
     const state = failure(error);
+    if (done > 0) processQueueSoon("orders.bulkFulfillOrders");
     revalidatePath(`/admin/${storeHandle}/pedidos`);
     return done > 0
       ? { ...state, error: `${state.error} Se surtieron ${done} antes del error.` }
       : state;
   }
+  if (done > 0) processQueueSoon("orders.bulkFulfillOrders");
   revalidatePath(`/admin/${storeHandle}/pedidos`, "layout");
   const surtidos = done === 1 ? "1 pedido surtido" : `${done} pedidos surtidos`;
   return {

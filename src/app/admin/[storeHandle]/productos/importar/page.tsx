@@ -108,8 +108,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
         </h2>
         <p>
           No llenes la plantilla: exporta tus productos desde allá y sube ese mismo archivo en el
-          paso 3. Lo pasamos al formato de PRUVA (presentaciones, precios, existencias, marca, peso
-          y SEO). Las fotos de Shopify se descargan solas desde sus enlaces; las demás, súbelas
+          paso 3. Lo pasamos al formato de tu tienda (presentaciones, precios, existencias, marca,
+          peso y SEO). Las fotos de Shopify se descargan solas desde sus enlaces; las demás, súbelas
           todas de una vez con una carpeta por producto.
         </p>
       </section>
@@ -170,7 +170,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
           >
             <div className="space-y-1">
               <label htmlFor="file" className="text-sm font-medium">
-                Archivo CSV de PRUVA, Shopify o Tiendanube (hasta 4 MB y 5 000 filas)
+                Archivo CSV de esta plataforma, Shopify o Tiendanube (hasta 4 MB y 5 000 filas)
               </label>
               <input
                 id="file"

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { effectiveShippingPrice, shippingEstimate } from "@/lib/checkout/shipping";
 import { getCart, getCartLegends, paymentMethods } from "@/server/storefront/cart";
-import { getShippingPromo } from "@/server/storefront/catalog";
+import { getPolicyLinks, getShippingPromo } from "@/server/storefront/catalog";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
 
@@ -23,11 +23,12 @@ type Props = { params: Promise<{ storeId: string }> };
 /** Checkout de una página (§17): todo lo calcula la base en cada render. */
 export default async function CheckoutPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
-  const [cart, methods, legends, promo] = await Promise.all([
+  const [cart, methods, legends, promo, policies] = await Promise.all([
     getCart(store.id),
     paymentMethods(store.id),
     getCartLegends(store.id, "checkout"),
     getShippingPromo(store.id),
+    getPolicyLinks(store.id),
   ]);
   if (!cart || cart.item_count === 0) redirect("/carrito");
 
@@ -86,7 +87,7 @@ export default async function CheckoutPage({ params }: Props) {
         {cart.has_unavailable ? (
           <p role="alert">
             Hay productos no disponibles en tu carrito.{" "}
-            <Link href="/carrito" className="underline">
+            <Link prefetch={false} href="/carrito" className="underline">
               Revisa el carrito
             </Link>
             .
@@ -101,6 +102,25 @@ export default async function CheckoutPage({ params }: Props) {
           shippingLabels={labels}
           totalLabel={totalLabel}
         />
+        {/* Las políticas publicadas, junto al botón de pago (auditoría REG-07). */}
+        {policies.length > 0 ? (
+          <nav aria-label="Políticas de la tienda" className="text-sm text-[var(--sf-muted)]">
+            <p>Antes de pagar puedes revisar:</p>
+            <ul className="flex flex-wrap gap-x-4">
+              {policies.map((p) => (
+                <li key={p.href}>
+                  <Link
+                    prefetch={false}
+                    href={p.href}
+                    className="inline-flex min-h-11 items-center underline underline-offset-2"
+                  >
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
       </div>
       <aside
         aria-label="Resumen del pedido"
@@ -120,7 +140,11 @@ export default async function CheckoutPage({ params }: Props) {
           shippingNote={shippingEstimate(promo, cart, (c) => money(c, store))}
         />
         <PurchaseLegends legends={legends} />
-        <Link href="/carrito" className="text-sm underline">
+        <Link
+          prefetch={false}
+          href="/carrito"
+          className="inline-flex min-h-11 items-center text-sm underline"
+        >
           Modificar el carrito
         </Link>
       </aside>

@@ -690,6 +690,36 @@ export const getPage = cache(async (storeId: string, slug: string): Promise<Page
   return pageCached(storeId, slug);
 });
 
+/**
+ * Políticas publicadas para el pie y el pago (auditoría REG-07/UX): se leen las
+ * cuatro páginas legales que toda tienda trae (app.create_store_content) por su
+ * dirección de origen. Si el comercio cambió esa dirección antes de publicar, la
+ * política sigue disponible desde su menú del pie. Nunca se inventa texto: solo
+ * se enlaza lo que la tienda publicó.
+ */
+export const POLICY_SLUGS = [
+  ["policy_privacy", "aviso-de-privacidad"],
+  ["policy_terms", "terminos-y-condiciones"],
+  ["policy_returns", "devoluciones"],
+  ["policy_shipping", "envios"],
+] as const;
+
+export interface PolicyLink {
+  type: (typeof POLICY_SLUGS)[number][0];
+  title: string;
+  href: string;
+}
+
+export const getPolicyLinks = cache(async (storeId: string): Promise<PolicyLink[]> => {
+  assertStore(storeId);
+  const pages = await Promise.all(POLICY_SLUGS.map(([, slug]) => pageCached(storeId, slug)));
+  return POLICY_SLUGS.flatMap(([type], i) => {
+    const page = pages[i];
+    if (!page || page.type !== type || page.unpublished) return [];
+    return [{ type, title: page.title, href: `/paginas/${page.slug}` }];
+  });
+});
+
 export const getMenus = cache(
   async (storeId: string): Promise<{ main: MenuEntry[]; footer: MenuEntry[] }> => {
     assertStore(storeId);
