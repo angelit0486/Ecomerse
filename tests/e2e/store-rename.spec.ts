@@ -25,6 +25,13 @@ test.beforeAll(async () => {
 
 test("la dueña cambia el nombre de su tienda abierta", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
+  // La CSP con nonce bloquea atributos style; un componente que los escriba deja
+  // errores en la consola (el Select de Radix lo hacía en esta pantalla).
+  const cspErrors: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" && m.text().includes("Content Security Policy"))
+      cspErrors.push(m.text());
+  });
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
   // En el celular el menú del panel está plegado.
@@ -32,6 +39,7 @@ test("la dueña cambia el nombre de su tienda abierta", async ({ page }) => {
   await page.getByRole("link", { name: "Datos de la tienda" }).first().click();
   await expect(page.getByRole("heading", { name: "Datos de la tienda", level: 1 })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
+  expect(cspErrors).toEqual([]);
 
   const name = `PRUVA Suplementos ${run}`;
   await page.getByLabel("Nombre de la tienda").fill(name);

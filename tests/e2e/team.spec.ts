@@ -46,8 +46,7 @@ test("invitación de punta a punta y permisos del catalog_manager", async ({ bro
   await owner.getByRole("button", { name: "Invitar a alguien" }).click();
   const dialog = owner.getByRole("dialog", { name: "Invitar a la tienda" });
   await dialog.getByLabel("Email").fill(catEmail);
-  await dialog.getByRole("combobox", { name: "Rol" }).click();
-  await owner.getByRole("option", { name: "Catálogo" }).click();
+  await dialog.getByRole("combobox", { name: "Rol" }).selectOption({ label: "Catálogo" });
   await dialog.getByRole("button", { name: "Enviar invitación" }).click();
   await expect(owner.getByText(`Invitación enviada a ${catEmail}.`).first()).toBeVisible();
   await expect(owner.getByRole("table", { name: "Invitaciones pendientes" })).toContainText(
@@ -105,8 +104,9 @@ test("invitación de punta a punta y permisos del catalog_manager", async ({ bro
   const row = members.getByRole("row", { name: new RegExp(catEmail) });
   await expect(row).toBeVisible();
 
-  await row.getByRole("combobox", { name: `Rol de ${catEmail}` }).click();
-  await owner.getByRole("option", { name: "Solo lectura" }).click();
+  await row
+    .getByRole("combobox", { name: `Rol de ${catEmail}` })
+    .selectOption({ label: "Solo lectura" });
   await expect(owner.getByText("Rol actualizado.").first()).toBeVisible();
 
   await row.getByRole("button", { name: "Suspender" }).click();

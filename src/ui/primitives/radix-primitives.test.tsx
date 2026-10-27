@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import axe from "axe-core";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { renderToString } from "react-dom/server";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { Button } from "./button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
@@ -58,6 +59,38 @@ describe("Dialog", () => {
 });
 
 describe("Select dentro de Field", () => {
+  it("el HTML del servidor no trae atributos style (la CSP los bloquea y ensucia la consola)", () => {
+    const html = renderToString(
+      <Select
+        name="timezone"
+        defaultValue="b"
+        options={[
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ]}
+      />,
+    );
+    expect(html).not.toContain("style=");
+    expect(html).toContain('name="timezone"');
+  });
+
+  it("controlado: avisa el valor elegido", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Select
+        aria-label="Fuente"
+        value="a"
+        onValueChange={onValueChange}
+        options={[
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ]}
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Fuente" }), { target: { value: "b" } });
+    expect(onValueChange).toHaveBeenCalledWith("b");
+  });
+
   it("recibe la etiqueta y el error del campo", async () => {
     render(
       <Field label="Rol" error="Elige un rol">

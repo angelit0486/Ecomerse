@@ -40,8 +40,7 @@ async function cspViolations(page: Page): Promise<string[]> {
 }
 
 async function choose(page: Page, label: string, option: string) {
-  await page.getByLabel(label, { exact: true }).click();
-  await page.getByRole("option", { name: option }).click();
+  await page.getByLabel(label, { exact: true }).selectOption({ label: option });
 }
 
 test.describe.configure({ mode: "serial" });

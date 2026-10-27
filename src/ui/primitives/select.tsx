@@ -1,7 +1,5 @@
 "use client";
 
-import { Select as S } from "radix-ui";
-
 import { cn } from "@/lib/cn";
 
 import type { FieldControlProps } from "./field";
@@ -25,56 +23,50 @@ export interface SelectProps extends Partial<FieldControlProps> {
 }
 
 /**
- * Selector (Radix) que se usa dentro de Field: recibe id y aria-* del campo.
- * Con `name` incluye un <select> nativo oculto, así funciona en formularios con
- * Server Actions.
+ * Selector nativo que se usa dentro de Field: recibe id y aria-* del campo y
+ * funciona en formularios con Server Actions sin JavaScript. Antes era el Select
+ * de Radix, que escribe atributos `style` en el HTML del servidor: la CSP con
+ * nonce los bloquea (GATE0 §44.13) y cada pantalla dejaba errores en la consola.
  */
 export function Select({
   options,
   placeholder = "Elige una opción",
-  id,
-  required,
-  "aria-invalid": ariaInvalid,
-  "aria-describedby": ariaDescribedBy,
-  "aria-label": ariaLabel,
+  value,
+  defaultValue,
+  onValueChange,
   ...rest
 }: SelectProps) {
+  // Sin valor inicial, una opción vacía pide elegir (y `required` la rechaza).
+  const empty = value === undefined && !options.some((o) => o.value === defaultValue);
   return (
-    <S.Root {...rest} {...(required ? { required: true } : {})}>
-      <S.Trigger
-        id={id}
-        aria-invalid={ariaInvalid}
-        aria-describedby={ariaDescribedBy}
-        aria-label={ariaLabel}
+    <div className="relative">
+      <select
+        {...rest}
+        {...(value !== undefined ? { value } : { defaultValue: empty ? "" : defaultValue })}
+        onChange={onValueChange ? (e) => onValueChange(e.target.value) : undefined}
         className={cn(
-          "flex h-11 w-full items-center md:h-9 justify-between rounded-[var(--radius-control)] border border-control",
-          "bg-surface px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2",
+          "flex h-11 w-full appearance-none items-center md:h-9 rounded-[var(--radius-control)] border border-control",
+          "bg-surface pl-3 pr-8 text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2",
           "focus-visible:outline-focus aria-[invalid=true]:border-danger disabled:opacity-50",
         )}
       >
-        <S.Value placeholder={placeholder} />
-        <S.Icon aria-hidden="true">▾</S.Icon>
-      </S.Trigger>
-      <S.Portal>
-        <S.Content
-          position="popper"
-          sideOffset={4}
-          className="z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--radius-control)] border border-border bg-surface shadow-lg"
-        >
-          <S.Viewport className="max-h-[inherit] overflow-y-auto p-1">
-            {options.map((option) => (
-              <S.Item
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled ?? false}
-                className="cursor-default rounded px-2 py-1.5 text-sm text-fg outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-canvas"
-              >
-                <S.ItemText>{option.label}</S.ItemText>
-              </S.Item>
-            ))}
-          </S.Viewport>
-        </S.Content>
-      </S.Portal>
-    </S.Root>
+        {empty ? (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        ) : null}
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled ?? false}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-fg"
+      >
+        ▾
+      </span>
+    </div>
   );
 }

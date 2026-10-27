@@ -65,8 +65,7 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.getByLabel("Email del dueño").fill(newOwnerEmail);
   await page.getByLabel("Nombre de la tienda").fill(`Tienda Nueva ${run}`);
   await page.getByLabel("Dirección de la tienda (handle)").fill(`nueva-${run}`);
-  await page.getByRole("combobox", { name: "Plan" }).click();
-  await page.getByRole("option", { name: "e2e_plan" }).click();
+  await page.getByRole("combobox", { name: "Plan" }).selectOption({ label: "e2e_plan" });
   await page.getByRole("button", { name: "Crear organización y tienda" }).click();
   await expect(page.getByText(`Tienda creada en nueva-${run}.tiendas.localhost.`)).toBeVisible();
   await runJobs();
@@ -107,10 +106,15 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.getByLabel("Buscar tienda u organización").fill(tenant.name);
   await page.getByLabel("Buscar tienda u organización").press("Enter");
   await expect(page).toHaveURL(/tienda=/);
-  await page.getByRole("combobox", { name: "Tienda", exact: true }).click();
-  await page.getByRole("option", { name: new RegExp(tenant.name) }).click();
-  await page.getByRole("combobox", { name: "Persona de soporte" }).click();
-  await page.getByRole("option", { name: supportEmail }).click();
+  const storeSelect = page.getByRole("combobox", { name: "Tienda", exact: true });
+  const storeLabel = await storeSelect
+    .locator("option", { hasText: tenant.name })
+    .first()
+    .textContent();
+  await storeSelect.selectOption({ label: storeLabel! });
+  await page
+    .getByRole("combobox", { name: "Persona de soporte" })
+    .selectOption({ label: supportEmail });
   await page.getByLabel("Motivo").fill("Ticket 42: la dueña no ve sus pedidos del día");
   await page.getByRole("button", { name: "Conceder acceso de solo lectura" }).click();
   await expect(page.getByText("Acceso concedido. Avisamos al dueño de la tienda.")).toBeVisible();
