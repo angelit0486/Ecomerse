@@ -60,6 +60,9 @@ insert into public.discounts (store_id, code, type, value, usage_limit) values
   (tests.fx('store_a'), 'MIL', 'fixed_amount', 1000, 5);
 
 -- ============================================================================ Fake
+-- Punto de partida fijo: otras pruebas (integración, E2E) pueden haber dejado
+-- el pago simulado activado en esta base; aquí se prueba el valor por omisión.
+delete from public.platform_settings where key = 'payments.allow_fake';
 select tests.set_fx('o1', (tests.order_with(tests.tok('f1'), tests.fx('fake'), 'MIL') ->> 'order_id')::uuid);
 select tests.set_fx('p1', (select id from public.payments where order_id = tests.fx('o1')));
 select throws_ok(format($$ select tests.gw(%L) $$, format('select storefront.fake_payment_result(%L, %L, ''succeeded'')',
