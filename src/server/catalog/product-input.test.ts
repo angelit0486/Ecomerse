@@ -29,20 +29,28 @@ describe("productInputSchema", () => {
   });
 
   it("rechaza compare_at_price ≤ precio, más de 3 opciones y dos categorías principales", () => {
-    const bad = productInputSchema.safeParse({
-      title: "X",
-      options: [1, 2, 3, 4].map((n) => ({ name: `O${n}`, values: ["a"] })),
-      variants: [{ price: 100, compare_at_price: 100 }],
-      categories: [
-        { id: "0190a0d0-0000-7000-8000-000000000001", is_primary: true },
-        { id: "0190a0d0-0000-7000-8000-000000000002", is_primary: true },
-      ],
-    });
-    expect(bad.success).toBe(false);
-    const paths = bad.error!.issues.map((i) => i.path.join("."));
-    expect(paths).toEqual(
-      expect.arrayContaining(["options", "variants.0.compare_at_price", "categories"]),
+    const base = { title: "X", variants: [{ price: 100 }] };
+    const paths = (input: Record<string, unknown>) => {
+      const result = productInputSchema.safeParse({ ...base, ...input });
+      expect(result.success).toBe(false);
+      return result.error!.issues.map((i) => i.path.join("."));
+    };
+    // Zod ≥ 4.6.6 deja de validar al pasarse del límite de una lista (protección de
+    // memoria), así que cada regla se prueba por separado.
+    expect(paths({ options: [1, 2, 3, 4].map((n) => ({ name: `O${n}`, values: ["a"] })) })).toEqual(
+      ["options"],
     );
+    expect(paths({ variants: [{ price: 100, compare_at_price: 100 }] })).toContain(
+      "variants.0.compare_at_price",
+    );
+    expect(
+      paths({
+        categories: [
+          { id: "0190a0d0-0000-7000-8000-000000000001", is_primary: true },
+          { id: "0190a0d0-0000-7000-8000-000000000002", is_primary: true },
+        ],
+      }),
+    ).toContain("categories");
   });
 
   it("rechaza precios negativos o fraccionarios (dinero en centavos)", () => {
