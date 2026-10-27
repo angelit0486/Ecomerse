@@ -6,6 +6,7 @@ import { money } from "./format";
 export function Totals({
   cart,
   store,
+  shippingNote,
 }: {
   cart: Pick<
     CartView,
@@ -14,6 +15,8 @@ export function Totals({
     shippingKnown: boolean;
   };
   store: { currency: string; locale: string };
+  /** Envío estimado antes de la dirección (p. ej. «$99.00 (gratis desde $999.00)»). */
+  shippingNote?: string | undefined;
 }) {
   return (
     <dl className="space-y-2 text-sm">
@@ -31,7 +34,7 @@ export function Totals({
         <dt>Envío</dt>
         <dd>
           {!cart.shippingKnown
-            ? "Se calcula con tu dirección"
+            ? (shippingNote ?? "Se calcula con tu dirección")
             : cart.shipping_total === 0
               ? "Gratis"
               : money(cart.shipping_total, store)}
@@ -44,7 +47,8 @@ export function Totals({
         </div>
       ) : null}
       <div className="flex justify-between border-t border-[var(--sf-border)] pt-2 text-base font-semibold">
-        <dt>Total</dt>
+        {/* Sin dirección el total aún no lleva envío: decirlo evita la «sorpresa» al pagar. */}
+        <dt>{cart.shippingKnown ? "Total" : "Total sin envío"}</dt>
         <dd>{money(cart.total, store)}</dd>
       </div>
     </dl>

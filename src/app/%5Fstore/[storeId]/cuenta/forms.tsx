@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 
+import { MX_STATES } from "@/lib/checkout/mx-states";
+
 import {
   deleteAddress,
   requestCode,
@@ -154,14 +156,35 @@ export function AddressForm({ storeId, country }: { storeId: string; country: st
         <Input label="Colonia, interior (opcional)" name="line2" defaultValue={v.line2} />
       </div>
       <Input label="Ciudad" name="city" defaultValue={v.city} />
-      <Input label="Estado" name="region" defaultValue={v.region} />
+      {country === "MX" ? (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="addr-region" className="text-sm font-medium">
+            Estado
+          </label>
+          {/* Misma lista que el checkout: así la dirección guardada coincide con las zonas de envío. */}
+          <select
+            id="addr-region"
+            name="region"
+            autoComplete="address-level1"
+            defaultValue={v.region ?? ""}
+            className={input}
+          >
+            <option value="" disabled>
+              Elige tu estado
+            </option>
+            {MX_STATES.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <Input label="Estado" name="region" defaultValue={v.region} />
+      )}
       <Input label="Código postal" name="postal_code" defaultValue={v.postal_code} />
-      <Input
-        label="País (código de 2 letras)"
-        name="country"
-        maxLength={2}
-        defaultValue={v.country ?? country}
-      />
+      {/* La tienda envía dentro de su país: no se pide un código de país al comprador. */}
+      <input type="hidden" name="country" value={country} />
       <Input label="Teléfono (opcional)" name="phone" type="tel" defaultValue={v.phone} />
       <label className="flex items-center gap-2 self-end text-sm">
         <input type="checkbox" name="is_default" value="1" defaultChecked={v.is_default === "1"} />

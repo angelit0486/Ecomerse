@@ -57,7 +57,7 @@ async function checkout(page: Page, t: Tenant): Promise<string> {
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");
-  await page.getByLabel("Estado", { exact: true }).fill("Puebla");
+  await page.getByLabel("Estado", { exact: true }).selectOption("Puebla");
   await page.getByLabel("Código postal").fill("72000");
   await page.getByRole("button", { name: /Confirmar pedido/ }).click();
   // El servidor elige el envío y pide confirmar con el total a la vista.

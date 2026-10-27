@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { effectiveShippingPrice } from "@/lib/checkout/shipping";
+import { effectiveShippingPrice, shippingEstimate } from "@/lib/checkout/shipping";
 import { getCart, getCartLegends, paymentMethods } from "@/server/storefront/cart";
+import { getShippingPromo } from "@/server/storefront/catalog";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
 
@@ -22,10 +23,11 @@ type Props = { params: Promise<{ storeId: string }> };
 /** Checkout de una página (§17): todo lo calcula la base en cada render. */
 export default async function CheckoutPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
-  const [cart, methods, legends] = await Promise.all([
+  const [cart, methods, legends, promo] = await Promise.all([
     getCart(store.id),
     paymentMethods(store.id),
     getCartLegends(store.id, "checkout"),
+    getShippingPromo(store.id),
   ]);
   if (!cart || cart.item_count === 0) redirect("/carrito");
 
@@ -47,6 +49,10 @@ export default async function CheckoutPage({ params }: Props) {
     }),
   );
   const itemCount = cart.lines.reduce((n, l) => n + l.quantity, 0);
+  const totalLabel =
+    cart.shipping.status === "ok" || cart.shipping.status === "not_required"
+      ? money(cart.total, store)
+      : `${money(cart.total, store)} + envío`;
   const summaryLines = (
     <ul className="space-y-2 text-sm">
       {cart.lines.map((l) => (
@@ -73,7 +79,7 @@ export default async function CheckoutPage({ params }: Props) {
             <span>
               Ver resumen ({itemCount} {itemCount === 1 ? "producto" : "productos"})
             </span>
-            <span>{money(cart.total, store)}</span>
+            <span className="shrink-0">{totalLabel}</span>
           </summary>
           <div className="mt-3 space-y-3">{summaryLines}</div>
         </details>
@@ -93,7 +99,7 @@ export default async function CheckoutPage({ params }: Props) {
           methods={methods}
           idempotencyKey={newCheckoutKey()}
           shippingLabels={labels}
-          totalLabel={money(cart.total, store)}
+          totalLabel={totalLabel}
         />
       </div>
       <aside
@@ -111,6 +117,7 @@ export default async function CheckoutPage({ params }: Props) {
             shippingKnown: cart.shipping.status === "ok" || cart.shipping.status === "not_required",
           }}
           store={store}
+          shippingNote={shippingEstimate(promo, cart, (c) => money(c, store))}
         />
         <PurchaseLegends legends={legends} />
         <Link href="/carrito" className="text-sm underline">

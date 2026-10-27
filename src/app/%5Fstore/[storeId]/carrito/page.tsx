@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { freeShippingProgress } from "@/lib/catalog/merchandising";
+import { shippingEstimate } from "@/lib/checkout/shipping";
 import { getCart, getCartLegends } from "@/server/storefront/cart";
 import {
   getShippingPromo,
@@ -167,6 +168,7 @@ export default async function CartPage({ params }: Props) {
             shippingKnown: cart.shipping.status === "ok" || cart.shipping.status === "not_required",
           }}
           store={store}
+          shippingNote={shippingEstimate(promo, cart, (c) => money(c, store))}
         />
         {cart.has_unavailable ? (
           <p className="text-sm">Quita los productos no disponibles para continuar.</p>

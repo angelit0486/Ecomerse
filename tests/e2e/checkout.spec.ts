@@ -90,6 +90,8 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   const summary = page.getByRole("complementary", { name: "Resumen" });
   await expect(summary).toContainText("$500.00");
   await expect(summary).toContainText("−$50.00");
+  // Sin dirección el total lo dice: aún no lleva el envío (auditoría UX-05).
+  await expect(summary).toContainText("Total sin envío");
   await expectNoSeriousA11yViolations(page);
 
   await page.getByRole("link", { name: "Continuar al pago" }).click();
@@ -102,15 +104,22 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
   await expect(page.getByText("Escribe la colonia.")).toBeVisible();
   await expect(page.getByText("Escribe un teléfono para la paquetería.")).toBeVisible();
+  // Pago sin distracciones: encabezado mínimo, sin buscador (auditoría UX-12).
+  await expect(page.getByText("Pago seguro")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Volver al carrito" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Buscar productos" })).toHaveCount(0);
 
   await page.getByRole("textbox", { name: "Email" }).fill("Comprador@Example.test");
+  // El error del campo corregido se quita al momento y el conteo baja (UX-03).
+  await expect(page.getByText("Escribe un email válido.")).toHaveCount(0);
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
   await page.getByLabel(/^Teléfono/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");
-  await page.getByLabel("Estado", { exact: true }).fill("Puebla");
+  // Con el CP completo el estado se propone solo.
   await page.getByLabel("Código postal").fill("72000");
+  await expect(page.getByLabel("Estado", { exact: true })).toHaveValue("Puebla");
   // Clic directo en «Confirmar» sin salir del campo: el servidor elige el envío
   // y pide confirmar con el total a la vista (no se pierde el clic, Gate F9).
   await page.getByRole("button", { name: /Confirmar pedido/ }).click();

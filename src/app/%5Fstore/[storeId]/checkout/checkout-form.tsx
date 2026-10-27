@@ -1,9 +1,18 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useSyncExternalStore, type FocusEvent } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FocusEvent,
+  type FormEvent,
+} from "react";
 
 const noSubscribe = () => () => {};
 
+import { MX_STATES, stateForPostalCode } from "@/lib/checkout/mx-states";
 import type { CartView, PaymentMethod } from "@/server/storefront/cart";
 import { submitKeepingState } from "@/ui/submit";
 
@@ -23,7 +32,7 @@ function addressKey(form: HTMLFormElement): string | null {
   return ADDRESS_FIELDS.map(value).join("\u0000");
 }
 
-const COUNTRIES: Record<string, string> = {
+const COUNTRY_NAMES: Record<string, string> = {
   MX: "México",
   US: "Estados Unidos",
   CO: "Colombia",
@@ -32,6 +41,9 @@ const COUNTRIES: Record<string, string> = {
   PE: "Perú",
   ES: "España",
 };
+
+/** Espera tras el último cambio antes de cotizar (el autocompletado llena varios campos seguidos). */
+const QUOTE_DELAY_MS = 600;
 
 function Field({
   label,
@@ -90,13 +102,37 @@ export function CheckoutForm({
     {},
   );
   const a = cart.shipping_address;
-  const f = state.fields ?? {};
+  // Un error se quita en cuanto la persona corrige ese campo (no hasta el siguiente envío).
+  const [edited, setEdited] = useState<{ for: CartActionState; names: Set<string> }>({
+    for: state,
+    names: new Set(),
+  });
+  const editedNames = edited.for === state ? edited.names : new Set<string>();
+  const f = Object.fromEntries(
+    Object.entries(state.fields ?? {}).filter(([name]) => !editedNames.has(name)),
+  ) as NonNullable<CartActionState["fields"]>;
+  // «Faltan N datos» baja conforme se corrigen los campos y desaparece en cero.
+  const missingTotal = Object.keys(state.fields ?? {}).length;
+  const missingLeft = Object.keys(f).length;
+  const errorMessage =
+    state.error && missingTotal > 0 && missingLeft < missingTotal
+      ? missingLeft > 0
+        ? `Faltan ${missingLeft} ${missingLeft === 1 ? "dato" : "datos"}. Revisa los campos marcados.`
+        : null
+      : state.error;
+  function markEditedName(name: string) {
+    if (!name || !state.fields?.[name] || editedNames.has(name)) return;
+    setEdited({ for: state, names: new Set([...editedNames, name]) });
+  }
+  function markEdited(event: FormEvent<HTMLFormElement>) {
+    markEditedName((event.target as HTMLInputElement).name);
+  }
   const selectedRate =
     cart.shipping.status === "ok" ? cart.shipping.rate_id : cart.shipping_rate_id;
-  const countries = {
-    ...COUNTRIES,
-    ...(COUNTRIES[storeCountry] ? {} : { [storeCountry]: storeCountry }),
-  };
+  // Solo el país de la tienda (las zonas de envío de hoy son nacionales); se
+  // conserva el de una dirección ya guardada si fuera otro.
+  const countryCodes = [...new Set([storeCountry, ...(a?.country ? [a.country] : [])])];
+  const [country, setCountry] = useState(a?.country ?? storeCountry);
   const submit = submitKeepingState(action);
   const formRef = useRef<HTMLFormElement>(null);
   // Con JS se cotiza solo: el botón «Calcular envío» queda para quien no tiene JS.
@@ -133,16 +169,45 @@ export function CheckoutForm({
    * el foco va a un botón de envío, ese botón ya envía el formulario. Sin JS
    * queda el botón «Calcular envío».
    */
-  function quoteOnBlur(event: FocusEvent<HTMLFieldSetElement>) {
-    const next = event.relatedTarget;
-    if (next instanceof HTMLButtonElement && next.type === "submit") return;
+  function quote(form: HTMLFormElement | null) {
     if (submitting.current) return;
-    const form = event.currentTarget.form;
     if (!form || pending) return;
     const key = addressKey(form);
     if (!key || key === quotedKey.current) return;
     quotedKey.current = key;
     form.requestSubmit(quoteButton.current);
+  }
+  function quoteOnBlur(event: FocusEvent<HTMLFieldSetElement>) {
+    const next = event.relatedTarget;
+    if (next instanceof HTMLButtonElement && next.type === "submit") return;
+    quote(event.currentTarget.form);
+  }
+  // El autocompletado del navegador llena la dirección sin salir de los campos:
+  // también se cotiza poco después del último cambio, antes de que se pulse
+  // «Confirmar pedido» (antes ese primer clic solo calculaba el envío).
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    },
+    [],
+  );
+  // Con el CP completo se propone el estado si aún no se eligió (solo México;
+  // el cliente no decide el envío: la zona la resuelve la base al cotizar).
+  function fillStateFromPostalCode(target: EventTarget) {
+    if (!(target instanceof HTMLInputElement) || target.name !== "postal_code") return;
+    const region = target.form?.elements.namedItem("region");
+    if (!(region instanceof HTMLSelectElement) || region.value) return;
+    const state = stateForPostalCode(target.value);
+    if (!state) return;
+    region.value = state;
+    if (f.region) markEditedName("region");
+  }
+  function quoteOnChange(event: FormEvent<HTMLFieldSetElement>) {
+    fillStateFromPostalCode(event.target);
+    const form = event.currentTarget.form;
+    if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    quoteTimer.current = setTimeout(() => quote(form), QUOTE_DELAY_MS);
   }
 
   return (
@@ -153,8 +218,12 @@ export function CheckoutForm({
         if ((event.target as HTMLElement).closest('button[type="submit"]'))
           submitting.current = true;
       }}
+      onInput={markEdited}
+      onChange={markEdited}
       onSubmit={(event) => {
         submitting.current = false;
+        // Un envío (cotizar o confirmar) ya cotiza: no hace falta la cotización pendiente.
+        if (quoteTimer.current) clearTimeout(quoteTimer.current);
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
         if (submitter === quoteButton.current) quotedKey.current = addressKey(event.currentTarget);
         submit(event);
@@ -201,7 +270,7 @@ export function CheckoutForm({
       </fieldset>
 
       {cart.requires_shipping ? (
-        <fieldset className="space-y-4" onBlur={quoteOnBlur}>
+        <fieldset className="space-y-4" onBlur={quoteOnBlur} onInput={quoteOnChange}>
           <legend className="text-lg font-semibold">Dirección de envío</legend>
           {f.shipping_address ? (
             <p role="alert" className="text-sm text-[var(--sf-danger)]">
@@ -232,14 +301,50 @@ export function CheckoutForm({
               defaultValue={a?.city ?? ""}
               error={f.city}
             />
-            <Field
-              label="Estado"
-              name="region"
-              autoComplete="address-level1"
-              required
-              defaultValue={a?.region ?? ""}
-              error={f.region}
-            />
+            {country === "MX" ? (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="co-region" className="text-sm font-medium">
+                  Estado
+                </label>
+                <select
+                  id="co-region"
+                  name="region"
+                  autoComplete="address-level1"
+                  required
+                  defaultValue={a?.region ?? ""}
+                  className={input}
+                  aria-invalid={f.region ? true : undefined}
+                  aria-describedby={f.region ? "co-region-error" : undefined}
+                >
+                  <option value="" disabled>
+                    Elige tu estado
+                  </option>
+                  {/* Una dirección guardada con otro texto se conserva tal cual. */}
+                  {a?.region && !(MX_STATES as readonly string[]).includes(a.region) ? (
+                    <option value={a.region}>{a.region}</option>
+                  ) : null}
+                  {MX_STATES.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                {f.region ? (
+                  <p id="co-region-error" className="text-sm text-[var(--sf-danger)]">
+                    {f.region}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <Field
+                label="Estado"
+                name="region"
+                autoComplete="address-level1"
+                required
+                defaultValue={a?.region ?? ""}
+                error={f.region}
+              />
+            )}
             <Field
               label="Código postal"
               name="postal_code"
@@ -250,23 +355,35 @@ export function CheckoutForm({
               defaultValue={a?.postal_code ?? ""}
               error={f.postal_code}
             />
-            <div className="flex flex-col gap-1">
-              <label htmlFor="co-country" className="text-sm font-medium">
-                País
-              </label>
-              <select
-                id="co-country"
-                name="country"
-                defaultValue={a?.country ?? storeCountry}
-                className={input}
-              >
-                {Object.entries(countries).map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {countryCodes.length === 1 ? (
+              // Un solo país: se muestra como dato, no como lista de una opción.
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium">País</span>
+                <p className="flex h-11 items-center text-sm">
+                  {COUNTRY_NAMES[country] ?? country}
+                </p>
+                <input type="hidden" name="country" value={country} />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="co-country" className="text-sm font-medium">
+                  País
+                </label>
+                <select
+                  id="co-country"
+                  name="country"
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                  className={input}
+                >
+                  {countryCodes.map((code) => (
+                    <option key={code} value={code}>
+                      {COUNTRY_NAMES[code] ?? code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <button
             ref={quoteButton}
@@ -359,9 +476,9 @@ export function CheckoutForm({
       </div>
 
       <div aria-live="polite">
-        {state.error ? (
+        {errorMessage ? (
           <p role="alert" className="text-sm text-[var(--sf-danger)]">
-            {state.error}
+            {errorMessage}
           </p>
         ) : state.ok ? (
           <p role="status" className="text-sm">

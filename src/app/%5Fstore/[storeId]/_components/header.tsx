@@ -53,6 +53,51 @@ const ICON = {
  * Fijo arriba para que el carrito siempre esté a la vista. En escritorio, una
  * fila con el buscador ancho y debajo el menú.
  */
+/**
+ * Encabezado de la página de pago: el logo (o el nombre) de la tienda, un aviso
+ * de pago seguro y el regreso al carrito. Sin buscador ni menús.
+ */
+export function CheckoutHeader({ store }: { store: StorePublic }) {
+  return (
+    <header className="sf-el-header border-b border-[var(--sf-border)] bg-[var(--sf-bg)]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <Link href="/" className="flex min-w-0 items-center">
+          {store.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
+            <img
+              src={mediaUrl(store.logo.path)}
+              alt={store.name}
+              width={store.logo.width ?? 160}
+              height={store.logo.height ?? 48}
+              className="h-9 w-auto max-w-36 object-contain sm:h-11 sm:max-w-44"
+            />
+          ) : (
+            <span className="line-clamp-2 text-lg font-extrabold leading-[1.1] tracking-tight sm:text-xl text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]">
+              {store.name}
+            </span>
+          )}
+        </Link>
+        <div className="flex shrink-0 items-center gap-4 text-sm">
+          <span className="inline-flex items-center gap-1.5 font-semibold">
+            <svg {...ICON} className="h-5 w-5" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+            Pago seguro
+          </span>
+          {/* En el celular cabe el nombre de la tienda; el resumen ya enlaza al carrito. */}
+          <Link
+            href="/carrito"
+            className="hidden min-h-11 items-center underline underline-offset-2 sm:inline-flex"
+          >
+            Volver al carrito
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export function StoreHeader({
   store,
   menu,

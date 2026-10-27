@@ -152,7 +152,7 @@ test("compra completa en 3 clics desde la ficha", async ({ page }) => {
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");
-  await page.getByLabel("Estado", { exact: true }).fill("Puebla");
+  await page.getByLabel("Estado", { exact: true }).selectOption("Puebla");
   await page.getByLabel("Código postal").fill("72000");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: /Estándar/ })).toBeChecked();

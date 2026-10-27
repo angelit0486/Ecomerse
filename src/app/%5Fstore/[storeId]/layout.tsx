@@ -16,7 +16,8 @@ import { getStorefront } from "@/server/storefront/context";
 import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
-import { AnnouncementBar, StoreFooter, StoreHeader } from "./_components/header";
+import { CheckoutChrome } from "./_components/checkout-chrome";
+import { AnnouncementBar, CheckoutHeader, StoreFooter, StoreHeader } from "./_components/header";
 import { NavBar } from "./_components/nav-bar";
 import { CartToast } from "./_components/quick-add";
 
@@ -157,24 +158,31 @@ export default async function StoreLayout({ children, params }: Props) {
           </form>
         </div>
       ) : null}
-      <AnnouncementBar announcement={theme.announcement} />
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-[var(--sf-bg)] focus:p-2"
       >
         Saltar al contenido
       </a>
-      <StoreHeader
-        store={store}
-        menu={menus.main}
-        discovery={discoveryLinks}
-        cartCount={cart?.item_count ?? 0}
-        logoPosition={theme.logoPosition}
-        whatsapp={settings.contact?.whatsapp}
-        thumbs={thumbs}
-        below={navSticky ? navBar : null}
+      <CheckoutChrome
+        checkout={<CheckoutHeader store={store} />}
+        regular={
+          <>
+            <AnnouncementBar announcement={theme.announcement} />
+            <StoreHeader
+              store={store}
+              menu={menus.main}
+              discovery={discoveryLinks}
+              cartCount={cart?.item_count ?? 0}
+              logoPosition={theme.logoPosition}
+              whatsapp={settings.contact?.whatsapp}
+              thumbs={thumbs}
+              below={navSticky ? navBar : null}
+            />
+            {navSticky ? null : navBar}
+          </>
+        }
       />
-      {navSticky ? null : navBar}
       <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">
         {children}
       </main>

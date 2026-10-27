@@ -92,7 +92,7 @@ test("comprador: entra con código, ve su pedido de invitado y guarda una direcc
   await page.getByLabel("Nombre de quien recibe").fill("Compradora Uno");
   await page.getByLabel("Calle y número").fill("Av. Siempre Viva 742");
   await page.getByLabel("Ciudad").fill("Monterrey");
-  await page.getByLabel("Estado").fill("Nuevo León");
+  await page.getByLabel("Estado").selectOption("Nuevo León");
   await page.getByLabel("Código postal").fill("64000");
   await page.getByRole("button", { name: "Agregar dirección" }).click();
   await expect(page.getByText("Dirección guardada.")).toBeVisible();
