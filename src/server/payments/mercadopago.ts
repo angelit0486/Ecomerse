@@ -24,7 +24,13 @@ import { ProviderHttpError } from "./provider";
  * real con credenciales de prueba queda pendiente del propietario.
  */
 export interface MercadoPagoConfig {
+  /** Token de la plataforma: cuentas conectadas antes de ADR-041 y validar la propia. */
   accessToken: string;
+  /**
+   * ADR-041: token de la cuenta del comercio (OAuth), descifrado y renovado por el
+   * servidor. Sin él (o si la cuenta no tiene llaves propias) se usa `accessToken`.
+   */
+  tokenFor?: (account: PaymentAccountCredentials) => Promise<string>;
   webhookSecret: string;
   apiBase?: string;
   /** Tolerancia de la firma del webhook (§18.4: ±5 min). */
@@ -160,11 +166,11 @@ export class MercadoPagoApi {
   async request<T>(
     method: "GET" | "POST" | "PUT",
     path: string,
-    options: { body?: unknown; idempotencyKey?: string } = {},
+    options: { body?: unknown; idempotencyKey?: string; token?: string } = {},
   ): Promise<T> {
     const base = this.cfg.apiBase ?? "https://api.mercadopago.com";
     const headers: Record<string, string> = {
-      authorization: `Bearer ${this.cfg.accessToken}`,
+      authorization: `Bearer ${options.token ?? this.cfg.accessToken}`,
     };
     if (options.body !== undefined) headers["content-type"] = "application/json";
     if (options.idempotencyKey) headers["x-idempotency-key"] = options.idempotencyKey;
@@ -185,33 +191,46 @@ export class MercadoPagoApi {
   }
 
   /** Cuenta dueña del access token (al conectar la tienda). */
-  async me(): Promise<{ id: string; siteId: string }> {
-    const u = await this.request<{ id: number | string; site_id?: string }>("GET", "/users/me");
+  async me(token?: string): Promise<{ id: string; siteId: string }> {
+    const u = await this.request<{ id: number | string; site_id?: string }>(
+      "GET",
+      "/users/me",
+      token ? { token } : {},
+    );
     const id = String(u.id);
     if (!NUMERIC_ID_RE.test(id)) throw new AppError("provider_error");
     return { id, siteId: String(u.site_id ?? "") };
   }
 
-  getPayment(paymentId: string): Promise<MercadoPagoPayment> {
+  getPayment(paymentId: string, token?: string): Promise<MercadoPagoPayment> {
     if (!NUMERIC_ID_RE.test(paymentId)) throw new AppError("validation_failed");
-    return this.request("GET", `/v1/payments/${paymentId}`);
+    return this.request("GET", `/v1/payments/${paymentId}`, token ? { token } : {});
   }
 
   /** Cobros de un intento (external_reference = payments.id), el más reciente primero. */
-  async searchByReference(reference: string): Promise<MercadoPagoPayment[]> {
+  async searchByReference(reference: string, token?: string): Promise<MercadoPagoPayment[]> {
     if (!/^[0-9a-f-]{36}$/.test(reference)) throw new AppError("validation_failed");
     const r = await this.request<{ results?: MercadoPagoPayment[] }>(
       "GET",
       `/v1/payments/search?external_reference=${reference}&sort=date_created&criteria=desc`,
+      token ? { token } : {},
     );
     return Array.isArray(r.results) ? r.results : [];
   }
 
-  getRefund(paymentId: string, refundId: string): Promise<{ id: number | string; status: string }> {
+  getRefund(
+    paymentId: string,
+    refundId: string,
+    token?: string,
+  ): Promise<{ id: number | string; status: string }> {
     if (!NUMERIC_ID_RE.test(paymentId) || !NUMERIC_ID_RE.test(refundId)) {
       throw new AppError("validation_failed");
     }
-    return this.request("GET", `/v1/payments/${paymentId}/refunds/${refundId}`);
+    return this.request(
+      "GET",
+      `/v1/payments/${paymentId}/refunds/${refundId}`,
+      token ? { token } : {},
+    );
   }
 }
 
@@ -226,9 +245,16 @@ export function pickPayment(payments: MercadoPagoPayment[]): MercadoPagoPayment 
 
 export interface MercadoPagoProvider extends PaymentProvider {
   api: MercadoPagoApi;
-  fetchPayment(paymentId: string): Promise<NormalizedPayment & { collectorId: string | null }>;
+  /** Re-consulta con la llave de la cuenta del cobro (la del comercio con ADR-041). */
+  fetchPayment(
+    paymentId: string,
+    account: PaymentAccountCredentials,
+  ): Promise<NormalizedPayment & { collectorId: string | null }>;
   /** Estado de un intento por su referencia (reconciliación); null si aún no hay cobro. */
-  fetchByReference(reference: string): Promise<NormalizedPayment | null>;
+  fetchByReference(
+    reference: string,
+    account: PaymentAccountCredentials,
+  ): Promise<NormalizedPayment | null>;
   refund(input: {
     account: PaymentAccountCredentials;
     providerPaymentId: string;
@@ -245,6 +271,8 @@ function refundStatus(status: string): "succeeded" | "failed" | "pending" {
 
 export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoProvider {
   const api = new MercadoPagoApi(cfg);
+  const tokenOf = (account: PaymentAccountCredentials) =>
+    cfg.tokenFor ? cfg.tokenFor(account) : Promise.resolve(cfg.accessToken);
   return {
     key: "mercadopago",
     api,
@@ -267,6 +295,8 @@ export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoPr
         init_point?: string;
         sandbox_init_point?: string;
       }>("POST", "/checkout/preferences", {
+        // La preferencia se crea en la cuenta del comercio: el cobro llega a ella.
+        token: await tokenOf(input.account),
         idempotencyKey: input.idempotencyKey,
         body: {
           // Un solo concepto por el total calculado por la base: Mercado Pago cobra
@@ -353,27 +383,32 @@ export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoPr
           : {}),
       };
     },
-    async fetchPayment(paymentId) {
-      const p = await api.getPayment(paymentId);
+    async fetchPayment(paymentId, account) {
+      const p = await api.getPayment(paymentId, await tokenOf(account));
       return {
         ...normalizeMercadoPagoPayment(p),
         collectorId: p.collector_id == null ? null : String(p.collector_id),
       };
     },
-    async fetchByReference(reference) {
-      const p = pickPayment(await api.searchByReference(reference));
+    async fetchByReference(reference, account) {
+      const p = pickPayment(await api.searchByReference(reference, await tokenOf(account)));
       return p ? normalizeMercadoPagoPayment(p) : null;
     },
     async refund(input) {
       mercadoPagoUserId(input.account);
       if (!NUMERIC_ID_RE.test(input.providerPaymentId)) throw new AppError("validation_failed");
+      const token = await tokenOf(input.account);
       // Ya creado: se consulta su estado; repetir el POST devolvería la primera respuesta.
       const r = input.providerRefundId
-        ? await api.getRefund(input.providerPaymentId, input.providerRefundId)
+        ? await api.getRefund(input.providerPaymentId, input.providerRefundId, token)
         : await api.request<{ id: number | string; status: string }>(
             "POST",
             `/v1/payments/${input.providerPaymentId}/refunds`,
-            { idempotencyKey: input.idempotencyKey, body: { amount: toDecimal(input.amount) } },
+            {
+              token,
+              idempotencyKey: input.idempotencyKey,
+              body: { amount: toDecimal(input.amount) },
+            },
           );
       return { providerRefundId: String(r.id), status: refundStatus(r.status) };
     },

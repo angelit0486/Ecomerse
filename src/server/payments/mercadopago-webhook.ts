@@ -79,7 +79,7 @@ export async function handleMercadoPagoWebhook(deps: {
     return { status: 200, body: { received: true, outcome: "ignored" } };
   }
 
-  const [account] = await db<{ id: string; store_id: string; status: string }[]>`
+  const [account] = await db<{ id: string; store_id: string; status: string; mode: string }[]>`
     select * from system.payment_account_for_webhook('mercadopago', ${verified.account})`;
   if (!account) {
     await db`select system.record_webhook_rejection('payment.webhook_unknown_account', 'mercadopago')`;
@@ -97,7 +97,13 @@ export async function handleMercadoPagoWebhook(deps: {
       await db`select system.finish_payment_event(${event.id}, null)`;
       return { status: 200, body: { received: true, outcome: "ignored" } };
     }
-    const payment = await provider.fetchPayment(verified.providerPaymentId);
+    // Con la llave de ESA cuenta (la del comercio, ADR-041): otra cuenta no ve el cobro.
+    const payment = await provider.fetchPayment(verified.providerPaymentId, {
+      id: account.id,
+      provider: "mercadopago",
+      mode: account.mode === "live" ? "live" : "test",
+      publicConfig: { mp_user_id: verified.account },
+    });
     const reference = UUID_RE.test(payment.externalReference) ? payment.externalReference : null;
     const [found] = await db<{ p: { id: string } | null }[]>`
       select system.payment_for_provider_ref(${account.id}, null, ${reference}) as p`;
@@ -127,13 +133,28 @@ export async function reconcileMercadoPagoPayments(deps: {
   provider: MercadoPagoProvider;
   log: Logger;
 }): Promise<number> {
-  const rows = await deps.db<{ payment_id: string; account: { provider: string } }[]>`
+  const rows = await deps.db<
+    {
+      payment_id: string;
+      account: {
+        id: string;
+        provider: string;
+        mode: "test" | "live";
+        public_config: Record<string, unknown>;
+      };
+    }[]
+  >`
     select payment_id, account from system.payments_to_reconcile(100)`;
   let applied = 0;
   for (const row of rows) {
     if (row.account.provider !== "mercadopago") continue;
     try {
-      const n = await deps.provider.fetchByReference(row.payment_id);
+      const n = await deps.provider.fetchByReference(row.payment_id, {
+        id: row.account.id,
+        provider: "mercadopago",
+        mode: row.account.mode,
+        publicConfig: row.account.public_config,
+      });
       if (!n) continue; // Aún sin cobro: el comprador no ha pagado.
       await deps.db`select system.apply_mercadopago_payment(${row.payment_id}, ${deps.db.json(toRpc(n))})`;
       applied += 1;

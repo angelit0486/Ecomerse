@@ -5,7 +5,11 @@ import { ConfirmButton } from "@/ui/primitives/confirm-button";
 
 import type { FormState } from "../../_shared/action-state";
 import { FormFeedback } from "../../_shared/form-feedback";
-import { connectMercadoPago, setMercadoPagoEnabled } from "./mercadopago-actions";
+import {
+  connectMercadoPago,
+  setMercadoPagoEnabled,
+  startMercadoPagoOAuth,
+} from "./mercadopago-actions";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 export function ConnectMercadoPagoButton({ storeHandle }: { storeHandle: string }) {
@@ -17,6 +21,22 @@ export function ConnectMercadoPagoButton({ storeHandle }: { storeHandle: string 
     <form action={action} className="flex flex-wrap items-center gap-3">
       <Button type="submit" loading={pending}>
         Conectar Mercado Pago
+      </Button>
+      <FormFeedback state={state} />
+    </form>
+  );
+}
+
+/** ADR-041: lleva a Mercado Pago para autorizar la cuenta del comercio. */
+export function ConnectOwnMercadoPagoButton({ storeHandle }: { storeHandle: string }) {
+  const [state, action, pending] = useSafeActionState<FormState>(
+    startMercadoPagoOAuth.bind(null, storeHandle),
+    {},
+  );
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-3">
+      <Button type="submit" loading={pending}>
+        Conectar mi cuenta de Mercado Pago
       </Button>
       <FormFeedback state={state} />
     </form>

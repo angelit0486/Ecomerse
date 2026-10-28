@@ -15,7 +15,12 @@ import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
 import { createOrderHandlers } from "@/server/orders/handlers";
 import { createRefundHandlers } from "@/server/orders/refunds";
-import { mercadoPagoProvider, stripeProvider } from "@/server/payments/registry";
+import { refreshDueAccounts } from "@/server/payments/mercadopago-credentials";
+import {
+  mercadoPagoCredentialDeps,
+  mercadoPagoProvider,
+  stripeProvider,
+} from "@/server/payments/registry";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
 import { storeOrigin } from "@/server/storefront/seo";
@@ -100,6 +105,14 @@ const handlers: Array<[string, JobHandler]> = [
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
   ["payments.reconcile", lazy("payments.reconcile", orders)],
+  [
+    "payments.mercadopago_refresh",
+    // ADR-041: llaves de los comercios por vencer. Sin la clave de cifrado no hay nada que renovar.
+    async () => {
+      const deps = mercadoPagoCredentialDeps();
+      if (deps) await refreshDueAccounts(deps);
+    },
+  ],
   ["payment.failed", lazy("payment.failed", orderNotifications)],
   ["payment.late_without_stock", lazy("payment.late_without_stock", orderNotifications)],
   ["orders.complete", lazy("orders.complete", orders)],

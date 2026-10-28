@@ -38,6 +38,7 @@
   - Panel → Ajustes → **Plan y uso** (dueña o administración) y aviso de pago pendiente o de prueba por terminar.
   - Avance automático de estados en el mantenimiento (§19.4). Migración `20261028000100`, pgTAP `103`, E2E `plans.spec.ts`.
   - Pendiente de la Fase 10: salud de la plataforma en la consola (cola, webhooks, errores) y el E2E «alta → límite → suspensión → reactivación».
+- **ADR-041 (2026-10-28): cada comercio cobra en su propia cuenta de Mercado Pago** (OAuth con PKCE; llaves cifradas en `system.payment_credentials`; preferencia, re-consulta, reconciliación y reembolsos con la llave de la cuenta; renovación automática). Migración `20261028000200`, pgTAP `104`, integración `mercadopago-oauth`. Falta: aplicar la migración, las tres variables en Vercel y la prueba con la aplicación real del propietario.
 
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.

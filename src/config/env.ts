@@ -65,6 +65,25 @@ export const serverEnvSchema = z.object({
   /** Solo pruebas: API de Mercado Pago simulada. */
   MERCADOPAGO_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /**
+   * ADR-041: aplicación de Mercado Pago para que cada comercio conecte SU cuenta
+   * (OAuth). Con las tres, el dinero de cada tienda llega a la cuenta del comercio.
+   */
+  MERCADOPAGO_CLIENT_ID: z
+    .string()
+    .regex(/^[0-9]{6,25}$/)
+    .optional(),
+  MERCADOPAGO_CLIENT_SECRET: z
+    .string()
+    .regex(/^[A-Za-z0-9]{16,128}$/)
+    .optional(),
+  /** Clave que cifra las llaves de los comercios en la base: 32 bytes en base64. */
+  PAYMENT_CREDENTIALS_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .optional(),
+  /** Solo pruebas: pantalla de autorización de Mercado Pago simulada. */
+  MERCADOPAGO_AUTH_BASE: z.url({ protocol: /^https?$/ }).optional(),
+  /**
    * Dominios propios (E16): token de Vercel con acceso SOLO a este proyecto e id
    * del proyecto (y del equipo, si aplica). Opcionales: sin ellos los dominios
    * quedan «en verificación» y el panel dice que falta configurarlo.
@@ -138,6 +157,22 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   // Mercado Pago va completo o no va: un token sin secreto aceptaría cobros sin poder confirmarlos.
   if (!env.MERCADOPAGO_ACCESS_TOKEN !== !env.MERCADOPAGO_WEBHOOK_SECRET) {
     ctx.addIssue({ code: "custom", path: ["MERCADOPAGO_WEBHOOK_SECRET"], message: "van juntas" });
+  }
+  // OAuth va completo y sobre la integración de plataforma (su webhook y su token).
+  const oauth = [
+    env.MERCADOPAGO_CLIENT_ID,
+    env.MERCADOPAGO_CLIENT_SECRET,
+    env.PAYMENT_CREDENTIALS_KEY,
+  ];
+  if (oauth.some(Boolean) && !oauth.every(Boolean)) {
+    ctx.addIssue({ code: "custom", path: ["PAYMENT_CREDENTIALS_KEY"], message: "van juntas" });
+  }
+  if (oauth.every(Boolean) && !env.MERCADOPAGO_ACCESS_TOKEN) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["MERCADOPAGO_ACCESS_TOKEN"],
+      message: "requerida con OAuth",
+    });
   }
   // Vercel inyecta VERCEL_PROJECT_ID en cada build y ejecución: sola no significa
   // nada. Solo el token la exige.

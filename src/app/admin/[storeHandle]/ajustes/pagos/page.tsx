@@ -4,12 +4,16 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
-import { mercadoPagoProvider, stripeProvider } from "@/server/payments/registry";
+import { mercadoPagoOAuth, mercadoPagoProvider, stripeProvider } from "@/server/payments/registry";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { ManualPaymentForm } from "../../configuracion/launch-forms";
 import type { StripeSettings } from "./actions";
-import { ConnectMercadoPagoButton, MercadoPagoToggle } from "./mercadopago-forms";
+import {
+  ConnectMercadoPagoButton,
+  ConnectOwnMercadoPagoButton,
+  MercadoPagoToggle,
+} from "./mercadopago-forms";
 import type { MercadoPagoSettings } from "./mercadopago-actions";
 import { ConnectStripeButton, StripeToggle } from "./stripe-forms";
 
@@ -17,7 +21,33 @@ export const metadata: Metadata = { title: "Pagos" };
 
 type Props = {
   params: Promise<{ storeHandle: string }>;
-  searchParams: Promise<{ stripe?: string }>;
+  searchParams: Promise<{ stripe?: string; mp?: string }>;
+};
+
+/** Regreso de la autorización de Mercado Pago (ADR-041), con texto fijo por código. */
+const MP_NOTICES: Record<string, { tone: "success" | "warning"; text: string }> = {
+  conectado: {
+    tone: "success",
+    text: "Listo: tu cuenta de Mercado Pago quedó conectada. El dinero de tus ventas llega directo a ella.",
+  },
+  cancelado: {
+    tone: "warning",
+    text: "No se conectó: la autorización se canceló en Mercado Pago.",
+  },
+  not_mexico: { tone: "warning", text: "La cuenta de Mercado Pago debe ser de México." },
+  mode_mismatch: {
+    tone: "warning",
+    text: "Esa cuenta es de prueba (o real) y esta plataforma necesita la otra. Usa la cuenta correcta.",
+  },
+  account_mismatch: {
+    tone: "warning",
+    text: "Mercado Pago respondió con otra cuenta. Inténtalo de nuevo.",
+  },
+  en_uso: { tone: "warning", text: "Esa cuenta de Mercado Pago ya está conectada a otra tienda." },
+  error: {
+    tone: "warning",
+    text: "No pudimos conectar tu cuenta de Mercado Pago. Inténtalo de nuevo en unos minutos.",
+  },
 };
 
 /** Avisos del retorno de Stripe (texto fijo: el parámetro nunca se muestra tal cual). */
@@ -41,7 +71,8 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "payments.manage")) notFound();
-  const notice = RETURN_NOTICES[(await searchParams).stripe ?? ""];
+  const query = await searchParams;
+  const notice = RETURN_NOTICES[query.stripe ?? ""] ?? MP_NOTICES[query.mp ?? ""];
   const supabase = await createSupabaseServerClient();
   const [settings, mp, { data: manual, error }] = await Promise.all([
     callRpc<StripeSettings>(supabase, "payments_get_stripe", { p_store_id: ctx.store.id }),
@@ -60,6 +91,8 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
   if (error) throw error;
   const stripeAvailable = stripeProvider() !== null;
   const mpAvailable = mercadoPagoProvider() !== null;
+  // ADR-041: con la aplicación OAuth, cada tienda conecta su propia cuenta.
+  const mpOwnAccounts = mpAvailable && mercadoPagoOAuth() !== null;
   const mpAccount = mp.account;
   const account = settings.account;
 
@@ -101,8 +134,18 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
           <>
             <p className="text-sm">
               Activa: tus compradores pueden pagar con Mercado Pago.
+              {mpAccount.own_account ? " El dinero llega directo a tu cuenta." : ""}
               {mpAccount.mode === "test" ? " (modo de prueba: no se cobra dinero real)" : ""}
             </p>
+            {mpOwnAccounts && !mpAccount.own_account ? (
+              <div className="space-y-2 rounded-md border border-warning p-3 text-sm">
+                <p>
+                  Esta tienda cobra con la cuenta de la plataforma. Conecta tu propia cuenta para
+                  recibir el dinero de tus ventas directo.
+                </p>
+                <ConnectOwnMercadoPagoButton storeHandle={ctx.store.handle} />
+              </div>
+            ) : null}
             <MercadoPagoToggle storeHandle={ctx.store.handle} enabled />
           </>
         ) : mpAccount ? (
@@ -110,6 +153,8 @@ export default async function PaymentsSettingsPage({ params, searchParams }: Pro
             <p className="text-sm">Desactivada por la tienda.</p>
             <MercadoPagoToggle storeHandle={ctx.store.handle} enabled={false} />
           </>
+        ) : mpOwnAccounts ? (
+          <ConnectOwnMercadoPagoButton storeHandle={ctx.store.handle} />
         ) : (
           <ConnectMercadoPagoButton storeHandle={ctx.store.handle} />
         )}

@@ -123,6 +123,29 @@ describe("parseServerEnv", () => {
     ).toThrow(/MERCADOPAGO_ACCESS_TOKEN/);
   });
 
+  it("Mercado Pago por tienda: cliente, secreto y clave de cifrado van juntos (ADR-041)", () => {
+    const mp = {
+      MERCADOPAGO_ACCESS_TOKEN:
+        "TEST-1234567890123456-101716-abcdef0123456789abcdef0123456789-123456789",
+      MERCADOPAGO_WEBHOOK_SECRET: "a1".repeat(16),
+    };
+    const oauth = {
+      MERCADOPAGO_CLIENT_ID: "1234567890123456",
+      MERCADOPAGO_CLIENT_SECRET: "b2".repeat(16),
+      PAYMENT_CREDENTIALS_KEY: Buffer.alloc(32, 7).toString("base64"),
+    };
+    expect(() => parseServerEnv({ ...valid, ...mp, ...oauth })).not.toThrow();
+    expect(() =>
+      parseServerEnv({ ...valid, ...mp, ...oauth, PAYMENT_CREDENTIALS_KEY: undefined }),
+    ).toThrow(/PAYMENT_CREDENTIALS_KEY: van juntas/);
+    expect(() => parseServerEnv({ ...valid, ...oauth })).toThrow(
+      /MERCADOPAGO_ACCESS_TOKEN: requerida con OAuth/,
+    );
+    expect(() =>
+      parseServerEnv({ ...valid, ...mp, ...oauth, PAYMENT_CREDENTIALS_KEY: "corta" }),
+    ).toThrow(/PAYMENT_CREDENTIALS_KEY/);
+  });
+
   it("dominios: VERCEL_PROJECT_ID sin token es válido (Vercel lo inyecta en cada build)", () => {
     const projectId = "prj_AbCdEf0123456789";
     expect(() => parseServerEnv({ ...valid, VERCEL_PROJECT_ID: projectId })).not.toThrow();

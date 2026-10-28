@@ -1,4 +1,4 @@
-# Mercado Pago (ADR-028)
+# Mercado Pago (ADR-028 y ADR-041)
 
 Cobro con Mercado Pago Checkout Pro. **Estado:** implementado y probado con la API simulada. **Falta la prueba con credenciales reales de prueba**.
 
@@ -24,6 +24,29 @@ Van juntas: si falta una, la aplicación no arranca. Así se evita aceptar cobro
 ## Conectar la tienda
 
 Panel → **Ajustes → Pagos → Mercado Pago → Conectar Mercado Pago**. El servidor valida la credencial y registra la cuenta. A partir de ese momento el checkout ofrece «Mercado Pago».
+
+## Cada comercio con su propia cuenta (ADR-041)
+
+Con esto, el dinero de cada tienda llega a la cuenta de Mercado Pago **del comercio**, no a la tuya.
+
+1. En la misma aplicación de [Tus integraciones](https://www.mercadopago.com.mx/developers/panel/app):
+   - **Editar → URLs de redireccionamiento**: `https://<dominio-del-panel>/api/payments/mercadopago/callback` (exacta).
+   - Activar **«Authorization code flow con PKCE»**.
+   - Copiar el **Client ID** y el **Client Secret** (en «Credenciales de producción» o de prueba, según el ambiente).
+2. Generar la clave de cifrado en una terminal: `openssl rand -base64 32`. Guárdala solo en Vercel: si se pierde, cada comercio tendrá que volver a conectar su cuenta.
+3. Agregar en Vercel:
+
+| Variable                    | Valor                                                |
+| --------------------------- | ---------------------------------------------------- |
+| `MERCADOPAGO_CLIENT_ID`     | Client ID de la aplicación.                          |
+| `MERCADOPAGO_CLIENT_SECRET` | Client Secret de la aplicación.                      |
+| `PAYMENT_CREDENTIALS_KEY`   | La clave del paso 2 (44 caracteres, termina en `=`). |
+
+Las tres van juntas y necesitan las dos de arriba (el webhook sigue siendo el de la aplicación).
+
+4. Cada comercio: **Ajustes → Pagos → Conectar mi cuenta de Mercado Pago**. Entra a Mercado Pago con SU cuenta, autoriza y regresa al panel con el aviso «Listo». Una tienda que ya cobraba con tu cuenta ve el mismo botón para pasarse a la suya.
+
+Las llaves de los comercios duran 180 días y se renuevan solas. Nunca se muestran en el panel ni se guardan sin cifrar.
 
 ## Prueba de punta a punta (pendiente)
 
