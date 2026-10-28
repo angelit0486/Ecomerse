@@ -1,6 +1,6 @@
 # Aplicar las migraciones del 2026-10-27 en staging
 
-Seis migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10) Mercado Pago con la cuenta de cada comercio (ADR-041) y la dirección de envío en el correo de confirmación. Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
+Siete migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación y la salud de la plataforma con alertas. Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
 
 | Orden | Archivo                                                      | Qué hace                                                   |
 | ----- | ------------------------------------------------------------ | ---------------------------------------------------------- |
@@ -10,14 +10,15 @@ Seis migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesio
 | 4     | `supabase/migrations/20261028000100_plans_subscriptions.sql` | Consola → Planes y suscripciones; «Plan y uso» en el panel |
 | 5     | `supabase/migrations/20261028000200_mercadopago_oauth.sql`   | Cada comercio cobra en su propia cuenta de Mercado Pago    |
 | 6     | `supabase/migrations/20261028000300_order_email_address.sql` | El correo de confirmación lleva la dirección de envío      |
+| 7     | `supabase/migrations/20261028000400_platform_health.sql`     | Consola → Salud y alertas por correo cada 15 minutos       |
 
 ## Pasos (desde el celular o la computadora)
 
 1. Entra a Supabase → tu proyecto de staging → **SQL Editor** → **New query**.
 2. En GitHub, abre el archivo 1 de la tabla, toca **Raw**, copia todo y pégalo en la consulta.
 3. Toca **Run**. Debe decir «Success. No rows returned».
-4. Repite con el archivo 2, luego el 3, el 4, el 5 y al final el 6.
-5. Comprueba con esta consulta (debe devolver `20261028000300`):
+4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6 y al final el 7.
+5. Comprueba con esta consulta (debe devolver `20261028000400`):
 
    ```sql
    select public.app_schema_version();
@@ -37,5 +38,7 @@ Seis migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesio
 - **La migración 4 no cambia el acceso de nadie**: tus organizaciones de staging tienen la suscripción activa sin fecha de fin, y sin fecha no avanza sola. Después, en Consola → Planes, crea tus planes reales.
 
 - **La migración 5 tampoco cambia nada por sí sola**: tu tienda sigue cobrando con tu cuenta. La conexión por comercio se enciende cuando agregues en Vercel las tres variables de `docs/runbooks/mercadopago.md`.
+
+- **La migración 7 solo lee**: revisa la cola, los pagos y los correos y avisa a dueño y administración de la plataforma. Los avisos salen cuando Resend esté configurado (`docs/runbooks/salud-y-alertas.md`).
 
 Para aplicar las migraciones no se necesita ninguna contraseña ni clave nueva.

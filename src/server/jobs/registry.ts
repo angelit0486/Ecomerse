@@ -21,6 +21,7 @@ import {
   mercadoPagoProvider,
   stripeProvider,
 } from "@/server/payments/registry";
+import { createHealthHandlers } from "@/server/platform/health-handlers";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { invalidateStore } from "@/server/storefront/cache";
 import { storeOrigin } from "@/server/storefront/seo";
@@ -105,6 +106,16 @@ const handlers: Array<[string, JobHandler]> = [
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
   ["payments.reconcile", lazy("payments.reconcile", orders)],
+  [
+    "platform.health_check",
+    lazy("platform.health_check", () =>
+      createHealthHandlers({
+        db: workerDb(),
+        channel: emailChannel(),
+        appUrl: serverEnv().APP_URL,
+      }),
+    ),
+  ],
   [
     "payments.mercadopago_refresh",
     // ADR-041: llaves de los comercios por vencer. Sin la clave de cifrado no hay nada que renovar.

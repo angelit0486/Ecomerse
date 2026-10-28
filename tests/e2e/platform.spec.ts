@@ -51,7 +51,7 @@ test("platform_admin: crea un tenant, suspende y concede soporte con motivo", as
   await page.setViewportSize({ width: 375, height: 812 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   const consoleNav = page.getByRole("navigation", { name: "Consola de plataforma" });
-  for (const name of ["Organizaciones", "Soporte", "Cumplimiento", "Trabajos"]) {
+  for (const name of ["Organizaciones", "Soporte", "Cumplimiento", "Trabajos", "Salud"]) {
     const box = (await consoleNav.getByRole("link", { name }).boundingBox())!;
     expect(box.height, name).toBeGreaterThanOrEqual(44);
   }
@@ -214,4 +214,23 @@ test("trabajos fallidos: se ven sin su contenido y se vuelven a la cola (paso 17
   // Volvió a la cola con los intentos en cero. La pasada inmediata puede tomarlo y,
   // como su payload es de prueba, fallar de nuevo: por eso se miran los intentos.
   expect(after!.attempts).toBeLessThan(8);
+});
+
+test("salud: soporte ve los problemas con qué hacer, sin datos privados (F1.6)", async ({
+  page,
+}) => {
+  const email = `psalud-${run}@platform.test`;
+  await admin`insert into public.platform_staff (user_id, role)
+              values (${await createAuthUser(email)}, 'platform_support')`;
+  await admin`insert into system.jobs (type, payload, status, attempts, max_attempts, last_error, finished_at)
+              values ('order.paid', '{"to":"salud-privado@cliente.test"}', 'dead', 8, 8, 'Resend 401', now())`;
+  await loginNewStaff(page, email);
+  await page.goto("/platform/salud");
+  await expect(page.getByRole("heading", { name: "Salud de la plataforma" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(/Hay avisos|Atención urgente/);
+  await expect(page.getByText(/trabajo\(s\) fallido\(s\) en 24 h/)).toBeVisible();
+  await expect(page.getByText(/Consola → Trabajos/)).toBeVisible();
+  await expect(page.getByText("salud-privado@cliente.test")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Ver y reintentar en Trabajos" })).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
 });

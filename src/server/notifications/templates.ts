@@ -149,3 +149,28 @@ export function authCodeEmail(input: {
     ),
   };
 }
+
+/** Alerta de salud para dueño y administración de la plataforma (misión vendible F1.6). */
+export function platformHealthAlertEmail(input: {
+  to: string;
+  title: string;
+  action: string;
+  severity: "warning" | "critical";
+  link: string;
+}): EmailMessage {
+  const subject = `${input.severity === "critical" ? "Urgente" : "Aviso"}: ${input.title}`;
+  return {
+    to: input.to,
+    subject,
+    text: [input.title, "", `Qué hacer: ${input.action}`, "", `Ver la salud: ${input.link}`].join(
+      "\n",
+    ),
+    html: layout(
+      subject,
+      `<p><strong>${escapeHtml(input.title)}</strong></p>
+<p>Qué hacer: ${escapeHtml(input.action)}</p>
+<p><a href="${escapeHtml(input.link)}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Ver la salud de la plataforma</a></p>
+<p style="color:#555">Recibes este aviso una vez por hora mientras el problema siga.</p>`,
+    ),
+  };
+}
