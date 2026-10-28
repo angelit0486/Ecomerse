@@ -1084,3 +1084,32 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
 - **Fuera de alcance.** Comisión de la plataforma por venta (`marketplace_fee`): la cobra la suscripción de la Fase 10, no cada venta.
 - **Implementación.** Migración `20261028000200_mercadopago_oauth`, pgTAP `104_mercadopago_oauth`, integración `mercadopago-oauth` (dos comercios, llaves cifradas, cobro cruzado rechazado, renovación, modo), unitarias de `secret-box` y `mercadopago-oauth`. Configuración: `docs/runbooks/mercadopago.md`.
 - **Estado.** Implementada y probada con Mercado Pago simulado. **Falta la prueba con la aplicación real** del propietario (credenciales de prueba).
+
+### ADR-042 — Política de contenido: categorías prohibidas y aceptación de Términos · **PROPUESTO (espera aprobación del propietario)**
+
+- **Contexto.** Para vender la plataforma a otros comercios (misión vendible, Fase 1) hace falta dejar claro qué no se puede vender en ella y poder demostrar que cada comercio lo aceptó. Hoy no hay lista de productos prohibidos, ni aceptación registrada de Términos de la plataforma, ni una forma de que la consola detecte y frene un producto prohibido. Es regulación y toca el alta de comercios: por eso es un ADR y no se implementa sin aprobación. Todo texto legal queda **PENDIENTE DE REVISIÓN** por abogado.
+- **Decisión propuesta.**
+  1. **Política de contenido** en `docs/legal/politica-de-contenido.md` (borrador, PENDIENTE DE REVISIÓN), con dos listas:
+     - **Prohibido** (no se publica): vapeadores y cigarrillos electrónicos y sus líquidos; armas, municiones, partes de armas, explosivos y fuegos artificiales; drogas ilícitas y su parafernalia; medicamentos que requieren receta y sustancias controladas; productos falsificados o que infringen marcas; especies protegidas, animales vivos y sus partes; contenido sexual explícito; documentos oficiales, datos personales o cuentas; cualquier producto cuya venta prohíba la ley mexicana o las reglas de Mercado Pago.
+     - **Restringido** (se publica solo tras revisión de la plataforma): bebidas alcohólicas, tabaco tradicional, suplementos (ya cubiertos por el perfil regulatorio, ADR de Fase R), cosméticos con declaraciones de salud.
+     - La lista exacta la confirma el propietario con su abogado; el sistema no la toma como verdad legal.
+  2. **Aceptación registrada.** Al crear una organización (consola o alta propia, Fase 4) la dueña acepta los Términos de la plataforma y la política de contenido. Se guarda quién, cuándo, desde qué IP (con hash) y **qué versión** del texto. Si la versión cambia, el panel pide aceptar la nueva antes de publicar productos. Tabla nueva a nivel organización (no de tienda), con RLS forzado, solo inserción y auditoría.
+  3. **Aviso en el alta.** En el onboarding se muestra la lista prohibida en una frase y un enlace a la política, antes del botón de aceptar.
+  4. **Revisión en la consola, sin bloqueo automático.** Una lista de palabras clave (configurable en la consola) marca productos «para revisión» al publicarse; el producto **sí** se publica, y la consola los muestra en Cumplimiento → Revisión. Soporte o administración pueden ocultarlo con motivo (auditado) y avisar a la dueña. Así un falso positivo («vaporera de cocina») no frena una venta legítima.
+- **Alternativas descartadas.** Bloqueo automático por palabras clave (demasiados falsos positivos y fácil de evadir); sin control (riesgo legal y de que Mercado Pago suspenda las cuentas); revisión manual de cada producto antes de publicar (no escala).
+- **Preguntas para el propietario.**
+  1. ¿Apruebas las listas como punto de partida (para que tu abogado las ajuste)?
+  2. ¿Alcohol y tabaco tradicional: restringidos (con revisión) o prohibidos?
+  3. ¿Prefieres que un producto marcado quede **oculto** hasta revisarlo, en lugar de publicarse y revisarse después?
+- **Implementación (tras aprobar).** Migración con la tabla de aceptaciones y la marca de revisión, pgTAP con aislamiento entre organizaciones, aviso y aceptación en el onboarding, página de revisión en la consola, E2E con axe.
+
+### ADR-043 — Contracargos y reembolsos hechos fuera de la plataforma · **PROPUESTO (espera aprobación del propietario)**
+
+- **Contexto.** Hallazgo de la misión vendible (F1.4), comprobado con Mercado Pago simulado: si un pedido ya pagado recibe un aviso de Mercado Pago con estado `charged_back` (contracargo del comprador) o `refunded` (reembolso hecho desde el panel de Mercado Pago, no desde la plataforma), `system.apply_payment_status` responde `ignored`. El pedido sigue «pagado», sin marca de atención, y nadie se entera; el comercio podría enviar mercancía ya perdida. Toca el contrato de pagos (GATE0 §18, contrato crítico §43): no se cambia sin aprobación.
+- **Decisión propuesta.**
+  1. Un `refunded` o `charged_back` de un cobro aprobado que **no** corresponde a un reembolso pedido desde la plataforma marca el pedido con **atención** y deja el motivo («contracargo» o «reembolso fuera de la plataforma») en su historial y en la auditoría.
+  2. **No** cambia por sí solo el estado de pago, el total pagado ni el inventario: lo decide una persona desde el pedido (como hoy con un cobro duplicado). Así un aviso equivocado no mueve dinero ni existencias.
+  3. Aviso por correo a quien administra la tienda (mismo canal y deduplicado de los correos de pedidos) y conteo en Consola → Salud.
+  4. Un reembolso pedido desde la plataforma sigue su flujo actual (F7-T03) sin cambios.
+- **Alternativa descartada.** Marcar el pedido como reembolsado automáticamente: un contracargo puede revertirse a favor del comercio, y un reembolso parcial hecho en Mercado Pago no siempre trae el monto que la plataforma espera.
+- **Implementación (tras aprobar).** Migración que redefine `system.apply_payment_status` solo en la rama `refunded`/`charged_back`, pgTAP del caso, integración en `mercadopago-webhook` (el escenario de la sonda pasa de «ignored» a «atención»), plantilla de correo y su prueba.

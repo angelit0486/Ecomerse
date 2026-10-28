@@ -17,9 +17,14 @@
 
 4. Quita la línea «PENDIENTE DE REVISIÓN» solo cuando el texto esté aprobado.
 
+## Texto de la plataforma (no de la tienda)
+
+`politica-de-contenido.md`: qué pueden vender los comercios en la plataforma (ADR-042, propuesto). Lo acepta cada comercio al darse de alta; no se publica como página de una tienda.
+
 ## Qué debe verificar el abogado
 
 - Que el aviso de privacidad cumpla la legislación mexicana de protección de datos personales vigente (finalidades, transferencias, derechos ARCO y medios para ejercerlos).
 - Que los plazos y condiciones de cambios, devoluciones y cancelación cumplan la Ley Federal de Protección al Consumidor y las disposiciones aplicables al comercio electrónico.
 - Que las condiciones de los suplementos (uso, advertencias, leyendas) coincidan con lo que aprobó el asesor regulatorio. Estos borradores **no** contienen leyendas sanitarias: esas se capturan en Ajustes → Cumplimiento.
 - Los datos fiscales y de contacto reales.
+- Que las listas de productos prohibidos y restringidos de `politica-de-contenido.md` reflejen la ley mexicana vigente y las reglas de los medios de pago.
