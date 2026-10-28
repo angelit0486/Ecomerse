@@ -64,10 +64,17 @@ async function checkBar(page: Page, width: number) {
   // Completo y dentro de la pantalla: empieza en el margen, no cortado.
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(width);
-  for (const link of await bar.getByRole("link").all()) {
-    if (!(await link.isVisible())) continue;
-    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  }
+  // Se miden todos de una vez en el navegador: preguntar enlace por enlace
+  // «¿se ve?» y luego «¿cuánto mide?» fallaba si la barra se volvía a dibujar
+  // entre las dos preguntas (al resolverse los parámetros de la URL).
+  const heights = await bar.evaluate((nav) =>
+    [...nav.querySelectorAll("a")]
+      .map((a) => a.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0)
+      .map((r) => r.height),
+  );
+  expect(heights.length).toBeGreaterThan(0);
+  for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
 }
 
 for (const width of [360, 375, 1280]) {
