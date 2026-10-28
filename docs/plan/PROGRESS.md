@@ -32,6 +32,12 @@
     - 17: Consola → Trabajos, con los trabajos fallidos y «Reintentar» (sin mostrar su contenido). Migración `20261027000100`, pgTAP 100, E2E en `platform.spec`.
   - **Paso 8 (hecho; migración pendiente de aplicar en staging):** fotos en 320–1280 px con `srcset` (D-PRO-02). Migración `20261027000300`, pgTAP 102. Tras aplicarla, el mantenimiento genera las copias de las fotos existentes y la tienda activa `srcset` sola al terminar.
   - **Pruebas del 2026-10-27:** el ayudante E2E `asFreshClient` ahora pone la IP solo en las peticiones a la app (antes rompía el preflight CORS de las subidas directas a Storage). «Reintentar» en Consola → Trabajos ya no refresca la lista: el trabajo salía de ella y se llevaba su confirmación.
+- **Fase 10 (2026-10-28): vender la plataforma a otros comercios sin SQL** (D-F10-01; migración pendiente de aplicar en staging):
+  - Consola → **Planes**: crear y editar planes con todos sus límites y funciones.
+  - Consola → ficha de cada **organización**: registrar pago, prueba, pago pendiente, pausa, cancelación y cambio de plan, con motivo y auditoría; excepciones por organización; límites y uso en vivo.
+  - Panel → Ajustes → **Plan y uso** (dueña o administración) y aviso de pago pendiente o de prueba por terminar.
+  - Avance automático de estados en el mantenimiento (§19.4). Migración `20261028000100`, pgTAP `103`, E2E `plans.spec.ts`.
+  - Pendiente de la Fase 10: salud de la plataforma en la consola (cola, webhooks, errores) y el E2E «alta → límite → suspensión → reactivación».
 
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.

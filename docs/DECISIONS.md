@@ -1063,3 +1063,10 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
   - La tienda usa `srcset` solo si TODAS sus fotos listas tienen copias (`media_variants` en los datos públicos) y solo en rutas canónicas: nunca pide un tamaño que no existe.
   - La purga de huérfanos reconoce las copias como parte de su foto; al borrar una foto, el worker borra también sus copias.
   - Migración `20261027000300`, pgTAP `102`, pruebas unitarias de `variants.ts`. En local: 0 imágenes rotas y las tarjetas cargan la copia de 320–640 px en el celular.
+- **D-F10-01. Planes y suscripción manual desde la consola (F10-T01 y "Plan y uso" de F10-T02; GATE0 §19).**
+  - Implementa el contrato vigente de §19 sin cambiarlo: el cobro sigue siendo manual (§19.5) y el resto del sistema solo lee el modo de acceso y los límites.
+  - Un plan se guarda con **todos** sus límites numéricos: en la base una clave ausente vale 0 (§19.3) y bloquearía crear tiendas, productos o equipo sin querer.
+  - Transiciones con motivo y auditoría: registrar pago (activa N días; si aún no vence, los suma al periodo), prueba, pago pendiente con gracia, pausa, cancelación y cambio de plan. Sin suscripción vigente solo se puede empezar una nueva, con plan.
+  - Avance automático en el mantenimiento: periodo vencido → `past_due` con 7 días de gracia → `paused` (solo lectura) → a los 30 días `suspended` (§19.4, con `subscriptions.paused_at`). Sin fecha de fin de periodo no avanza nada: las suscripciones actuales de staging (`active` sin fin) no cambian.
+  - "Plan y uso" solo para la dueña o la administración de la organización (`org.billing.read`), sin notas internas. El aviso de pago pendiente o de prueba por terminar aparece en todo el panel.
+  - Migración `20261028000100`, pgTAP `103`, E2E `plans.spec.ts`. El panel tolera la base sin la migración (la sección dice que está por llegar).

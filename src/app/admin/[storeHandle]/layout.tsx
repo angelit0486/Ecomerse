@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { keyDate } from "@/lib/billing/entitlements";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { canSeePlan, loadPlanUsage } from "@/server/billing/plan-usage";
 import { callRpc } from "@/server/db/rpc";
 import { checkSchemaVersion } from "@/server/db/schema-version";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -26,10 +28,13 @@ export default async function StoreLayout({ children, params }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   const supabase = await createSupabaseServerClient();
-  const [stores, schema] = await Promise.all([
+  const showPlan = canSeePlan(ctx);
+  const [stores, schema, billing] = await Promise.all([
     callRpc<MyStore[]>(supabase, "access_list_my_stores"),
     checkSchemaVersion(supabase),
+    showPlan ? loadPlanUsage(ctx.store.id) : Promise.resolve(null),
   ]);
+  const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
   type Entry = { href: string; label: string; show: boolean };
@@ -122,6 +127,7 @@ export default async function StoreLayout({ children, params }: Props) {
           label: "Cumplimiento sanitario",
           show: hasPermission(ctx, "store.update") || hasPermission(ctx, "products.update"),
         },
+        { href: `${base}/ajustes/plan`, label: "Plan y uso", show: showPlan },
         {
           href: `${base}/ajustes/actividad`,
           label: "Actividad",
@@ -199,7 +205,22 @@ export default async function StoreLayout({ children, params }: Props) {
           ) : null}
           {ctx.accessMode === "read_only" ? (
             <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
-              La cuenta está en modo de solo lectura. Revisa la facturación para volver a editar.
+              La cuenta está en modo de solo lectura por un pago pendiente: tu tienda sigue
+              vendiendo, pero no puedes editar.{" "}
+              {showPlan ? (
+                <Link href={`${base}/ajustes/plan`} className="underline">
+                  Ver plan y uso
+                </Link>
+              ) : (
+                "Avisa a la persona dueña de la cuenta."
+              )}
+            </p>
+          ) : billingNotice ? (
+            <p role="status" className="rounded-md border border-warning px-3 py-2 text-sm">
+              {billingNotice}{" "}
+              <Link href={`${base}/ajustes/plan`} className="underline">
+                Ver plan y uso
+              </Link>
             </p>
           ) : null}
           {children}
@@ -207,4 +228,18 @@ export default async function StoreLayout({ children, params }: Props) {
       </div>
     </StoreTimeZoneProvider>
   );
+}
+
+const noticeDate = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" });
+
+/** Aviso a la dueña antes de perder la edición: pago pendiente o prueba por terminar (§19.4). */
+function planNotice(sub: Parameters<typeof keyDate>[0]): string | null {
+  const due = keyDate(sub);
+  if (!sub || !due) return null;
+  const when = noticeDate.format(new Date(due.at));
+  if (sub.status === "past_due")
+    return `Tu pago está pendiente. Para seguir editando, paga antes del ${when}.`;
+  const days = (new Date(due.at).getTime() - Date.now()) / 86_400_000;
+  if (sub.status === "trialing" && days <= 7) return `Tu prueba gratis termina el ${when}.`;
+  return null;
 }

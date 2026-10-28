@@ -74,7 +74,12 @@ export default async function OrganizationsPage({
           {orgs.map((o) => (
             <TR key={o.id}>
               <TD>
-                <span className="block font-medium">{o.name}</span>
+                <Link
+                  href={`/platform/organizaciones/${o.id}`}
+                  className="block font-medium underline"
+                >
+                  {o.name}
+                </Link>
                 <span className="text-[13px] text-fg-muted">{o.slug}</span>
               </TD>
               <TD>{o.owner_email ?? "Invitación pendiente"}</TD>
