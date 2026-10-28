@@ -21,13 +21,20 @@ Etiquetas: **[VERIFICADO]** = probado aquí con evidencia; **[SIMULADOR]** = pro
 
 ## Suites completas al cierre
 
-| Suite                  | Resultado                               |
-| ---------------------- | --------------------------------------- |
-| `pnpm verify` (unit)   | 989/989 [VERIFICADO]                    |
-| pgTAP                  | 2,440/2,440 [VERIFICADO]                |
-| Integración            | 362/362 [VERIFICADO]                    |
-| E2E (Playwright + axe) | _se completa al terminar la ronda_      |
-| `pnpm audit`           | sin vulnerabilidades conocidas (Fase 0) |
+| Suite                  | Resultado                                 |
+| ---------------------- | ----------------------------------------- |
+| `pnpm verify` (unit)   | 989/989 [VERIFICADO]                      |
+| pgTAP                  | 2,440/2,440 [VERIFICADO]                  |
+| Integración            | 362/362 [VERIFICADO]                      |
+| E2E (Playwright + axe) | 104/104 [VERIFICADO], en la segunda ronda |
+| `pnpm audit`           | sin vulnerabilidades conocidas (Fase 0)   |
+
+## La primera ronda E2E no salió en verde
+
+La primera ronda completa dio 99 pasadas, 2 fallidas y 3 sin correr (dependían de una fallida). No se tomó como «inestable» sin investigar:
+
+- **Barra de categorías (360 px):** se reprodujo 2 de 3 veces. Causa: la prueba preguntaba enlace por enlace «¿se ve?» y luego «¿cuánto mide?»; si la barra se volvía a dibujar entre las dos preguntas, el tamaño daba `null`. Se corrigió la prueba para medir todos los enlaces en un solo paso (`f09935b`): 5 de 5 en verde. No era un fallo de la tienda.
+- **Agregar tienda desde la consola:** el mensaje «Tienda creada en …» sí aparece en la captura del fallo, pero llegó después de los 5 s que espera la prueba. Ocurrió justo después de reiniciarse el contenedor. Aislada pasó 3 de 3 y en la segunda ronda completa también. Queda anotada; si se repite, se mide la duración de esa acción.
 
 ## Revisión adversarial de la fase
 
