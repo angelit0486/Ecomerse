@@ -97,7 +97,7 @@ const fetchImpl = (async (url: string, init: RequestInit = {}) => {
 
 const oauth = {
   clientId: "1234567890",
-  clientSecret: "secretodeaplicacion0001",
+  clientSecret: "s".repeat(24), // valor de prueba evidente
   redirectUri: "https://app.test/api/payments/mercadopago/callback",
   apiBase: "https://mp.test",
   fetchImpl,

@@ -14,9 +14,12 @@ import {
 } from "./mercadopago-oauth";
 
 const key = randomBytes(32);
+// Valores de prueba evidentes (de baja entropía) para que el escáner de secretos no los confunda.
+const FAKE_SECRET = "s".repeat(24);
+const FAKE_REFRESH = `TG-${"0".repeat(12)}`;
 const cfg: MercadoPagoOAuthConfig = {
   clientId: "1234567890",
-  clientSecret: "secretodeaplicacion0001",
+  clientSecret: FAKE_SECRET,
   redirectUri: "https://app.test/api/payments/mercadopago/callback",
   apiBase: "https://mp.test",
 };
@@ -32,7 +35,7 @@ function fakeToken(body: unknown, status = 200) {
 
 const goodToken = {
   access_token: "APP_USR-1234567890123456-102812-abcdefabcdef-55512345",
-  refresh_token: "TG-abcdef123456",
+  refresh_token: FAKE_REFRESH,
   user_id: 55512345,
   expires_in: 15552000,
   live_mode: false,
@@ -135,10 +138,10 @@ describe("intercambio de llaves", () => {
 
   it("renueva con el refresh token", async () => {
     const { calls, cfg: c } = fakeToken(goodToken);
-    await refreshTokens(c, "TG-abcdef123456");
+    await refreshTokens(c, FAKE_REFRESH);
     expect(calls[0]!.body).toMatchObject({
       grant_type: "refresh_token",
-      refresh_token: "TG-abcdef123456",
+      refresh_token: FAKE_REFRESH,
     });
   });
 });
