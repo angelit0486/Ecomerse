@@ -3,6 +3,39 @@ import { describe, expect, it } from "vitest";
 import { redact, redactString } from "./redact";
 
 describe("redact", () => {
+  it("redacta nombres de personas e IP sin tocar nombres de cosas (SEC-09)", () => {
+    expect(
+      redact({
+        customer_name: "Ana López",
+        recipient_name: "Luis",
+        ip: "203.0.113.7",
+        "x-forwarded-for": "203.0.113.7",
+        name: "Tienda demo",
+        store_name: "Tienda demo",
+      }),
+    ).toEqual({
+      customer_name: "[redactado]",
+      recipient_name: "[redactado]",
+      ip: "[redactado]",
+      "x-forwarded-for": "[redactado]",
+      name: "Tienda demo",
+      store_name: "Tienda demo",
+    });
+  });
+
+  it("enmascara tokens en URLs, teléfonos internacionales e IP dentro de textos (SEC-09)", () => {
+    const out = redactString(
+      "GET /pedido/123?t=abcDEF_123-x&lang=es callback?code=TG-999&state=zzz desde 203.0.113.7 tel +52 55 1234 5678",
+    );
+    expect(out).toContain("?t=[redactado]&lang=es");
+    expect(out).toContain("?code=[redactado]&state=[redactado]");
+    expect(out).toContain("203.0.x.x");
+    expect(out).toContain("[teléfono]");
+    expect(out).not.toMatch(/abcDEF|TG-999|113\.7|1234 5678/);
+    // Identificadores comunes no cambian.
+    expect(redactString("pedido 1042 de la tienda 7f1c2a")).toBe("pedido 1042 de la tienda 7f1c2a");
+  });
+
   it("redacta claves sensibles a cualquier profundidad", () => {
     const out = redact({
       user: { email: "a@b.com", password: "x", nested: { authorization: "Bearer t" } },

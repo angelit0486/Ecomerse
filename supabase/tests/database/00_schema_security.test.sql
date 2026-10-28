@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(17);
 
 -- 1. RLS habilitado Y forzado en todas las tablas propias.
 select is_empty(
@@ -51,15 +51,15 @@ select is_empty(
   'ninguna función propia es ejecutable por PUBLIC'
 );
 
--- 5. Toda función SECURITY DEFINER fija search_path.
+-- 5. Toda función SECURITY DEFINER fija search_path vacío (CLAUDE.md regla 5;
+-- auditoría SEC-08): cualquier otro valor deja un esquema donde sembrar objetos.
 select is_empty(
   $$ select p.oid::regprocedure::text
        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where p.prosecdef
         and n.nspname in ('public', 'app', 'audit', 'private', 'storefront', 'system')
-        and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) cfg
-                         where cfg like 'search_path=%') $$,
-  'toda función SECURITY DEFINER fija search_path'
+        and not ('search_path=""' = any (coalesce(p.proconfig, '{}'))) $$,
+  'toda función SECURITY DEFINER fija search_path vacío'
 );
 
 -- 6. anon no tiene USAGE en los esquemas internos.
@@ -159,6 +159,37 @@ select is_empty(
         and not coalesce(c.reloptions @> array['security_invoker=true'], false) $$,
   'toda vista propia usa security_invoker=true'
 );
+
+-- 15. Toda función SECURITY DEFINER de public (la Data API) verifica permisos
+-- (auditoría SEC-04): llama a una guarda o a un ayudante de app que la llama.
+-- Es una revisión de texto: prueba que la guarda está, no que se use bien; las
+-- pruebas de cada función cubren lo segundo.
+create function pg_temp.unguarded_rpcs() returns setof text language sql as $f$
+  with guard as (
+    select '(app\.(require_aal2_user|require_account|require_platform_role|require_store_permission|has_store_permission|has_org_permission|is_platform_staff|media_permission|assert_can_manage_org_member|assert_can_manage_store_member)\(|auth\.uid\(\))'::text as re
+  ), helpers as (
+    select 'app.' || p.proname as name
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace, guard
+     where n.nspname = 'app' and p.prosrc ~ guard.re
+  )
+  select p.oid::regprocedure::text
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace, guard
+   where n.nspname = 'public' and p.prosecdef
+     and p.prosrc !~ guard.re
+     and not exists (select 1 from helpers h where position(h.name || '(' in p.prosrc) > 0)
+$f$;
+select is_empty('select * from pg_temp.unguarded_rpcs()',
+                'toda función SECURITY DEFINER de public llega a una guarda de permisos');
+
+-- 16-17. El metatest 15 sí detecta una función sin guarda (y la de ayudante cuenta).
+create function public.zz_metatest_unguarded() returns int language sql security definer
+  set search_path = '' as $f$ select 1 $f$;
+create function public.zz_metatest_helper_guarded() returns void language plpgsql security definer
+  set search_path = '' as $f$ begin perform app.lock_media(null, null); end $f$;
+select ok('public.zz_metatest_unguarded()'::regprocedure::text in (select * from pg_temp.unguarded_rpcs()),
+          'una función sin guarda aparece en el metatest 15');
+select ok('public.zz_metatest_helper_guarded()'::regprocedure::text not in (select * from pg_temp.unguarded_rpcs()),
+          'una función que delega en un ayudante con guarda no aparece');
 
 select * from finish();
 rollback;

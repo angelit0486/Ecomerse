@@ -6,6 +6,11 @@
 const SENSITIVE_KEY =
   /(pass(word)?|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|signature|session|email|phone|address|card|cvv)/i;
 
+// Nombres de personas e IP (auditoría SEC-09). Solo claves explícitas: `name` a
+// secas también es el nombre de una tienda, un producto o un trabajo.
+const PERSON_KEY =
+  /^(full|first|last|given|family|customer|recipient|buyer|contact)[-_]?name$|^(ip|ip[-_]?address|client[-_]?ip|remote[-_]?addr|x-forwarded-for|x-real-ip)$/i;
+
 const REDACTED = "[redactado]";
 const MAX_DEPTH = 8;
 const MAX_ARRAY_ITEMS = 50;
@@ -17,6 +22,15 @@ const STRING_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bBearer\s+[A-Za-z0-9._~+/=-]+/g, "Bearer [redactado]"],
   [/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt]"],
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email]"],
+  // Tokens en la query de una URL: enlace de pedido (?t=), códigos OAuth, state.
+  [
+    /([?&](?:t|token|code|state|access_token|refresh_token|invite|key)=)[^&\s#"']+/gi,
+    "$1[redactado]",
+  ],
+  // Teléfonos en formato internacional (+52 …).
+  [/\+\d{1,3}(?:[\s.-]?\d){8,12}\b/g, "[teléfono]"],
+  // IPv4: se conserva la red, nunca la dirección completa.
+  [/\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b/g, "$1.x.x"],
 ];
 
 export function redactString(value: string): string {
@@ -28,7 +42,7 @@ export function redactString(value: string): string {
 }
 
 export function isSensitiveKey(key: string): boolean {
-  return SENSITIVE_KEY.test(key);
+  return SENSITIVE_KEY.test(key) || PERSON_KEY.test(key);
 }
 
 export function redact(value: unknown): unknown {

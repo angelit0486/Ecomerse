@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(65);
+select plan(68);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('cat', 'cat@a.io');
@@ -125,6 +125,15 @@ select throws_ok(format($$ select public.media_finalize(%L, %L) $$, tests.fx('st
   '42501', null, 'otro tenant no finaliza medios de A');
 select throws_ok(format($$ select public.media_finalize(%L, %L) $$, tests.fx('store_b'), tests.fx('m1')),
   'P0001', 'not_found', 'un medio de A no existe para la tienda B');
+-- SEC-10: sin acceso a la tienda, un id que existe y uno inventado dan lo mismo.
+select throws_ok(format($$ select public.media_set_alt_text(%L, %L, 'x') $$, tests.fx('store_a'), tests.fx('m1')),
+  '42501', 'forbidden', 'medio existente de otra tienda: forbidden');
+select throws_ok(format($$ select public.media_set_alt_text(%L, %L, 'x') $$, tests.fx('store_a'), gen_random_uuid()),
+  '42501', 'forbidden', 'id inventado en otra tienda: también forbidden (no revela si existe)');
+select tests.logout(); select tests.login('view');
+select throws_ok(format($$ select public.media_delete(%L, %L) $$, tests.fx('store_a'), gen_random_uuid()),
+  '42501', 'forbidden', 'un miembro sin permisos de medios tampoco distingue ids');
+select tests.logout(); select tests.login('owner_b');
 select is((select count(*)::int from public.media where store_id = tests.fx('store_a')), 0,
   'RLS: otro tenant no ve los medios de A');
 

@@ -3,6 +3,7 @@ import { processQueueSoon } from "@/server/jobs/run-now";
 import { serverEnv } from "@/server/env";
 import { log } from "@/server/observability/logger";
 import { requestIdFrom } from "@/server/observability/request-id";
+import { readBodyLimited } from "@/server/security/body";
 import { stripeProvider } from "@/server/payments/registry";
 import { handleStripeWebhook } from "@/server/payments/webhook";
 
@@ -22,15 +23,14 @@ export async function POST(request: Request): Promise<Response> {
   });
   const provider = stripeProvider();
   if (!provider) return Response.json({ received: false }, { status: 404 });
-  // Se rechaza por tamaño antes de leer el cuerpo (el límite se vuelve a aplicar al leer).
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
-    return Response.json({ received: false }, { status: 413 });
-  }
+  // Tope real de bytes al leer, no solo por content-length (SEC-07).
+  const rawBody = await readBodyLimited(request, MAX_BODY_BYTES);
+  if (rawBody === null) return Response.json({ received: false }, { status: 413 });
   const result = await handleStripeWebhook({
     db: workerDb(),
     provider,
     headers: request.headers,
-    rawBody: await request.text(),
+    rawBody,
     now: new Date(),
     log: reqLog,
     requireLivemode: serverEnv().APP_ENV === "production",

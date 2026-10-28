@@ -1,24 +1,25 @@
 # Aplicar las migraciones del 2026-10-27 en staging
 
-Siete migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación y la salud de la plataforma con alertas. Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
+Ocho migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación la salud de la plataforma con alertas y un ajuste de seguridad en las fotos. Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
 
-| Orden | Archivo                                                      | Qué hace                                                   |
-| ----- | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| 1     | `supabase/migrations/20261027000100_dead_jobs_console.sql`   | Consola → Trabajos: ver y reintentar trabajos fallidos     |
-| 2     | `supabase/migrations/20261027000200_import_skip_errors.sql`  | Importar solo los productos sin errores (ADR-040)          |
-| 3     | `supabase/migrations/20261027000300_media_variants.sql`      | Fotos en varios tamaños (srcset) y su limpieza correcta    |
-| 4     | `supabase/migrations/20261028000100_plans_subscriptions.sql` | Consola → Planes y suscripciones; «Plan y uso» en el panel |
-| 5     | `supabase/migrations/20261028000200_mercadopago_oauth.sql`   | Cada comercio cobra en su propia cuenta de Mercado Pago    |
-| 6     | `supabase/migrations/20261028000300_order_email_address.sql` | El correo de confirmación lleva la dirección de envío      |
-| 7     | `supabase/migrations/20261028000400_platform_health.sql`     | Consola → Salud y alertas por correo cada 15 minutos       |
+| Orden | Archivo                                                              | Qué hace                                                           |
+| ----- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1     | `supabase/migrations/20261027000100_dead_jobs_console.sql`           | Consola → Trabajos: ver y reintentar trabajos fallidos             |
+| 2     | `supabase/migrations/20261027000200_import_skip_errors.sql`          | Importar solo los productos sin errores (ADR-040)                  |
+| 3     | `supabase/migrations/20261027000300_media_variants.sql`              | Fotos en varios tamaños (srcset) y su limpieza correcta            |
+| 4     | `supabase/migrations/20261028000100_plans_subscriptions.sql`         | Consola → Planes y suscripciones; «Plan y uso» en el panel         |
+| 5     | `supabase/migrations/20261028000200_mercadopago_oauth.sql`           | Cada comercio cobra en su propia cuenta de Mercado Pago            |
+| 6     | `supabase/migrations/20261028000300_order_email_address.sql`         | El correo de confirmación lleva la dirección de envío              |
+| 7     | `supabase/migrations/20261028000400_platform_health.sql`             | Consola → Salud y alertas por correo cada 15 minutos               |
+| 8     | `supabase/migrations/20261028000500_lock_media_permission_first.sql` | Fotos: sin acceso a la tienda no se puede saber si una foto existe |
 
 ## Pasos (desde el celular o la computadora)
 
 1. Entra a Supabase → tu proyecto de staging → **SQL Editor** → **New query**.
 2. En GitHub, abre el archivo 1 de la tabla, toca **Raw**, copia todo y pégalo en la consulta.
 3. Toca **Run**. Debe decir «Success. No rows returned».
-4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6 y al final el 7.
-5. Comprueba con esta consulta (debe devolver `20261028000400`):
+4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7 y al final el 8.
+5. Comprueba con esta consulta (debe devolver `20261028000500`):
 
    ```sql
    select public.app_schema_version();
