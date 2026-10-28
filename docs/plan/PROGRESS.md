@@ -8,19 +8,19 @@
 
 Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0–7; estado real en `docs/plan/ESTADO-2026-10-28.md`.
 
-| Paso  | Qué                                                        | Estado                          | Evidencia                                                                                                    |
-| ----- | ---------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| F0    | Estado real                                                | hecha                           | `02c7641`; verify 979 ×2, pgTAP 2,421 ×2, integración 360 ×2, E2E 103/103 ×2; CI corrida 108 verde           |
-| F1.1  | CI en verde                                                | hecha                           | gitleaks con valores de prueba de baja entropía (`02c7641`)                                                  |
-| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | bloqueada (propietario)         | 7 migraciones pendientes: `docs/runbooks/migraciones-2026-10-27.md`                                          |
-| F1.3  | Resend + Send Email Hook                                   | bloqueada (propietario)         | Sin API key ni dominio                                                                                       |
-| F1.4  | Escenarios de Mercado Pago                                 | pendiente                       | Con simulador etiquetado; prueba real espera credenciales                                                    |
-| F1.5  | Correo de confirmación con la dirección completa           | hecha                           | `4b85dd7`; migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2)                            |
-| F1.6  | Salud de la plataforma y alertas                           | hecha                           | Migración `20261028000400`, pgTAP 105, integración `platform-health`, unitarias, E2E `platform.spec` (Salud) |
-| F1.7  | Respaldos con restauración probada, RTO/RPO                | pendiente                       |                                                                                                              |
-| F1.8  | Monitoreo (Sentry)                                         | pendiente (DSN del propietario) |                                                                                                              |
-| F1.9  | Seguridad: CSP, límites, Origin, 2FA, revisión adversarial | pendiente                       |                                                                                                              |
-| F1.10 | Política de categorías prohibidas y Términos               | pendiente (ADR PROPUESTO)       | Regulación: requiere aprobación del propietario                                                              |
+| Paso  | Qué                                                        | Estado                                 | Evidencia                                                                                                                                          |
+| ----- | ---------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F0    | Estado real                                                | hecha                                  | `02c7641`; verify 979 ×2, pgTAP 2,421 ×2, integración 360 ×2, E2E 103/103 ×2; CI corrida 108 verde                                                 |
+| F1.1  | CI en verde                                                | hecha                                  | gitleaks con valores de prueba de baja entropía (`02c7641`)                                                                                        |
+| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | bloqueada (propietario)                | 7 migraciones pendientes: `docs/runbooks/migraciones-2026-10-27.md`                                                                                |
+| F1.3  | Resend + Send Email Hook                                   | bloqueada (propietario)                | Sin API key ni dominio                                                                                                                             |
+| F1.4  | Escenarios de Mercado Pago                                 | pendiente                              | Con simulador etiquetado; prueba real espera credenciales                                                                                          |
+| F1.5  | Correo de confirmación con la dirección completa           | hecha                                  | `4b85dd7`; migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2)                                                                  |
+| F1.6  | Salud de la plataforma y alertas                           | hecha                                  | Migración `20261028000400`, pgTAP 105, integración `platform-health`, unitarias, E2E `platform.spec` (Salud)                                       |
+| F1.7  | Respaldos con restauración probada, RTO/RPO                | hecha en local; Pro/PITR (propietario) | `scripts/ops/restore-drill.sh` ×2 correcto (8 s, 147,865 filas); `docs/runbooks/respaldos.md`. Staging en plan Free: **sin respaldos automáticos** |
+| F1.8  | Monitoreo (Sentry)                                         | pendiente (DSN del propietario)        |                                                                                                                                                    |
+| F1.9  | Seguridad: CSP, límites, Origin, 2FA, revisión adversarial | pendiente                              |                                                                                                                                                    |
+| F1.10 | Política de categorías prohibidas y Términos               | pendiente (ADR PROPUESTO)              | Regulación: requiere aprobación del propietario                                                                                                    |
 
 ### F1.6 en detalle
 
@@ -43,6 +43,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | B3  | Resend: API key y dominio con SPF/DKIM/DMARC                                | No salen correos ni alertas en staging                      |
 | B4  | Credenciales de Mercado Pago (aplicación de prueba)                         | Pagos solo probados con API simulada                        |
 | B5  | `angelii33/pruva` responde 403; el trabajo se sube a `angelit0486/Ecomerse` | Aclarar la propiedad del código antes de vender (data room) |
+| B6  | Pasar Supabase a Pro (+ PITR antes del primer comercio de pago)             | Hoy no hay respaldos automáticos de staging                 |
 | R0  | Reglas y leyendas sanitarias de suplementos (asesor regulatorio)            | El perfil de México nace `pending` y bloquea la publicación |
 
 ## Verificaciones pendientes con servicios reales
