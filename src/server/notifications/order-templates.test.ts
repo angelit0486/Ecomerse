@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addressLines,
+  orderConfirmationEmail,
   orderDeliveredEmail,
   orderShippedEmail,
   staffOrderEmail,
@@ -95,5 +97,50 @@ describe("plantillas de pedidos", () => {
     const m = staffOrderEmail(base, "s@x.test", "paid_after_cancel", "https://panel.test/p");
     expect(m.subject).toContain("pedido cancelado #1001");
     expect(m.text).toContain("reembolso automáticamente");
+  });
+
+  it("confirmación: dirección de envío completa, escapada y en texto plano", () => {
+    const m = orderConfirmationEmail(
+      {
+        ...base,
+        order: {
+          ...base.order,
+          shipping_address: {
+            recipient_name: "Ana <b>López</b>",
+            line1: "Av. Juárez 10",
+            line2: "Col. Centro",
+            postal_code: "82000",
+            city: "Mazatlán",
+            region: "Sinaloa",
+            country: "MX",
+          },
+        },
+      },
+      "c@x.test",
+    );
+    expect(m.html).toContain("Enviaremos a:");
+    expect(m.html).toContain("Ana &lt;b&gt;López&lt;/b&gt;");
+    expect(m.html).toContain("Av. Juárez 10, Col. Centro");
+    expect(m.html).toContain("82000 Mazatlán, Sinaloa, MX");
+    expect(m.html).not.toContain("<b>López");
+    expect(m.text).toContain("Enviaremos a:\nAna <b>López</b>\nAv. Juárez 10, Col. Centro");
+    expect(m.text).toContain("Total: ");
+  });
+
+  it("confirmación sin envío: no muestra dirección", () => {
+    const m = orderConfirmationEmail(base, "c@x.test");
+    expect(m.html).not.toContain("Enviaremos a:");
+    expect(addressLines(null)).toEqual([]);
+    expect(
+      addressLines({
+        recipient_name: "Ana",
+        line1: "Calle 1",
+        line2: null,
+        postal_code: null,
+        city: "León",
+        region: null,
+        country: null,
+      }),
+    ).toEqual(["Ana", "Calle 1", "León"]);
   });
 });

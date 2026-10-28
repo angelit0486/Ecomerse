@@ -39,6 +39,8 @@
   - Avance automático de estados en el mantenimiento (§19.4). Migración `20261028000100`, pgTAP `103`, E2E `plans.spec.ts`.
   - Pendiente de la Fase 10: salud de la plataforma en la consola (cola, webhooks, errores) y el E2E «alta → límite → suspensión → reactivación».
 - **ADR-041 (2026-10-28): cada comercio cobra en su propia cuenta de Mercado Pago** (OAuth con PKCE; llaves cifradas en `system.payment_credentials`; preferencia, re-consulta, reconciliación y reembolsos con la llave de la cuenta; renovación automática). Migración `20261028000200`, pgTAP `104`, integración `mercadopago-oauth`. Falta: aplicar la migración, las tres variables en Vercel y la prueba con la aplicación real del propietario.
+- **Misión vendible · F0 (2026-10-28):** estado real en `docs/plan/ESTADO-2026-10-28.md` (todo verde ×2; CI verde tras corregir falsos positivos de gitleaks; staging con migraciones pendientes; Vercel 403).
+- **Misión vendible · F1.5 (2026-10-28):** el correo de confirmación (solo tras confirmarse el pago, una vez por pedido, ya existente) ahora incluye la dirección de envío completa, escapada y sin teléfono. Migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2). El aviso de «pedido recibido, pago pendiente» ya existía para pagos diferidos (transferencia).
 
 - **Misión de calidad (2026-10-27):** subir la calidad del software y de las tiendas demo y demo2 sin depender de servicios externos. Pasos 0–6.
   - **Paso 0 (hecho):** estado real en `docs/plan/ESTADO-CALIDAD-2026-10-27.md`.

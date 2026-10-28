@@ -27,6 +27,8 @@ export interface OrderEmailData {
     total: number;
     prices_include_tax: boolean;
     shipping_name: string | null;
+    /** Dirección de envío (sin teléfono); null si el pedido no requiere envío. */
+    shipping_address?: ShippingAddress | null;
   };
   items: { title: string; variant: string | null; quantity: number; line_total: number }[];
   orderUrl: string | null;
@@ -39,7 +41,38 @@ export interface OrderEmailData {
   refund?: { amount: number } | null;
 }
 
+export interface ShippingAddress {
+  recipient_name: string | null;
+  line1: string | null;
+  line2: string | null;
+  postal_code: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+}
+
 const HEX = /^#[0-9a-fA-F]{6}$/;
+
+/** Líneas de la dirección en el orden en que se escribe en México (vacías fuera). */
+export function addressLines(a: ShippingAddress | null | undefined): string[] {
+  if (!a) return [];
+  const street = [a.line1, a.line2].filter(Boolean).join(", ");
+  const place = [[a.postal_code, a.city].filter(Boolean).join(" "), a.region, a.country]
+    .filter(Boolean)
+    .join(", ");
+  return [a.recipient_name, street, place].filter((l): l is string => Boolean(l && l.trim()));
+}
+
+function addressHtml(d: OrderEmailData): string {
+  const lines = addressLines(d.order.shipping_address);
+  if (lines.length === 0) return "";
+  return `<p style="margin-top:16px"><strong>Enviaremos a:</strong><br>${lines.map(escapeHtml).join("<br>")}</p>`;
+}
+
+function addressText(d: OrderEmailData): string[] {
+  const lines = addressLines(d.order.shipping_address);
+  return lines.length ? ["", "Enviaremos a:", ...lines] : [];
+}
 
 function money(cents: number, d: OrderEmailData): string {
   return formatMoney(cents, d.store.currency, d.store.locale);
@@ -142,7 +175,7 @@ export function orderConfirmationEmail(d: OrderEmailData, to: string): EmailMess
     d,
     to,
     subject,
-    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pago. Estamos preparando tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.</p>${itemsHtml(d)}${
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pago. Estamos preparando tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.</p>${itemsHtml(d)}${addressHtml(d)}${
       d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""
     }`,
     [
@@ -151,6 +184,7 @@ export function orderConfirmationEmail(d: OrderEmailData, to: string): EmailMess
       `Recibimos tu pago. Estamos preparando tu pedido ${d.order.display_number}.`,
       "",
       itemsText(d),
+      ...addressText(d),
       d.orderUrl ? `Tu pedido: ${d.orderUrl}` : "",
     ],
   );

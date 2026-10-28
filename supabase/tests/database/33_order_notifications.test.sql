@@ -4,7 +4,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(16);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('viewer', 'viewer@a.io');
@@ -53,6 +53,26 @@ delete from public.store_notification_settings where store_id = tests.fx('store_
 select is((system.order_notification(tests.fx('order_a')) -> 'staff' -> 'emails'), '["hola@a.io"]'::jsonb,
   'sin configuración: el email de contacto de la tienda');
 select is(system.order_notification(gen_random_uuid()), null, 'pedido inexistente: null');
+
+-- Misión vendible F1.5: la dirección completa llega a la plantilla, sin teléfono.
+select is(system.order_notification(tests.fx('order_a')) -> 'order' -> 'shipping_address', 'null'::jsonb,
+          'sin envío: sin dirección');
+create function pg_temp.ship(p_order uuid) returns void language plpgsql as $$
+begin
+  -- Pedido de prueba con envío (fuera de las funciones de checkout, solo para leerlo).
+  alter table public.orders disable trigger user;
+  update public.orders set requires_shipping = true,
+         shipping_address = '{"recipient_name":"Ana López","line1":"Av. Juárez 10","line2":"Col. Centro",
+                              "postal_code":"82000","city":"Mazatlán","region":"Sinaloa","country":"MX",
+                              "phone":"6690000000"}'
+   where id = p_order;
+  alter table public.orders enable trigger user;
+end $$;
+select pg_temp.ship(tests.fx('order_a'));
+select is(system.order_notification(tests.fx('order_a')) -> 'order' -> 'shipping_address',
+          '{"recipient_name":"Ana López","line1":"Av. Juárez 10","line2":"Col. Centro","postal_code":"82000",
+            "city":"Mazatlán","region":"Sinaloa","country":"MX"}'::jsonb,
+          'con envío: dirección completa y nunca el teléfono');
 
 select * from finish();
 rollback;
