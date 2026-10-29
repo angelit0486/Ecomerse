@@ -38,3 +38,26 @@ export async function saveNotifications(
   revalidatePath(`/admin/${storeHandle}/ajustes/notificaciones`);
   return { ok: true, message: "Notificaciones guardadas." };
 }
+
+/** ADR-048: recordatorio de carritos dejados (viene apagado). */
+export async function saveCartRecovery(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const enabled = formData.get("cart_recovery") === "1";
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "notifications_set_cart_recovery", {
+      p_store_id: storeId,
+      p_enabled: enabled,
+    });
+  } catch (error) {
+    return failure(error, formValues(formData, ["cart_recovery"]));
+  }
+  revalidatePath(`/admin/${storeHandle}/ajustes/notificaciones`);
+  return {
+    ok: true,
+    message: enabled ? "Recordatorio de carritos activado." : "Recordatorio de carritos apagado.",
+  };
+}

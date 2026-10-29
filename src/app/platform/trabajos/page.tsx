@@ -28,6 +28,7 @@ const TYPE_LABELS: Record<string, string> = {
   "import.commit": "Importación de productos",
   "orders.expire": "Vencer reservas",
   "orders.complete": "Completar pedidos",
+  "carts.recover": "Recordatorios de carrito",
   "payments.reconcile": "Conciliar pagos",
   "refund.execute": "Reembolso",
   "order.created": "Correo: pedido recibido",

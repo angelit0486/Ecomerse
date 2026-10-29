@@ -5,6 +5,7 @@ import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { CartRecoveryForm } from "./cart-recovery-form";
 import { NotificationsForm } from "./notifications-form";
 
 export const metadata: Metadata = { title: "Notificaciones" };
@@ -19,7 +20,7 @@ export default async function NotificationsSettingsPage({ params }: Props) {
   const [{ data: settings, error }, { data: store }] = await Promise.all([
     supabase
       .from("store_notification_settings")
-      .select("staff_emails, notify_new_order, notify_paid")
+      .select("staff_emails, notify_new_order, notify_paid, cart_recovery")
       .eq("store_id", ctx.store.id)
       .maybeSingle(),
     supabase.from("stores").select("contact_email").eq("id", ctx.store.id).single(),
@@ -43,6 +44,10 @@ export default async function NotificationsSettingsPage({ params }: Props) {
           notify_new_order: (settings?.notify_new_order as boolean | undefined) ?? true,
           notify_paid: (settings?.notify_paid as boolean | undefined) ?? true,
         }}
+      />
+      <CartRecoveryForm
+        storeHandle={ctx.store.handle}
+        enabled={(settings?.cart_recovery as boolean | undefined) ?? false}
       />
     </section>
   );

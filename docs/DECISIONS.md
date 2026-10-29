@@ -1132,7 +1132,7 @@ Análisis de brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`. Ya existe y no requiere
 
 Lo que sigue necesita la decisión del propietario.
 
-### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan, días de prueba y si se prorratea al cambiar de plan.
+### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan y días de prueba. Cambio de plan: **prorratear** (propietario, 2026-10-29).
 
 - **Contexto.** Los planes tienen límites pero **no precio**, y el cobro es manual: la plataforma marca «activa por N días» después de recibir el pago por fuera. No se puede calcular el MRR ni cobrar solo. La misión pide suscripción mensual y anual, prueba, cambios de plan, cancelación y suspensión por impago, sin cobrar nada sin ADR aprobado.
 - **Opciones evaluadas (cobro con tarjeta en México):**
@@ -1255,7 +1255,7 @@ Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VER
 
 - **Pregunta para el propietario.** ¿Apruebas empezar con la recuperación de carritos y después los envíos? Cada integración tendría su propio ADR corto con proveedor y costos antes de construirse.
 
-### ADR-048 (propuesto) — Recuperación de carritos por correo
+### ADR-048 — Recuperación de carritos por correo · **aprobado por el propietario el 2026-10-29: opción B, a todos como recordatorio con enlace de baja**. PENDIENTE DE REVISIÓN legal: el abogado debe confirmar que cumple la ley de datos personales.
 
 - **Contexto.** ADR-047 aprobó empezar por aquí.
   - Proveedor: el correo que ya usa la plataforma (Resend). No agrega dependencias. El costo por correo depende del plan de Resend del propietario [NO VERIFICADO].
@@ -1269,7 +1269,7 @@ Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VER
   - **Opción A (segura):** el correo sale solo a quien marcó «acepto recibir promociones». Se agrega la casilla en el paso del correo del checkout.
   - **Opción B:** el correo sale a todo el que escribió su correo, como recordatorio de servicio. Recupera más, pero tu abogado debe confirmar que cumple la ley de datos personales.
 
-### ADR-049 (propuesto) — Envíos con cotización y guías
+### ADR-049 — Envíos con cotización y guías · **el propietario eligió Skydropx con la cuenta de cada comercio (2026-10-29)**. Bloqueado: hace falta que el propietario pida a Skydropx la documentación y credenciales de su API; no se construye con una API supuesta.
 
 - **Opciones evaluadas** (fuentes públicas; precios [NO VERIFICADO]):
   - **Envía (envia.com):**

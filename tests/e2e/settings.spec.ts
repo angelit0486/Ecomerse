@@ -42,12 +42,12 @@ test("pagos y notificaciones de la tienda", async ({ page }) => {
   await page.getByRole("link", { name: "Notificaciones" }).click();
   const emails = page.getByLabel("Quién recibe los avisos de la tienda");
   await emails.fill("ventas@ajustes.test\nno-es-email");
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "hasta 5 emails" })).toBeVisible();
   await expect(emails).toHaveValue("ventas@ajustes.test\nno-es-email");
   await emails.fill("Ventas@Ajustes.test\nbodega@ajustes.test");
   await page.getByLabel("un pedido quede pagado y listo para preparar").uncheck();
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(page.getByText("Notificaciones guardadas.")).toBeVisible();
   await expectNoSeriousA11yViolations(page);
 

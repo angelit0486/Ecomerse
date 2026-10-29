@@ -172,6 +172,29 @@ export async function addToCart(
   throw new AppError("internal");
 }
 
+/**
+ * ADR-048: el enlace del recordatorio (un solo uso) liga el carrito a una cookie
+ * nueva. Si ya había otro carrito en este navegador, se reemplaza por el recuperado.
+ */
+export async function recoverCart(storeId: string, recoveryToken: string): Promise<boolean> {
+  if (!TOKEN_RE.test(recoveryToken)) return false;
+  const token = newToken();
+  const ok = await value<boolean>(
+    gatewayDb()`select storefront.cart_recover(${storeId}, ${recoveryToken}, ${token}) as value`,
+  );
+  if (ok) await setCartCookie(token);
+  return ok === true;
+}
+
+/** Baja de recordatorios: recibe el hash del correo ya verificado con su firma. */
+export async function optOutCartRecovery(storeId: string, emailHash: string): Promise<void> {
+  try {
+    await gatewayDb()`select storefront.cart_recovery_optout(${storeId}, ${emailHash})`;
+  } catch (error) {
+    throw toAppError(error);
+  }
+}
+
 export async function setCartQuantity(
   storeId: string,
   variantId: string,

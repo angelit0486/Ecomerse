@@ -18,6 +18,7 @@ Catorce migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profe
 | 12    | `supabase/migrations/20261029000400_plan_pricing.sql`                | Precios de los planes y MRR en Métricas (ADR-044)                             |
 | 13    | `supabase/migrations/20261029000500_stripe_billing.sql`              | Cobro de la mensualidad con Stripe Billing (ADR-044)                          |
 | 14    | `supabase/migrations/20261029000600_store_anonymization.sql`         | Anonimiza datos de compradores 30 días después de cerrar una tienda (ADR-046) |
+| 15    | `supabase/migrations/20261029000700_cart_recovery.sql`               | Recordatorio de carritos dejados, apagado por defecto (ADR-048)               |
 
 ## Pasos (desde el celular o la computadora)
 
@@ -25,7 +26,7 @@ Catorce migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profe
 2. En GitHub, abre el archivo 1 de la tabla, toca **Raw**, copia todo y pégalo en la consulta.
 3. Toca **Run**. Debe decir «Success. No rows returned».
 4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7, el 8, el 9, el 10, el 11, el 12, el 13 y al final el 14.
-5. Comprueba con esta consulta (debe devolver `20261029000600`):
+5. Comprueba con esta consulta (debe devolver `20261029000700`):
 
    ```sql
    select public.app_schema_version();

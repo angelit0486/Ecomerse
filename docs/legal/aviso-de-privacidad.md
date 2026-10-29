@@ -23,6 +23,7 @@ No recabamos datos de tu tarjeta: el pago lo procesa **[PROVEEDOR DE PAGOS]**, q
 **Finalidades adicionales (puedes negarte):**
 
 - Enviarte novedades y promociones por correo, solo si lo aceptaste al comprar.
+- Si la tienda lo activó: enviarte un solo recordatorio por correo cuando dejas productos en tu carrito sin terminar la compra (ADR-048). Cada recordatorio trae un enlace para no recibir más. _PENDIENTE DE REVISIÓN: confirmar con el abogado si esta finalidad requiere consentimiento previo._
 
 Si no quieres que usemos tus datos para las finalidades adicionales, escríbenos a **[CORREO DE PRIVACIDAD]**.
 

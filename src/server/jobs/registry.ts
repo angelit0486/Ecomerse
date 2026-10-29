@@ -10,6 +10,7 @@ import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { createImportHandlers } from "@/server/imports/handlers";
+import { createCartRecoveryHandlers } from "@/server/notifications/cart-recovery";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
@@ -64,6 +65,15 @@ const orderNotifications = () => {
     appUrl: env.APP_URL,
   });
 };
+
+// ADR-048: recordatorio de carritos dejados.
+const cartRecovery = () =>
+  createCartRecoveryHandlers({
+    db: workerDb(),
+    channel: emailChannel(),
+    linkSecret: serverEnv().ORDER_LINK_SECRET,
+    storeOrigin: ({ hostname, handle }) => storeOrigin({ primary_hostname: hostname, handle }),
+  });
 
 const orders = () =>
   createOrderHandlers({ db: workerDb(), stripe: stripeProvider, mercadopago: mercadoPagoProvider });
@@ -142,6 +152,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
   ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],
   ["domains.verify", lazy("domains.verify", domains)],
+  ["carts.recover", lazy("carts.recover", cartRecovery)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

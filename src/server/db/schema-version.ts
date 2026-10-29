@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Última migración que este código necesita (misión Panel, Paso E). Se
  * actualiza junto con `public.app_schema_version()` en cada migración nueva.
  */
-export const EXPECTED_SCHEMA_VERSION = "20261029000600";
+export const EXPECTED_SCHEMA_VERSION = "20261029000700";
 
 export type SchemaStatus = { ok: true } | { ok: false; current: string | null };
 
