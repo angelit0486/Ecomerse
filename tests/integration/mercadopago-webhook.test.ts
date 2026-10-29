@@ -285,4 +285,16 @@ describe("webhook de Mercado Pago (§34.4)", () => {
     ).toBeGreaterThanOrEqual(1);
     expect((await state(o.orderId)).payment_status).toBe("paid");
   });
+  it("contracargo después de pagado: atención y aviso, sin tocar el pago (ADR-043)", async () => {
+    const o = await order();
+    const id = charge(o.paymentId, "approved");
+    expect((await deliver(id)).body.outcome).toBe("paid");
+    payments.get(id)!.status = "charged_back";
+    expect((await deliver(id)).body.outcome).toBe("external_reversal");
+    expect(await state(o.orderId)).toMatchObject({ payment_status: "paid", needs_attention: true });
+    const [job] = await admin<{ reason: string }[]>`
+      select payload ->> 'reason' as reason from system.jobs
+       where type = 'payment.external_reversal' and payload ->> 'order_id' = ${o.orderId}`;
+    expect(job?.reason).toBe("chargeback");
+  });
 });

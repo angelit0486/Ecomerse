@@ -106,6 +106,11 @@ export function normalizeMercadoPagoPayment(p: MercadoPagoPayment): NormalizedPa
     ...(status === "failed" && p.status_detail
       ? { failureCode: String(p.status_detail).slice(0, 100) }
       : {}),
+    ...(p.status === "charged_back"
+      ? { reversal: "chargeback" as const }
+      : p.status === "refunded"
+        ? { reversal: "refund" as const }
+        : {}),
   };
 }
 

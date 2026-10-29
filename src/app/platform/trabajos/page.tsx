@@ -37,6 +37,7 @@ const TYPE_LABELS: Record<string, string> = {
   "order.cancelled": "Correo: pedido cancelado",
   "refund.succeeded": "Correo: reembolso",
   "payment.failed": "Correo: pago fallido",
+  "payment.external_reversal": "Correo: contracargo o reembolso externo",
   "access.invitation_email": "Correo: invitación al equipo",
   "domains.verify": "Verificar dominio",
   "catalog.publish_scheduled": "Publicación programada",

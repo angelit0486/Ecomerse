@@ -296,7 +296,8 @@ export function refundIssuedEmail(d: OrderEmailData, to: string): EmailMessage {
   );
 }
 
-export type StaffEmailKind = "new" | "paid" | "attention" | "paid_after_cancel";
+export type StaffEmailKind =
+  "new" | "paid" | "attention" | "paid_after_cancel" | "chargeback" | "external_refund";
 
 /** Staff: pedido nuevo, pagado o que requiere atención (sin PII más allá del número y el total). */
 export function staffOrderEmail(
@@ -318,6 +319,14 @@ export function staffOrderEmail(
     attention: {
       subject: `Atención: pedido ${n} pagado sin existencias`,
       body: "El pago llegó después de vencer el pedido y ya no hay existencias. Iniciamos el reembolso automáticamente; revisa que se complete.",
+    },
+    chargeback: {
+      subject: `Atención: contracargo en el pedido ${n}`,
+      body: "El comprador abrió un contracargo con su banco y Mercado Pago revirtió el cobro. Si aún no lo envías, detén el envío. Revisa el caso en Mercado Pago y el pedido en el panel.",
+    },
+    external_refund: {
+      subject: `Atención: el pedido ${n} se reembolsó fuera de la tienda`,
+      body: "El cobro de este pedido se reembolsó desde el panel de Mercado Pago, no desde tu tienda. Revisa el pedido: su estado e inventario no cambiaron solos.",
     },
     paid_after_cancel: {
       subject: `Atención: pago recibido en el pedido cancelado ${n}`,

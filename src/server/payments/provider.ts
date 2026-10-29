@@ -85,6 +85,11 @@ export interface NormalizedPayment {
   externalReference: string;
   method?: string;
   failureCode?: string;
+  /**
+   * Cobro aprobado que el proveedor revirtió fuera de la plataforma (ADR-043):
+   * contracargo del comprador o reembolso hecho desde el panel del proveedor.
+   */
+  reversal?: "chargeback" | "refund";
 }
 
 export type WebhookVerification =

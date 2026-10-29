@@ -40,6 +40,7 @@ function toRpc(n: NormalizedPayment) {
     external_reference: n.externalReference,
     method: n.method ?? null,
     failure_code: n.failureCode ?? null,
+    reversal: n.reversal ?? null,
   };
 }
 

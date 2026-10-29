@@ -26,6 +26,8 @@ export const healthSchema = z.object({
     events_failed_24h: z.number(),
     webhooks_rejected_24h: z.number(),
     open_over_2h: z.number(),
+    // Opcional: la base anterior a 20261029000100 no lo trae.
+    reversals_24h: z.number().optional(),
   }),
   emails: z.object({ sent_24h: z.number(), suppressed_24h: z.number() }),
   orders_24h: z.number(),
@@ -53,6 +55,12 @@ export function describeIssue(issue: HealthIssue): { title: string; action: stri
         title: `${issue.value} aviso(s) de pago con error en 24 h`,
         action:
           "Revisa los pedidos en atención: un pago pudo no aplicarse. La reconciliación reintenta cada 10 min.",
+      };
+    case "payment_reversals":
+      return {
+        title: `${issue.value} cobro(s) revertido(s) fuera de la plataforma en 24 h`,
+        action:
+          "Contracargos o reembolsos hechos en el panel de Mercado Pago: los pedidos quedaron en atención y las tiendas recibieron aviso.",
       };
     case "jobs_dead":
       return {

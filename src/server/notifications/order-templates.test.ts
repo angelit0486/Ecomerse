@@ -99,6 +99,15 @@ describe("plantillas de pedidos", () => {
     expect(m.text).toContain("reembolso automáticamente");
   });
 
+  it("staff: contracargo y reembolso externo, cada uno con su aviso (ADR-043)", () => {
+    const c = staffOrderEmail(base, "s@x.test", "chargeback", "https://panel.test/p");
+    expect(c.subject).toBe("Atención: contracargo en el pedido #1001");
+    expect(c.text).toContain("detén el envío");
+    const r = staffOrderEmail(base, "s@x.test", "external_refund", "https://panel.test/p");
+    expect(r.subject).toContain("se reembolsó fuera de la tienda");
+    expect(r.text).toContain("https://panel.test/p");
+  });
+
   it("confirmación: dirección de envío completa, escapada y en texto plano", () => {
     const m = orderConfirmationEmail(
       {

@@ -6,7 +6,7 @@
 | Mercado Pago, Resend y dominios no probados con los servicios reales    | [NO VERIFICADO] hasta tener credenciales                                                |
 | Base de staging en plan gratuito de Supabase: sin respaldos automáticos | Decisión del propietario (Pro + PITR)                                                   |
 | 8 migraciones pendientes de aplicar en staging                          | Requiere al propietario                                                                 |
-| Contracargos y reembolsos hechos fuera de la plataforma se ignoran      | ADR-043 propuesto                                                                       |
+| Contracargos y reembolsos hechos fuera de la plataforma                 | Resuelto (ADR-043): pedido en atención y aviso; [NO VERIFICADO con Mercado Pago real]   |
 | Política de contenido y aceptación de Términos                          | ADR-042 aplazado por el propietario; sin lista de productos prohibidos en la plataforma |
 | Reglas sanitarias de suplementos                                        | Pendientes del asesor regulatorio                                                       |
 | Rendimiento móvil del listado: Lighthouse 92–93 (meta 95)               | Abierto                                                                                 |

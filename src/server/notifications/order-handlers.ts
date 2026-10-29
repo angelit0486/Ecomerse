@@ -262,6 +262,14 @@ export function createOrderNotificationHandlers(
     await notifyStaff(job, n, "attention");
   };
 
+  // ADR-043: contracargo o reembolso hecho fuera de la plataforma.
+  const externalReversal: JobHandler = async (job, { log }) => {
+    const n = await load(job);
+    if (!n) return log.info("Pedido inexistente: nada que avisar");
+    const reason = (job.payload as { reason?: unknown }).reason;
+    await notifyStaff(job, n, reason === "chargeback" ? "chargeback" : "external_refund");
+  };
+
   return [
     ["order.created", created],
     ["order.paid", paid],
@@ -272,5 +280,6 @@ export function createOrderNotificationHandlers(
     ["refund.succeeded", refunded],
     ["payment.late_without_stock", lateWithoutStock],
     ["payment.after_cancel", afterCancel],
+    ["payment.external_reversal", externalReversal],
   ];
 }

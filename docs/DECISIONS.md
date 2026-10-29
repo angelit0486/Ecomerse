@@ -1103,7 +1103,7 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
   3. ¿Prefieres que un producto marcado quede **oculto** hasta revisarlo, en lugar de publicarse y revisarse después?
 - **Implementación (tras aprobar).** Migración con la tabla de aceptaciones y la marca de revisión, pgTAP con aislamiento entre organizaciones, aviso y aceptación en el onboarding, página de revisión en la consola, E2E con axe.
 
-### ADR-043 — Contracargos y reembolsos hechos fuera de la plataforma · **PROPUESTO (espera aprobación del propietario)**
+### ADR-043 — Contracargos y reembolsos hechos fuera de la plataforma · **aprobado por el propietario el 2026-10-29 («Si apruebo»)**
 
 - **Contexto.** Hallazgo de la misión vendible (F1.4), comprobado con Mercado Pago simulado: si un pedido ya pagado recibe un aviso de Mercado Pago con estado `charged_back` (contracargo del comprador) o `refunded` (reembolso hecho desde el panel de Mercado Pago, no desde la plataforma), `system.apply_payment_status` responde `ignored`. El pedido sigue «pagado», sin marca de atención, y nadie se entera; el comercio podría enviar mercancía ya perdida. Toca el contrato de pagos (GATE0 §18, contrato crítico §43): no se cambia sin aprobación.
 - **Decisión propuesta.**
@@ -1112,4 +1112,5 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
   3. Aviso por correo a quien administra la tienda (mismo canal y deduplicado de los correos de pedidos) y conteo en Consola → Salud.
   4. Un reembolso pedido desde la plataforma sigue su flujo actual (F7-T03) sin cambios.
 - **Alternativa descartada.** Marcar el pedido como reembolsado automáticamente: un contracargo puede revertirse a favor del comercio, y un reembolso parcial hecho en Mercado Pago no siempre trae el monto que la plataforma espera.
-- **Implementación (tras aprobar).** Migración que redefine `system.apply_payment_status` solo en la rama `refunded`/`charged_back`, pgTAP del caso, integración en `mercadopago-webhook` (el escenario de la sonda pasa de «ignored» a «atención»), plantilla de correo y su prueba.
+- **Implementación.** Migración `20261029000100_external_reversals` (rama nueva en `system.apply_payment_status` antes de la regla «nada retrocede»; conteo y aviso `payment_reversals` en la salud). El normalizador de Mercado Pago distingue `charged_back` (contracargo) de `refunded`. Trabajo `payment.external_reversal` con correo a la tienda (dos textos). Pruebas: pgTAP `106_external_reversals` (14, rojo comprobado con la función anterior), integración `mercadopago-webhook` (contracargo), unitarias del normalizador y de la plantilla.
+- **Estado.** Implementado y probado con Mercado Pago simulado [NO VERIFICADO con Mercado Pago real].

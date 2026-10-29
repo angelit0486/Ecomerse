@@ -160,6 +160,7 @@ export async function handleStripeWebhook(deps: {
         external_reference: normalized.externalReference,
         method: normalized.method ?? null,
         failure_code: normalized.failureCode ?? null,
+        reversal: normalized.reversal ?? null,
       })}) as r`;
     await db`select system.finish_payment_event(${event.id}, null)`;
     return { status: 200, body: { received: true, outcome: applied!.r.outcome } };
@@ -198,6 +199,7 @@ export async function reconcilePayments(deps: {
         external_reference: n.externalReference,
         method: n.method ?? null,
         failure_code: n.failureCode ?? null,
+        reversal: n.reversal ?? null,
       })})`;
       applied += 1;
     } catch (error) {

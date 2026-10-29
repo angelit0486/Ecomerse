@@ -145,6 +145,21 @@ describe("montos y estados", () => {
     );
   });
 
+  it("distingue contracargo de reembolso hecho en Mercado Pago (ADR-043)", () => {
+    const base: MercadoPagoPayment = {
+      id: 1,
+      status: "approved",
+      transaction_amount: 10,
+      currency_id: "MXN",
+      external_reference: "r",
+    };
+    expect(normalizeMercadoPagoPayment({ ...base, status: "charged_back" }).reversal).toBe(
+      "chargeback",
+    );
+    expect(normalizeMercadoPagoPayment({ ...base, status: "refunded" }).reversal).toBe("refund");
+    expect(normalizeMercadoPagoPayment(base).reversal).toBeUndefined();
+  });
+
   it("de varios cobros de un intento manda el aprobado", () => {
     const p = (id: number, status: string): MercadoPagoPayment => ({
       id,

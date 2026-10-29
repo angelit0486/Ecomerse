@@ -66,6 +66,7 @@ export default async function HealthPage() {
         ["Avisos con error", health.payments.events_failed_24h],
         ["Avisos rechazados por firma", health.payments.webhooks_rejected_24h],
         ["Pagos abiertos más de 2 h", health.payments.open_over_2h],
+        ["Contracargos y reembolsos externos", health.payments.reversals_24h ?? 0],
       ],
     },
     {
