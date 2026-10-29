@@ -1,0 +1,21 @@
+# Cadena de suministro (auditoría 2026-10-29): avisos y actualizaciones semanales.
+# Las actualizaciones de seguridad llegan como PR aparte en cuanto hay aviso.
+# Cada PR pasa por el CI completo antes de unirse; nada se une solo.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Mazatlan
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "eslint-config-next", "@next/*"]
+      supabase:
+        patterns: ["@supabase/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
