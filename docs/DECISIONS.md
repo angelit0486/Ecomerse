@@ -1254,3 +1254,34 @@ Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VER
 | Cupones por producto o categoría  | Promociones                                  | Ya hay cupones básicos; lo avanzado quedó pospuesto por el propietario (ADR-036)               | Sigue pospuesto |
 
 - **Pregunta para el propietario.** ¿Apruebas empezar con la recuperación de carritos y después los envíos? Cada integración tendría su propio ADR corto con proveedor y costos antes de construirse.
+
+### ADR-048 (propuesto) — Recuperación de carritos por correo
+
+- **Contexto.** ADR-047 aprobó empezar por aquí.
+  - Proveedor: el correo que ya usa la plataforma (Resend). No agrega dependencias. El costo por correo depende del plan de Resend del propietario [NO VERIFICADO].
+  - Hecho del código: el consentimiento de publicidad del comprador hoy **solo se guarda al hacer el pedido** (`orders.accepts_marketing`) o en su cuenta de cliente (`customers.accepts_marketing`). El carrito guarda el correo, pero no el consentimiento.
+- **Decisión propuesta.**
+  1. Un solo correo por carrito, 3 horas después de la última actividad, si el carrito tiene correo, productos con existencias y no terminó en pedido.
+  2. Lleva el enlace de vuelta al carrito y un enlace para no recibir más; no lleva descuentos automáticos.
+  3. Cada tienda lo activa o desactiva en **Ajustes → Notificaciones**. Viene desactivado.
+  4. Se mide cuántos carritos se recuperan (pedidos pagados que vienen del enlace).
+- **Pregunta legal para el propietario:**
+  - **Opción A (segura):** el correo sale solo a quien marcó «acepto recibir promociones». Se agrega la casilla en el paso del correo del checkout.
+  - **Opción B:** el correo sale a todo el que escribió su correo, como recordatorio de servicio. Recupera más, pero tu abogado debe confirmar que cumple la ley de datos personales.
+
+### ADR-049 (propuesto) — Envíos con cotización y guías
+
+- **Opciones evaluadas** (fuentes públicas; precios [NO VERIFICADO]):
+  - **Envía (envia.com):**
+    - API documentada públicamente, con sandbox (`api-test.envia.com`): cotizar (`/ship/rate/`), generar guía, recolección y rastreo.
+    - Las guías se pagan con **saldo prepagado** de la cuenta.
+  - **Skydropx:**
+    - Más de 30 paqueterías (FedEx, Estafeta, DHL, Paquetexpress, Redpack).
+    - Precios **bajo cotización**, facturados en USD según una tienda de apps.
+    - Su documentación de API no fue accesible desde aquí.
+- **Decisión propuesta.** **Envía**, porque su API y su sandbox son públicos, así que se puede construir y probar sin esperar un contrato.
+  - Cada comercio conecta **su propia cuenta** y saldo, como con Mercado Pago (ADR-041). PRUVA no adelanta el costo de las guías.
+  - Al surtir un pedido, el panel cotiza, compra la guía y guarda el número de rastreo en el envío que ya existe.
+- **Preguntas para el propietario.**
+  1. ¿Envía o Skydropx?
+  2. ¿Cuenta de cada comercio (recomendado) o una cuenta de PRUVA que revende guías? Revender implica cobrar y facturar las guías.
