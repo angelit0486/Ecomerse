@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { optoutPath } from "@/server/notifications/cart-recovery-links";
+import { oneClickUnsubscribeUrl, optoutPath } from "@/server/notifications/cart-recovery-links";
 
 import {
   admin,
@@ -86,5 +86,24 @@ test("el comprador vuelve a su carrito con el enlace y se da de baja", async ({ 
   const [row] = await admin<{ n: number }[]>`
     select count(*)::int as n from public.cart_recovery_optouts
      where store_id = ${tenant.storeId} and email_hash = app.email_hash(${buyer})`;
+  expect(row!.n).toBe(1);
+});
+
+test("baja en un clic (RFC 8058): POST firmado sin abrir la tienda", async ({ request }) => {
+  const email = `unclic-${run}@example.test`;
+  const url = oneClickUnsubscribeUrl(
+    "http://localhost:3000",
+    process.env.ORDER_LINK_SECRET!,
+    tenant.storeId,
+    email,
+  );
+  const forged = new URL(url);
+  forged.searchParams.set("s", "a".repeat(43));
+  expect((await request.post(forged.toString())).status()).toBe(400);
+  const ok = await request.post(url);
+  expect(ok.status()).toBe(200);
+  const [row] = await admin<{ n: number }[]>`
+    select count(*)::int as n from public.cart_recovery_optouts
+     where store_id = ${tenant.storeId} and email_hash = app.email_hash(${email})`;
   expect(row!.n).toBe(1);
 });

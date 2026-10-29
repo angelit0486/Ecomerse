@@ -1,7 +1,7 @@
 import type { Sql } from "@/server/db/role-clients";
 import type { JobHandler } from "@/server/jobs/types";
 
-import { optoutPath, recoverPath } from "./cart-recovery-links";
+import { oneClickUnsubscribeUrl, optoutPath, recoverPath } from "./cart-recovery-links";
 import { sendNotification } from "./handlers";
 import { escapeHtml } from "./templates";
 import { isEmail, safeDisplayName, type EmailChannel, type EmailMessage } from "./types";
@@ -17,6 +17,8 @@ export interface CartRecoveryDeps {
   channel: EmailChannel;
   linkSecret: string;
   storeOrigin: (store: { hostname: string | null; handle: string }) => string;
+  /** Origen del panel: recibe la baja en un clic (List-Unsubscribe). */
+  appUrl: string;
 }
 
 export interface CartRecoveryEmailData {
@@ -24,6 +26,7 @@ export interface CartRecoveryEmailData {
   items: { title: string; quantity: number }[];
   recoverUrl: string;
   optoutUrl: string;
+  oneClickUrl?: string;
 }
 
 const MAX_LINES = 5;
@@ -53,7 +56,14 @@ export function cartRecoveryEmail(d: CartRecoveryEmailData, to: string): EmailMe
     "",
     d.storeName,
   ].join("\n");
-  return { to, subject, html, text, fromName: d.storeName };
+  return {
+    to,
+    subject,
+    html,
+    text,
+    fromName: d.storeName,
+    ...(d.oneClickUrl ? { listUnsubscribeUrl: d.oneClickUrl } : {}),
+  };
 }
 
 interface DueCart {
@@ -87,6 +97,12 @@ export function createCartRecoveryHandlers(deps: CartRecoveryDeps): Array<[strin
               items: c.items,
               recoverUrl: `${origin}${recoverPath(c.token)}`,
               optoutUrl: `${origin}${optoutPath(deps.linkSecret, c.store_id, c.email)}`,
+              oneClickUrl: oneClickUnsubscribeUrl(
+                deps.appUrl,
+                deps.linkSecret,
+                c.store_id,
+                c.email,
+              ),
             },
             c.email,
           ),

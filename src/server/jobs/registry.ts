@@ -73,6 +73,7 @@ const cartRecovery = () =>
     channel: emailChannel(),
     linkSecret: serverEnv().ORDER_LINK_SECRET,
     storeOrigin: ({ hostname, handle }) => storeOrigin({ primary_hostname: hostname, handle }),
+    appUrl: serverEnv().APP_URL,
   });
 
 const orders = () =>

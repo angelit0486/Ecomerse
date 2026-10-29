@@ -63,6 +63,26 @@ describe("canal Resend", () => {
     );
   });
 
+  it("baja en un clic (RFC 8058) solo si el correo la trae y con una URL válida", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ id: "re_3" }));
+    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", fetchImpl);
+    await channel.send({
+      ...message,
+      listUnsubscribeUrl: "https://panel.test/api/email/unsubscribe/cart?s=1",
+    });
+    await channel.send(message);
+    await channel.send({ ...message, listUnsubscribeUrl: "https://x.test/a>\r\nBcc: y" });
+    const bodies = fetchImpl.mock.calls.map((c) =>
+      JSON.parse((c as unknown as [string, RequestInit])[1].body as string),
+    );
+    expect(bodies[0].headers).toEqual({
+      "List-Unsubscribe": "<https://panel.test/api/email/unsubscribe/cart?s=1>",
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    });
+    expect(bodies[1].headers).toBeUndefined();
+    expect(bodies[2].headers).toBeUndefined();
+  });
+
   it("422 es definitivo; 429 y 5xx se reintentan", async () => {
     const reject = (status: number) =>
       resendChannel("k", "P <a@x.test>", async () => new Response("{}", { status })).send(message);

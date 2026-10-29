@@ -43,3 +43,18 @@ export function optoutPath(secret: string, storeId: string, email: string): stri
 export function recoverPath(token: string): string {
   return `/carrito/recuperar?t=${encodeURIComponent(token)}`;
 }
+
+/** Baja en un clic (RFC 8058): la recibe la plataforma por POST, sin abrir la tienda. */
+export function oneClickUnsubscribeUrl(
+  appUrl: string,
+  secret: string,
+  storeId: string,
+  email: string,
+): string {
+  const h = emailHashHex(email);
+  const url = new URL("/api/email/unsubscribe/cart", appUrl);
+  url.searchParams.set("store", storeId);
+  url.searchParams.set("h", h);
+  url.searchParams.set("s", optoutSignature(secret, storeId, h));
+  return url.toString();
+}

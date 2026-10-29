@@ -5,6 +5,7 @@ import {
   type EmailChannel,
   type EmailMessage,
   type SendResult,
+  unsubscribeHeaders,
 } from "./types";
 
 /** "Nombre <email>" → partes (validado por el esquema de entorno). */
@@ -41,6 +42,9 @@ export function resendChannel(apiKey: string, from: string, fetchImpl = fetch): 
           subject: message.subject,
           html: message.html,
           text: message.text,
+          ...(Object.keys(unsubscribeHeaders(message)).length
+            ? { headers: unsubscribeHeaders(message) }
+            : {}),
         }),
       });
       if (!response.ok) await failure("resend", response);
@@ -69,6 +73,9 @@ export function mailpitChannel(baseUrl: string, from: string, fetchImpl = fetch)
           Subject: message.subject,
           HTML: message.html,
           Text: message.text,
+          ...(Object.keys(unsubscribeHeaders(message)).length
+            ? { Headers: unsubscribeHeaders(message) }
+            : {}),
         }),
       });
       if (!response.ok) await failure("mailpit", response);

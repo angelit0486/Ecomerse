@@ -10,6 +10,18 @@ export interface EmailMessage {
   fromName?: string;
   /** Respuestas al contacto de la tienda (GATE0 §27: marca de la tienda). */
   replyTo?: string;
+  /**
+   * Baja en un clic (RFC 8058) para correos de mercadotecnia: se envía como
+   * `List-Unsubscribe` + `List-Unsubscribe-Post`. Nunca en correos de pedido.
+   */
+  listUnsubscribeUrl?: string;
+}
+
+/** Cabeceras de baja en un clic; solo con una URL http(s) válida. */
+export function unsubscribeHeaders(message: EmailMessage): Record<string, string> {
+  const url = message.listUnsubscribeUrl;
+  if (!url || !/^https?:\/\/[^\s<>]+$/.test(url)) return {};
+  return { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
 }
 
 /**

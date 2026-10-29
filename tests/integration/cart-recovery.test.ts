@@ -20,7 +20,9 @@ const worker = postgres(process.env.TEST_WORKER_DATABASE_URL!, {
 const log = createLogger({ sink: () => {} });
 const run = Math.random().toString(36).slice(2, 8);
 const SECRET = "c".repeat(40);
-let channel: EmailChannel & { sent: { to: string; html: string; text: string }[] } = fakeChannel();
+let channel: EmailChannel & {
+  sent: { to: string; html: string; text: string; listUnsubscribeUrl?: string }[];
+} = fakeChannel();
 let storeId: string;
 let variantId: string;
 
@@ -32,6 +34,7 @@ const runJob = (ch: EmailChannel = channel) =>
       channel: ch,
       linkSecret: SECRET,
       storeOrigin: ({ hostname, handle }) => `https://${hostname ?? handle}`,
+      appUrl: "https://panel.test",
     }),
   ).get("carts.recover")!(job, { log } as never);
 
@@ -95,6 +98,12 @@ describe("recordatorio de carritos (ADR-048)", () => {
     expect(mine).toHaveLength(1);
     expect(mine[0]!.html).toContain("2 × Proteína &lt;i&gt;");
     expect(mine[0]!.html).not.toContain("<i>");
+    // Baja en un clic (RFC 8058) hacia el panel, con la misma firma.
+    const oneClick = new URL(mine[0]!.listUnsubscribeUrl!);
+    expect(oneClick.origin + oneClick.pathname).toBe(
+      "https://panel.test/api/email/unsubscribe/cart",
+    );
+    expect(oneClick.searchParams.get("store")).toBe(storeId);
 
     const t = linkParams(mine[0]!.text, "/carrito/recuperar").get("t")!;
     expect(t).toMatch(/^[A-Za-z0-9_-]{43}$/);
