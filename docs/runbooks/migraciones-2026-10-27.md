@@ -1,6 +1,6 @@
 # Aplicar las migraciones del 2026-10-27 en staging
 
-Nueve migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación la salud de la plataforma con alertas un ajuste de seguridad en las fotos y el aviso de contracargos (ADR-043). Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
+Diez migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación la salud de la plataforma con alertas un ajuste de seguridad en las fotos, el aviso de contracargos (ADR-043) y el resumen de cambios al importar. Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
 
 | Orden | Archivo                                                              | Qué hace                                                                     |
 | ----- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -13,14 +13,15 @@ Nueve migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesi
 | 7     | `supabase/migrations/20261028000400_platform_health.sql`             | Consola → Salud y alertas por correo cada 15 minutos                         |
 | 8     | `supabase/migrations/20261028000500_lock_media_permission_first.sql` | Fotos: sin acceso a la tienda no se puede saber si una foto existe           |
 | 9     | `supabase/migrations/20261029000100_external_reversals.sql`          | Contracargos y reembolsos hechos en Mercado Pago: pedido en atención y aviso |
+| 10    | `supabase/migrations/20261029000200_import_preview_changes.sql`      | Importar: la vista previa dice qué precios y existencias cambian             |
 
 ## Pasos (desde el celular o la computadora)
 
 1. Entra a Supabase → tu proyecto de staging → **SQL Editor** → **New query**.
 2. En GitHub, abre el archivo 1 de la tabla, toca **Raw**, copia todo y pégalo en la consulta.
 3. Toca **Run**. Debe decir «Success. No rows returned».
-4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7, el 8 y al final el 9.
-5. Comprueba con esta consulta (debe devolver `20261029000100`):
+4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7, el 8, el 9 y al final el 10.
+5. Comprueba con esta consulta (debe devolver `20261029000200`):
 
    ```sql
    select public.app_schema_version();

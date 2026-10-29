@@ -12,7 +12,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | ----- | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | F0    | Estado real                                                | hecha                                          | `02c7641`; verify 979 ×2, pgTAP 2,421 ×2, integración 360 ×2, E2E 103/103 ×2; CI corrida 108 verde                                                                          |
 | F1.1  | CI en verde                                                | hecha                                          | gitleaks con valores de prueba de baja entropía (`02c7641`)                                                                                                                 |
-| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | bloqueada (propietario)                        | 9 migraciones pendientes: `docs/runbooks/migraciones-2026-10-27.md`                                                                                                         |
+| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | bloqueada (propietario)                        | 10 migraciones pendientes: `docs/runbooks/migraciones-2026-10-27.md`                                                                                                        |
 | F1.3  | Resend + Send Email Hook                                   | guía lista; bloqueada (propietario)            | `docs/runbooks/correo-resend.md` (dominio, SPF/DKIM/DMARC, clave, Vercel, hook de Supabase, comprobación)                                                                   |
 | F1.4  | Escenarios de Mercado Pago                                 | 15 de 15 cubiertos [SIMULADOR]; real pendiente | `docs/runbooks/mercadopago-escenarios.md`; ADR-043 (contracargos) aprobado e implementado, migración `20261029000100`, pgTAP 106                                            |
 | F1.5  | Correo de confirmación con la dirección completa           | hecha                                          | `4b85dd7`; migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2)                                                                                           |
@@ -37,6 +37,10 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 - `docs/venta/`: data room con datos verificados (resumen técnico, riesgos, propiedad del código como bandera roja) y kit de paquetes de tiendas con precios `[PRECIO]` por definir. Sin valuación hasta tener métricas reales.
 - Siguiente: Fase 3 (auditoría del panel).
 
+### Fase 3 (2026-10-29) · panel a escala
+
+Tienda local de 1000 productos × 3 tallas: la base responde en milisegundos y las pantallas no se alentan con el catálogo. Corregido: la vista previa de una importación dice qué precios y existencias cambian (y avisa que las existencias del archivo reemplazan las de hoy), migración `20261029000200`; listado con 25/50/100 por página. Pendiente: conteo de resultados, inventario compacto, «seleccionar los N del filtro». Auditoría: `docs/plan/AUDITORIA-PANEL-ESCALA.md`; informe: `docs/phases/VENDIBLE-FASE-3-INFORME.md`.
+
 ## Hecho justo antes de la misión (2026-10-27/28)
 
 - **Panel y tienda más profesionales:** pasos 0–19 menos 20; migraciones `20261027000100` (Consola → Trabajos), `000200` (importar solo lo válido, ADR-040), `000300` (fotos con `srcset`).
@@ -47,7 +51,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 
 | ID  | Bloqueo                                                                     | Efecto                                                      |
 | --- | --------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| B1  | Aplicar 9 migraciones en staging o configurar `MIGRATION_DATABASE_URL`      | Pantallas nuevas no cargan en staging                       |
+| B1  | Aplicar 10 migraciones en staging o configurar `MIGRATION_DATABASE_URL`     | Pantallas nuevas no cargan en staging                       |
 | B2  | Autorizar el conector de Vercel (equipo `angelit0486s-projects`)            | No se pueden leer variables, despliegues ni logs            |
 | B3  | Resend: API key y dominio con SPF/DKIM/DMARC                                | No salen correos ni alertas en staging                      |
 | B4  | Credenciales de Mercado Pago (aplicación de prueba)                         | Pagos solo probados con API simulada                        |
