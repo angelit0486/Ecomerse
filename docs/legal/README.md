@@ -19,7 +19,14 @@
 
 ## Texto de la plataforma (no de la tienda)
 
-`politica-de-contenido.md`: qué pueden vender los comercios en la plataforma (ADR-042, propuesto). Lo acepta cada comercio al darse de alta; no se publica como página de una tienda.
+Son entre PRUVA y cada comercio; no se publican como páginas de una tienda:
+
+| Archivo                                        | Qué es                                                                            |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| `plataforma/terminos-del-servicio.md`          | Contrato del servicio: plan, prueba, atraso de pago, cancelación, datos, soporte  |
+| `plataforma/aviso-de-privacidad-plataforma.md` | PRUVA responsable de los datos del comercio y encargado de los de sus compradores |
+| `plataforma/uso-aceptable.md`                  | Conductas no permitidas y qué hace PRUVA si se incumplen                          |
+| `politica-de-contenido.md`                     | Productos prohibidos y restringidos (ADR-042, **aplazado por el propietario**)    |
 
 ## Qué debe verificar el abogado
 
