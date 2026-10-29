@@ -8,12 +8,28 @@ import { canManageTenants, requirePlatformRole } from "@/server/auth/platform";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { PlanForm, type PlanValues } from "../billing-forms";
+import { formatMoney } from "@/lib/money/format";
+
+import { PlanForm, PlanPricingForm, type PlanValues } from "../billing-forms";
 
 export const metadata = { title: "Planes" };
 
 interface PlanRow extends PlanValues {
   subscribers: number;
+  price_monthly: number | null;
+  price_annual: number | null;
+  currency: string;
+  trial_days: number | null;
+}
+
+/** «$499.00 al mes · $4,790.00 al año · 14 días de prueba» o «Sin precio». */
+function priceLine(plan: PlanRow): string {
+  const parts = [
+    plan.price_monthly !== null ? `${formatMoney(plan.price_monthly, plan.currency)} al mes` : null,
+    plan.price_annual !== null ? `${formatMoney(plan.price_annual, plan.currency)} al año` : null,
+    plan.trial_days ? `${plan.trial_days} días de prueba` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "Sin precio";
 }
 
 const STATUS: Record<string, string> = {
@@ -56,6 +72,7 @@ export default async function PlansPage() {
                   {plan.subscribers === 1 ? "comercio" : "comercios"}
                 </span>
               </div>
+              <p className="text-sm font-medium">{priceLine(plan)}</p>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 {MEASURED_KEYS.map((key) => (
                   <div key={key} className="contents">
@@ -78,6 +95,16 @@ export default async function PlansPage() {
                   </summary>
                   <div className="pt-4">
                     <PlanForm plan={plan} />
+                  </div>
+                </details>
+              ) : null}
+              {manage ? (
+                <details>
+                  <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm underline sm:min-h-9">
+                    Precios de {plan.name}
+                  </summary>
+                  <div className="pt-4">
+                    <PlanPricingForm plan={plan} />
                   </div>
                 </details>
               ) : null}

@@ -117,10 +117,32 @@ export default async function MetricsPage({
               </div>
             ))}
           </dl>
-          <p className="mt-3 text-[13px] text-fg-muted">
-            Ingreso mensual recurrente (MRR): pendiente. Los planes todavía no tienen precio; se
-            define con el cobro a tiendas (ADR-044).
-          </p>
+          <div className="mt-3 border-t border-border pt-3 text-sm">
+            <p className="text-fg-muted">Ingreso mensual recurrente (MRR)</p>
+            {m.mrr.length === 0 ? (
+              <p>Sin precios cargados en los planes (Consola → Planes → Precios).</p>
+            ) : (
+              m.mrr.map((r) => (
+                <p key={r.currency}>
+                  <span className="text-lg font-semibold tabular-nums">
+                    {formatMoney(r.amount, r.currency)}
+                  </span>{" "}
+                  de {r.subscriptions} {r.subscriptions === 1 ? "suscripción" : "suscripciones"}
+                </p>
+              ))
+            )}
+            {m.paying_without_price > 0 ? (
+              <p className="text-[13px] text-fg-muted">
+                {m.paying_without_price === 1
+                  ? "1 suscripción que paga no tiene precio en su plan: no se cuenta."
+                  : `${m.paying_without_price} suscripciones que pagan no tienen precio en su plan: no se cuentan.`}
+              </p>
+            ) : null}
+            <p className="text-[13px] text-fg-muted">
+              Activas y con pago vencido en gracia; las anuales cuentan su precio entre 12. Las de
+              prueba no cuentan.
+            </p>
+          </div>
         </section>
         <section
           aria-labelledby="planes"

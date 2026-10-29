@@ -11,13 +11,20 @@ import {
   type LimitKey,
 } from "@/lib/billing/entitlements";
 import { hasUnrenderedFieldError } from "@/lib/form-values";
+import { centsToInput } from "@/lib/money/format";
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
-import { savePlan, setOverride, setSubscription, type ConsoleState } from "./actions";
+import {
+  savePlan,
+  savePlanPricing,
+  setOverride,
+  setSubscription,
+  type ConsoleState,
+} from "./actions";
 
 function Feedback({ state, rendered }: { state: ConsoleState; rendered: readonly string[] }) {
   if (state.ok)
@@ -277,6 +284,70 @@ export function OverrideForm({ organizationId }: { organizationId: string }) {
       <div>
         <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? "Guardando…" : "Guardar excepción"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export interface PlanPricing {
+  key: string;
+  name: string;
+  price_monthly: number | null;
+  price_annual: number | null;
+  trial_days: number | null;
+}
+
+/** Precios del plan (ADR-044). Vacío = sin precio: no se cobra ni cuenta en el MRR. */
+export function PlanPricingForm({ plan }: { plan: PlanPricing }) {
+  const [state, action, pending] = useSafeActionState(savePlanPricing.bind(null, plan.key), {});
+  const v = (key: string, fallback: string) => state.values?.[key] ?? fallback;
+  const rendered = ["price_monthly", "price_annual", "trial_days"];
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field
+          label={`Precio mensual de ${plan.name}`}
+          hint="En pesos, IVA según tu contrato."
+          error={state.fields?.price_monthly}
+        >
+          {(c) => (
+            <Input
+              {...c}
+              name="price_monthly"
+              inputMode="decimal"
+              defaultValue={v("price_monthly", centsToInput(plan.price_monthly))}
+            />
+          )}
+        </Field>
+        <Field label={`Precio anual de ${plan.name}`} error={state.fields?.price_annual}>
+          {(c) => (
+            <Input
+              {...c}
+              name="price_annual"
+              inputMode="decimal"
+              defaultValue={v("price_annual", centsToInput(plan.price_annual))}
+            />
+          )}
+        </Field>
+        <Field label={`Días de prueba de ${plan.name}`} error={state.fields?.trial_days}>
+          {(c) => (
+            <Input
+              {...c}
+              name="trial_days"
+              inputMode="numeric"
+              defaultValue={v(
+                "trial_days",
+                plan.trial_days === null ? "" : String(plan.trial_days),
+              )}
+            />
+          )}
+        </Field>
+      </div>
+      <Feedback state={state} rendered={rendered} />
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Guardando…" : "Guardar precios"}
         </Button>
       </div>
     </form>

@@ -2,8 +2,9 @@ import { z } from "zod";
 
 /**
  * Consola → Métricas (misión vendible F4). Lo calcula `public.platform_metrics`:
- * solo conteos y sumas en centavos, sin datos de clientes. El MRR no se calcula
- * porque los planes aún no tienen precio (ADR-044, propuesto).
+ * solo conteos y sumas en centavos, sin datos de clientes. El MRR sale de los
+ * precios de los planes (ADR-044); una suscripción que paga sin precio cargado se
+ * cuenta aparte, nunca se inventa.
  */
 export const METRIC_WINDOWS = [7, 30, 90, 365] as const;
 export type MetricWindow = (typeof METRIC_WINDOWS)[number];
@@ -15,6 +16,8 @@ export const metricsSchema = z.object({
   days: z.number().int(),
   organizations: z.object({ total: count, active: count, new: count }),
   subscriptions: z.record(z.string(), count),
+  mrr: z.array(z.object({ currency: z.string(), amount: cents, subscriptions: count })),
+  paying_without_price: count,
   trials_ending_7d: count,
   plans: z.array(z.object({ key: z.string(), name: z.string(), organizations: count })),
   stores: z.object({ total: count, live: count, draft: count, with_sales: count }),

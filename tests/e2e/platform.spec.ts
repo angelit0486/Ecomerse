@@ -245,8 +245,7 @@ test("métricas: administración ve ventas, suscripciones y el periodo (F4)", as
   await expect(page.getByRole("heading", { name: "Métricas", level: 1 })).toBeVisible();
   await expect(page.getByText("Organizaciones activas")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Suscripciones" })).toBeVisible();
-  // El MRR no se inventa: se dice por qué falta.
-  await expect(page.getByText(/MRR\): pendiente/)).toBeVisible();
+  await expect(page.getByText("Ingreso mensual recurrente (MRR)")).toBeVisible();
   await page.getByRole("link", { name: "7 días" }).click();
   await expect(page).toHaveURL(/dias=7/);
   await expect(page.getByRole("link", { name: "7 días" })).toHaveAttribute("aria-current", "page");
@@ -266,4 +265,31 @@ test("métricas: soporte no ve el enlace ni la página", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Métricas" })).toHaveCount(0);
   const resp = await page.goto("/platform/metricas");
   expect(resp?.status()).toBe(404);
+});
+
+test("precios de un plan: se capturan en la consola y se validan (ADR-044)", async ({ page }) => {
+  const email = `pprecios-${run}@platform.test`;
+  const key = `pp_${run.replace(/[^a-z0-9]/g, "")}`.slice(0, 30);
+  await admin`insert into public.platform_staff (user_id, role)
+              values (${await createAuthUser(email)}, 'platform_admin')`;
+  await admin`insert into public.plans (key, name, status, sort) values (${key}, ${`Precio ${run}`}, 'hidden', 99)`;
+  await loginNewStaff(page, email);
+  await page.goto("/platform/planes");
+  const card = page.getByRole("listitem").filter({ hasText: `Precio ${run}` });
+  await expect(card.getByText("Sin precio")).toBeVisible();
+  await card.getByText(`Precios de Precio ${run}`).click();
+  await card.getByLabel(`Precio mensual de Precio ${run}`).fill("abc");
+  await card.getByRole("button", { name: "Guardar precios" }).click();
+  await expect(card.getByText("Escribe un importe como 499 o 499.00.")).toBeVisible();
+  await card.getByLabel(`Precio mensual de Precio ${run}`).fill("499");
+  await card.getByLabel(`Precio anual de Precio ${run}`).fill("4,790.00");
+  await card.getByLabel(`Días de prueba de Precio ${run}`).fill("14");
+  await card.getByRole("button", { name: "Guardar precios" }).click();
+  await expect(
+    card.getByText("$499.00 al mes · $4,790.00 al año · 14 días de prueba"),
+  ).toBeVisible();
+  const [plan] = await admin<{ m: string; a: string; t: number }[]>`
+    select price_monthly::text m, price_annual::text a, trial_days t from public.plans where key = ${key}`;
+  expect(plan).toEqual({ m: "49900", a: "479000", t: 14 });
+  await expectNoSeriousA11yViolations(page);
 });

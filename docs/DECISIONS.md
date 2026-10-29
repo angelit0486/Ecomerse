@@ -1132,7 +1132,7 @@ Análisis de brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`. Ya existe y no requiere
 
 Lo que sigue necesita la decisión del propietario.
 
-### ADR-044 (propuesto) — Cobro a las tiendas: proveedor, precios y periodos
+### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan, días de prueba y si se prorratea al cambiar de plan.
 
 - **Contexto.** Los planes tienen límites pero **no precio**, y el cobro es manual: la plataforma marca «activa por N días» después de recibir el pago por fuera. No se puede calcular el MRR ni cobrar solo. La misión pide suscripción mensual y anual, prueba, cambios de plan, cancelación y suspensión por impago, sin cobrar nada sin ADR aprobado.
 - **Opciones evaluadas (cobro con tarjeta en México):**
@@ -1178,7 +1178,7 @@ Lo que sigue necesita la decisión del propietario.
   - Pantalla «Plan y uso» con «Pagar» y «Cambiar plan».
   - E2E con el proveedor simulado.
 
-### ADR-045 (propuesto) — Alta autoservicio de comercios (reconsiderar E15)
+### ADR-045 — Alta autoservicio de comercios (reconsiderar E15) · **NO aprobado por el propietario el 2026-10-29 («No, sigue la plataforma»)**: las tiendas las sigue creando la plataforma desde la consola. No se implementa.
 
 - **Contexto.** El 2026-10-20 el propietario **no aprobó** E15 (alta de tienda por cuenta propia): las tiendas las crea la plataforma. La misión de hoy pide alta autoservicio con meta de «tienda publicada en menos de 1 hora sin ayuda». Las dos indicaciones se contradicen, así que se pregunta antes de construir nada.
 - **Decisión propuesta (si se aprueba).**
@@ -1203,7 +1203,7 @@ Lo que sigue necesita la decisión del propietario.
   2. ¿Tiendas nuevas con aprobación manual antes de publicar, o publicación directa?
   3. ¿Límites del plan de prueba (productos y días)?
 
-### ADR-046 (propuesto) — Datos al terminar el servicio: exportar y anonimizar
+### ADR-046 — Datos al terminar el servicio: exportar y anonimizar · **aprobado por el propietario el 2026-10-29 («Sí, anonimizar»)**. Plazo de conservación de operaciones: lo confirma el abogado.
 
 - **Contexto.** La misión pide exportación y **borrado** de datos por tienda. La exportación ya existe (productos, inventario, pedidos y clientes en CSV). El borrado choca con dos reglas del proyecto:
   - los pedidos, pagos, movimientos y auditoría nunca se borran (regla 9);
@@ -1222,7 +1222,7 @@ Lo que sigue necesita la decisión del propietario.
   1. ¿Apruebas anonimizar en lugar de borrar los pedidos?
   2. ¿Plazos: 30 días para descargar y [N años, según el abogado] para conservar operaciones?
 
-### ADR-047 (propuesto) — Integraciones: orden y alcance
+### ADR-047 — Integraciones: orden y alcance · **aprobado por el propietario el 2026-10-29: primero recuperación de carritos, después envíos** (cada una con su ADR corto)
 
 Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VERIFICADO] hasta revisarlos con cuenta.
 

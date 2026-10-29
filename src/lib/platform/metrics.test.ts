@@ -6,6 +6,8 @@ const sample = {
   days: 30,
   organizations: { total: 3, active: 2, new: 1 },
   subscriptions: { active: 2, trialing: 1 },
+  mrr: [{ currency: "MXN", amount: 89817, subscriptions: 2 }],
+  paying_without_price: 0,
   trials_ending_7d: 1,
   plans: [{ key: "basico", name: "Básico", organizations: 3 }],
   stores: { total: 4, live: 2, draft: 2, with_sales: 1 },

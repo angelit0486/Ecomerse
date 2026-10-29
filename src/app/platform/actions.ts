@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseMoneyToCents } from "@/lib/money/format";
 
 import { requirePlatformRole } from "@/server/auth/platform";
 import { FEATURE_KEYS, LIMIT_KEYS } from "@/lib/billing/entitlements";
@@ -228,6 +229,60 @@ export async function savePlan(_: ConsoleState, formData: FormData): Promise<Con
           key: "Clave en minúsculas, sin espacios (ej. basico).",
           name: "Escribe un nombre de hasta 60 caracteres.",
           ...Object.fromEntries(LIMIT_KEYS.map((k) => [k, "Escribe un número entero (0 o más)."])),
+        },
+      },
+    ),
+  );
+}
+
+/**
+ * Precios de un plan (ADR-044): mensual y anual en pesos con centavos, y días de
+ * prueba. Vacío = sin precio (no cuenta en el MRR). La base exige dueño o administración.
+ */
+export async function savePlanPricing(
+  planKey: string,
+  _: ConsoleState,
+  formData: FormData,
+): Promise<ConsoleState> {
+  const keys = ["price_monthly", "price_annual", "trial_days"];
+  const fields: Record<string, string> = {};
+  const money = (key: string) => {
+    const raw = text(formData, key);
+    if (raw === "") return null;
+    const cents = parseMoneyToCents(raw);
+    if (cents === null) fields[key] = "Escribe un importe como 499 o 499.00.";
+    return cents;
+  };
+  const monthly = money("price_monthly");
+  const annual = money("price_annual");
+  const trialRaw = text(formData, "trial_days");
+  const trial = trialRaw === "" ? null : Number(trialRaw);
+  if (trial !== null && (!Number.isInteger(trial) || trial < 0 || trial > 90)) {
+    fields.trial_days = "Escribe de 0 a 90 días.";
+  }
+  if (Object.keys(fields).length > 0) {
+    return { error: "Revisa los datos marcados.", fields, values: formValues(formData, keys) };
+  }
+  return keepValues(
+    formData,
+    keys,
+    attempt(
+      async () => {
+        const supabase = await createSupabaseServerClient();
+        await callRpc(supabase, "platform_set_plan_pricing", {
+          p_key: planKey,
+          p_price_monthly: monthly,
+          p_price_annual: annual,
+          p_trial_days: trial,
+        });
+        return "Precios guardados.";
+      },
+      "/platform/planes",
+      {
+        fieldText: {
+          price_monthly: "Escribe un importe de 0 a 1,000,000.",
+          price_annual: "Escribe un importe de 0 a 10,000,000.",
+          trial_days: "Escribe de 0 a 90 días.",
         },
       },
     ),
