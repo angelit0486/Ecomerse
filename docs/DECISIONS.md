@@ -1364,3 +1364,18 @@ Contexto: misión «que comprar y pagar funcione sin errores y que el correo sal
   - **Es un filtro de texto, no una garantía:** la revisión humana sigue siendo necesaria.
   - Términos y política de contenido: PENDIENTE DE REVISIÓN por abogado.
 - **Pregunta:** ¿apruebas la lista base (o qué agregas o quitas) y que la plataforma la imponga a todas las tiendas?
+
+## 31. Auditoría de amenazas (2026-10-29)
+
+Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/RIESGOS.md`. Informe: `docs/phases/AUDITORIA-AMENAZAS-2026-10-29.md`.
+
+### ADR-054 — Datos personales enmascarados para roles que no los necesitan · **PROPUESTO, espera decisión del propietario**
+
+- **Hallazgo (AUD-04, severidad media):** los roles `viewer` (solo lectura) e `inventory_manager` tienen `orders.read` y, el primero, `customers.read`. Hoy ven el correo, el teléfono y la dirección completos de los compradores. Evidencia: `select … from public.role_permissions` (informe, sección 2).
+- **Propuesta:**
+  1. Permiso nuevo `customers.pii`. Lo tienen el dueño, `store_admin`, `order_manager` y `support_agent`.
+  2. Sin ese permiso, las lecturas de pedidos y clientes muestran el correo enmascarado (`a***@dominio.com`), el teléfono con los últimos 4 dígitos y la dirección solo con ciudad y estado.
+  3. Las exportaciones CSV exigen `customers.pii`.
+  4. Pruebas pgTAP por rol y E2E del panel con un `viewer`.
+- **Por qué es ADR:** cambia el contrato de permisos y de lectura de pedidos (GATE0 §43).
+- **Pregunta:** ¿apruebas esta lista de roles con acceso a datos personales completos?
