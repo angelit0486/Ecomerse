@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { requirePlatformRole } from "@/server/auth/platform";
+import { canManageTenants, requirePlatformRole } from "@/server/auth/platform";
 import { PruvaLogo } from "@/ui/brand/pruva-logo";
 import { Button } from "@/ui/primitives/button";
 
@@ -48,6 +48,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           <Link href="/platform/salud" className={navLink}>
             Salud
           </Link>
+          {canManageTenants(role) ? (
+            <Link href="/platform/metricas" className={navLink}>
+              Métricas
+            </Link>
+          ) : null}
         </nav>
         <div className="flex items-center gap-3 text-[13px] text-fg-muted">
           <span>{ROLE[role]}</span>

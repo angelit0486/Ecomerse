@@ -6,7 +6,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(4);
 
-select is(public.app_schema_version(), '20261029000200', 'la versión es la de la última migración');
+select is(public.app_schema_version(), '20261029000300', 'la versión es la de la última migración');
 select ok(has_function_privilege('authenticated', 'public.app_schema_version()', 'execute'),
           'el panel puede leerla');
 select ok(not has_function_privilege('anon', 'public.app_schema_version()', 'execute')

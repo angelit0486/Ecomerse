@@ -234,3 +234,36 @@ test("salud: soporte ve los problemas con qué hacer, sin datos privados (F1.6)"
   await expect(page.getByRole("link", { name: "Ver y reintentar en Trabajos" })).toBeVisible();
   await expectNoSeriousA11yViolations(page);
 });
+
+test("métricas: administración ve ventas, suscripciones y el periodo (F4)", async ({ page }) => {
+  const email = `pmetricas-${run}@platform.test`;
+  await admin`insert into public.platform_staff (user_id, role)
+              values (${await createAuthUser(email)}, 'platform_admin')`;
+  await loginNewStaff(page, email);
+  await page.goto("/platform");
+  await page.getByRole("link", { name: "Métricas" }).click();
+  await expect(page.getByRole("heading", { name: "Métricas", level: 1 })).toBeVisible();
+  await expect(page.getByText("Organizaciones activas")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suscripciones" })).toBeVisible();
+  // El MRR no se inventa: se dice por qué falta.
+  await expect(page.getByText(/MRR\): pendiente/)).toBeVisible();
+  await page.getByRole("link", { name: "7 días" }).click();
+  await expect(page).toHaveURL(/dias=7/);
+  await expect(page.getByRole("link", { name: "7 días" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { name: "Ventas de las tiendas en 7 días" }),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+});
+
+test("métricas: soporte no ve el enlace ni la página", async ({ page }) => {
+  const email = `pmetricas-sop-${run}@platform.test`;
+  await admin`insert into public.platform_staff (user_id, role)
+              values (${await createAuthUser(email)}, 'platform_support')`;
+  await loginNewStaff(page, email);
+  await page.goto("/platform");
+  await expect(page.getByRole("link", { name: "Salud" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Métricas" })).toHaveCount(0);
+  const resp = await page.goto("/platform/metricas");
+  expect(resp?.status()).toBe(404);
+});
