@@ -1285,3 +1285,82 @@ Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VER
 - **Preguntas para el propietario.**
   1. ¿Envía o Skydropx?
   2. ¿Cuenta de cada comercio (recomendado) o una cuenta de PRUVA que revende guías? Revender implica cobrar y facturar las guías.
+
+## 30. Comprar y pagar sin errores (2026-10-29)
+
+Contexto: misión «que comprar y pagar funcione sin errores y que el correo salga solo cuando corresponde». Lo que ya existía y se mantiene:
+
+- El pedido nace «Pendiente de pago» y **solo** pasa a pagado cuando:
+  - llega el webhook firmado;
+  - **y** al volver a consultar el cobro en la API del proveedor coinciden el monto, la moneda, la referencia y la cuenta.
+- La redirección del navegador nunca cambia el estado (regla 11).
+- Hay reconciliación cada 10 minutos.
+- Reintentar el pago reutiliza el mismo pedido (clave de idempotencia del checkout).
+- Los 15 escenarios están probados con el simulador (`docs/runbooks/mercadopago-escenarios.md`).
+
+### ADR-050 — Aviso «Pago pendiente» para OXXO y SPEI · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:**
+  - Con Mercado Pago, un pago en OXXO o SPEI que queda pendiente **no envía ningún correo** al comprador. Sus instrucciones solo las ve en Mercado Pago al pagar.
+  - Con el método manual (transferencia de la tienda), el comprador recibe «Recibimos tu pedido» con las instrucciones de pago.
+  - En ningún caso se envía la confirmación de compra antes del pago. Esto ya cumple lo que pide la misión.
+- **Propuesta:** un correo distinto, «Tu pedido #N está pendiente de pago», cuando el cobro de Mercado Pago queda `pending` por pago en efectivo o transferencia. Llevaría:
+  - el total a pagar y la fecha límite (la del pedido);
+  - un botón **«Completar mi pago»** que abre la página del pedido; desde ahí se vuelve a la ficha de pago de Mercado Pago;
+  - la aclaración de que la confirmación llega cuando el pago se acredite.
+- **Reglas:**
+  - un solo aviso por pedido, con la clave `payment.pending:<pedido>`;
+  - no se envía si el pedido ya se pagó o venció;
+  - el aviso al dueño de la tienda sigue igual.
+- **Preguntas:**
+  1. ¿Se envía el aviso de pago pendiente? Opciones: sí, solo con OXXO y SPEI (recomendado); sí, con cualquier pago pendiente; o no.
+  2. ¿Un recordatorio 24 horas antes de que venza? Recomiendo no, por ahora.
+
+### ADR-051 — Respaldo si se suspende una cuenta de Mercado Pago · **PROPUESTO, espera decisión del propietario**
+
+- **Riesgo:** Mercado Pago puede suspender la cuenta de un comercio o la de la plataforma. Según notas de prensa de 2025, la suspensión puede ser temporal o permanente. La política oficial de México no fue accesible desde el entorno [NO VERIFICADO].
+- **Lo que ya existe:**
+  - **Cuentas separadas:** cada comercio cobra con **su propia** cuenta de Mercado Pago (ADR-041). La suspensión de una cuenta no detiene a las demás tiendas.
+  - **Pago manual por transferencia:** proveedor `manual`. La tienda pone su CLABE e instrucciones, el pedido queda pendiente y la tienda lo marca pagado al ver el depósito, con auditoría. Funciona hoy y sirve como respaldo inmediato.
+  - **Adaptador de Stripe Connect:** probado con el simulador; con OXXO en Stripe.
+- **Propuesta:**
+  1. **Respaldo inmediato:** si falla Mercado Pago, la tienda activa «Transferencia» desde Ajustes → Pagos en minutos. El runbook `pagos.md` dice cómo.
+  2. **Segundo procesador con tarjeta:** Stripe, porque ya está hecho. Hay que configurar las llaves de la plataforma y que cada comercio conecte su cuenta.
+  3. **Conekta u OpenPay** (ambos de México, con tarjeta, OXXO y SPEI): evaluarlos cuando las páginas oficiales sean accesibles. Las comisiones en fuentes de terceros no coinciden entre sí [NO VERIFICADO]. Construir un tercer adaptador cuesta como el de Mercado Pago (un adaptador con webhook firmado, reconciliación y reembolsos). Solo se recomienda si Stripe no sirve para un comercio.
+- **Pregunta:** ¿apruebas Stripe como segundo procesador y aplazas Conekta y OpenPay hasta tener sus comisiones oficiales?
+
+### ADR-052 — Fraude y contracargos: reglas básicas · **PROPUESTO, espera decisión del propietario**
+
+- **Lo que ya existe:**
+  - límite de pedidos por correo al día;
+  - límite de intentos con códigos de descuento;
+  - límites por IP en el checkout;
+  - contracargos y reembolsos externos detectados por webhook (ADR-043): el pedido queda en atención y se avisa a la tienda;
+  - todo cambio de estado queda en la auditoría.
+- **Propuesta:**
+  1. **Revisión manual de pedidos sospechosos.** Un pedido pagado queda marcado «Revisar antes de enviar» si:
+     - supera un monto, por ejemplo $10,000 MXN, ajustable por tienda;
+     - o es la primera compra del correo con un total mayor a 3 veces el ticket promedio de la tienda;
+     - o la dirección de envío no coincide con el estado de la tarjeta, cuando el proveedor lo informe.
+
+     La tienda confirma o cancela con reembolso.
+
+  2. **Evidencia de entrega:** guardar en el envío la guía, la paquetería, la fecha de entrega y, si existe, el enlace del acuse de la paquetería. Sirve para responder un contracargo. El panel ya guarda guía y paquetería; faltan el acuse y una vista de «evidencia» para descargar.
+  3. **Límites:** monto máximo por pedido en tiendas nuevas durante sus primeros 30 días (por ejemplo $20,000 MXN).
+- **Preguntas:**
+  1. ¿Montos de revisión y límite (los de arriba u otros)?
+  2. ¿Se aplica a todas las tiendas o cada tienda lo activa?
+
+### ADR-053 — Categorías que la plataforma bloquea (retoma ADR-042) · **PROPUESTO, espera decisión del propietario**
+
+- **Contexto:**
+  - El propietario aplazó ADR-042 el 2026-10-29.
+  - La regla 9 del propietario (2026-10-29) pide bloquear vapeadores y cigarros electrónicos, armas, drogas ilegales y medicamentos controlados sin autorización.
+  - Mercado Pago también prohíbe vender, entre otros, estupefacientes, armas, flora y fauna protegidas y artículos que violan propiedad intelectual. Fuente: notas de prensa de 2025 y la página oficial de Brasil (mercadopago.com.br/ajuda/3264). La página oficial de México no fue accesible desde el entorno [NO VERIFICADO].
+- **Propuesta:**
+  - Usar el mecanismo que ya existe: los términos prohibidos de las reglas de cumplimiento. Hoy bloquean publicar un producto o una sección que los contenga.
+  - Agregar una lista de la **plataforma**, que ninguna tienda puede desactivar: «vapeador», «vape», «cigarro electrónico», «pod de nicotina», «arma», «pistola», «munición», «cannabis/THC» (salvo CBD con permiso), «receta médica», «antibiótico», «controlado».
+  - La lista se edita desde la consola por la plataforma, con auditoría.
+  - **Es un filtro de texto, no una garantía:** la revisión humana sigue siendo necesaria.
+  - Términos y política de contenido: PENDIENTE DE REVISIÓN por abogado.
+- **Pregunta:** ¿apruebas la lista base (o qué agregas o quitas) y que la plataforma la imponga a todas las tiendas?
