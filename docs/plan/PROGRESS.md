@@ -41,21 +41,15 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 
 Tienda local de 1000 productos × 3 tallas: la base responde en milisegundos y las pantallas no se alentan con el catálogo. Corregido: la vista previa de una importación dice qué precios y existencias cambian (y avisa que las existencias del archivo reemplazan las de hoy), migración `20261029000200`; listado con 25/50/100 por página. Pendiente: conteo de resultados, inventario compacto, «seleccionar los N del filtro». Auditoría: `docs/plan/AUDITORIA-PANEL-ESCALA.md`; informe: `docs/phases/VENDIBLE-FASE-3-INFORME.md`.
 
-### Fase 4 (2026-10-29) · en curso, esperando decisiones del propietario
+### Fase 4 (2026-10-29) · hecha en lo que no depende del propietario
 
-Brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`.
+Informe: `docs/phases/VENDIBLE-FASE-4-INFORME.md`. Decisiones: DECISIONS §29.
 
-**Hecho:**
-
-- Consola → Métricas (`ac70294`, migración `20261029000300`).
-- Borradores legales de la plataforma (`docs/legal/plataforma/`, PENDIENTE DE REVISIÓN).
-
-**Por decidir (DECISIONS §29):**
-
-- ADR-044: cobro y precios.
-- ADR-045: alta autoservicio (reconsidera E15).
-- ADR-046: anonimizar al terminar.
-- ADR-047: integraciones.
+- Consola → Métricas con MRR real; precios mensual y anual por plan (`ac70294`, `804c854`).
+- Cobro con Stripe Billing y cambio de plan con prorrateo (`3ec04ea`, `0544c3a`). [NO VERIFICADO con Stripe real]
+- Anonimizar a los 30 días del cierre (`c131a4c`; paso 2, Auth y Storage, pendiente).
+- Recordatorio de carritos, apagado por defecto (`4d3a4fc`; PENDIENTE DE REVISIÓN legal).
+- Alta autoservicio: no (ADR-045). Envíos con Skydropx: bloqueado por documentación y llaves (ADR-049).
 
 ## Hecho justo antes de la misión (2026-10-27/28)
 
