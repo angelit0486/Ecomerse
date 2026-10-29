@@ -3,9 +3,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import {
+  percentChange,
+  previewChangesSchema,
+  priceSummary,
+  stockSummary,
+  type ChangeExample,
+  type PreviewChanges,
+} from "@/lib/imports/preview-changes";
+import { formatMoney } from "@/lib/money/format";
 import { hasPermission } from "@/server/auth/context";
+import { callRpc } from "@/server/db/rpc";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { resumeQueue } from "@/server/jobs/run-now";
+import { log } from "@/server/observability/logger";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { commitImport } from "../actions";
@@ -124,6 +135,24 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   const ready = job.status === "validated" && errors === 0 && twin?.status !== "committing";
   const done = job.status === "completed";
   const base = `/admin/${ctx.store.handle}/productos/importar`;
+  // Qué cambia en los productos que ya existen (misión vendible F3). Si la consulta
+  // falla, la vista previa sigue funcionando sin el resumen.
+  let changes: PreviewChanges | null = null;
+  if (job.status === "validated" && (totals.update ?? 0) > 0) {
+    try {
+      changes = previewChangesSchema.parse(
+        await callRpc<unknown>(supabase, "import_preview_changes", {
+          p_store_id: ctx.store.id,
+          p_job_id: job.id,
+        }),
+      );
+    } catch (error) {
+      log.warn("imports.preview_changes_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      changes = null;
+    }
+  }
   const ignored = (job.ignored_columns as string[] | null) ?? [];
   const byColumn = rows && rows.length > 0 ? errorsByColumn(rows) : [];
   const handleTaken =
@@ -255,6 +284,8 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
           <dd className="mt-1 text-xl font-semibold tabular-nums">{errors}</dd>
         </div>
       </dl>
+
+      {changes ? <ChangesSummary changes={changes} currency={ctx.store.currency} /> : null}
 
       {twin?.status === "committing" ? (
         <p role="status" className="rounded-md border border-warning p-3 text-sm">
@@ -398,6 +429,86 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             </tbody>
           </table>
         </section>
+      ) : null}
+    </section>
+  );
+}
+
+function ExampleList({
+  label,
+  items,
+  format,
+}: {
+  label: string;
+  items: ChangeExample[];
+  format: (e: ChangeExample) => string;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <ul aria-label={label} className="list-disc space-y-1 pl-5 text-sm text-fg-muted">
+      {items.map((e) => (
+        <li key={`${e.sku ?? ""}-${e.title}`}>
+          {e.title}
+          {e.sku ? ` (${e.sku})` : ""}: {format(e)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Resumen de lo que cambia antes de confirmar: precios, existencias y estado. */
+function ChangesSummary({ changes, currency }: { changes: PreviewChanges; currency: string }) {
+  const stock = stockSummary(changes);
+  const money = (cents: number | null) => (cents === null ? "—" : formatMoney(cents, currency));
+  return (
+    <section
+      aria-labelledby="import-cambios"
+      className="space-y-3 rounded-md border border-border p-4"
+    >
+      <h2 id="import-cambios" className="text-base font-semibold">
+        Qué cambia en tus productos
+      </h2>
+      <div className="space-y-1">
+        <p className="text-sm">{priceSummary(changes)}</p>
+        <ExampleList
+          label="Ejemplos de precios que cambian"
+          items={changes.price_examples}
+          format={(e) => {
+            const pct = percentChange(e.from, e.to);
+            return `${money(e.from)} → ${money(e.to)}${pct ? ` (${pct})` : ""}`;
+          }}
+        />
+      </div>
+      {stock ? (
+        <div className="space-y-1">
+          <p className="text-sm">{stock}</p>
+          <ExampleList
+            label="Ejemplos de existencias que cambian"
+            items={changes.stock_examples ?? []}
+            format={(e) => `${e.from ?? 0} → ${e.to} piezas`}
+          />
+          {(changes.stock_changes ?? 0) > 0 ? (
+            <p className="rounded-md border border-warning p-3 text-sm">
+              Las existencias del archivo reemplazan las de hoy. Si vendiste algo desde que
+              preparaste el archivo, descárgalo de nuevo o deja vacía la columna inventory_quantity
+              para no tocarlas.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {(changes.status_changes ?? 0) > 0 ? (
+        <p className="text-sm">
+          {changes.status_changes === 1
+            ? "1 producto cambia de estado (publicado o borrador)."
+            : `${changes.status_changes} productos cambian de estado (publicado o borrador).`}
+        </p>
+      ) : null}
+      {changes.unmatched_variants > 0 ? (
+        <p className="text-sm">
+          {changes.unmatched_variants === 1
+            ? "1 presentación del archivo no existe hoy: es nueva."
+            : `${changes.unmatched_variants} presentaciones del archivo no existen hoy: son nuevas.`}
+        </p>
       ) : null}
     </section>
   );

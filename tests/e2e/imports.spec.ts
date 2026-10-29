@@ -242,4 +242,33 @@ test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia 
       on_hand: 0,
     },
   ]);
+
+  // Misión vendible F3: al actualizar, la vista previa dice qué cambia antes de confirmar.
+  const prices = [
+    "handle,option1_name,option1_value,sku,price,inventory_quantity",
+    `${handle},Sabor,Vainilla,SH-V-${run},950.00,2`,
+    `${handle},Sabor,Chocolate,SH-C-${run},899.00,`,
+  ].join("\n");
+  await page.goto(`/admin/${shop.handle}/productos/importar`);
+  await page.getByLabel(/Archivo CSV/).setInputFiles({
+    name: "precios.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(prices),
+  });
+  await page.getByRole("button", { name: "Validar archivo" }).click();
+  const summary = page.getByRole("region", { name: "Qué cambia en tus productos" });
+  await expect(summary).toBeVisible();
+  await expect(summary.getByText("1 precio cambia: 1 sube.")).toBeVisible();
+  await expect(
+    summary
+      .getByRole("list", { name: "Ejemplos de precios que cambian" })
+      .getByText(`Proteína Whey (SH-V-${run.toUpperCase()}): $899.00 → $950.00 (+6 %)`),
+  ).toBeVisible();
+  // La columna vacía de Chocolate no toca sus existencias: solo cambia Vainilla.
+  await expect(summary.getByText("1 presentación cambia de existencias.")).toBeVisible();
+  await expect(summary.getByText(/5 → 2 piezas/)).toBeVisible();
+  await expect(
+    summary.getByText(/Las existencias del archivo reemplazan las de hoy/),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
 });

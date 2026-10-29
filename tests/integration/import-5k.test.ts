@@ -172,4 +172,55 @@ describe("import.commit con 5 000 filas", () => {
     >`select status from public.import_jobs where id = ${jobId}`;
     expect(job!.status).toBe("completed");
   }, 300_000);
+
+  it("la vista previa de 5 000 actualizaciones dice qué cambia y coincide con lo que se aplica (F3)", async () => {
+    // Usa los 5 000 productos «ok-*» del primer caso (precio 19900, 3 piezas).
+    const [job] = await admin<{ id: string }[]>`
+      insert into public.import_jobs (store_id, type, mode, status, file_name, requested_by, columns, needs, totals)
+      values (${storeId}, 'products', 'update_existing', 'validated', 'precios.csv', ${ownerId},
+              array['handle', 'sku', 'price', 'inventory_quantity'], array['imports.run', 'inventory.adjust', 'products.update'],
+              ${admin.json({ rows: ROWS, products: ROWS, create: 0, update: ROWS, errors: 0 })})
+      returning id`;
+    await admin`
+      insert into public.import_job_rows (store_id, import_job_id, row_number, raw, normalized, errors, action)
+      select ${storeId}, ${job!.id}, g + 1, jsonb_build_object('handle', 'ok-' || g),
+             jsonb_build_object('handle', 'ok-' || g, 'option_names', null, 'product', '{}'::jsonb,
+               'variants', jsonb_build_array(jsonb_build_object(
+                 'row_number', g + 1, 'sku', 'OK-' || g, 'price', 21890,
+                 'quantity', case when g <= 10 then 1 else 3 end))),
+             '[]'::jsonb, 'update'
+        from generate_series(1, ${ROWS}) g`;
+    const preview = () =>
+      admin.begin(async (sql) => {
+        await sql`select set_config('request.jwt.claims', ${JSON.stringify({
+          sub: ownerId,
+          role: "authenticated",
+          aal: "aal2",
+        })}, true), set_config('role', 'authenticated', true)`;
+        const [row] = await sql<{ c: Record<string, unknown> }[]>`
+          select public.import_preview_changes(${storeId}, ${job!.id}) as c`;
+        return row!.c;
+      });
+
+    const started = Date.now();
+    const before = await preview();
+    // Con miles de productos el resumen no debe frenar la vista previa.
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(before).toMatchObject({
+      price_changes: ROWS,
+      price_up: ROWS,
+      price_down: 0,
+      stock_changes: 10,
+      unmatched_variants: 0,
+    });
+    expect((before.stock_examples as unknown[]).length).toBe(5);
+
+    await admin`update public.import_jobs set status = 'committing', commit_requested_by = ${ownerId},
+                       commit_requested_at = now() where id = ${job!.id}`;
+    await admin`select app.enqueue_job('import.commit', ${admin.json({ import_job_id: job!.id })}, ${storeId},
+                                       ${`import.commit:${job!.id}`}, now(), 3)`;
+    expect(await run()).toMatchObject({ succeeded: 1 });
+    // Lo que la vista previa anunció es exactamente lo que se aplicó: ya no queda nada por cambiar.
+    expect(await preview()).toMatchObject({ price_changes: 0, stock_changes: 0 });
+  }, 300_000);
 });
