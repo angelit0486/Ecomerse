@@ -41,6 +41,22 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 
 Tienda local de 1000 productos × 3 tallas: la base responde en milisegundos y las pantallas no se alentan con el catálogo. Corregido: la vista previa de una importación dice qué precios y existencias cambian (y avisa que las existencias del archivo reemplazan las de hoy), migración `20261029000200`; listado con 25/50/100 por página. Pendiente: conteo de resultados, inventario compacto, «seleccionar los N del filtro». Auditoría: `docs/plan/AUDITORIA-PANEL-ESCALA.md`; informe: `docs/phases/VENDIBLE-FASE-3-INFORME.md`.
 
+### Fase 4 (2026-10-29) · en curso, esperando decisiones del propietario
+
+Brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`.
+
+**Hecho:**
+
+- Consola → Métricas (`ac70294`, migración `20261029000300`).
+- Borradores legales de la plataforma (`docs/legal/plataforma/`, PENDIENTE DE REVISIÓN).
+
+**Por decidir (DECISIONS §29):**
+
+- ADR-044: cobro y precios.
+- ADR-045: alta autoservicio (reconsidera E15).
+- ADR-046: anonimizar al terminar.
+- ADR-047: integraciones.
+
 ## Hecho justo antes de la misión (2026-10-27/28)
 
 - **Panel y tienda más profesionales:** pasos 0–19 menos 20; migraciones `20261027000100` (Consola → Trabajos), `000200` (importar solo lo válido, ADR-040), `000300` (fotos con `srcset`).
