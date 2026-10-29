@@ -102,8 +102,12 @@ test("importar productos: errores por fila, confirmación y producto en el catá
   await page.getByRole("button", { name: "Confirmar importación" }).click();
   // La confirmación la aplica el worker (job import.commit); la página se actualiza sola.
   // Se espera el aviso de la página (no el texto del botón mientras envía): así el job
-  // ya está en la cola. El runner se llama como lo haría el cron hasta que termine.
-  await expect(page.getByRole("status").filter({ hasText: "Importando…" })).toBeVisible();
+  // ya está en la cola. Como la cola se procesa al instante, a veces ya terminó al
+  // cargar la página: cualquiera de los dos avisos sirve. El runner se llama como lo
+  // haría el cron hasta que termine.
+  await expect(
+    page.getByRole("status").filter({ hasText: /Importando…|Importación terminada\./ }),
+  ).toBeVisible();
   await expect(async () => {
     await runJobs();
     await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
@@ -197,7 +201,9 @@ test("archivo exportado de Shopify (Latin-1): se traduce, avisa lo que no copia 
   await expectNoSeriousA11yViolations(page);
 
   await page.getByRole("button", { name: "Confirmar importación" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Importando…" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: /Importando…|Importación terminada\./ }),
+  ).toBeVisible();
   await expect(async () => {
     await runJobs();
     await expect(page.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
