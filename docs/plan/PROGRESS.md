@@ -32,6 +32,11 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 
 «Anaquel ilustrado» (objetos del giro dibujados cuando no hay fotos), 6 plantillas por giro (+ Hogar y decoración, + Mascotas), buscador con la marca, beneficios a lo ancho y ruta de navegación visible en el celular. Suites: verify 1,018, pgTAP 2,440, integración 362, E2E 110/110. Lighthouse móvil: 92–98 (meta 95 no cumplida en el listado de demo). Informe: `docs/phases/VENDIBLE-FASE-2-INFORME.md`.
 
+### Fases 5 y 6 (2026-10-29) · borradores
+
+- `docs/venta/`: data room con datos verificados (resumen técnico, riesgos, propiedad del código como bandera roja) y kit de paquetes de tiendas con precios `[PRECIO]` por definir. Sin valuación hasta tener métricas reales.
+- Siguiente: Fase 3 (auditoría del panel).
+
 ## Hecho justo antes de la misión (2026-10-27/28)
 
 - **Panel y tienda más profesionales:** pasos 0–19 menos 20; migraciones `20261027000100` (Consola → Trabajos), `000200` (importar solo lo válido, ADR-040), `000300` (fotos con `srcset`).
