@@ -40,7 +40,7 @@ Proveedores necesarios para operar el servicio:
 ## 5. Conservación
 
 - Los datos de la cuenta se conservan mientras haya contrato y, después, lo que exija la ley.
-- Los pedidos, pagos y movimientos de inventario no se borran, por obligaciones fiscales y de auditoría. Al terminar el servicio, **[POR DEFINIR, ADR-047]**.
+- Los pedidos, pagos y movimientos de inventario no se borran, por obligaciones fiscales y de auditoría. Al terminar el servicio, **[POR DEFINIR, ADR-046]**.
 
 ## 6. Seguridad
 

@@ -1114,3 +1114,124 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
 - **Alternativa descartada.** Marcar el pedido como reembolsado automáticamente: un contracargo puede revertirse a favor del comercio, y un reembolso parcial hecho en Mercado Pago no siempre trae el monto que la plataforma espera.
 - **Implementación.** Migración `20261029000100_external_reversals` (rama nueva en `system.apply_payment_status` antes de la regla «nada retrocede»; conteo y aviso `payment_reversals` en la salud). El normalizador de Mercado Pago distingue `charged_back` (contracargo) de `refunded`. Trabajo `payment.external_reversal` con correo a la tienda (dos textos). Pruebas: pgTAP `106_external_reversals` (14, rojo comprobado con la función anterior), integración `mercadopago-webhook` (contracargo), unitarias del normalizador y de la plantilla.
 - **Estado.** Implementado y probado con Mercado Pago simulado [NO VERIFICADO con Mercado Pago real].
+
+## 29. Misión vendible · Fase 4: la plataforma como producto SaaS (2026-10-29)
+
+Análisis de brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`. Ya existe y no requiere decisión:
+
+- **Ciclo de suscripción con cobro manual:**
+  - prueba;
+  - pago vencido con 7 días de gracia;
+  - solo lectura;
+  - suspensión a los 30 días;
+  - cambio de plan.
+- **Dominio propio automatizado (ADR-037):** solo falta el token de Vercel del propietario.
+- **Acceso de soporte temporal y auditado.**
+- **Exportación CSV por tienda.**
+- **Consola → Métricas** (`20261029000300`).
+
+Lo que sigue necesita la decisión del propietario.
+
+### ADR-044 (propuesto) — Cobro a las tiendas: proveedor, precios y periodos
+
+- **Contexto.** Los planes tienen límites pero **no precio**, y el cobro es manual: la plataforma marca «activa por N días» después de recibir el pago por fuera. No se puede calcular el MRR ni cobrar solo. La misión pide suscripción mensual y anual, prueba, cambios de plan, cancelación y suspensión por impago, sin cobrar nada sin ADR aprobado.
+- **Opciones evaluadas (cobro con tarjeta en México):**
+
+  **Stripe Billing**
+  - Integración que ya existe: el adaptador Stripe Connect para los cobros de las tiendas (F7-T01).
+  - Fuerte en suscripciones: prorrateo, reintentos de cobro, portal del cliente y facturas.
+  - Comisiones [NO VERIFICADO; fuentes de terceros, la página oficial no fue accesible desde esta sesión]:
+    - tarjeta nacional: alrededor de 3.6 % + MX$3 + IVA;
+    - Billing: entre 0.5 % y 0.8 % adicional, según la fuente.
+  - Requiere una cuenta Stripe México de PRUVA.
+
+  **Mercado Pago Suscripciones**
+  - Integración que ya existe: Mercado Pago OAuth y webhook firmado (ADR-041).
+  - Conocido por los comercios mexicanos.
+  - Tiene planes y reintentos automáticos, con menos herramientas que Stripe (prorrateo y portal).
+  - Comisión de tarjeta: alrededor de 3.49 % + IVA [NO VERIFICADO; fuentes de terceros].
+
+  **Conekta u Openpay**
+  - Locales.
+  - Tarjeta alrededor de 2.9 % + MX$2.5 [NO VERIFICADO].
+  - Integración nueva desde cero; menos herramientas de suscripción documentadas.
+
+  **Seguir manual (transferencia o SPEI) mientras haya pocos comercios**
+  - Ya funciona.
+  - Sin comisión de tarjeta.
+  - Trabajo manual de la plataforma.
+
+- **Decisión propuesta.**
+  1. **Precios en los planes:** mensual y anual en centavos MXN, más días de prueba. Los fija el propietario; el sistema no inventa precios. Con eso se calcula el MRR en Consola → Métricas.
+  2. **Proveedor: Stripe Billing**, por sus herramientas de suscripción (prorrateo, reintentos y portal), que habría que construir a mano con los otros.
+     - Los estados del proveedor se traducen al ciclo que ya existe (`trialing`, `active`, `past_due`, `paused`, `cancelled`) solo por **webhook verificado**, igual que los pagos (regla 11).
+     - El cobro manual se conserva como alternativa por organización.
+  3. **Hasta tener el proveedor:** el cobro sigue manual, con precios ya cargados para el MRR.
+- **Preguntas para el propietario.**
+  1. ¿Stripe Billing, Mercado Pago Suscripciones o seguir manual por ahora?
+  2. ¿Precios mensual y anual por plan, y cuántos días de prueba?
+  3. Al cambiar de plan a mitad de periodo, ¿prorratear o aplicar el cambio al siguiente periodo?
+- **Implementación (tras aprobar).**
+  - Migración con columnas de precio y días de prueba en `plans`, con pgTAP.
+  - Adaptador del proveedor detrás de una interfaz `BillingProvider`, con idempotencia.
+  - Webhook verificado con pruebas de firma y de repetición.
+  - Pantalla «Plan y uso» con «Pagar» y «Cambiar plan».
+  - E2E con el proveedor simulado.
+
+### ADR-045 (propuesto) — Alta autoservicio de comercios (reconsiderar E15)
+
+- **Contexto.** El 2026-10-20 el propietario **no aprobó** E15 (alta de tienda por cuenta propia): las tiendas las crea la plataforma. La misión de hoy pide alta autoservicio con meta de «tienda publicada en menos de 1 hora sin ayuda». Las dos indicaciones se contradicen, así que se pregunta antes de construir nada.
+- **Decisión propuesta (si se aprueba).**
+  1. **Registro** con correo y código (ya existe), verificación en dos pasos obligatoria (ya existe) y aceptación de los Términos del servicio. Se guarda la versión aceptada; los borradores están en `docs/legal/plataforma/`.
+  2. Crea **una organización propia** con la persona como `org_owner` y un plan de prueba con límites bajos.
+     - Nunca da permisos de plataforma: no es la «ruta pública que convierte al primero en administrador» que el propietario prohibió.
+  3. Sigue el onboarding que ya existe:
+     - giro y plantilla;
+     - nombre, logo y colores;
+     - pagos;
+     - envíos;
+     - checklist de lanzamiento con bloqueos explicados.
+  4. **Controles contra abuso:**
+     - límite de altas por IP y por correo;
+     - la tienda nace en borrador;
+     - plan de prueba con pocos productos;
+     - la consola ve las altas nuevas en Métricas;
+     - suspensión con motivo (ya existe).
+- **Riesgo abierto.** Sin la política de contenido (ADR-042, aplazado), cualquiera podría abrir una tienda de productos prohibidos con el nombre de la plataforma. Mitigación mínima propuesta: que las tiendas nuevas por alta propia queden «en revisión» hasta que la plataforma las apruebe para publicar.
+- **Preguntas para el propietario.**
+  1. ¿Ahora sí apruebas el alta autoservicio?
+  2. ¿Tiendas nuevas con aprobación manual antes de publicar, o publicación directa?
+  3. ¿Límites del plan de prueba (productos y días)?
+
+### ADR-046 (propuesto) — Datos al terminar el servicio: exportar y anonimizar
+
+- **Contexto.** La misión pide exportación y **borrado** de datos por tienda. La exportación ya existe (productos, inventario, pedidos y clientes en CSV). El borrado choca con dos reglas del proyecto:
+  - los pedidos, pagos, movimientos y auditoría nunca se borran (regla 9);
+  - los snapshots de los pedidos son inmutables, y guardan nombre, correo y dirección del comprador.
+
+  Además, la ley fiscal obliga a conservar las operaciones durante años.
+
+- **Decisión propuesta.**
+  1. Al cerrar la tienda, la exportación completa queda disponible 30 días.
+  2. Pasado ese plazo:
+     - se **borran** fotos, productos, páginas, tema y clientes sin pedidos;
+     - en clientes y pedidos se **anonimizan** los datos personales del comprador (nombre, correo, teléfono y dirección se reemplazan por «Anonimizado»);
+     - montos, fechas, productos vendidos e inventario se conservan.
+  3. La anonimización sería la **única excepción** a la inmutabilidad del snapshot, hecha por una función del sistema auditada. Es un cambio de contrato crítico (GATE0 §43): por eso es ADR.
+- **Preguntas para el propietario.**
+  1. ¿Apruebas anonimizar en lugar de borrar los pedidos?
+  2. ¿Plazos: 30 días para descargar y [N años, según el abogado] para conservar operaciones?
+
+### ADR-047 (propuesto) — Integraciones: orden y alcance
+
+Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VERIFICADO] hasta revisarlos con cuenta.
+
+| Integración                       | Valor para el comercio                       | Esfuerzo y riesgo                                                                              | Propuesta       |
+| --------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------- |
+| Recuperación de carritos (correo) | Recupera ventas; usa el correo que ya existe | Bajo. Solo a compradores que aceptaron publicidad (`accepts_marketing` ya existe)              | **1.º**         |
+| Envíos con cotización y guías     | Ahorra capturar guías a mano                 | Medio. Agregador (Skydropx o Envía) con cuenta del comercio o de la plataforma; costo por guía | **2.º**         |
+| Facturación CFDI                  | Obligatoria para muchos clientes empresa     | Medio-alto: responsabilidad fiscal; requiere un PAC y los datos fiscales de cada comercio      | 3.º             |
+| WhatsApp (estado del pedido)      | Canal preferido en México                    | Medio: API oficial de Meta con verificación de negocio y costo por conversación                | 4.º             |
+| Cupones por producto o categoría  | Promociones                                  | Ya hay cupones básicos; lo avanzado quedó pospuesto por el propietario (ADR-036)               | Sigue pospuesto |
+
+- **Pregunta para el propietario.** ¿Apruebas empezar con la recuperación de carritos y después los envíos? Cada integración tendría su propio ADR corto con proveedor y costos antes de construirse.
