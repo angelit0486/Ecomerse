@@ -29,14 +29,26 @@ export interface OrderEmailData {
     shipping_name: string | null;
     /** Dirección de envío (sin teléfono); null si el pedido no requiere envío. */
     shipping_address?: ShippingAddress | null;
+    /** Días estimados de entrega de la tarifa elegida (copia del pedido). */
+    estimated_days?: { min: number | null; max: number | null } | null;
   };
-  items: { title: string; variant: string | null; quantity: number; line_total: number }[];
+  items: {
+    title: string;
+    variant: string | null;
+    quantity: number;
+    line_total: number;
+    unit_price?: number;
+    /** Miniatura: solo URLs https del almacenamiento público (las resuelve el handler). */
+    image_url?: string | null;
+  }[];
   orderUrl: string | null;
-  payment?: { display_name: string; instructions: string | null } | null;
+  payment?: { display_name: string; instructions: string | null; method?: string | null } | null;
   shipment?: {
     carrier: string | null;
     tracking_number: string | null;
     tracking_url: string | null;
+    items?: { title: string; variant: string | null; quantity: number }[];
+    partial?: boolean;
   } | null;
   refund?: { amount: number } | null;
 }
@@ -74,6 +86,34 @@ function addressText(d: OrderEmailData): string[] {
   return lines.length ? ["", "Enviaremos a:", ...lines] : [];
 }
 
+const METHOD_LABEL: Record<string, string> = {
+  credit_card: "Tarjeta de crédito",
+  debit_card: "Tarjeta de débito",
+  prepaid_card: "Tarjeta de prepago",
+  card: "Tarjeta",
+  ticket: "Efectivo en tienda (OXXO)",
+  oxxo: "Efectivo en OXXO",
+  atm: "Pago en cajero o banco",
+  bank_transfer: "Transferencia (SPEI)",
+  account_money: "Saldo de Mercado Pago",
+};
+
+/** Método de pago legible, sin ningún dato de la tarjeta (nunca dígitos ni titular). */
+export function paymentMethodLabel(p: OrderEmailData["payment"]): string | null {
+  if (!p) return null;
+  const method = p.method ? METHOD_LABEL[p.method] : undefined;
+  return method ? `${method} · ${p.display_name}` : p.display_name;
+}
+
+/** «Llega en 2 a 5 días» desde la tarifa elegida; null si la tienda no lo indicó. */
+export function deliveryEstimate(d: OrderEmailData): string | null {
+  const e = d.order.estimated_days;
+  if (!e || e.max === null || e.max === undefined || e.max <= 0) return null;
+  const min = e.min ?? null;
+  if (min === null || min === e.max) return `Llega en ${e.max} ${e.max === 1 ? "día" : "días"}`;
+  return `Llega en ${min} a ${e.max} días`;
+}
+
 function money(cents: number, d: OrderEmailData): string {
   return formatMoney(cents, d.store.currency, d.store.locale);
 }
@@ -93,11 +133,21 @@ function layout(d: OrderEmailData, title: string, body: string): string {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="font-family:system-ui,sans-serif;color:#1a1a1a;line-height:1.5;max-width:560px;margin:0 auto;padding:24px"><div style="margin-bottom:24px">${header}</div>${body}${contact}</body></html>`;
 }
 
+function thumb(url: string | null | undefined): string {
+  return url && url.startsWith("https://")
+    ? `<img src="${escapeHtml(url)}" alt="" width="48" height="48" style="width:48px;height:48px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px">`
+    : "";
+}
+
 function itemsHtml(d: OrderEmailData): string {
   const rows = d.items
     .map(
       (i) =>
-        `<tr><td style="padding:4px 0">${i.quantity} × ${escapeHtml(i.title)}${i.variant ? ` (${escapeHtml(i.variant)})` : ""}</td><td style="text-align:right">${escapeHtml(money(i.line_total, d))}</td></tr>`,
+        `<tr><td style="padding:6px 0">${thumb(i.image_url)}${i.quantity} × ${escapeHtml(i.title)}${i.variant ? ` (${escapeHtml(i.variant)})` : ""}${
+          i.unit_price !== undefined && i.quantity > 1
+            ? `<br><span style="color:#555;font-size:12px">${escapeHtml(money(i.unit_price, d))} c/u</span>`
+            : ""
+        }</td><td style="text-align:right;vertical-align:top;padding:6px 0">${escapeHtml(money(i.line_total, d))}</td></tr>`,
     )
     .join("");
   const line = (label: string, value: string, strong = false) =>
@@ -171,21 +221,29 @@ export function orderReceivedEmail(d: OrderEmailData, to: string): EmailMessage 
 
 export function orderConfirmationEmail(d: OrderEmailData, to: string): EmailMessage {
   const subject = `Confirmamos tu pedido ${d.order.display_number}`;
+  const method = paymentMethodLabel(d.payment);
+  const eta = d.order.shipping_address ? deliveryEstimate(d) : null;
+  const facts = [
+    method ? `<strong>Pagaste con:</strong> ${escapeHtml(method)}` : "",
+    eta ? `<strong>Entrega estimada:</strong> ${escapeHtml(eta)} después del envío` : "",
+  ].filter(Boolean);
   return message(
     d,
     to,
     subject,
-    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pago. Estamos preparando tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.</p>${itemsHtml(d)}${addressHtml(d)}${
-      d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""
-    }`,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pago. Estamos preparando tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.</p>${itemsHtml(d)}${
+      facts.length ? `<p style="margin-top:16px">${facts.join("<br>")}</p>` : ""
+    }${addressHtml(d)}${d.orderUrl ? button("Seguir mi pedido", d.orderUrl, color(d)) : ""}`,
     [
       `Hola, ${d.order.customer_name}:`,
       "",
       `Recibimos tu pago. Estamos preparando tu pedido ${d.order.display_number}.`,
       "",
       itemsText(d),
+      method ? `Pagaste con: ${method}` : "",
+      eta ? `Entrega estimada: ${eta} después del envío` : "",
       ...addressText(d),
-      d.orderUrl ? `Tu pedido: ${d.orderUrl}` : "",
+      d.orderUrl ? `Sigue tu pedido: ${d.orderUrl}` : "",
     ],
   );
 }
@@ -209,8 +267,14 @@ export function paymentFailedEmail(d: OrderEmailData, to: string): EmailMessage 
 }
 
 export function orderShippedEmail(d: OrderEmailData, to: string): EmailMessage {
-  const subject = `Tu pedido ${d.order.display_number} va en camino`;
   const s = d.shipment;
+  const partial = s?.partial === true;
+  const subject = partial
+    ? `Parte de tu pedido ${d.order.display_number} va en camino`
+    : `Tu pedido ${d.order.display_number} va en camino`;
+  const box = (s?.items ?? []).map(
+    (i) => `${i.quantity} × ${i.title}${i.variant ? ` (${i.variant})` : ""}`,
+  );
   // La base ya exige https; aquí se vuelve a comprobar (nunca un esquema javascript:).
   const trackingUrl = s?.tracking_url?.startsWith("https://") ? s.tracking_url : null;
   const tracking = s?.tracking_number
@@ -220,13 +284,22 @@ export function orderShippedEmail(d: OrderEmailData, to: string): EmailMessage {
     d,
     to,
     subject,
-    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Enviamos tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.</p>${
-      tracking ? `<p>Guía: <strong>${escapeHtml(tracking)}</strong></p>` : ""
-    }${trackingUrl ? button("Rastrear envío", trackingUrl, color(d)) : d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""}`,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>${
+      partial
+        ? `Enviamos una parte de tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>. Lo demás te lo enviaremos después y te avisaremos.`
+        : `Enviamos tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>.`
+    }</p>${
+      box.length
+        ? `<p><strong>En este paquete:</strong><br>${box.map(escapeHtml).join("<br>")}</p>`
+        : ""
+    }${tracking ? `<p>Guía: <strong>${escapeHtml(tracking)}</strong></p>` : ""}${trackingUrl ? button("Rastrear envío", trackingUrl, color(d)) : d.orderUrl ? button("Seguir mi pedido", d.orderUrl, color(d)) : ""}`,
     [
       `Hola, ${d.order.customer_name}:`,
       "",
-      `Enviamos tu pedido ${d.order.display_number}.`,
+      partial
+        ? `Enviamos una parte de tu pedido ${d.order.display_number}. Lo demás te lo enviaremos después y te avisaremos.`
+        : `Enviamos tu pedido ${d.order.display_number}.`,
+      ...(box.length ? ["", "En este paquete:", ...box] : []),
       tracking ? `Guía: ${tracking}` : "",
       trackingUrl ?? d.orderUrl ?? "",
     ],
@@ -299,7 +372,11 @@ export function refundIssuedEmail(d: OrderEmailData, to: string): EmailMessage {
 export type StaffEmailKind =
   "new" | "paid" | "attention" | "paid_after_cancel" | "chargeback" | "external_refund";
 
-/** Staff: pedido nuevo, pagado o que requiere atención (sin PII más allá del número y el total). */
+/**
+ * Staff: pedido nuevo, pagado o que requiere atención. Lleva los mismos datos que
+ * el comprador (productos, pago sin datos sensibles y dirección para enviar) y el
+ * enlace al panel; nunca el teléfono.
+ */
 export function staffOrderEmail(
   d: OrderEmailData,
   to: string,
@@ -307,6 +384,7 @@ export function staffOrderEmail(
   panelUrl: string,
 ): EmailMessage {
   const n = d.order.display_number;
+  const method = paymentMethodLabel(d.payment);
   const { subject, body } = {
     new: {
       subject: `Nuevo pedido ${n} (${money(d.order.total, d)})`,
@@ -339,8 +417,18 @@ export function staffOrderEmail(
     html: layout(
       d,
       subject,
-      `<p>${escapeHtml(body)}</p>${itemsHtml(d)}${button("Abrir en el panel", panelUrl, "#1a1a1a")}`,
+      `<p>${escapeHtml(body)}</p><p>Cliente: ${escapeHtml(d.order.customer_name)}</p>${itemsHtml(d)}${
+        method ? `<p><strong>Pago:</strong> ${escapeHtml(method)}</p>` : ""
+      }${addressHtml(d)}${button("Abrir en el panel", panelUrl, "#1a1a1a")}`,
     ),
-    text: [body, "", itemsText(d), `Panel: ${panelUrl}`].join("\n"),
+    text: [
+      body,
+      `Cliente: ${d.order.customer_name}`,
+      "",
+      itemsText(d),
+      method ? `Pago: ${method}` : "",
+      ...addressText(d),
+      `Panel: ${panelUrl}`,
+    ].join("\n"),
   };
 }

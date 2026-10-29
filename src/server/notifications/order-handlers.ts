@@ -57,12 +57,13 @@ interface OrderNotification {
     payment_status: string;
     checkout_idempotency_key: string | null;
   };
-  items: OrderEmailData["items"];
+  items: (Omit<OrderEmailData["items"][number], "image_url"> & { image_path?: string | null })[];
   payment: {
     provider: string;
     status: string;
     display_name: string;
     instructions: string | null;
+    method: string | null;
   } | null;
   shipment: OrderEmailData["shipment"];
   refund: OrderEmailData["refund"];
@@ -106,7 +107,11 @@ export function createOrderNotificationHandlers(
         primary_color: n.store.primary_color,
       },
       order: n.order,
-      items: n.items,
+      // Miniatura solo si es una ruta del almacenamiento (la plantilla exige https).
+      items: n.items.map(({ image_path, ...item }) => ({
+        ...item,
+        image_url: image_path ? deps.mediaUrl(image_path) : null,
+      })),
       orderUrl:
         origin && key
           ? `${origin}/pedido/${n.order.id}?t=${encodeURIComponent(guestToken(deps.linkSecret, key))}`

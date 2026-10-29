@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { JobRecord } from "@/server/jobs/types";
 import { fakeChannel } from "@/server/notifications/channels";
+import { PermanentDeliveryError, type EmailChannel } from "@/server/notifications/types";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
 import { createLogger } from "@/server/observability/logger";
 import { guestToken } from "@/server/payments/order-links";
@@ -187,5 +188,60 @@ describe("notificaciones de pedidos", () => {
     expect(channel.sent[0]!.subject).toContain("Reembolso de");
     await runJob("order.cancelled", { order_id: orderId });
     expect(channel.sent).toHaveLength(2);
+  });
+
+  describe("correo de confirmación: una sola vez y nunca a un correo que rebotó", () => {
+    afterAll(async () => {
+      await admin`delete from system.email_suppressions`;
+    });
+
+    it("lleva el método de pago y sale una sola vez aunque el aviso llegue dos veces", async () => {
+      const { orderId, paymentId } = await placeOrder("fake");
+      await admin`select app.confirm_order_payment(${paymentId}, 'system', 'fake')`;
+      await runJob("order.paid", { order_id: orderId });
+      await runJob("order.paid", { order_id: orderId });
+      const buyer = channel.sent.filter((m) => m.to === "comprador@example.test");
+      expect(buyer).toHaveLength(1);
+      expect(buyer[0]!.text).toContain("Pagaste con: Prueba");
+      expect(buyer[0]!.text).toContain("Sigue tu pedido:");
+    });
+
+    it("un correo suprimido (rebote o queja) no recibe nada y queda registrado", async () => {
+      await admin`select system.email_suppress('Comprador@Example.test', 'complaint', 'provider_webhook', 'msg_x')`;
+      const { orderId, paymentId } = await placeOrder("fake");
+      await admin`select app.confirm_order_payment(${paymentId}, 'system', 'fake')`;
+      await runJob("order.paid", { order_id: orderId });
+      expect(channel.sent.filter((m) => m.to === "comprador@example.test")).toHaveLength(0);
+      const [row] = await admin<{ status: string }[]>`
+        select status from public.notification_deliveries
+         where dedupe_key like ${`order.paid:${orderId}:order_confirmation:%`}`;
+      expect(row!.status).toBe("suppressed");
+      await admin`delete from system.email_suppressions`;
+    });
+
+    it("correo mal escrito: el rechazo definitivo lo suprime y no se reintenta", async () => {
+      let attempts = 0;
+      const bouncing: EmailChannel = {
+        provider: "fake",
+        async send(message) {
+          if (message.to === "comprador@example.test") {
+            attempts += 1;
+            throw new PermanentDeliveryError("dirección inexistente");
+          }
+          return { providerMessageId: "ok" };
+        },
+      };
+      const first = await placeOrder("fake");
+      await admin`select app.confirm_order_payment(${first.paymentId}, 'system', 'fake')`;
+      channel = bouncing as typeof channel;
+      await runJob("order.paid", { order_id: first.orderId });
+      const second = await placeOrder("fake");
+      await admin`select app.confirm_order_payment(${second.paymentId}, 'system', 'fake')`;
+      await runJob("order.paid", { order_id: second.orderId });
+      expect(attempts).toBe(1);
+      const [s] = await admin<{ reason: string; source: string }[]>`
+        select reason, source from system.email_suppressions`;
+      expect(s).toEqual({ reason: "bounce", source: "send_rejected" });
+    });
   });
 });

@@ -36,6 +36,15 @@ export async function sendNotification(
     idempotencyKey?: string;
   },
 ): Promise<void> {
+  // Rebotó o se quejó antes: no se le vuelve a escribir (protege al dominio remitente).
+  const [blocked] = await deps.db<{ suppressed: boolean }[]>`
+    select system.email_suppressed(${input.message.to}) as suppressed`;
+  if (blocked?.suppressed) {
+    await deps.db`select system.record_notification_delivery(
+      ${input.dedupeKey}, ${input.template}, ${input.message.to}, ${input.organizationId}::uuid,
+      'suppressed', ${deps.channel.provider}, null)`;
+    return;
+  }
   try {
     const result = await deps.channel.send(input.message, {
       ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
@@ -45,6 +54,10 @@ export async function sendNotification(
       'sent', ${deps.channel.provider}, ${result.providerMessageId})`;
   } catch (error) {
     if (error instanceof PermanentDeliveryError) {
+      // Rechazo definitivo (dirección inexistente o mal escrita): se suprime para siempre.
+      await deps.db`select system.email_suppress(${input.message.to}, 'bounce', 'send_rejected')`.catch(
+        () => undefined,
+      );
       await deps.db`select system.record_notification_delivery(
         ${input.dedupeKey}, ${input.template}, ${input.message.to}, ${input.organizationId}::uuid,
         'suppressed', ${deps.channel.provider}, null)`;

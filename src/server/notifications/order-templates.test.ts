@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   addressLines,
+  deliveryEstimate,
   orderConfirmationEmail,
   orderDeliveredEmail,
   orderShippedEmail,
+  paymentMethodLabel,
   staffOrderEmail,
   type OrderEmailData,
 } from "./order-templates";
@@ -151,5 +153,106 @@ describe("plantillas de pedidos", () => {
         country: null,
       }),
     ).toEqual(["Ana", "Calle 1", "León"]);
+  });
+});
+
+describe("confirmación completa (misión pagos, 2026-10-29)", () => {
+  const full: OrderEmailData = {
+    ...base,
+    order: {
+      ...base.order,
+      estimated_days: { min: 2, max: 5 },
+      shipping_address: {
+        recipient_name: "Ana",
+        line1: "Calle 1",
+        line2: null,
+        postal_code: "82000",
+        city: "Mazatlán",
+        region: "Sinaloa",
+        country: "MX",
+      },
+    },
+    items: [
+      {
+        title: "Proteína",
+        variant: "Vainilla 1 kg",
+        quantity: 2,
+        unit_price: 45000,
+        line_total: 90000,
+        image_url: "https://media.test/p.webp",
+      },
+      {
+        title: "Shaker",
+        variant: null,
+        quantity: 1,
+        unit_price: 9900,
+        line_total: 9900,
+        image_url: "javascript:alert(1)",
+      },
+    ],
+    payment: { display_name: "Mercado Pago", instructions: null, method: "credit_card" },
+  };
+
+  it("miniaturas solo https, presentación, precio unitario, pago, entrega y seguimiento", () => {
+    const m = orderConfirmationEmail(full, "c@x.test");
+    expect(m.html).toContain('<img src="https://media.test/p.webp"');
+    expect(m.html).not.toContain("javascript:");
+    expect(m.html).toContain("2 × Proteína (Vainilla 1 kg)");
+    expect(m.html).toContain("c/u");
+    expect(m.html).toContain("Tarjeta de crédito · Mercado Pago");
+    expect(m.html).toContain("Llega en 2 a 5 días");
+    expect(m.html).toContain("Seguir mi pedido");
+    expect(m.text).toContain("Pagaste con: Tarjeta de crédito · Mercado Pago");
+    expect(m.text).toContain("Sigue tu pedido: https://tienda.test/pedido/1?t=abc");
+  });
+
+  it("el método de pago nunca muestra datos de la tarjeta", () => {
+    expect(
+      paymentMethodLabel({ display_name: "Tarjeta", instructions: null, method: "4242" }),
+    ).toBe("Tarjeta");
+    expect(paymentMethodLabel(null)).toBeNull();
+  });
+
+  it("entrega estimada: rango, un solo valor o nada", () => {
+    expect(deliveryEstimate(full)).toBe("Llega en 2 a 5 días");
+    expect(
+      deliveryEstimate({ ...full, order: { ...full.order, estimated_days: { min: 1, max: 1 } } }),
+    ).toBe("Llega en 1 día");
+    expect(
+      deliveryEstimate({ ...full, order: { ...full.order, estimated_days: null } }),
+    ).toBeNull();
+  });
+
+  it("envío parcial: asunto y paquete distintos al envío completo", () => {
+    const partial = orderShippedEmail(
+      {
+        ...full,
+        shipment: {
+          carrier: "DHL",
+          tracking_number: "X1",
+          tracking_url: null,
+          partial: true,
+          items: [{ title: "Shaker <b>", variant: null, quantity: 1 }],
+        },
+      },
+      "c@x.test",
+    );
+    expect(partial.subject).toBe("Parte de tu pedido #1001 va en camino");
+    expect(partial.html).toContain("En este paquete:");
+    expect(partial.html).toContain("1 × Shaker &lt;b&gt;");
+    const whole = orderShippedEmail(
+      { ...full, shipment: { ...full.shipment!, partial: false } },
+      "c@x.test",
+    );
+    expect(whole.subject).toBe("Tu pedido #1001 va en camino");
+  });
+
+  it("la tienda recibe los mismos datos y el enlace al panel", () => {
+    const m = staffOrderEmail(full, "t@x.test", "paid", "https://panel.test/admin/t/pedidos/1");
+    expect(m.html).toContain("Enviaremos a:");
+    expect(m.html).toContain("Tarjeta de crédito · Mercado Pago");
+    expect(m.html).toContain("2 × Proteína");
+    expect(m.text).toContain("Panel: https://panel.test/admin/t/pedidos/1");
+    expect(m.html).toContain("&lt;script&gt;");
   });
 });

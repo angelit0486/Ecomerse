@@ -128,6 +128,11 @@ export const serverEnvSchema = z.object({
   /** Remitente de los emails de plataforma: "Nombre <no-reply@dominio>". */
   EMAIL_FROM: z.string().regex(/^[^<>]{1,80} <[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/),
   RESEND_API_KEY: z.string().min(10).optional(),
+  // Firma de los webhooks de Resend (rebotes y quejas). Opcional.
+  RESEND_WEBHOOK_SECRET: z
+    .string()
+    .regex(/^whsec_[A-Za-z0-9+/=]{16,}$/)
+    .optional(),
   MAILPIT_URL: z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8025"),
   /**
    * Solo vista previa (D-F9-17): enlaces a las tiendas de demostración que muestra la
