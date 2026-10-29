@@ -17,7 +17,12 @@ export function Breadcrumb({ items }: { items: { label: string; href?: string }[
                 {item.label}
               </Link>
             ) : (
-              <span aria-current={index === items.length - 1 ? "page" : undefined}>
+              // Mismo alto que los enlaces: si la ruta se parte en dos líneas, el
+              // margen negativo solo recorta espacio vacío y no tapa el texto.
+              <span
+                aria-current={index === items.length - 1 ? "page" : undefined}
+                className="inline-flex min-h-11 items-center"
+              >
                 {item.label}
               </span>
             )}

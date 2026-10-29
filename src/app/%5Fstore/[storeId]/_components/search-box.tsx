@@ -25,7 +25,8 @@ const GROUPS: { kind: SuggestionItem["kind"]; label: string }[] = [
 
 const DEBOUNCE_MS = 200;
 
-export function SearchBox() {
+/** `storeName`: el campo dice «Buscar en {tienda}» (misión vendible F2, V5). */
+export function SearchBox({ storeName }: { storeName: string }) {
   const router = useRouter();
   const id = useId();
   const listId = `${id}-lista`;
@@ -142,7 +143,7 @@ export function SearchBox() {
           aria-controls={listId}
           aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
           autoComplete="off"
-          placeholder="¿Qué estás buscando?"
+          placeholder={`Buscar en ${storeName}`}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

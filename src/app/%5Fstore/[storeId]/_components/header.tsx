@@ -153,7 +153,7 @@ export function StoreHeader({
               </span>
             )}
           </Link>
-          <SearchBox />
+          <SearchBox storeName={store.name} />
           <Link
             prefetch={false}
             href="/cuenta"

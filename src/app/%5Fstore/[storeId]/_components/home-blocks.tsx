@@ -79,6 +79,16 @@ export function FaqBlock({ section, headingId }: { section: Block<"faq">; headin
   );
 }
 
+const BENEFIT_COLS: Record<number, string> = {
+  0: "",
+  1: "sm:grid-cols-1",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+  5: "sm:grid-cols-3 lg:grid-cols-5",
+  6: "sm:grid-cols-3 lg:grid-cols-6",
+};
+
 export function BenefitsBlock({
   section,
   headingId,
@@ -97,11 +107,17 @@ export function BenefitsBlock({
           {section.title}
         </h2>
       ) : null}
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {/* Las columnas siguen al número de beneficios: 3 llenan la fila en lugar de
+          quedar pegados a la izquierda; en el celular, uno impar ocupa el ancho. */}
+      <ul className={`grid grid-cols-2 gap-3 ${BENEFIT_COLS[Math.min(section.items.length, 6)]}`}>
         {section.items.map((item, i) => (
           <li
             key={i}
-            className="flex flex-col gap-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4"
+            className={`flex flex-col gap-2 rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] p-4 ${
+              section.items.length % 2 === 1 && i === section.items.length - 1
+                ? "max-sm:col-span-2"
+                : ""
+            }`}
           >
             <span className="text-[var(--sf-link)]">
               <Icon name={item.icon} />
