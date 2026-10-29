@@ -40,7 +40,7 @@ Proveedores necesarios para operar el servicio:
 ## 5. Conservación
 
 - Los datos de la cuenta se conservan mientras haya contrato y, después, lo que exija la ley.
-- Los pedidos, pagos y movimientos de inventario no se borran, por obligaciones fiscales y de auditoría. Al terminar el servicio, **[POR DEFINIR, ADR-046]**.
+- Los pedidos, pagos y movimientos de inventario no se borran, por obligaciones fiscales y de auditoría. 30 días después de que una tienda cierra, sus datos personales de compradores se anonimizan (ADR-046) y las operaciones se conservan sin ellos.
 
 ## 6. Seguridad
 

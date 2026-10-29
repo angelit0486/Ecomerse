@@ -1231,6 +1231,16 @@ Lo que sigue necesita la decisión del propietario.
   1. ¿Apruebas anonimizar en lugar de borrar los pedidos?
   2. ¿Plazos: 30 días para descargar y [N años, según el abogado] para conservar operaciones?
 
+- **Implementación (2026-10-29), migración `20261029000600`.**
+  - `system.anonymize_closed_stores` corre con el mantenimiento, de 5 tiendas por corrida, para tiendas cerradas hace más de 30 días.
+  - **Pedidos:** se reemplazan correo, nombre, teléfono, nota y dirección; de la dirección quedan país y estado.
+  - **Clientes:** mismo resultado que «Borrar datos»; sus direcciones guardadas se borran.
+  - **Carritos y opiniones:** se quitan correo, dirección y autor.
+  - Montos, fechas y productos no cambian; nada se borra de pedidos ni de la auditoría.
+  - **La excepción:** el guardián de pedidos acepta el cambio solo con la marca de la transacción y solo con los valores anónimos exactos. Lo mismo para el autor de una opinión.
+  - **Paso 2 pendiente** (necesita Auth/Storage Admin): cuentas de compradores en Auth y archivos de fotos. Los registros de auditoría con datos enmascarados se conservan (regla 9).
+  - Pruebas: pgTAP 111 (19), integración vía el mantenimiento real, y las pruebas anteriores de pedidos y opiniones en verde. No tiene pantalla, así que no hay E2E: es un proceso automático.
+
 ### ADR-047 — Integraciones: orden y alcance · **aprobado por el propietario el 2026-10-29: primero recuperación de carritos, después envíos** (cada una con su ADR corto)
 
 Evaluación sin costos verificados: los precios de cada proveedor quedan [NO VERIFICADO] hasta revisarlos con cuenta.

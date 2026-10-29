@@ -39,7 +39,7 @@ El Comercio puede cancelar cuando quiera desde **[MEDIO]**. Antes de cancelar pu
 
 - Los datos de la tienda (productos, pedidos, clientes) son del Comercio. PRUVA los trata solo para prestar el servicio (ver el Aviso de privacidad de la plataforma).
 - El Comercio puede descargarlos en cualquier momento: **Ajustes → Exportar** (productos, inventario, pedidos y clientes, en CSV).
-- **Borrado al terminar el servicio:** **[POR DEFINIR, ADR-046]**. Los pedidos, pagos y movimientos de inventario se conservan el tiempo que exija la ley fiscal.
+- **Al terminar el servicio:** el Comercio tiene 30 días para descargar sus datos. Después se anonimizan los datos personales de sus compradores (nombre, correo, teléfono, dirección y notas). Los pedidos, pagos y movimientos de inventario se conservan sin esos datos el tiempo que exija la ley fiscal (**[PLAZO, a confirmar por el abogado]**).
 
 ## 7. Soporte y acceso del personal de PRUVA
 
