@@ -21,8 +21,8 @@ Los dibujos son código de la plataforma (28 objetos en un solo trazo), no imág
 | Suite                     | Resultado                                                                   |
 | ------------------------- | --------------------------------------------------------------------------- |
 | `pnpm verify` (unitarias) | 1,018/1,018 [VERIFICADO]                                                    |
-| pgTAP + integración       | _se completa al terminar la ronda_                                          |
-| E2E (Playwright + axe)    | _se completa al terminar la ronda_                                          |
+| pgTAP + integración       | 2,440 + 362 [VERIFICADO]                                                    |
+| E2E (Playwright + axe)    | 110/110 en la primera ronda [VERIFICADO]                                    |
 | Diseño a 5 anchos         | 6 plantillas × 360/375/768/1280/1920 px sin desborde y con axe [VERIFICADO] |
 
 ## Lighthouse (móvil, local, 2 corridas por página)
