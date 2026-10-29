@@ -51,12 +51,12 @@ Etiquetas: **[VERIFICADO]** = probado aquí con evidencia (local, con proveedore
 
 ## Suites completas al cierre
 
-| Suite                     | Resultado                                                           |
-| ------------------------- | ------------------------------------------------------------------- |
-| `pnpm verify` (unitarias) | 1,043/1,043 [VERIFICADO]                                            |
-| pgTAP                     | 2,571/2,571 en 115 archivos [VERIFICADO]                            |
-| Integración               | 375/375 [VERIFICADO]                                                |
-| E2E (Playwright + axe)    | en curso al escribir este informe; resultado en el siguiente commit |
+| Suite                     | Resultado                                                  |
+| ------------------------- | ---------------------------------------------------------- |
+| `pnpm verify` (unitarias) | 1,043/1,043 [VERIFICADO]                                   |
+| pgTAP                     | 2,571/2,571 en 115 archivos [VERIFICADO]                   |
+| Integración               | 375/375 [VERIFICADO]                                       |
+| E2E (Playwright + axe)    | 117/117 en una sola ronda completa (17.9 min) [VERIFICADO] |
 
 ## Revisión adversarial
 
