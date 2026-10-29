@@ -12,7 +12,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | ----- | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | F0    | Estado real                                                | hecha                                          | `02c7641`; verify 979 ×2, pgTAP 2,421 ×2, integración 360 ×2, E2E 103/103 ×2; CI corrida 108 verde                                                                          |
 | F1.1  | CI en verde                                                | hecha                                          | gitleaks con valores de prueba de baja entropía (`02c7641`)                                                                                                                 |
-| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | bloqueada (propietario)                        | 16 migraciones pendientes: `docs/runbooks/migraciones-2026-10-27.md`                                                                                                        |
+| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | hecha (manual con sha256)                      | staging al día (17 aplicadas el 2026-10-29); método: `database-roles.md` §7                                                                                                        |
 | F1.3  | Resend + Send Email Hook                                   | guía lista; bloqueada (propietario)            | `docs/runbooks/correo-resend.md` (dominio, SPF/DKIM/DMARC, clave, Vercel, hook de Supabase, comprobación)                                                                   |
 | F1.4  | Escenarios de Mercado Pago                                 | 15 de 15 cubiertos [SIMULADOR]; real pendiente | `docs/runbooks/mercadopago-escenarios.md`; ADR-043 (contracargos) aprobado e implementado, migración `20261029000100`, pgTAP 106                                            |
 | F1.5  | Correo de confirmación con la dirección completa           | hecha                                          | `4b85dd7`; migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2)                                                                                           |
@@ -22,49 +22,50 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | F1.9  | Seguridad: CSP, límites, Origin, 2FA, revisión adversarial | hecha en lo que no depende del propietario     | `docs/phases/VENDIBLE-F1.9-SEGURIDAD.md`: SEC-04, 07, 08, 09, 10 y CSRF de `/salir` corregidos; migración `20261028000500`; abiertos SEC-02 (ADR), 03, 05, 13 (propietario) |
 | F1.10 | Política de categorías prohibidas y Términos               | aplazada por el propietario (2026-10-29)       | ADR-042 aplazado; borrador `docs/legal/politica-de-contenido.md` sin usar                                                                                                   |
 
-### F1.6 en detalle
+### Fases 2 a 6 (2026-10-29)
 
-- `system.platform_health()`: cola (trabajo listo más antiguo, atorados, fallidos 24 h por tipo), pagos (avisos, errores, rechazos de firma, abiertos > 2 h), correos y pedidos 24 h. Solo conteos.
-- Consola → **Salud** (`/platform/salud`) para dueño, administración y soporte.
-- Trabajo `platform.health_check` cada 15 min: un correo por problema, destinatario y hora a dueño y administración activos (soporte no). Runbook: `docs/runbooks/salud-y-alertas.md`.
+Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: `docs/phases/VENDIBLE-FASE-2-INFORME.md`, `VENDIBLE-FASE-3-INFORME.md` y `VENDIBLE-FASE-4-INFORME.md`.
 
-### Fase 2 (2026-10-29) · hecha
+### Infraestructura (2026-10-29)
 
-«Anaquel ilustrado» (objetos del giro dibujados cuando no hay fotos), 6 plantillas por giro (+ Hogar y decoración, + Mascotas), buscador con la marca, beneficios a lo ancho y ruta de navegación visible en el celular. Suites: verify 1,018, pgTAP 2,440, integración 362, E2E 110/110. Lighthouse móvil: 92–98 (meta 95 no cumplida en el listado de demo). Informe: `docs/phases/VENDIBLE-FASE-2-INFORME.md`.
+- Línea base: `docs/plan/LINEA-BASE-2026-10-29.md`. Todas las suites pasaron ×2 sin pruebas inestables.
+- Staging al día:
+  - 17 migraciones aplicadas con sha256 (hasta `20261029000900`);
+  - 137 registradas, igual que el repo [VERIFICADO].
+  - Pendiente: `20261029001000` (correo completo y rebotes) tras su push.
+- Aviso de versión de esquema:
+  - la tienda muestra «Tienda en mantenimiento»;
+  - la consola avisa.
+- Runbooks: `despliegue-y-rollback.md`, `rotacion-de-claves.md`.
 
-### Fases 5 y 6 (2026-10-29) · borradores
+### Comprar y pagar sin errores (2026-10-29) · en curso
 
-- `docs/venta/`: data room con datos verificados (resumen técnico, riesgos, propiedad del código como bandera roja) y kit de paquetes de tiendas con precios `[PRECIO]` por definir. Sin valuación hasta tener métricas reales.
-- Siguiente: Fase 3 (auditoría del panel).
-
-### Fase 3 (2026-10-29) · panel a escala
-
-Tienda local de 1000 productos × 3 tallas: la base responde en milisegundos y las pantallas no se alentan con el catálogo. Corregido: la vista previa de una importación dice qué precios y existencias cambian (y avisa que las existencias del archivo reemplazan las de hoy), migración `20261029000200`; listado con 25/50/100 por página. Pendiente: conteo de resultados, inventario compacto, «seleccionar los N del filtro». Auditoría: `docs/plan/AUDITORIA-PANEL-ESCALA.md`; informe: `docs/phases/VENDIBLE-FASE-3-INFORME.md`.
-
-### Fase 4 (2026-10-29) · hecha en lo que no depende del propietario
-
-Informe: `docs/phases/VENDIBLE-FASE-4-INFORME.md`. Decisiones: DECISIONS §29.
-
-- Consola → Métricas con MRR real; precios mensual y anual por plan (`ac70294`, `804c854`).
-- Cobro con Stripe Billing y cambio de plan con prorrateo (`3ec04ea`, `0544c3a`). [NO VERIFICADO con Stripe real]
-- Anonimizar a los 30 días del cierre (`c131a4c`; paso 2, Auth y Storage, pendiente).
-- Recordatorio de carritos, apagado por defecto (`4d3a4fc`; PENDIENTE DE REVISIÓN legal).
-- Alta autoservicio: no (ADR-045). Envíos con Skydropx: bloqueado por documentación y llaves (ADR-049).
-
-## Hecho justo antes de la misión (2026-10-27/28)
-
-- **Panel y tienda más profesionales:** pasos 0–19 menos 20; migraciones `20261027000100` (Consola → Trabajos), `000200` (importar solo lo válido, ADR-040), `000300` (fotos con `srcset`).
-- **Fase 10:** Consola → Planes, ficha de organización con suscripción y excepciones, «Plan y uso» en el panel, avance automático de estados. Migración `20261028000100`, pgTAP 103, E2E `plans.spec`.
-- **ADR-041:** cada comercio cobra en su propia cuenta de Mercado Pago (OAuth con PKCE, llaves cifradas). Migración `20261028000200`, pgTAP 104. Falta: migración en staging, tres variables en Vercel y prueba con la aplicación real.
+- **Correo de confirmación completo:**
+  - miniatura, presentación y precio unitario;
+  - método de pago sin datos de la tarjeta;
+  - entrega estimada y enlace «Seguir mi pedido».
+- **La tienda recibe los mismos datos** y el enlace al panel.
+- **Envío parcial:** correo distinto.
+- **Correos que rebotan o se quejan quedan suprimidos:**
+  - webhook de Resend con firma Svix [NO VERIFICADO contra Resend];
+  - rechazo definitivo al enviar.
+- Migración `20261029001000`, pgTAP 115.
+- **Propuestos, esperan decisión** (DECISIONS §30):
+  - ADR-050: aviso de pago pendiente;
+  - ADR-051: respaldo si se suspende Mercado Pago;
+  - ADR-052: fraude;
+  - ADR-053: categorías bloqueadas.
+- Runbook: `docs/runbooks/pagos.md`.
+- Mercado Pago real y correo real: [NO VERIFICADO]. Faltan las credenciales de prueba y Resend.
 
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                     | Efecto                                                      |
 | --- | --------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| B1  | Aplicar 16 migraciones en staging o configurar `MIGRATION_DATABASE_URL`     | Pantallas nuevas no cargan en staging                       |
+| B1  | `MIGRATION_DATABASE_URL` en Vercel (opcional; hoy se migra a mano con sha256) | Cada migración nueva hay que aplicarla a mano               |
 | B2  | Autorizar el conector de Vercel (equipo `angelit0486s-projects`)            | No se pueden leer variables, despliegues ni logs            |
 | B3  | Resend: API key y dominio con SPF/DKIM/DMARC                                | No salen correos ni alertas en staging                      |
-| B4  | Credenciales de Mercado Pago (aplicación de prueba)                         | Pagos solo probados con API simulada                        |
+| B4  | Credenciales de prueba de Mercado Pago como secretos del entorno de la sesión | Pagos solo probados con API simulada                        |
 | B5  | `angelii33/pruva` responde 403; el trabajo se sube a `angelit0486/Ecomerse` | Aclarar la propiedad del código antes de vender (data room) |
 | B6  | Pasar Supabase a Pro (+ PITR antes del primer comercio de pago)             | Hoy no hay respaldos automáticos de staging                 |
 | R0  | Reglas y leyendas sanitarias de suplementos (asesor regulatorio)            | El perfil de México nace `pending` y bloquea la publicación |
