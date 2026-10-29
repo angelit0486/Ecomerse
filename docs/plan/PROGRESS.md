@@ -30,8 +30,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 
 - Línea base: `docs/plan/LINEA-BASE-2026-10-29.md`. Todas las suites pasaron ×2 sin pruebas inestables.
 - Staging al día:
-  - 18 migraciones aplicadas con sha256 (hasta `20261029001000`);
-  - 138 registradas, igual que el repo [VERIFICADO].
+  - 19 migraciones aplicadas con sha256 (hasta `20261029001100`);
+  - 139 registradas, igual que el repo [VERIFICADO].
 - Aviso de versión de esquema:
   - la tienda muestra «Tienda en mantenimiento»;
   - la consola avisa.
@@ -56,6 +56,19 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - ADR-053: categorías bloqueadas.
 - Runbook: `docs/runbooks/pagos.md`.
 - Mercado Pago real y correo real: [NO VERIFICADO]. Faltan las credenciales de prueba y Resend.
+
+### Auditoría de amenazas (2026-10-29)
+
+- Informe: `docs/phases/AUDITORIA-AMENAZAS-2026-10-29.md`.
+- Registro: `docs/audit/RIESGOS.md`, con 0 críticos y 0 altos abiertos.
+- Modelo: `docs/audit/AMENAZAS.md` (STRIDE).
+- Corregidos con prueba:
+  - AUD-03: 30 importaciones por hora por tienda, migración `20261029001100`;
+  - AUD-05: baja en un clic en los recordatorios;
+  - AUD-06: Dependabot.
+- Propuesto: ADR-054 (PII por rol).
+- Restauración local [VERIFICADO], 26 s. Restauración en proyecto aparte [NO VERIFICADO] porque staging está en plan Free.
+- Staging en `20261029001100`, con 139 migraciones = repo [VERIFICADO].
 
 ## Bloqueos (requieren al propietario)
 
