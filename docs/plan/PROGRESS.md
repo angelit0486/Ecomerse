@@ -30,9 +30,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 
 - Línea base: `docs/plan/LINEA-BASE-2026-10-29.md`. Todas las suites pasaron ×2 sin pruebas inestables.
 - Staging al día:
-  - 17 migraciones aplicadas con sha256 (hasta `20261029000900`);
-  - 137 registradas, igual que el repo [VERIFICADO].
-  - Pendiente: `20261029001000` (correo completo y rebotes) tras su push.
+  - 18 migraciones aplicadas con sha256 (hasta `20261029001000`);
+  - 138 registradas, igual que el repo [VERIFICADO].
 - Aviso de versión de esquema:
   - la tienda muestra «Tienda en mantenimiento»;
   - la consola avisa.
