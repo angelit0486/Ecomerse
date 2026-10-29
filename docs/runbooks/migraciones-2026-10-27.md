@@ -1,6 +1,6 @@
 # Aplicar las migraciones del 2026-10-27 en staging
 
-Doce migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación la salud de la plataforma con alertas un ajuste de seguridad en las fotos, el aviso de contracargos (ADR-043) el resumen de cambios al importar las métricas de la consola y los precios de los planes (ADR-044). Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
+Trece migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesionales», los planes para vender la plataforma a otros comercios (Fase 10), Mercado Pago con la cuenta de cada comercio (ADR-041), la dirección de envío en el correo de confirmación la salud de la plataforma con alertas un ajuste de seguridad en las fotos, el aviso de contracargos (ADR-043) el resumen de cambios al importar las métricas de la consola los precios de los planes y el cobro con Stripe (ADR-044). Se aplican **en orden**, una por una, en el SQL Editor de Supabase. Cada una corre completa o no cambia nada.
 
 | Orden | Archivo                                                              | Qué hace                                                                     |
 | ----- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -16,14 +16,15 @@ Doce migraciones nuevas: los pasos 8, 15 y 17 del plan «panel y tienda profesio
 | 10    | `supabase/migrations/20261029000200_import_preview_changes.sql`      | Importar: la vista previa dice qué precios y existencias cambian             |
 | 11    | `supabase/migrations/20261029000300_platform_metrics.sql`            | Consola → Métricas: organizaciones, suscripciones, tiendas y ventas          |
 | 12    | `supabase/migrations/20261029000400_plan_pricing.sql`                | Precios de los planes y MRR en Métricas (ADR-044)                            |
+| 13    | `supabase/migrations/20261029000500_stripe_billing.sql`              | Cobro de la mensualidad con Stripe Billing (ADR-044)                         |
 
 ## Pasos (desde el celular o la computadora)
 
 1. Entra a Supabase → tu proyecto de staging → **SQL Editor** → **New query**.
 2. En GitHub, abre el archivo 1 de la tabla, toca **Raw**, copia todo y pégalo en la consulta.
 3. Toca **Run**. Debe decir «Success. No rows returned».
-4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7, el 8, el 9, el 10, el 11 y al final el 12.
-5. Comprueba con esta consulta (debe devolver `20261029000400`):
+4. Repite con el archivo 2, luego el 3, el 4, el 5, el 6, el 7, el 8, el 9, el 10, el 11, el 12 y al final el 13.
+5. Comprueba con esta consulta (debe devolver `20261029000500`):
 
    ```sql
    select public.app_schema_version();

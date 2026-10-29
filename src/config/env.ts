@@ -47,6 +47,14 @@ export const serverEnvSchema = z.object({
     .string()
     .regex(/^whsec_[A-Za-z0-9]{10,}$/)
     .optional(),
+  /**
+   * Stripe Billing (ADR-044): secreto del endpoint de webhooks del COBRO de las
+   * suscripciones (distinto del de Connect). Sin él, «Pagar con tarjeta» no se ofrece.
+   */
+  STRIPE_BILLING_WEBHOOK_SECRET: z
+    .string()
+    .regex(/^whsec_[A-Za-z0-9]{10,}$/)
+    .optional(),
   /** Solo pruebas: API de Stripe simulada. */
   STRIPE_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /**

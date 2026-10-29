@@ -1178,6 +1178,15 @@ Lo que sigue necesita la decisión del propietario.
   - Pantalla «Plan y uso» con «Pagar» y «Cambiar plan».
   - E2E con el proveedor simulado.
 
+- **Implementación (2026-10-29).**
+  - **Paso 1** (`804c854`, migración `20261029000400`): precios en los planes y MRR en Métricas.
+  - **Paso 2** (migración `20261029000500`): Stripe Checkout en modo suscripción desde «Plan y uso», solo para la dueña de la organización (`org.billing.manage`, AAL2).
+    - El precio sale de la base (`org_billing_checkout_input`).
+    - Webhook propio `/api/webhooks/billing/stripe`, con secreto `STRIPE_BILLING_WEBHOOK_SECRET`.
+    - `system.billing_apply_stripe_event` aplica cada evento con idempotencia, ignora eventos atrasados o de otra suscripción y deja auditoría.
+    - Pruebas: pgTAP 110 (26), integración `stripe-billing` (3), unitarias (6) y E2E `billing-card` contra un Stripe simulado.
+  - Guía del propietario: `docs/runbooks/stripe-billing.md`. **[NO VERIFICADO con Stripe real]**
+
 ### ADR-045 — Alta autoservicio de comercios (reconsiderar E15) · **NO aprobado por el propietario el 2026-10-29 («No, sigue la plataforma»)**: las tiendas las sigue creando la plataforma desde la consola. No se implementa.
 
 - **Contexto.** El 2026-10-20 el propietario **no aprobó** E15 (alta de tienda por cuenta propia): las tiendas las crea la plataforma. La misión de hoy pide alta autoservicio con meta de «tienda publicada en menos de 1 hora sin ayuda». Las dos indicaciones se contradicen, así que se pregunta antes de construir nada.
