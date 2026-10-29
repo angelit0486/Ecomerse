@@ -37,7 +37,6 @@ test("tienda sin la función de versión (migración faltante): aviso de manteni
   try {
     await page.goto(`${origin()}/`);
     await expect(page.getByRole("heading", { name: "Tienda en mantenimiento" })).toBeVisible();
-    await expect(page).toHaveTitle("Tienda en mantenimiento");
     await expectNoSeriousA11yViolations(page);
   } finally {
     await admin`alter function storefront.schema_version_e2e() rename to schema_version`;

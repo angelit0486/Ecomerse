@@ -12,7 +12,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | ----- | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | F0    | Estado real                                                | hecha                                          | `02c7641`; verify 979 ×2, pgTAP 2,421 ×2, integración 360 ×2, E2E 103/103 ×2; CI corrida 108 verde                                                                          |
 | F1.1  | CI en verde                                                | hecha                                          | gitleaks con valores de prueba de baja entropía (`02c7641`)                                                                                                                 |
-| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | hecha (manual con sha256)                      | staging al día (17 aplicadas el 2026-10-29); método: `database-roles.md` §7                                                                                                        |
+| F1.2  | Migraciones en staging / `MIGRATION_DATABASE_URL`          | hecha (manual con sha256)                      | staging al día (17 aplicadas el 2026-10-29); método: `database-roles.md` §7                                                                                                 |
 | F1.3  | Resend + Send Email Hook                                   | guía lista; bloqueada (propietario)            | `docs/runbooks/correo-resend.md` (dominio, SPF/DKIM/DMARC, clave, Vercel, hook de Supabase, comprobación)                                                                   |
 | F1.4  | Escenarios de Mercado Pago                                 | 15 de 15 cubiertos [SIMULADOR]; real pendiente | `docs/runbooks/mercadopago-escenarios.md`; ADR-043 (contracargos) aprobado e implementado, migración `20261029000100`, pgTAP 106                                            |
 | F1.5  | Correo de confirmación con la dirección completa           | hecha                                          | `4b85dd7`; migración `20261028000300`, pgTAP 33 (+2), unitarias de plantilla (+2)                                                                                           |
@@ -59,15 +59,15 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 
 ## Bloqueos (requieren al propietario)
 
-| ID  | Bloqueo                                                                     | Efecto                                                      |
-| --- | --------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| ID  | Bloqueo                                                                       | Efecto                                                      |
+| --- | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | B1  | `MIGRATION_DATABASE_URL` en Vercel (opcional; hoy se migra a mano con sha256) | Cada migración nueva hay que aplicarla a mano               |
-| B2  | Autorizar el conector de Vercel (equipo `angelit0486s-projects`)            | No se pueden leer variables, despliegues ni logs            |
-| B3  | Resend: API key y dominio con SPF/DKIM/DMARC                                | No salen correos ni alertas en staging                      |
+| B2  | Autorizar el conector de Vercel (equipo `angelit0486s-projects`)              | No se pueden leer variables, despliegues ni logs            |
+| B3  | Resend: API key y dominio con SPF/DKIM/DMARC                                  | No salen correos ni alertas en staging                      |
 | B4  | Credenciales de prueba de Mercado Pago como secretos del entorno de la sesión | Pagos solo probados con API simulada                        |
-| B5  | `angelii33/pruva` responde 403; el trabajo se sube a `angelit0486/Ecomerse` | Aclarar la propiedad del código antes de vender (data room) |
-| B6  | Pasar Supabase a Pro (+ PITR antes del primer comercio de pago)             | Hoy no hay respaldos automáticos de staging                 |
-| R0  | Reglas y leyendas sanitarias de suplementos (asesor regulatorio)            | El perfil de México nace `pending` y bloquea la publicación |
+| B5  | `angelii33/pruva` responde 403; el trabajo se sube a `angelit0486/Ecomerse`   | Aclarar la propiedad del código antes de vender (data room) |
+| B6  | Pasar Supabase a Pro (+ PITR antes del primer comercio de pago)               | Hoy no hay respaldos automáticos de staging                 |
+| R0  | Reglas y leyendas sanitarias de suplementos (asesor regulatorio)              | El perfil de México nace `pending` y bloquea la publicación |
 
 ## Verificaciones pendientes con servicios reales
 
