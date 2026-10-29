@@ -25,7 +25,7 @@ Cuota mensual de la plataforma: según el plan asignado en Consola → Planes (`
 
 ## Giros con plantilla
 
-Suplementos, Ropa, Belleza, Abarrotes, Hogar y decoración, Mascotas (más Genérica y En blanco). Productos prohibidos: según la política de contenido (ADR-042, **pendiente de aprobación**).
+Suplementos, Ropa, Belleza, Abarrotes, Hogar y decoración, Mascotas (más Genérica y En blanco). Lista de productos prohibidos: aplazada por el propietario (ADR-042); cada comercio responde por lo que vende según la ley.
 
 ## Lo que no se debe prometer todavía
 

@@ -20,7 +20,7 @@ Objetivo: (A) vender la plataforma y (B) vender tiendas como servicio. Fases 0�
 | F1.7  | Respaldos con restauración probada, RTO/RPO                | hecha en local; Pro/PITR (propietario)         | `scripts/ops/restore-drill.sh` ×2 correcto (8 s, 147,865 filas); `docs/runbooks/respaldos.md`. Staging en plan Free: **sin respaldos automáticos**                          |
 | F1.8  | Monitoreo (Sentry)                                         | pendiente (DSN del propietario)                |                                                                                                                                                                             |
 | F1.9  | Seguridad: CSP, límites, Origin, 2FA, revisión adversarial | hecha en lo que no depende del propietario     | `docs/phases/VENDIBLE-F1.9-SEGURIDAD.md`: SEC-04, 07, 08, 09, 10 y CSRF de `/salir` corregidos; migración `20261028000500`; abiertos SEC-02 (ADR), 03, 05, 13 (propietario) |
-| F1.10 | Política de categorías prohibidas y Términos               | **ADR-042 propuesto**; borrador legal          | `docs/legal/politica-de-contenido.md` (PENDIENTE DE REVISIÓN); espera aprobación                                                                                            |
+| F1.10 | Política de categorías prohibidas y Términos               | aplazada por el propietario (2026-10-29)       | ADR-042 aplazado; borrador `docs/legal/politica-de-contenido.md` sin usar                                                                                                   |
 
 ### F1.6 en detalle
 

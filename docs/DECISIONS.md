@@ -1085,7 +1085,7 @@ Lista de 20 pasos acordada con el propietario («Empieza» y «Continue»). Los 
 - **Implementación.** Migración `20261028000200_mercadopago_oauth`, pgTAP `104_mercadopago_oauth`, integración `mercadopago-oauth` (dos comercios, llaves cifradas, cobro cruzado rechazado, renovación, modo), unitarias de `secret-box` y `mercadopago-oauth`. Configuración: `docs/runbooks/mercadopago.md`.
 - **Estado.** Implementada y probada con Mercado Pago simulado. **Falta la prueba con la aplicación real** del propietario (credenciales de prueba).
 
-### ADR-042 — Política de contenido: categorías prohibidas y aceptación de Términos · **PROPUESTO (espera aprobación del propietario)**
+### ADR-042 — Política de contenido: categorías prohibidas y aceptación de Términos · **APLAZADO por el propietario el 2026-10-29 («Sáltate la parte de los productos que se pueden vender»). No se implementa; la propuesta queda como referencia.**
 
 - **Contexto.** Para vender la plataforma a otros comercios (misión vendible, Fase 1) hace falta dejar claro qué no se puede vender en ella y poder demostrar que cada comercio lo aceptó. Hoy no hay lista de productos prohibidos, ni aceptación registrada de Términos de la plataforma, ni una forma de que la consola detecte y frene un producto prohibido. Es regulación y toca el alta de comercios: por eso es un ADR y no se implementa sin aprobación. Todo texto legal queda **PENDIENTE DE REVISIÓN** por abogado.
 - **Decisión propuesta.**

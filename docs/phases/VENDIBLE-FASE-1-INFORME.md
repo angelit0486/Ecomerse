@@ -17,7 +17,7 @@ Etiquetas: **[VERIFICADO]** = probado aquí con evidencia; **[SIMULADOR]** = pro
 | F1.7  | Respaldos con restauración probada, RTO/RPO             | ✅ en local ×2; staging en plan Free              | `68d0c66`; `docs/runbooks/respaldos.md`                              |
 | F1.8  | Monitoreo de errores (Sentry)                           | ⏸ Propietario (DSN)                               | Mientras tanto: Consola → Salud y alertas por correo                 |
 | F1.9  | Revisión de seguridad                                   | ✅ lo que no depende del propietario              | `docs/phases/VENDIBLE-F1.9-SEGURIDAD.md`; migración `20261028000500` |
-| F1.10 | Categorías prohibidas y Términos                        | 📝 ADR-042 propuesto                              | `docs/legal/politica-de-contenido.md` (PENDIENTE DE REVISIÓN)        |
+| F1.10 | Categorías prohibidas y Términos                        | ⏸ ADR-042 aplazado por el propietario             | `docs/legal/politica-de-contenido.md` (PENDIENTE DE REVISIÓN)        |
 
 ## Suites completas al cierre
 
@@ -53,6 +53,6 @@ La primera ronda completa dio 99 pasadas, 2 fallidas y 3 sin correr (dependían 
 3. Activar la protección de contraseñas filtradas en Supabase (1 interruptor).
 4. Credenciales de prueba de la aplicación de Mercado Pago.
 5. Decidir el plan de Supabase (Pro y, antes del primer cliente de pago, PITR).
-6. Responder ADR-042 (política de contenido) y ADR-043 (contracargos).
+6. Responder ADR-043 (contracargos). ADR-042 quedó aplazado.
 7. DSN de Sentry si quieres monitoreo de errores externo.
 8. Autorizar el conector de Vercel.
