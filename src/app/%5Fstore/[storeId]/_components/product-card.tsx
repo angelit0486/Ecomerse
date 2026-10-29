@@ -8,9 +8,11 @@ import {
   type RatingSummaries,
 } from "@/server/storefront/catalog";
 import { srcSetFor } from "@/server/storefront/media-variants";
+import { goodFor } from "@/lib/storefront/goods";
 
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
+import { GoodIcon } from "./goods-art";
 import { QuickAdd } from "./quick-add";
 import { Stars } from "./stars";
 import { UnpublishedBadge } from "./unpublished";
@@ -156,11 +158,13 @@ function ProductCard({
               className={`h-full w-full object-contain p-1.5 [mix-blend-mode:var(--sf-photo-blend,multiply)] motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
             />
           ) : (
-            <div
-              aria-hidden="true"
-              className="flex h-full items-center justify-center text-sm text-[var(--sf-muted)]"
-            >
-              Sin imagen
+            // Sin foto: el objeto que corresponde a su nombre, tenue (no «Sin imagen»).
+            <div className="flex h-full items-center justify-center text-[var(--sf-muted)]">
+              <GoodIcon
+                good={goodFor(product.title, "bag")}
+                strokeOpacity={0.6}
+                className="size-2/5"
+              />
             </div>
           )}
         </div>

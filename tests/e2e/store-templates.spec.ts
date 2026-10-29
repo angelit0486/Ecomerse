@@ -39,7 +39,7 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
   );
   await expect(steps.getByRole("link", { name: /^Dominio propio/ })).toContainText("Opcional");
   const section = page.getByRole("region", { name: "Plantilla por giro" });
-  await expect(section.getByRole("radio")).toHaveCount(6);
+  await expect(section.getByRole("radio")).toHaveCount(8);
   await expectNoSeriousA11yViolations(page);
 
   await section.getByRole("radio", { name: /^Ropa/ }).check();

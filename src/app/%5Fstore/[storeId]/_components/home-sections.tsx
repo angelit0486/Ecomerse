@@ -10,10 +10,12 @@ import {
 } from "@/server/storefront/catalog";
 import { srcSetFor } from "@/server/storefront/media-variants";
 import { brandInitialsOf } from "@/lib/catalog/brand-initials";
+import { goodFor, shelfFor, type Good } from "@/lib/storefront/goods";
 import { sectionCss } from "@/lib/theme/resolve-theme";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { GoalTiles, type GoalTile } from "./goal-chips";
+import { GoodIcon, GoodsShelf } from "./goods-art";
 import {
   BenefitsBlock,
   ContactBlock,
@@ -121,7 +123,16 @@ interface HeroSlideData {
  * blanco, ≥ 5.7:1 con cualquier foto. La imagen del celular, si la hay, se usa
  * por debajo de 640 px. Con portadas extra, rotan con pausa (HeroCarousel).
  */
-function Hero({ section, headingLevel }: { section: HeroData; headingLevel: 1 | 2 }) {
+function Hero({
+  section,
+  headingLevel,
+  shelf,
+}: {
+  section: HeroData;
+  headingLevel: 1 | 2;
+  /** Objetos del giro para el hero sin foto («Anaquel ilustrado»). */
+  shelf: readonly Good[];
+}) {
   const slides: HeroSlideData[] = [section, ...(section.slides ?? [])];
   const rendered = slides.map((slide, index) => (
     <HeroSlide
@@ -132,6 +143,7 @@ function Hero({ section, headingLevel }: { section: HeroData; headingLevel: 1 | 
       // Un solo h1 (el de la primera); solo la primera imagen es el LCP.
       headingLevel={index === 0 ? headingLevel : 2}
       eager={index === 0}
+      shelf={shelf}
     />
   ));
   if (rendered.length === 1) return rendered[0]!;
@@ -185,12 +197,14 @@ function HeroSlide({
   layout,
   headingLevel,
   eager,
+  shelf,
 }: {
   slide: HeroSlideData;
   align: "left" | "center";
   layout: "split" | "background";
   headingLevel: 1 | 2;
   eager: boolean;
+  shelf: readonly Good[];
 }) {
   const Heading = headingLevel === 1 ? "h1" : "h2";
   const centered = align === "center";
@@ -241,7 +255,7 @@ function HeroSlide({
       }`}
     >
       <div
-        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${hasImage ? "pb-2" : "pb-7"} ${centered ? "items-center text-center" : "items-start"}`}
+        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${hasImage ? "pb-2" : "pb-6"} ${centered ? "items-center text-center" : "items-start"}`}
       >
         {text}
         {slide.cta ? (
@@ -253,6 +267,7 @@ function HeroSlide({
           </ThemeLink>
         ) : null}
       </div>
+      {hasImage ? null : <GoodsShelf goods={shelf} />}
       <HeroPicture
         slide={slide}
         eager={eager}
@@ -266,7 +281,7 @@ function HeroSlide({
 
 /**
  * «Compra por categoría» en círculos (rediseño A+B). Sin imagen propia, la foto
- * del producto más vendido de la categoría; sin productos, la inicial.
+ * del producto más vendido de la categoría; sin productos, su objeto dibujado.
  */
 async function CategoryCircles({
   section,
@@ -309,12 +324,12 @@ async function CategoryCircles({
                       className={`h-full w-full [mix-blend-mode:var(--sf-photo-blend,multiply)] ${category.image ? "object-cover" : "object-contain p-1.5"}`}
                     />
                   ) : (
-                    <span
-                      aria-hidden="true"
-                      className="text-2xl font-extrabold text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]"
-                    >
-                      {category.name.slice(0, 1)}
-                    </span>
+                    // Sin foto: el objeto del giro, no la inicial («P P S A» no decía nada).
+                    <GoodIcon
+                      good={goodFor(category.name, "tag")}
+                      strokeWidth={1.75}
+                      className="size-1/2 text-[var(--sf-link)]"
+                    />
                   )}
                 </span>
                 <span className="text-sm font-semibold leading-tight text-balance">
@@ -384,6 +399,9 @@ export async function HomeSections({
   goals?: GoalTile[];
 }) {
   const heroFirst = !asPage && sections[0]?.type === "hero";
+  const shelf = shelfFor(
+    sections.flatMap((s) => (s.type === "category_grid" ? s.categories.map((c) => c.name) : [])),
+  );
   const colorCss = sectionCss(sections);
   const nonce = colorCss ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
@@ -416,12 +434,12 @@ export async function HomeSections({
             key={section.id}
             className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
           >
-            <Hero section={section} headingLevel={1} />
+            <Hero section={section} headingLevel={1} shelf={shelf} />
             <GoalTiles goals={goals} />
             {trust}
           </div>
         ) : (
-          <Hero key={section.id} section={section} headingLevel={2} />
+          <Hero key={section.id} section={section} headingLevel={2} shelf={shelf} />
         );
       case "featured_products": {
         const eager = index === eagerIndex ? 4 : 0;

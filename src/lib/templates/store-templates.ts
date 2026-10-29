@@ -32,7 +32,8 @@ export interface TemplateProduct {
 }
 
 export interface StoreTemplate {
-  key: "suplementos" | "ropa" | "belleza" | "abarrotes" | "generica" | "blanco";
+  key:
+    "suplementos" | "ropa" | "belleza" | "abarrotes" | "hogar" | "mascotas" | "generica" | "blanco";
   name: string;
   description: string;
   colors: Palette;
@@ -440,6 +441,191 @@ const ABARROTES: StoreTemplate = {
   ],
 };
 
+const HOGAR: StoreTemplate = {
+  key: "hogar",
+  name: "Hogar y decoración",
+  description: "Piezas para la casa por espacio, con fotos grandes y una portada tranquila.",
+  colors: {
+    primary: "#1f4e5a",
+    accent: "#8a4b14",
+    background: "#f5f6f4",
+    foreground: "#1d2421",
+    muted: "#4f5a55",
+  },
+  settings: {
+    listing: { columns_mobile: 2, show_brand: false },
+    typography: { heading: "lora", body: "dm-sans" },
+    shape: { radius: "md", button_style: "solid", shadow: "none", density: "spacious" },
+  },
+  home_sections: [
+    {
+      id: id(1),
+      type: "hero",
+      enabled: true,
+      props: {
+        heading: "Hecho para quedarse",
+        subheading: "Escribe aquí qué hace distinta a tu tienda.",
+        cta: { label: "Ver la tienda", link: "/productos" },
+        align: "left",
+      },
+    },
+    categoryGrid(2, "Por espacio"),
+    newest(3, "Recién llegado", "carousel"),
+    {
+      id: id(4),
+      type: "benefits",
+      enabled: true,
+      props: {
+        items: [
+          { icon: "gift", title: "Envoltura para regalo" },
+          { icon: "truck", title: "Envío bien empacado" },
+          { icon: "return", title: "Cambios sin complicaciones" },
+        ],
+      },
+    },
+    faqShipping(5),
+  ],
+  categories: [
+    { name: "Decoración", slug: "decoracion" },
+    { name: "Cocina", slug: "cocina" },
+    { name: "Velas y aromas", slug: "velas-y-aromas" },
+    { name: "Textiles", slug: "textiles" },
+    { name: "Plantas y macetas", slug: "plantas-y-macetas" },
+  ],
+  products: [
+    {
+      title: "Lámpara de mesa de cerámica",
+      category: "decoracion",
+      description:
+        "Base de cerámica esmaltada y pantalla de tela. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 89900 }],
+    },
+    {
+      title: "Juego de 4 tazas de barro",
+      category: "cocina",
+      description: "Barro vidriado, 300 ml cada una. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 45900, compare_at_price: 52900 }],
+    },
+    {
+      title: "Vela aromática en vaso de vidrio",
+      category: "velas-y-aromas",
+      description: "Cera de soya en vaso reutilizable. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Aroma", values: ["Vainilla", "Lavanda"] }],
+      variants: ["Vainilla", "Lavanda"].map((aroma) => ({
+        options: { Aroma: aroma },
+        price: 24900,
+      })),
+    },
+    {
+      title: "Funda de cojín de lino",
+      category: "textiles",
+      description: "45 × 45 cm, cierre oculto. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Color", values: ["Arena", "Gris"] }],
+      variants: ["Arena", "Gris"].map((color) => ({ options: { Color: color }, price: 29900 })),
+    },
+    {
+      title: "Maceta de barro con plato",
+      category: "plantas-y-macetas",
+      description:
+        "Barro natural con orificio de drenaje. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Tamaño", values: ["Chica", "Mediana"] }],
+      variants: [
+        { options: { Tamaño: "Chica" }, price: 19900 },
+        { options: { Tamaño: "Mediana" }, price: 27900 },
+      ],
+    },
+  ],
+};
+
+const MASCOTAS: StoreTemplate = {
+  key: "mascotas",
+  name: "Mascotas",
+  description: "Alimento, juguetes y accesorios por tipo de producto, con tallas por mascota.",
+  colors: {
+    primary: "#343a8f",
+    accent: "#a63c0a",
+    background: "#ffffff",
+    foreground: "#1b1d33",
+    muted: "#4a4f68",
+  },
+  settings: {
+    listing: { columns_mobile: 2, show_brand: true },
+    typography: { heading: "space-grotesk", body: "dm-sans" },
+    shape: { radius: "full", button_style: "solid", shadow: "soft", density: "comfortable" },
+  },
+  home_sections: [
+    {
+      id: id(1),
+      type: "hero",
+      enabled: true,
+      props: {
+        heading: "Todo para tu compañero",
+        subheading: "Escribe aquí qué ofreces y para qué mascotas.",
+        cta: { label: "Comprar ahora", link: "/productos" },
+        align: "left",
+      },
+    },
+    categoryGrid(2, "¿Qué necesita hoy?"),
+    newest(3, "Lo más nuevo"),
+    {
+      id: id(4),
+      type: "benefits",
+      enabled: true,
+      props: {
+        items: [
+          { icon: "truck", title: "Entrega a domicilio" },
+          { icon: "chat", title: "Te ayudamos a elegir" },
+          { icon: "clock", title: "Pide lo de siempre en segundos" },
+          { icon: "card", title: "Paga como prefieras" },
+        ],
+      },
+    },
+    reviews(5),
+    faqShipping(6),
+  ],
+  categories: [
+    { name: "Alimento", slug: "alimento" },
+    { name: "Juguetes", slug: "juguetes" },
+    { name: "Collares y correas", slug: "collares-y-correas" },
+    { name: "Camas", slug: "camas" },
+  ],
+  products: [
+    {
+      title: "Alimento seco para perro adulto",
+      category: "alimento",
+      description: "Croqueta mediana. Escribe aquí la marca e ingredientes reales.",
+      options: [{ name: "Presentación", values: ["2 kg", "7 kg"] }],
+      variants: [
+        { options: { Presentación: "2 kg" }, price: 34900, net_content: "2 kg" },
+        { options: { Presentación: "7 kg" }, price: 99900, net_content: "7 kg" },
+      ],
+    },
+    {
+      title: "Pelota de hule para perro",
+      category: "juguetes",
+      description: "Hule flexible, 7 cm. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 12900 }],
+    },
+    {
+      title: "Collar ajustable de nylon",
+      category: "collares-y-correas",
+      description: "Hebilla de liberación rápida y argolla metálica. Reemplaza este texto.",
+      options: [{ name: "Talla", values: ["CH", "M", "G"] }],
+      variants: ["CH", "M", "G"].map((talla) => ({ options: { Talla: talla }, price: 17900 })),
+    },
+    {
+      title: "Cama acolchada lavable",
+      category: "camas",
+      description: "Funda removible que se lava en lavadora. Reemplaza este texto.",
+      options: [{ name: "Talla", values: ["M", "G"] }],
+      variants: [
+        { options: { Talla: "M" }, price: 64900, compare_at_price: 72900 },
+        { options: { Talla: "G" }, price: 84900 },
+      ],
+    },
+  ],
+};
+
 const GENERICA: StoreTemplate = {
   key: "generica",
   name: "Genérica",
@@ -521,6 +707,8 @@ export const STORE_TEMPLATES: readonly StoreTemplate[] = [
   ROPA,
   BELLEZA,
   ABARROTES,
+  HOGAR,
+  MASCOTAS,
   GENERICA,
   BLANCO,
 ];

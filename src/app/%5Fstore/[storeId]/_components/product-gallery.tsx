@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { goodFor } from "@/lib/storefront/goods";
+
+import { GoodIcon } from "./goods-art";
+
 /** Evento con el que el selector de variantes muestra su imagen (revisión M5). */
 export const VARIANT_IMAGE_EVENT = "sf:variant-image";
 
@@ -60,7 +64,7 @@ export function ProductGallery({
   if (!current) {
     return (
       <div className="flex aspect-square items-center justify-center rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] text-[var(--sf-muted)]">
-        Sin imagen
+        <GoodIcon good={goodFor(title, "bag")} strokeOpacity={0.6} className="size-1/3" />
       </div>
     );
   }

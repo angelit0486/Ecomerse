@@ -17,6 +17,8 @@ describe("plantillas de tienda", () => {
       "ropa",
       "belleza",
       "abarrotes",
+      "hogar",
+      "mascotas",
       "generica",
       "blanco",
     ]);
