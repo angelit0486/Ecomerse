@@ -14,6 +14,7 @@ import {
   mediaUrl,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { storefrontSchemaStatus } from "@/server/storefront/schema";
 import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
@@ -67,6 +68,7 @@ const LISTING_CSS =
  * (carrito, checkout, cuenta) nunca muestran el nombre de la plataforma (white-label).
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (!(await storefrontSchemaStatus()).ok) return MAINTENANCE_METADATA;
   const { store } = await getStorefront((await params).storeId);
   const v = iconVersion(store);
   return {
@@ -80,8 +82,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const MAINTENANCE_METADATA: Metadata = {
+  title: { absolute: "Tienda en mantenimiento" },
+  robots: { index: false, follow: false },
+};
+
+/**
+ * Faltan migraciones en la base: en lugar de una pantalla rota, un aviso sin
+ * datos de la tienda (no se consulta nada más de la base).
+ */
+function Maintenance() {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-3 px-4 text-center">
+      <h1 className="text-2xl font-bold text-balance">Tienda en mantenimiento</h1>
+      <p className="text-base">
+        Estamos actualizando la tienda. Vuelve a intentarlo en unos minutos.
+      </p>
+    </main>
+  );
+}
+
 export default async function StoreLayout({ children, params }: Props) {
   const { storeId } = await params;
+  if (!(await storefrontSchemaStatus()).ok) return <Maintenance />;
   const { store, preview } = await getStorefront(storeId);
   // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
   // el principio adelanta la imagen principal (LCP) en el celular.

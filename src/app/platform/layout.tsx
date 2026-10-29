@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { canManageTenants, requirePlatformRole } from "@/server/auth/platform";
+import { checkSchemaVersion } from "@/server/db/schema-version";
+import { createSupabaseServerClient } from "@/server/supabase/server";
 import { PruvaLogo } from "@/ui/brand/pruva-logo";
 import { Button } from "@/ui/primitives/button";
 
@@ -19,6 +21,7 @@ const ROLE: Record<string, string> = {
 
 export default async function PlatformLayout({ children }: { children: ReactNode }) {
   const role = await requirePlatformRole();
+  const schema = await checkSchemaVersion(await createSupabaseServerClient());
   return (
     <div className="min-h-dvh">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
@@ -64,6 +67,13 @@ export default async function PlatformLayout({ children }: { children: ReactNode
         </div>
       </header>
       <main data-panel className="mx-auto max-w-5xl px-4 py-8">
+        {schema.ok ? null : (
+          <p role="alert" className="mb-6 rounded-md border border-danger px-3 py-2 text-sm">
+            Faltan migraciones de la base de datos
+            {schema.current ? ` (la base está en ${schema.current})` : ""}. Algunas pantallas pueden
+            fallar hasta que se apliquen: sigue el runbook de migraciones.
+          </p>
+        )}
         {children}
       </main>
     </div>
