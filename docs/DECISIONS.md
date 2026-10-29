@@ -1132,7 +1132,7 @@ Análisis de brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`. Ya existe y no requiere
 
 Lo que sigue necesita la decisión del propietario.
 
-### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan y días de prueba. Cambio de plan: **prorratear** (propietario, 2026-10-29).
+### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan y días de prueba. Cambio de plan: **prorratear** (propietario, 2026-10-29; implementado en `20261029000800`).
 
 - **Contexto.** Los planes tienen límites pero **no precio**, y el cobro es manual: la plataforma marca «activa por N días» después de recibir el pago por fuera. No se puede calcular el MRR ni cobrar solo. La misión pide suscripción mensual y anual, prueba, cambios de plan, cancelación y suspensión por impago, sin cobrar nada sin ADR aprobado.
 - **Opciones evaluadas (cobro con tarjeta en México):**

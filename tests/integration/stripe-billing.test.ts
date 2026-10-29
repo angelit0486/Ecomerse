@@ -36,6 +36,7 @@ function event(
   status: string,
   created: number,
   type = "customer.subscription.updated",
+  plan = { key: "", interval: "monthly" },
 ) {
   return JSON.stringify({
     id,
@@ -48,7 +49,11 @@ function event(
         customer: `cus_${run}`,
         status,
         current_period_end: created + 2_592_000,
-        metadata: { organization_id: orgId, plan_key: planKey, interval: "monthly" },
+        metadata: {
+          organization_id: orgId,
+          plan_key: plan.key || planKey,
+          interval: plan.interval,
+        },
       },
     },
   });
@@ -115,6 +120,24 @@ describe("webhook de Stripe Billing con la base real", () => {
     const [sec] = await admin<{ n: number }[]>`
       select count(*)::int n from audit.security_events where type like 'billing.webhook_%'`;
     expect(sec!.n).toBeGreaterThan(0);
+  });
+
+  it("cambio de plan prorrateado: el webhook aplica el plan y el periodo nuevos", async () => {
+    const [p2] = await admin<{ id: string }[]>`
+      insert into public.plans (key, name, status, price_monthly, price_annual)
+      values (${`${planKey}x`}, 'Integración anual', 'active', 99900, 959000) returning id`;
+    const body = event(
+      `evt_${run}m`,
+      "active",
+      Math.floor(Date.now() / 1000) + 15,
+      "customer.subscription.updated",
+      { key: `${planKey}x`, interval: "annual" },
+    );
+    expect((await deliver(body)).body).toEqual({ received: true, outcome: "updated" });
+    const [s] = await admin<{ plan_id: string; billing_interval: string }[]>`
+      select plan_id, billing_interval from public.subscriptions
+       where organization_id = ${orgId} and status <> 'cancelled'`;
+    expect(s).toEqual({ plan_id: p2!.id, billing_interval: "annual" });
   });
 
   it("cancelada en Stripe: la organización queda sin suscripción vigente", async () => {

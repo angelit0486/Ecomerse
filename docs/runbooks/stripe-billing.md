@@ -17,6 +17,10 @@ Estado: probado con un **Stripe simulado** (pruebas unitarias, de integración y
   | cancelada        | cancelada                          |
 
 - Los avisos repetidos o atrasados se ignoran. Cada cambio queda en la auditoría.
+- **Cambiar plan** (prorrateo, aprobado el 2026-10-29): con la suscripción de Stripe vigente, la dueña elige otro plan o periodo en **Plan y uso → Cambiar plan**.
+  - Stripe abona lo no usado del plan anterior y cobra la diferencia; de mensual a anual, el periodo nuevo empieza ese día.
+  - No se permite bajar a un plan que no alcanza para sus tiendas, productos o equipo, ni cambiar con un cobro pendiente.
+  - El plan cambia en PRUVA cuando llega el webhook `customer.subscription.updated`.
 - El cobro manual de la consola sigue disponible para quien pague por transferencia.
 
 ## Pasos del propietario (desde la computadora)
@@ -39,5 +43,5 @@ Estado: probado con un **Stripe simulado** (pruebas unitarias, de integración y
 
 ## Pendientes de decisión (ADR-044)
 
-- **Cambio de plan a mitad de periodo:** prorratear o aplicarlo al siguiente periodo. Hoy se cambia desde la consola o cancelando y volviendo a pagar.
+- ~~Cambio de plan a mitad de periodo~~: **prorratear** (propietario, 2026-10-29); hecho, migración `20261029000800`.
 - **Precios y días de prueba de cada plan.**

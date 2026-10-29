@@ -10,6 +10,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { PlanUsage } from "@/ui/billing/plan-usage";
 
 import { CardPaymentForm, type PayablePlan } from "./card-payment-form";
+import { ChangePlanForm } from "./change-plan-form";
 
 export const metadata: Metadata = { title: "Plan y uso" };
 
@@ -53,6 +54,16 @@ export default async function PlanPage({ params, searchParams }: Props) {
           p_store_id: ctx.store.id,
         }).catch(() => [])
       : [];
+  // Cambiar plan (ADR-044, prorrateo): solo con una suscripción de Stripe vigente.
+  const changeOptions =
+    ctx.orgRole === "org_owner" && stripeBilling() !== null
+      ? await callRpc<{
+          current: { plan_key: string | null; interval: string; status: string };
+          plans: PayablePlan[];
+        } | null>(await createSupabaseServerClient(), "org_billing_change_options", {
+          p_store_id: ctx.store.id,
+        }).catch(() => null)
+      : null;
   return (
     <section className="max-w-2xl space-y-6">
       <header className="space-y-1">
@@ -101,6 +112,22 @@ export default async function PlanPage({ params, searchParams }: Props) {
             storeHandle={ctx.store.handle}
             plans={payWithCard}
             currentPlan={billing.plan?.key ?? null}
+          />
+        </section>
+      ) : null}
+
+      {changeOptions && changeOptions.plans.length > 0 ? (
+        <section
+          aria-labelledby="cambiar"
+          className="space-y-3 rounded-md border border-border p-4"
+        >
+          <h2 id="cambiar" className="font-semibold">
+            Cambiar plan
+          </h2>
+          <ChangePlanForm
+            storeHandle={ctx.store.handle}
+            plans={changeOptions.plans}
+            current={changeOptions.current}
           />
         </section>
       ) : null}

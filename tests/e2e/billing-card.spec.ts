@@ -23,13 +23,28 @@ const planKey = `tc_${run.replace(/[^a-z0-9]/g, "")}`.slice(0, 30);
 const WEBHOOK_SECRET = "whsec_0000000000";
 let tenant: Awaited<ReturnType<typeof createTenant>>;
 let server: Server;
+const planKey2 = `${planKey}b`;
 const checkoutBodies: URLSearchParams[] = [];
+const changeBodies: URLSearchParams[] = [];
 
 test.beforeAll(async () => {
   server = createServer((req, res) => {
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
+      const json = (value: unknown) => {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(value));
+      };
+      // Cambio de plan (ADR-044): leer el concepto, crear el producto y actualizar.
+      if (req.method === "GET" && req.url?.startsWith("/v1/subscriptions/sub_")) {
+        return json({ id: req.url.split("/").at(-1), items: { data: [{ id: "si_test123" }] } });
+      }
+      if (req.method === "POST" && req.url === "/v1/products") return json({ id: "prod_test123" });
+      if (req.method === "POST" && req.url?.startsWith("/v1/subscriptions/sub_")) {
+        changeBodies.push(new URLSearchParams(body));
+        return json({ id: req.url.split("/").at(-1) });
+      }
       if (req.method === "POST" && req.url === "/v1/checkout/sessions") {
         checkoutBodies.push(new URLSearchParams(body));
         res.writeHead(200, { "content-type": "application/json" });
@@ -46,6 +61,11 @@ test.beforeAll(async () => {
   tenant = await createTenant(`tc${run}`, await createAuthUser(email));
   await admin`insert into public.plans (key, name, status, sort, price_monthly, price_annual)
               values (${planKey}, ${`Tarjeta ${run}`}, 'active', 98, 49900, 479000)`;
+  const [p2] = await admin<{ id: string }[]>`
+    insert into public.plans (key, name, status, sort, price_monthly, price_annual)
+    values (${planKey2}, ${`Crece ${run}`}, 'active', 99, 99900, null) returning id`;
+  await admin`insert into public.plan_entitlements (plan_id, key, value_int)
+              values (${p2!.id}, 'max_stores', 5), (${p2!.id}, 'max_products', 1000), (${p2!.id}, 'max_staff', 10)`;
 });
 
 test.afterAll(async () => {
@@ -119,4 +139,43 @@ test("pagar el plan con tarjeta: Stripe Checkout y activación por webhook firma
      where organization_id = ${orgId} and status <> 'cancelled'`;
   expect(sub).toEqual({ status: "active", provider: "stripe", billing_interval: "annual" });
   await expectNoSeriousA11yViolations(page);
+
+  // ADR-044, prorrateo: cambiar a otro plan desde la misma página.
+  const change = page.getByRole("region", { name: "Cambiar plan" });
+  await expect(change).toBeVisible();
+  await expect(change.getByLabel(/\(tu plan actual\)/)).toBeDisabled();
+  await change.getByLabel(new RegExp(`Crece ${run} · \\$999\\.00 al mes`)).check();
+  await change.getByRole("button", { name: "Cambiar plan" }).click();
+  await expect(change.getByRole("status")).toContainText("Pedimos el cambio a Stripe");
+  const changed = changeBodies.at(-1)!;
+  expect(changed.get("items[0][id]")).toBe("si_test123");
+  expect(changed.get("items[0][price_data][unit_amount]")).toBe("99900");
+  expect(changed.get("items[0][price_data][recurring][interval]")).toBe("month");
+  expect(changed.get("proration_behavior")).toBe("create_prorations");
+  expect(changed.get("metadata[plan_key]")).toBe(planKey2);
+  await expectNoSeriousA11yViolations(page);
+
+  // El plan cambia aquí solo con el webhook firmado.
+  const updated = JSON.stringify({
+    id: `evt_${run}2`,
+    type: "customer.subscription.updated",
+    created: Math.floor(Date.now() / 1000) + 1,
+    livemode: false,
+    data: {
+      object: {
+        id: `sub_${run}1`,
+        customer: `cus_${run}1`,
+        status: "active",
+        current_period_end: Math.floor(Date.now() / 1000) + 2_592_000,
+        metadata: { organization_id: orgId, plan_key: planKey2, interval: "monthly" },
+      },
+    },
+  });
+  const applied = await page.request.post("/api/webhooks/billing/stripe", {
+    data: updated,
+    headers: signed(updated),
+  });
+  expect(await applied.json()).toMatchObject({ received: true, outcome: "updated" });
+  await page.reload();
+  await expect(page.getByRole("definition").filter({ hasText: `Crece ${run}` })).toBeVisible();
 });

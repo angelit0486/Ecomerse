@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StripeApi } from "@/server/payments/stripe";
 
-import { createSubscriptionCheckout, parseBillingWebhook } from "./stripe-billing";
+import {
+  changeSubscriptionPlan,
+  createSubscriptionCheckout,
+  parseBillingWebhook,
+} from "./stripe-billing";
 
 /**
  * Stripe Billing (ADR-044) con payloads y firmas de ejemplo. La prueba contra el
@@ -122,5 +126,69 @@ describe("Checkout de la suscripción", () => {
     );
     // La cuenta de la plataforma cobra: nunca la cabecera de una cuenta conectada.
     expect((init.headers as Record<string, string>)["stripe-account"]).toBeUndefined();
+  });
+});
+
+describe("Cambio de plan con prorrateo", () => {
+  it("cambia el precio del mismo concepto con prorrateo y metadatos nuevos", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.endsWith("/v1/products")) return Response.json({ id: "prod_N1abc" });
+      if (url.endsWith("/v1/subscriptions/sub_ABC") && fetchImpl.mock.calls.length === 1) {
+        return Response.json({ id: "sub_ABC", items: { data: [{ id: "si_OLDx" }] } });
+      }
+      return Response.json({ id: "sub_ABC" });
+    });
+    const api = new StripeApi({
+      secretKey: "sk_test_x",
+      webhookSecret: SECRET,
+      fetchImpl: fetchImpl as never,
+    });
+    await changeSubscriptionPlan(api, {
+      organization_id: ORG,
+      subscription_id: "sub_ABC",
+      plan_key: "pro",
+      plan_name: "Pro",
+      interval: "annual",
+      amount: 959000,
+      currency: "MXN",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    const [getUrl, getInit] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(getUrl).toMatch(/\/v1\/subscriptions\/sub_ABC$/);
+    expect(getInit.method).toBe("GET");
+    const [, init] = fetchImpl.mock.calls[2] as unknown as [string, RequestInit];
+    const body = new URLSearchParams(String(init.body));
+    expect(body.get("items[0][id]")).toBe("si_OLDx");
+    expect(body.get("items[0][price_data][unit_amount]")).toBe("959000");
+    expect(body.get("items[0][price_data][recurring][interval]")).toBe("year");
+    expect(body.get("items[0][price_data][product]")).toBe("prod_N1abc");
+    expect(body.get("proration_behavior")).toBe("create_prorations");
+    expect(body.get("metadata[plan_key]")).toBe("pro");
+    expect(body.get("metadata[interval]")).toBe("annual");
+    expect((init.headers as Record<string, string>)["idempotency-key"]).toMatch(
+      new RegExp(`^billing-change:${ORG}:pro:annual:\\d+$`),
+    );
+    expect((init.headers as Record<string, string>)["stripe-account"]).toBeUndefined();
+  });
+
+  it("sin el concepto de la suscripción no manda nada", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ id: "sub_ABC", items: { data: [] } }));
+    const api = new StripeApi({
+      secretKey: "sk_test_x",
+      webhookSecret: SECRET,
+      fetchImpl: fetchImpl as never,
+    });
+    await expect(
+      changeSubscriptionPlan(api, {
+        organization_id: ORG,
+        subscription_id: "sub_ABC",
+        plan_key: "pro",
+        plan_name: "Pro",
+        interval: "monthly",
+        amount: 99900,
+        currency: "MXN",
+      }),
+    ).rejects.toThrow();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

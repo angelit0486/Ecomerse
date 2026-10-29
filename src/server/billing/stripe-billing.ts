@@ -89,6 +89,65 @@ export async function createSubscriptionCheckout(
   return session.url;
 }
 
+export const changeInputSchema = z.object({
+  organization_id: z.uuid(),
+  subscription_id: z.string().regex(/^sub_[A-Za-z0-9]{3,250}$/),
+  plan_key: z.string(),
+  plan_name: z.string(),
+  interval: z.enum(["monthly", "annual"]),
+  amount: z.number().int().positive(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+export type ChangeInput = z.infer<typeof changeInputSchema>;
+
+const subscriptionItems = z.object({
+  items: z.object({
+    data: z.array(z.object({ id: z.string().regex(/^si_[A-Za-z0-9]{3,250}$/) })).min(1),
+  }),
+});
+
+/**
+ * Cambia el plan o el periodo de la suscripción de Stripe con prorrateo (ADR-044):
+ * Stripe abona lo no usado del plan anterior y cobra la diferencia. Aquí nada
+ * cambia hasta que llega el webhook `customer.subscription.updated`.
+ */
+export async function changeSubscriptionPlan(api: StripeApi, input: ChangeInput): Promise<void> {
+  const current = subscriptionItems.parse(
+    await api.request("GET", `/v1/subscriptions/${input.subscription_id}`),
+  );
+  const minute = Math.floor(Date.now() / 60_000);
+  const key = `billing-change:${input.organization_id}:${input.plan_key}:${input.interval}:${minute}`;
+  // `price_data` de una suscripción pide un producto existente: uno por plan pedido.
+  const product = await api.request<{ id: string }>("POST", "/v1/products", {
+    params: { name: `PRUVA · plan ${input.plan_name}` },
+    idempotencyKey: `${key}:product`,
+  });
+  if (!/^prod_[A-Za-z0-9]{3,250}$/.test(product.id)) throw new AppError("provider_error");
+  const metadata = {
+    organization_id: input.organization_id,
+    plan_key: input.plan_key,
+    interval: input.interval,
+  };
+  await api.request("POST", `/v1/subscriptions/${input.subscription_id}`, {
+    params: {
+      items: [
+        {
+          id: current.items.data[0]!.id,
+          price_data: {
+            currency: input.currency.toLowerCase(),
+            unit_amount: input.amount,
+            recurring: { interval: input.interval === "annual" ? "year" : "month" },
+            product: product.id,
+          },
+        },
+      ],
+      proration_behavior: "create_prorations",
+      metadata,
+    },
+    idempotencyKey: key,
+  });
+}
+
 const subscriptionObject = z.object({
   id: z.string().regex(/^sub_[A-Za-z0-9]{3,250}$/),
   customer: z.string().regex(/^cus_[A-Za-z0-9]{3,250}$/),
