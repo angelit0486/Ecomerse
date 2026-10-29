@@ -83,6 +83,17 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
 - Migraciones: sin contraseña de la base, la base las bajó del repositorio en un commit fijo (pg_net) y se aplicaron en orden
   verificando el sha256 de cada archivo; quedan registradas en `supabase_migrations.schema_migrations` con su checksum.
   Con `MIGRATION_DATABASE_URL` configurada, `pnpm build` las aplica con `scripts/deploy/migrate.mjs`.
+  Pasos usados el 2026-10-29 (16 migraciones, desde el conector de Supabase):
+  1. Ensayo local: base con las migraciones ya aplicadas en staging + las nuevas; el esquema
+     resultante es idéntico al de una base creada desde cero (`pg_dump -s`) y un archivo
+     alterado se rechaza por sha256.
+  2. `net.http_get` de cada archivo en `raw.githubusercontent.com/angelit0486/Ecomerse/<commit>/…`
+     (solo funciona mientras el repositorio sea público).
+  3. Comparar `sha256(content)` de cada respuesta en `net._http_response` con el del repositorio.
+  4. Un solo bloque `do`: por cada archivo, en orden, comprueba que no esté aplicado y que la
+     huella coincida, lo ejecuta y lo registra (versión, nombre, checksum). Si uno falla, no se
+     aplica ninguno.
+  5. `notify pgrst, 'reload schema'` y `select public.app_schema_version()`.
 - Siembra: Edge Function `demo-seed` (código en `supabase/functions/demo-seed/`). Solo corre con un boleto de un solo uso:
   el operador inserta `sha256(boleto)` en `supabase_migrations.pruva_seed_ticket` (con caducidad) y llama a la función con
   la cabecera `x-demo-seed-ticket`. La clave de servicio nunca sale de Supabase.
