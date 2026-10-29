@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { centsToInput, formatMoney } from "@/lib/money/format";
+import { PRODUCT_PAGE_SIZES, parsePageSize } from "@/lib/catalog/page-size";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import {
@@ -94,6 +95,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   )?.key;
   const sortParam = one(sp.orden);
   const sort = PRODUCT_SORTS.find((o) => o === sortParam) ?? "recientes";
+  const pageSize = parsePageSize(one(sp.por));
   // El cursor por nombre lleva el título: pasa del límite de 200 de `one()`.
   const cursor = decodeCursor(typeof sp.desde === "string" ? sp.desde : undefined, sort);
 
@@ -111,6 +113,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
       deleted,
       sort,
       cursor,
+      pageSize,
     }),
   ]);
 
@@ -125,7 +128,11 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   };
   const filtersActive = Object.keys(filterQuery).length > 0;
   // El orden no es un filtro: se conserva al paginar y al quitar los filtros.
-  const sortQuery: Record<string, string> = sort === "recientes" ? {} : { orden: sort };
+  // Lo mismo con cuántos por página.
+  const sortQuery: Record<string, string> = {
+    ...(sort === "recientes" ? {} : { orden: sort }),
+    ...(pageSize === 25 ? {} : { por: String(pageSize) }),
+  };
   const listQuery = { ...filterQuery, ...sortQuery };
   const nextHref = page.nextCursor
     ? `${base}?${new URLSearchParams({ ...listQuery, desde: page.nextCursor })}`
@@ -311,6 +318,18 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="por" className="text-[13px] font-medium">
+            Mostrar
+          </label>
+          <select id="por" name="por" defaultValue={String(pageSize)} className={nativeControl}>
+            {PRODUCT_PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n} por página
+              </option>
+            ))}
+          </select>
+        </div>
         <label className="flex h-11 md:h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="eliminados" value="1" defaultChecked={deleted} />
           Ver eliminados
@@ -320,7 +339,11 @@ export default async function ProductsPage({ params, searchParams }: Props) {
         </button>
         {filtersActive ? (
           <Link
-            href={sort === "recientes" ? base : `${base}?${new URLSearchParams(sortQuery)}`}
+            href={
+              Object.keys(sortQuery).length === 0
+                ? base
+                : `${base}?${new URLSearchParams(sortQuery)}`
+            }
             className="inline-flex min-h-11 items-center text-sm underline"
           >
             Quitar filtros

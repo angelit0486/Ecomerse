@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { callRpc } from "@/server/db/rpc";
+import { type ProductPageSize } from "@/lib/catalog/page-size";
 import { serverEnv } from "@/server/env";
 
 /**
@@ -44,6 +45,8 @@ export interface ProductListFilters {
   deleted?: boolean | undefined;
   sort?: ProductSort | undefined;
   cursor?: ProductCursor | undefined;
+  /** 25, 50 o 100 por página (las acciones en bloque llegan a 100). */
+  pageSize?: ProductPageSize | undefined;
 }
 
 export const PAGE_SIZE = 25;
@@ -53,26 +56,33 @@ export async function searchProducts(
   storeId: string,
   filters: ProductListFilters,
 ): Promise<{ rows: ProductListRow[]; nextCursor: string | null }> {
-  const rows = await callRpc<ProductListRow[]>(supabase, "catalog_search_products", {
-    p_store_id: storeId,
-    p_query: filters.query ?? null,
-    p_status: filters.status ?? null,
-    p_category_id: filters.categoryId ?? null,
-    p_deleted: filters.deleted ?? false,
-    p_cursor: filters.cursor ? { k: filters.cursor.k, id: filters.cursor.id } : null,
-    p_limit: PAGE_SIZE + 1,
-    p_brand_id: filters.brandId ?? null,
-    p_issue: filters.issue ?? null,
-    p_sort: filters.sort ?? "recientes",
-  });
-  const page = rows.slice(0, PAGE_SIZE);
+  const size = filters.pageSize ?? PAGE_SIZE;
+  const search = (cursor: ProductCursor | undefined, limit: number) =>
+    callRpc<ProductListRow[]>(supabase, "catalog_search_products", {
+      p_store_id: storeId,
+      p_query: filters.query ?? null,
+      p_status: filters.status ?? null,
+      p_category_id: filters.categoryId ?? null,
+      p_deleted: filters.deleted ?? false,
+      p_cursor: cursor ? { k: cursor.k, id: cursor.id } : null,
+      p_limit: limit,
+      p_brand_id: filters.brandId ?? null,
+      p_issue: filters.issue ?? null,
+      p_sort: filters.sort ?? "recientes",
+    });
+  // La base devuelve como máximo 100: con páginas de 100 no se puede pedir la
+  // fila 101 para saber si hay más; se pregunta por una fila después de la última.
+  const sort = filters.sort ?? "recientes";
+  const rows = await search(filters.cursor, Math.min(size + 1, 100));
+  const page = rows.slice(0, size);
   const last = page.at(-1);
+  const lastCursor = last ? { s: sort, k: last.sort_key, id: last.id } : undefined;
+  const more =
+    rows.length > size ||
+    (rows.length === size && size === 100 && (await search(lastCursor, 1)).length > 0);
   return {
     rows: page,
-    nextCursor:
-      rows.length > PAGE_SIZE && last
-        ? encodeCursor({ s: filters.sort ?? "recientes", k: last.sort_key, id: last.id })
-        : null,
+    nextCursor: more && lastCursor ? encodeCursor(lastCursor) : null,
   };
 }
 
