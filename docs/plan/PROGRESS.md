@@ -90,7 +90,14 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - aviso de migraciones faltantes ya existía (E2E `schema-version`);
   - CI 160 verde.
   - Vista previa en Vercel [NO VERIFICADO]: el conector no tiene acceso al equipo (B2) y faltan Resend y Send Email Hook (B3).
-- Siguiente: lote 2, cuando el propietario diga «sigue».
+- Lote 2 (`docs/audit/lote2/LEEME.md`):
+  - interruptores por tienda conectados a la tienda (`8e16f47`, migración `20261103000100`, pgTAP 121);
+  - barra de categorías sin palabras cortadas, detrás de `storefront_nav_scroll_fix` apagado (`edbcbc4`);
+  - «Buscar marca» y aviso de vista previa ya estaban bien (sin cambio);
+  - capturas deterministas (`5b9207d`).
+  - Suites en verde: verify 1064, pgTAP 2635, integración 388, E2E 120/120.
+  - Staging en `20261103000100` (144); el interruptor está apagado y sin tiendas encendidas.
+- Siguiente: lote 3, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)
 
