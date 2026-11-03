@@ -136,6 +136,10 @@ select ok(exists (select 1 from audit.audit_logs where action = 'order.payment_c
 select tests.set_fx('o4', (tests.order_with(tests.tok('e1'), tests.fx('manual'), 'MIL') ->> 'order_id')::uuid);
 select is(tests.level_reserved(), 4, 'reservadas: 2 confirmadas (hasta el envío) + 2 pendientes');
 update public.inventory_reservations set expires_at = now() - interval '1 minute' where order_id = tests.fx('o4');
+-- Hermética (DIN-11): expire_orders es global; si la base trae pedidos vencidos de
+-- otras corridas, se aplazan dentro de esta transacción (se revierte al final).
+update public.inventory_reservations set expires_at = now() + interval '1 day'
+ where status = 'active' and expires_at <= now() and order_id is distinct from tests.fx('o4');
 select is(system.expire_orders(), 1, 'un pedido vencido');
 select is((select status || '/' || cancel_reason || '/' || payment_status from public.orders where id = tests.fx('o4')),
   'cancelled/payment_expired/expired', 'cancelado por pago vencido');
