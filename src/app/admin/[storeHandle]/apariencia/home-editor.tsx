@@ -21,7 +21,7 @@ import { FormFeedback } from "../_shared/form-feedback";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { HomePreview } from "./home-preview";
-import { SECTION_LABELS } from "./section-labels";
+import { FLAGGED_SECTION_TYPES, SECTION_LABELS } from "./section-labels";
 import {
   finalizeBannerUpload,
   requestBannerUpload,
@@ -113,6 +113,14 @@ const DEFAULTS: Record<HomeSectionType, Props> = {
   reviews: { title: "Lo que dicen nuestros clientes", limit: 6 },
   video: { provider: "youtube", video_id: "", title: "", caption: "" },
   contact_map: { title: "Visítanos", show_whatsapp: true },
+  image_carousel: {
+    slides: [],
+    interval_seconds: 4,
+    transition: "slide",
+    show_arrows: false,
+    aspect_desktop: "21:9",
+    aspect_mobile: "4:5",
+  },
 };
 
 const SOURCE_LABELS = {
@@ -1672,6 +1680,7 @@ export function HomeEditor({
   emptyText = "Sin secciones, la portada muestra la plantilla del tema: el nombre de tu tienda, las categorías principales y las novedades.",
   storeName,
   autosave = false,
+  flags = [],
 }: {
   storeHandle: string;
   revision: number;
@@ -1681,6 +1690,8 @@ export function HomeEditor({
   storeName?: string;
   /** Guarda solo en el borrador unos segundos después del último cambio. */
   autosave?: boolean;
+  /** Interruptores encendidos para la tienda: habilitan bloques nuevos en el menú. */
+  flags?: readonly string[];
   /** Otra acción de guardado (los bloques de una página, ADR-034 §3). */
   save?: (state: HomeFormState, formData: FormData) => Promise<HomeFormState>;
   saveLabel?: string;
@@ -2015,11 +2026,16 @@ export function HomeEditor({
                 onChange={(e) => setAdding(e.target.value as HomeSectionType)}
                 className={nativeControl}
               >
-                {Object.entries(SECTION_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
+                {Object.entries(SECTION_LABELS)
+                  .filter(([k]) => {
+                    const flag = FLAGGED_SECTION_TYPES[k as HomeSectionType];
+                    return !flag || flags.includes(flag);
+                  })
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
               </select>
             </div>
             <Button type="button" variant="secondary" onClick={add} disabled={full || productsFull}>

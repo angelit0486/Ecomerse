@@ -16,4 +16,13 @@ export const SECTION_LABELS: Record<HomeSectionType, string> = {
   reviews: "Opiniones verificadas",
   video: "Video",
   contact_map: "Contacto y ubicación",
+  image_carousel: "Portada de imágenes",
+};
+
+/**
+ * Tipos que solo se ofrecen con su interruptor encendido para la tienda
+ * (misión de mejoras, regla 6). Un bloque ya guardado se sigue editando.
+ */
+export const FLAGGED_SECTION_TYPES: Partial<Record<HomeSectionType, string>> = {
+  image_carousel: "hero_image_carousel",
 };

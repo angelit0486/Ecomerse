@@ -482,6 +482,118 @@ const products = (n: number, limit = 8, source: unknown = { type: "newest" }) =>
 
 export const SECTIONS_CASES: ReadonlyArray<SchemaCase> = [
   { name: "vacía", value: [], valid: true },
+  // Portada de imágenes (hero_image_carousel): solo imágenes, alt obligatorio.
+  {
+    name: "image_carousel mínimo",
+    value: [sec(1, "image_carousel", { slides: [{ image_media_id: id(9), alt: "Proteínas" }] })],
+    valid: true,
+  },
+  {
+    name: "image_carousel completo",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [
+          {
+            image_media_id: id(9),
+            alt: "Proteínas con descuento",
+            mobile_image_media_id: id(8),
+            link: "/categoria/proteinas",
+            focal: { x: 30, y: 40 },
+            mobile_focal: { x: 50, y: 0 },
+            starts_at: "2026-11-01T00:00:00Z",
+            ends_at: "2026-12-01T00:00:00Z",
+          },
+          { image_media_id: id(7), alt: "Ofertas", link: "https://example.com/x" },
+        ],
+        interval_seconds: 4,
+        transition: "fade",
+        show_arrows: true,
+        aspect_desktop: "16:9",
+        aspect_mobile: "1:1",
+      }),
+    ],
+    valid: true,
+  },
+  {
+    name: "image_carousel sin alt",
+    value: [sec(1, "image_carousel", { slides: [{ image_media_id: id(9) }] })],
+    valid: false,
+  },
+  {
+    name: "image_carousel con texto visible",
+    value: [
+      sec(1, "image_carousel", { slides: [{ image_media_id: id(9), alt: "x", heading: "Hola" }] }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel vacío",
+    value: [sec(1, "image_carousel", { slides: [] })],
+    valid: false,
+  },
+  {
+    name: "image_carousel con 11 imágenes",
+    value: [
+      sec(1, "image_carousel", {
+        slides: Array.from({ length: 11 }, () => ({ image_media_id: id(9), alt: "x" })),
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel avance fuera de rango",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [{ image_media_id: id(9), alt: "x" }],
+        interval_seconds: 2,
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel foco fuera de rango",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [{ image_media_id: id(9), alt: "x", focal: { x: 101, y: 0 } }],
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel transición desconocida",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [{ image_media_id: id(9), alt: "x" }],
+        transition: "zoom",
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel fechas al revés",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [
+          {
+            image_media_id: id(9),
+            alt: "x",
+            starts_at: "2026-12-01T00:00:00Z",
+            ends_at: "2026-11-01T00:00:00Z",
+          },
+        ],
+      }),
+    ],
+    valid: false,
+  },
+  {
+    name: "image_carousel enlace javascript",
+    value: [
+      sec(1, "image_carousel", {
+        slides: [{ image_media_id: id(9), alt: "x", link: "javascript:alert(1)" }],
+      }),
+    ],
+    valid: false,
+  },
   { name: "no es arreglo", value: {}, valid: false },
   {
     name: "hero mínimo",

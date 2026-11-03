@@ -285,6 +285,48 @@ const hero = z.strictObject({
   autoplay: z.boolean().optional(),
 });
 
+/** Punto focal en porcentaje: el recorte conserva lo importante de la foto. */
+const focal = z.strictObject({
+  x: z.int({ error: "Usa un número de 0 a 100." }).min(0).max(100),
+  y: z.int({ error: "Usa un número de 0 a 100." }).min(0).max(100),
+});
+
+/**
+ * Portada de imágenes (interruptor `hero_image_carousel`): solo imágenes, sin
+ * texto visible. El texto alternativo es obligatorio (lectores de pantalla) y
+ * pasa por la revisión de cumplimiento.
+ */
+const imageSlide = z
+  .strictObject({
+    image_media_id: uuid,
+    alt: text(1, 150),
+    mobile_image_media_id: uuid.optional(),
+    link: link.optional(),
+    focal: focal.optional(),
+    mobile_focal: focal.optional(),
+    starts_at: instant.optional(),
+    ends_at: instant.optional(),
+  })
+  .refine(schedule, SCHEDULE_ERROR);
+
+export const MAX_CAROUSEL_SLIDES = 10;
+
+const imageCarousel = z.strictObject({
+  slides: z
+    .array(imageSlide)
+    .min(1, "Agrega al menos una imagen.")
+    .max(MAX_CAROUSEL_SLIDES, `Hasta ${MAX_CAROUSEL_SLIDES} imágenes.`),
+  interval_seconds: z
+    .int({ error: "Usa un número entero de 3 a 10." })
+    .min(3, "Al menos 3 segundos.")
+    .max(10, "Hasta 10 segundos.")
+    .optional(),
+  transition: z.enum(["slide", "fade"]).optional(),
+  show_arrows: z.boolean().optional(),
+  aspect_desktop: z.enum(["21:9", "16:9", "3:1"]).optional(),
+  aspect_mobile: z.enum(["4:5", "1:1", "3:4"]).optional(),
+});
+
 const productSource = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("newest") }),
   z.strictObject({ type: z.literal("best_selling") }),
@@ -474,6 +516,7 @@ export const HomeSectionV2 = z.discriminatedUnion("type", [
   section("reviews", reviews),
   section("video", video),
   section("contact_map", contactMap),
+  section("image_carousel", imageCarousel),
 ]);
 export type HomeSection = z.infer<typeof HomeSectionV2>;
 export type HomeSectionType = HomeSection["type"];
