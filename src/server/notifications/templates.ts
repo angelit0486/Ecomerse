@@ -90,6 +90,93 @@ export function supportAccessNoticeEmail(input: {
   };
 }
 
+export type OwnerNoticeKind = "suspended" | "reactivated" | "closed" | "ownership_transferred";
+
+/**
+ * Avisos al dueño (D-F2-16, D-F2-20). Sin el motivo interno de la plataforma.
+ * En la transferencia, `recipient` dice si el correo va a quien entrega
+ * (previous) o a quien recibe (new) la propiedad.
+ */
+export function ownerNoticeEmail(input: {
+  to: string;
+  kind: OwnerNoticeKind;
+  name: string | null;
+  organizationName: string;
+  storeName: string | null;
+  storeStatus: string | null;
+  recipient?: "previous" | "new";
+  panelLink: string;
+}): EmailMessage {
+  const greeting = input.name ? `Hola, ${input.name}:` : "Hola:";
+  const target = input.storeName
+    ? `la tienda ${input.storeName}`
+    : `tu cuenta ${input.organizationName}`;
+  let subject: string;
+  let lines: string[];
+  switch (input.kind) {
+    case "suspended":
+      subject = input.storeName
+        ? `Suspendimos la tienda ${input.storeName}`
+        : `Suspendimos tu cuenta ${input.organizationName}`;
+      lines = [
+        `La plataforma suspendió ${target}.`,
+        input.storeName
+          ? "Mientras esté suspendida, tus clientes no pueden verla ni comprar en ella."
+          : "Mientras esté suspendida, tus tiendas no venden y tu equipo no puede hacer cambios.",
+        "Tus datos y pedidos se conservan.",
+        "Si tienes dudas, contacta al equipo de la plataforma.",
+      ];
+      break;
+    case "reactivated":
+      subject = input.storeName
+        ? `Reactivamos la tienda ${input.storeName}`
+        : `Reactivamos tu cuenta ${input.organizationName}`;
+      lines = [
+        `La plataforma reactivó ${target}.`,
+        input.storeName
+          ? input.storeStatus === "paused"
+            ? "La tienda quedó en pausa: publícala desde el panel cuando quieras volver a vender."
+            : "La tienda quedó en borrador: termina de prepararla y lánzala desde el panel."
+          : "Tu equipo ya puede volver a entrar y hacer cambios.",
+      ];
+      break;
+    case "closed":
+      subject = `Cerramos tu cuenta ${input.organizationName}`;
+      lines = [
+        `La plataforma cerró tu cuenta ${input.organizationName} y sus tiendas.`,
+        "El cierre es definitivo: las tiendas ya no venden.",
+        "Si tienes dudas, contacta al equipo de la plataforma.",
+      ];
+      break;
+    case "ownership_transferred":
+      if (input.recipient === "new") {
+        subject = `Ahora la propiedad de ${input.organizationName} es tuya`;
+        lines = [
+          `Te transfirieron la propiedad de ${input.organizationName}.`,
+          "Ahora tienes todos los permisos, incluida la facturación y el equipo.",
+        ];
+      } else {
+        subject = `Transferiste la propiedad de ${input.organizationName}`;
+        lines = [
+          `Se transfirió la propiedad de ${input.organizationName} a otra persona del equipo. Tu nuevo rol es de administración.`,
+          "Si no fuiste tú, contacta de inmediato al equipo de la plataforma.",
+        ];
+      }
+      break;
+  }
+  return {
+    to: input.to,
+    subject,
+    text: [greeting, "", ...lines, "", `Panel: ${input.panelLink}`].join("\n"),
+    html: layout(
+      subject,
+      `<p>${escapeHtml(greeting)}</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join("\n")}
+<p><a href="${escapeHtml(input.panelLink)}">Ir al panel</a></p>`,
+    ),
+  };
+}
+
 const AUTH_SUBJECTS: Record<string, string> = {
   signup: "Tu código para entrar",
   magiclink: "Tu código para entrar",

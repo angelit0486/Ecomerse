@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { mailpitChannel, resendChannel } from "./channels";
-import { escapeHtml, staffInvitationEmail, supportAccessNoticeEmail } from "./templates";
+import {
+  escapeHtml,
+  ownerNoticeEmail,
+  staffInvitationEmail,
+  supportAccessNoticeEmail,
+} from "./templates";
 import { PermanentDeliveryError } from "./types";
 
 const message = { to: "ana@example.test", subject: "Hola", html: "<p>Hola</p>", text: "Hola" };
@@ -34,6 +39,42 @@ describe("plantillas", () => {
     expect(email.text).toContain("30 minutos");
     expect(email.html).toContain("&lt;b&gt;pedidos&lt;/b&gt;");
     expect(email.html).toContain('href="https://app.x.test/admin"');
+  });
+
+  it("avisos al dueño: escapan nombres y dicen qué pasó y qué sigue", () => {
+    const base = {
+      to: "duena@example.test",
+      name: "Ana",
+      organizationName: "Ana <Moda>",
+      storeName: "<b>Moda Ana</b>",
+      storeStatus: null,
+      panelLink: "https://app.x.test/admin",
+    };
+    const suspended = ownerNoticeEmail({ ...base, kind: "suspended" });
+    expect(suspended.subject).toBe("Suspendimos la tienda <b>Moda Ana</b>");
+    expect(suspended.html).not.toContain("<b>Moda");
+    expect(suspended.text).toContain("no pueden verla ni comprar");
+    expect(ownerNoticeEmail({ ...base, kind: "reactivated", storeStatus: "draft" }).text).toContain(
+      "quedó en borrador",
+    );
+    expect(ownerNoticeEmail({ ...base, storeName: null, kind: "closed" }).text).toContain(
+      "definitivo",
+    );
+    const previous = ownerNoticeEmail({
+      ...base,
+      storeName: null,
+      kind: "ownership_transferred",
+      recipient: "previous",
+    });
+    expect(previous.text).toContain("Si no fuiste tú");
+    expect(
+      ownerNoticeEmail({
+        ...base,
+        storeName: null,
+        kind: "ownership_transferred",
+        recipient: "new",
+      }).subject,
+    ).toBe("Ahora la propiedad de Ana <Moda> es tuya");
   });
 
   it("escapeHtml cubre comillas", () => {

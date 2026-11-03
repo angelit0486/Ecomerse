@@ -165,3 +165,74 @@ describe("access.support_access_notice", () => {
     expect(channel.sent).toHaveLength(0);
   });
 });
+
+describe("tenant.owner_notice", () => {
+  const notice = (payload: Record<string, unknown>) =>
+    admin`select app.enqueue_job('tenant.owner_notice',
+            ${admin.json({ notice_id: crypto.randomUUID(), ...payload } as never)})`;
+
+  it("suspensión de una tienda: avisa al dueño una vez y sin el motivo interno", async () => {
+    const t = await tenant("o1");
+    const noticeId = crypto.randomUUID();
+    const payload = {
+      notice_id: noticeId,
+      organization_id: t.orgId,
+      store_id: t.storeId,
+      kind: "suspended",
+      store_status: "suspended",
+    };
+    await admin`select app.enqueue_job('tenant.owner_notice', ${admin.json(payload)})`;
+    await admin`select app.enqueue_job('tenant.owner_notice', ${admin.json(payload)})`;
+    await run();
+    expect(channel.sent).toHaveLength(1);
+    expect(channel.sent[0]!.to).toBe("owner-o1@x.test");
+    expect(channel.sent[0]!.subject).toBe("Suspendimos la tienda Tienda o1");
+    expect(channel.sent[0]!.html).not.toContain("<b>o1</b>");
+  });
+
+  it("reactivación: dice en qué estado quedó la tienda", async () => {
+    const t = await tenant("o2");
+    await notice({
+      organization_id: t.orgId,
+      store_id: t.storeId,
+      kind: "reactivated",
+      store_status: "paused",
+    });
+    await run();
+    expect(channel.sent[0]!.text).toContain("quedó en pausa");
+  });
+
+  it("transferencia: avisa a quien entrega y a quien recibe; nunca a ajenos", async () => {
+    const t = await tenant("o3");
+    const [next] = await admin<{ id: string }[]>`
+      insert into auth.users (id, email) values (gen_random_uuid(), 'nuevo-o3@x.test') returning id`;
+    await admin`insert into public.organization_members (organization_id, user_id, role)
+                values (${t.orgId}, ${next!.id}, 'org_admin')`;
+    const outsider = await tenant("o3b");
+    await notice({
+      organization_id: t.orgId,
+      kind: "ownership_transferred",
+      previous_owner: t.ownerId,
+      new_owner: next!.id,
+    });
+    // Un payload que apunta a alguien de otra organización no obtiene su correo.
+    await notice({
+      organization_id: t.orgId,
+      kind: "ownership_transferred",
+      previous_owner: outsider.ownerId,
+      new_owner: outsider.ownerId,
+    });
+    await run();
+    const byTo = Object.fromEntries(channel.sent.map((m) => [m.to, m.subject]));
+    expect(byTo).toEqual({
+      "owner-o3@x.test": "Transferiste la propiedad de Org <b>o3</b>",
+      "nuevo-o3@x.test": "Ahora la propiedad de Org <b>o3</b> es tuya",
+    });
+  });
+
+  it("tipo desconocido: dead sin reintentos", async () => {
+    const t = await tenant("o4");
+    await notice({ organization_id: t.orgId, kind: "otro" });
+    expect((await run()).dead).toBe(1);
+  });
+});

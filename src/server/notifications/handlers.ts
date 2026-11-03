@@ -2,7 +2,12 @@ import type { Sql } from "@/server/db/role-clients";
 
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
 
-import { staffInvitationEmail, supportAccessNoticeEmail } from "./templates";
+import {
+  ownerNoticeEmail,
+  staffInvitationEmail,
+  supportAccessNoticeEmail,
+  type OwnerNoticeKind,
+} from "./templates";
 import { PermanentDeliveryError, type EmailChannel } from "./types";
 
 /**
@@ -145,8 +150,67 @@ export function createNotificationHandlers(deps: NotificationDeps): Array<[strin
     });
   };
 
+  const ownerNotice: JobHandler = async (job, { log }) => {
+    const noticeId = payloadId(job, "notice_id");
+    const organizationId = payloadId(job, "organization_id");
+    const kind = job.payload.kind;
+    if (
+      kind !== "suspended" &&
+      kind !== "reactivated" &&
+      kind !== "closed" &&
+      kind !== "ownership_transferred"
+    ) {
+      throw new PermanentJobError("payload.kind inválido");
+    }
+    const storeId = job.payload.store_id == null ? null : payloadId(job, "store_id");
+    const storeStatus =
+      typeof job.payload.store_status === "string" ? job.payload.store_status : null;
+    // Transferencia: a quien entrega y a quien recibe; si no, al dueño actual.
+    const recipients =
+      kind === "ownership_transferred"
+        ? { previous: payloadId(job, "previous_owner"), new: payloadId(job, "new_owner") }
+        : null;
+    const contacts = await deps.db<
+      {
+        user_id: string;
+        email: string;
+        full_name: string | null;
+        organization_name: string;
+        store_name: string | null;
+      }[]
+    >`select * from system.owner_notice_contacts(${organizationId}::uuid, ${storeId}::uuid,
+        ${recipients ? [recipients.previous, recipients.new] : null}::uuid[])`;
+    if (contacts.length === 0) log.info("Aviso al dueño sin destinatario");
+    for (const c of contacts) {
+      const recipient = recipients
+        ? c.user_id === recipients.new
+          ? "new"
+          : "previous"
+        : undefined;
+      const dedupeKey = `owner_notice:${noticeId}:${c.user_id}`;
+      if (await alreadyDelivered(deps.db, dedupeKey)) continue;
+      await sendNotification(deps, {
+        dedupeKey,
+        template: `owner_notice_${kind}`,
+        organizationId,
+        idempotencyKey: dedupeKey,
+        message: ownerNoticeEmail({
+          to: c.email,
+          kind: kind as OwnerNoticeKind,
+          name: c.full_name,
+          organizationName: c.organization_name,
+          storeName: c.store_name,
+          storeStatus,
+          ...(recipient ? { recipient } : {}),
+          panelLink: new URL("/admin", deps.appUrl).toString(),
+        }),
+      });
+    }
+  };
+
   return [
     ["access.invitation_email", invitationEmail],
     ["access.support_access_notice", supportNotice],
+    ["tenant.owner_notice", ownerNotice],
   ];
 }

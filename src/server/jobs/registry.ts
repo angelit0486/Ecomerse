@@ -110,6 +110,7 @@ const domains = () => {
 const handlers: Array<[string, JobHandler]> = [
   ["access.invitation_email", lazy("access.invitation_email", notifications)],
   ["access.support_access_notice", lazy("access.support_access_notice", notifications)],
+  ["tenant.owner_notice", lazy("tenant.owner_notice", notifications)],
   ["media.process", lazy("media.process", media)],
   ["media.copy", lazy("media.copy", media)],
   ["media.fetch_remote", lazy("media.fetch_remote", media)],
