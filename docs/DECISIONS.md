@@ -1399,3 +1399,12 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   3. El código ya está hecho y probado (pgTAP 120, integración), pero **apagado**: el job no recibe la función de borrado hasta que lo apruebes.
 - **Riesgo.** Una cuenta borrada no se recupera; si la persona vuelve, crea una nueva con el mismo correo. Una cuenta que se sigue usando en otra tienda nunca se borra.
 - **Pregunta:** ¿apruebas que la plataforma borre esas cuentas automáticamente?
+
+## 33. Misión de mejoras 2026-11 (2026-11-03)
+
+- **D-MEJ-01. Interruptores por tienda en la tienda.** `src/server/storefront/flags.ts` lee `storefront.get_store_flags` una vez por request, sin caché entre requests. Si la lectura falla, todo queda apagado. Cada cambio visible de la misión va detrás de su interruptor, apagado por defecto.
+- **D-MEJ-02. Portada de imágenes (`image_carousel`), extensión de ADR-034** (como D-POR-02 y D-POR-04). Es un tipo de bloque nuevo, con las mismas reglas en SQL y en Zod (paridad) y solo aditivo. No toca contratos críticos de GATE0 §43: precios, pedidos, pagos, RLS, roles y autenticación quedan igual.
+  - Solo imágenes, con texto alternativo obligatorio que pasa por cumplimiento. Las imágenes deben ser banners listos de la misma tienda.
+  - Estilos sin `style=` en el HTML (CSP con nonce): el punto focal va en un `<style>` con nonce y el arrastre se mueve desde JavaScript.
+  - Evidencia y reversa: `docs/audit/parte-b/LEEME.md`.
+- **D-MEJ-03. Cuentas en staging.** La causa raíz es que no hay proveedor de correo (`docs/plan/DIAGNOSTICO-CUENTAS.md`). No se cambió código ni cuentas.
