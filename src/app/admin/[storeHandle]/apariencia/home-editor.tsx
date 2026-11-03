@@ -2638,19 +2638,24 @@ export function HomeEditor({
                       a aparecer.
                     </p>
                   )}
+                  {/* El rol va en un contenedor: en la <ul> le quitaría a la lista su semántica (axe «listitem»). */}
                   {errors ? (
-                    <ul role="alert" className="mx-3 mb-3 list-disc pl-5 text-sm text-danger">
-                      {errors.map((e, i) => (
-                        <li key={i}>{e}</li>
-                      ))}
-                    </ul>
+                    <div role="alert" className="mx-3 mb-3 text-sm text-danger">
+                      <ul className="list-disc pl-5">
+                        {errors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : null}
                   {state.warnings?.[section.id] && !edited.has(section.id) ? (
-                    <ul role="status" className="mx-3 mb-3 list-disc pl-5 text-sm text-warning">
-                      {state.warnings[section.id]!.map((w, i) => (
-                        <li key={i}>{w}</li>
-                      ))}
-                    </ul>
+                    <div role="status" className="mx-3 mb-3 text-sm text-warning">
+                      <ul className="list-disc pl-5">
+                        {state.warnings[section.id]!.map((w, i) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : null}
                   {expanded ? (
                     <div
