@@ -97,7 +97,12 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - capturas deterministas (`5b9207d`).
   - Suites en verde: verify 1064, pgTAP 2635, integración 388, E2E 120/120.
   - Staging en `20261103000100` (144); el interruptor está apagado y sin tiendas encendidas.
-- Siguiente: lote 3, cuando el propietario diga «sigue».
+- Misión «portada de imágenes y panel» (2026-11-03):
+  - Parte A: `docs/plan/DIAGNOSTICO-CUENTAS.md`. Causa: sin proveedor de correo en staging. Sin cambio de código ni de cuentas.
+  - Parte B: portada de imágenes detrás de `hero_image_carousel` (`6cf2eab`, `191c6ce`, `d3ff4d4`, `06bd4b8`, `9efedf9`); evidencia en `docs/audit/parte-b/`.
+  - Suites en verde: verify 1090, pgTAP 2655, integración 399, E2E 121/121.
+  - Staging en `20261103000200` (145 migraciones); interruptor encendido solo en `demo2`.
+- Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)
 
