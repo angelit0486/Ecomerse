@@ -26,6 +26,7 @@ import {
 } from "./home-blocks";
 import { ProductGrid } from "./rated-product-grid";
 import { HeroCarousel } from "./hero-carousel";
+import { ImageCarousel } from "./image-carousel";
 import { ThemeLink } from "./theme-link";
 
 /**
@@ -385,7 +386,10 @@ export async function HomeSections({
   trust = null,
   contact = {},
   asPage = false,
+  flags,
 }: {
+  /** Interruptores de la tienda: sin `hero_image_carousel`, la portada de imágenes no se dibuja. */
+  flags?: ReadonlySet<string>;
   /** En una página de contenido (ADR-034 §3): el h1 es el título de la página. */
   asPage?: boolean;
   /** Contacto del tema, para el bloque «Contacto y ubicación». */
@@ -398,17 +402,24 @@ export async function HomeSections({
   /** Objetivos con productos: bloques de color bajo el hero (o bajo el título, sin hero). */
   goals?: GoalTile[];
 }) {
-  const heroFirst = !asPage && sections[0]?.type === "hero";
+  // Interruptor apagado: la portada de imágenes guardada no se dibuja y todo queda como antes.
+  if (!flags?.has("hero_image_carousel") && sections.some((s) => s.type === "image_carousel")) {
+    sections = sections.filter((s) => s.type !== "image_carousel");
+  }
+  const heroFirst =
+    !asPage && (sections[0]?.type === "hero" || sections[0]?.type === "image_carousel");
   const shelf = shelfFor(
     sections.flatMap((s) => (s.type === "category_grid" ? s.categories.map((c) => c.name) : [])),
   );
   const colorCss = sectionCss(sections);
-  const nonce = colorCss ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
+  const focalCss = carouselFocalCss(sections);
+  const nonce = colorCss || focalCss ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
   return (
     <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
       {colorCss ? <style nonce={nonce}>{colorCss}</style> : null}
+      {focalCss ? <style nonce={nonce}>{focalCss}</style> : null}
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}
       {heroFirst || asPage ? null : (
         <div className="space-y-8">
@@ -441,6 +452,49 @@ export async function HomeSections({
         ) : (
           <Hero key={section.id} section={section} headingLevel={2} shelf={shelf} />
         );
+      case "image_carousel": {
+        const carousel = (
+          <ImageCarousel
+            key={section.id}
+            id={section.id}
+            priority={index === 0}
+            interval={section.interval_seconds}
+            transition={section.transition}
+            showArrows={section.show_arrows}
+            aspectMobile={section.aspect_mobile}
+            aspectDesktop={section.aspect_desktop}
+            slides={section.slides.map((slide, i) => ({
+              key: `${section.id}-${i}`,
+              src: mediaUrl(slide.image.path),
+              srcSet: srcSetFor(slide.image.path, slide.image.width),
+              width: slide.image.width ?? 2400,
+              height: slide.image.height ?? 1028,
+              ...(slide.mobile_image
+                ? {
+                    mobileSrc: mediaUrl(slide.mobile_image.path),
+                    mobileSrcSet: srcSetFor(slide.mobile_image.path, slide.mobile_image.width),
+                  }
+                : {}),
+              alt: slide.alt,
+              ...(slide.link ? { href: slide.link } : {}),
+            }))}
+          />
+        );
+        // Primera de la portada: el h1 (el nombre de la tienda) queda para lectores de pantalla.
+        return index === 0 && !asPage ? (
+          <div
+            key={section.id}
+            className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
+          >
+            <h1 className="sr-only">{storeName}</h1>
+            {carousel}
+            <GoalTiles goals={goals} />
+            {trust}
+          </div>
+        ) : (
+          carousel
+        );
+      }
       case "featured_products": {
         const eager = index === eagerIndex ? 4 : 0;
         const href = section.show_view_all ? viewAllHref(section.source) : null;
@@ -652,4 +706,31 @@ export async function HomeSections({
         return null;
     }
   }
+}
+
+/**
+ * Punto focal de cada imagen de la portada de imágenes, en un `<style>` con
+ * nonce (la CSP no admite estilos en línea). Los ids y porcentajes ya los
+ * validó la base (uuid y enteros de 0 a 100).
+ */
+function carouselFocalCss(sections: HomeSectionData[]): string {
+  const UUID = /^[0-9a-f-]{36}$/i;
+  const pct = (n: unknown) =>
+    Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 100 ? n : null;
+  const rules: string[] = [];
+  for (const section of sections) {
+    if (section.type !== "image_carousel" || !UUID.test(section.id)) continue;
+    section.slides.forEach((slide, i) => {
+      const sel = `[data-carousel="${section.id}"] [data-slide="${i}"] img`;
+      const d = slide.focal;
+      if (d && pct(d.x) !== null && pct(d.y) !== null) {
+        rules.push(`${sel}{object-position:${d.x}% ${d.y}%}`);
+      }
+      const m = slide.mobile_focal ?? (slide.mobile_image ? null : slide.focal);
+      if (m && pct(m.x) !== null && pct(m.y) !== null) {
+        rules.push(`@media (max-width:639px){${sel}{object-position:${m.x}% ${m.y}%}}`);
+      }
+    });
+  }
+  return rules.join("");
 }

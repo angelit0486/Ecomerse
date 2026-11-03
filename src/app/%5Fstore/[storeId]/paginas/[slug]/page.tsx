@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getPage } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 import { getPagePreview } from "@/server/storefront/preview-reads";
 import { excerpt, pageMetadata } from "@/server/storefront/seo";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
@@ -59,6 +60,7 @@ export default async function StorePage({ params }: Props) {
           storeName={store.name}
           contact={contact}
           asPage
+          flags={await storeFlags(store.id)}
         />
       ) : null}
     </div>

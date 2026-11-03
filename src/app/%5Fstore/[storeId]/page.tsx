@@ -13,6 +13,7 @@ import {
   mediaUrl,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 import { getHomePreview } from "@/server/storefront/preview-reads";
 import { canonicalUrl, pageMetadata } from "@/server/storefront/seo";
 
@@ -114,6 +115,7 @@ export default async function StoreHomePage({ params }: Props) {
           goals={goals}
           trust={trust}
           contact={settings.contact ?? {}}
+          flags={await storeFlags(store.id)}
         />
       ) : (
         <TemplateHome

@@ -817,7 +817,24 @@ type SectionBody =
       }[];
     }
   | { type: "video"; provider: VideoProvider; video_id: string; title: string; caption?: string }
-  | { type: "contact_map"; title: string; show_whatsapp: boolean };
+  | { type: "contact_map"; title: string; show_whatsapp: boolean }
+  | {
+      /** Portada de imágenes (interruptor hero_image_carousel): solo imágenes. */
+      type: "image_carousel";
+      slides: {
+        image: ImageRef;
+        mobile_image: ImageRef | null;
+        alt: string;
+        link?: string | null;
+        focal?: { x: number; y: number } | null;
+        mobile_focal?: { x: number; y: number } | null;
+      }[];
+      interval_seconds: number;
+      transition: "slide" | "fade";
+      show_arrows: boolean;
+      aspect_desktop: "21:9" | "16:9" | "3:1";
+      aspect_mobile: "4:5" | "1:1" | "3:4";
+    };
 
 export type HomeSectionData = SectionBody & {
   id: string;
