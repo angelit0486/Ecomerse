@@ -38,6 +38,9 @@ for (const name of VERTICALS) {
       page.waitForEvent("popup"),
       page.getByRole("link", { name: "Ver vista previa de la tienda" }).click(),
     ]);
+    // La ventana nueva nace en about:blank; según la versión del navegador el
+    // evento llega antes de que navegue. Se espera a la URL real de la tienda.
+    await preview.waitForURL(/^https?:\/\//);
     const home = new URL("/", preview.url()).toString();
     const dir = OUT ? `${OUT}/${name.split(" ")[0]!.toLowerCase()}` : null;
     if (dir) mkdirSync(dir, { recursive: true });
