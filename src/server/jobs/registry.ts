@@ -8,6 +8,7 @@ import {
 } from "@/server/domains/provider";
 import { workerDb } from "@/server/db/role-clients";
 import { serverEnv } from "@/server/env";
+import { log } from "@/server/observability/logger";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { createImportHandlers } from "@/server/imports/handlers";
 import { createCartRecoveryHandlers } from "@/server/notifications/cart-recovery";
@@ -16,7 +17,7 @@ import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
 import { createOrderHandlers } from "@/server/orders/handlers";
 import { createRefundHandlers } from "@/server/orders/refunds";
-import { refreshDueAccounts } from "@/server/payments/mercadopago-credentials";
+import { refreshDueAccounts, resealCredentials } from "@/server/payments/mercadopago-credentials";
 import {
   mercadoPagoCredentialDeps,
   mercadoPagoProvider,
@@ -132,7 +133,11 @@ const handlers: Array<[string, JobHandler]> = [
     // ADR-041: llaves de los comercios por vencer. Sin la clave de cifrado no hay nada que renovar.
     async () => {
       const deps = mercadoPagoCredentialDeps();
-      if (deps) await refreshDueAccounts(deps);
+      if (!deps) return;
+      // Rotación de la clave en curso: primero todo queda cifrado con la nueva.
+      if (deps.previousKey)
+        log.info("payments.credentials_resealed", { ...(await resealCredentials(deps)) });
+      await refreshDueAccounts(deps);
     },
   ],
   ["payment.failed", lazy("payment.failed", orderNotifications)],

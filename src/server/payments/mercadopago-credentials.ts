@@ -1,6 +1,6 @@
 import type { Sql } from "@/server/db/role-clients";
 import { AppError } from "@/server/errors";
-import { open, seal } from "@/server/security/secret-box";
+import { openWithAny, seal } from "@/server/security/secret-box";
 
 import type { MercadoPagoApi } from "./mercadopago";
 import {
@@ -19,6 +19,8 @@ import type { PaymentAccountCredentials } from "./provider";
 export interface CredentialDeps {
   db: Sql;
   key: Buffer;
+  /** Clave anterior durante una rotación: solo para leer; todo se guarda con `key`. */
+  previousKey?: Buffer | null;
   oauth: MercadoPagoOAuthConfig | null;
   /** Cuentas conectadas antes de ADR-041 (sin llaves propias) siguen con esta. */
   platformToken: string;
@@ -62,7 +64,11 @@ export async function refreshAccount(
     Row[]
   >`select * from system.mercadopago_credentials(${accountId}::uuid)`;
   if (!row?.refresh_token_enc || !deps.oauth) return null;
-  const refresh = open(deps.key, row.refresh_token_enc, credentialContext(row.store_id));
+  const refresh = openWithAny(
+    deps,
+    row.refresh_token_enc,
+    credentialContext(row.store_id),
+  ).plaintext;
   const tokens = await refreshTokens(deps.oauth, refresh, deps.now?.() ?? new Date());
   await saveRefreshed(deps, accountId, row, tokens);
   return tokens.accessToken;
@@ -83,7 +89,7 @@ export function createTokenResolver(
       const fresh = await refreshAccount(deps, account.id);
       if (fresh) return fresh;
     }
-    return open(deps.key, row.access_token_enc, credentialContext(row.store_id));
+    return openWithAny(deps, row.access_token_enc, credentialContext(row.store_id)).plaintext;
   };
 }
 
@@ -135,4 +141,61 @@ export async function refreshDueAccounts(deps: CredentialDeps): Promise<number> 
     if (await refreshAccount(deps, d.payment_account_id).catch(() => null)) renewed += 1;
   }
   return renewed;
+}
+
+export interface ResealResult {
+  /** Vueltas a cifrar con la clave vigente. */
+  resealed: number;
+  /** Ya estaban con la clave vigente. */
+  current: number;
+  /** Cambiaron mientras se leían (p. ej. una renovación); ya quedaron con la vigente. */
+  changed: number;
+  /** No abren con ninguna de las dos claves: esa tienda tendrá que reconectar. */
+  unreadable: number;
+}
+
+/**
+ * Rotación de PAYMENT_CREDENTIALS_KEY sin que los comercios reconecten: recorre
+ * todas las llaves por lotes, abre las que siguen con la clave anterior y las
+ * guarda con la vigente. La escritura es condicional (si el sobre cambió en
+ * medio no se pisa) y se puede repetir sin efecto: lo ya rotado se cuenta en
+ * `current`. Nunca registra llaves ni sobres.
+ */
+export async function resealCredentials(
+  deps: Pick<CredentialDeps, "db" | "key" | "previousKey">,
+  batchSize = 100,
+): Promise<ResealResult> {
+  const result: ResealResult = { resealed: 0, current: 0, changed: 0, unreadable: 0 };
+  let after: string | null = null;
+  for (;;) {
+    const rows: Array<Omit<Row, "expires_at"> & { payment_account_id: string }> = await deps.db`
+      select * from system.payment_credentials_batch(${after}::uuid, ${batchSize})`;
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      after = row.payment_account_id;
+      const ctx = credentialContext(row.store_id);
+      let access: ReturnType<typeof openWithAny>;
+      let refresh: ReturnType<typeof openWithAny> | null;
+      try {
+        access = openWithAny(deps, row.access_token_enc, ctx);
+        refresh = row.refresh_token_enc ? openWithAny(deps, row.refresh_token_enc, ctx) : null;
+      } catch {
+        result.unreadable += 1;
+        continue;
+      }
+      if (access.current && (refresh?.current ?? true)) {
+        result.current += 1;
+        continue;
+      }
+      const [r] = await deps.db<{ ok: boolean }[]>`
+        select system.payment_credentials_reseal(
+          ${row.payment_account_id}::uuid, ${row.access_token_enc},
+          ${seal(deps.key, access.plaintext, ctx)},
+          ${refresh ? seal(deps.key, refresh.plaintext, ctx) : null}) as ok`;
+      if (r?.ok) result.resealed += 1;
+      else result.changed += 1;
+    }
+    if (rows.length < batchSize) break;
+  }
+  return result;
 }

@@ -54,6 +54,9 @@ export function mercadoPagoCredentialDeps(): CredentialDeps | null {
   return {
     db: workerDb(),
     key: parseKey(env.PAYMENT_CREDENTIALS_KEY),
+    previousKey: env.PAYMENT_CREDENTIALS_KEY_PREVIOUS
+      ? parseKey(env.PAYMENT_CREDENTIALS_KEY_PREVIOUS)
+      : null,
     oauth: mercadoPagoOAuth(),
     platformToken: env.MERCADOPAGO_ACCESS_TOKEN,
   };

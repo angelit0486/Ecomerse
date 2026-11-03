@@ -89,6 +89,14 @@ export const serverEnvSchema = z.object({
     .string()
     .regex(/^[A-Za-z0-9+/]{43}=$/)
     .optional(),
+  /**
+   * Solo durante una rotación (docs/runbooks/rotacion-de-claves.md): la clave
+   * anterior, para seguir leyendo las llaves hasta volver a cifrarlas con la nueva.
+   */
+  PAYMENT_CREDENTIALS_KEY_PREVIOUS: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .optional(),
   /** Solo pruebas: pantalla de autorización de Mercado Pago simulada. */
   MERCADOPAGO_AUTH_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /**
@@ -170,6 +178,18 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   // Mercado Pago va completo o no va: un token sin secreto aceptaría cobros sin poder confirmarlos.
   if (!env.MERCADOPAGO_ACCESS_TOKEN !== !env.MERCADOPAGO_WEBHOOK_SECRET) {
     ctx.addIssue({ code: "custom", path: ["MERCADOPAGO_WEBHOOK_SECRET"], message: "van juntas" });
+  }
+  // La clave anterior solo tiene sentido junto a una nueva y distinta.
+  if (
+    env.PAYMENT_CREDENTIALS_KEY_PREVIOUS &&
+    (!env.PAYMENT_CREDENTIALS_KEY ||
+      env.PAYMENT_CREDENTIALS_KEY_PREVIOUS === env.PAYMENT_CREDENTIALS_KEY)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["PAYMENT_CREDENTIALS_KEY_PREVIOUS"],
+      message: "requiere una PAYMENT_CREDENTIALS_KEY nueva y distinta",
+    });
   }
   // OAuth va completo y sobre la integración de plataforma (su webhook y su token).
   const oauth = [

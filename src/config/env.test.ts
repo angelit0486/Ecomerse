@@ -144,6 +144,22 @@ describe("parseServerEnv", () => {
     expect(() =>
       parseServerEnv({ ...valid, ...mp, ...oauth, PAYMENT_CREDENTIALS_KEY: "corta" }),
     ).toThrow(/PAYMENT_CREDENTIALS_KEY/);
+    // Rotación: la clave anterior va junto a una nueva y distinta.
+    const previous = Buffer.alloc(32, 9).toString("base64");
+    expect(() =>
+      parseServerEnv({ ...valid, ...mp, ...oauth, PAYMENT_CREDENTIALS_KEY_PREVIOUS: previous }),
+    ).not.toThrow();
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        ...mp,
+        ...oauth,
+        PAYMENT_CREDENTIALS_KEY_PREVIOUS: oauth.PAYMENT_CREDENTIALS_KEY,
+      }),
+    ).toThrow(/PAYMENT_CREDENTIALS_KEY_PREVIOUS/);
+    expect(() => parseServerEnv({ ...valid, PAYMENT_CREDENTIALS_KEY_PREVIOUS: previous })).toThrow(
+      /PAYMENT_CREDENTIALS_KEY_PREVIOUS/,
+    );
   });
 
   it("dominios: VERCEL_PROJECT_ID sin token es válido (Vercel lo inyecta en cada build)", () => {

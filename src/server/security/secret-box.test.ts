@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { deriveKey, open, parseKey, seal } from "./secret-box";
+import { deriveKey, open, openWithAny, parseKey, seal } from "./secret-box";
 
 const key = randomBytes(32);
 
@@ -35,5 +35,23 @@ describe("secret-box", () => {
 
   it("las subclaves dependen del propósito", () => {
     expect(deriveKey(key, "a").equals(deriveKey(key, "b"))).toBe(false);
+  });
+
+  it("rotación: abre con la clave vigente o, si no, con la anterior", () => {
+    const old = randomBytes(32);
+    const fresh = randomBytes(32);
+    const viejo = seal(old, "llave", "cuenta-a");
+    const nuevo = seal(fresh, "llave", "cuenta-a");
+    expect(openWithAny({ key: fresh, previousKey: old }, nuevo, "cuenta-a")).toEqual({
+      plaintext: "llave",
+      current: true,
+    });
+    expect(openWithAny({ key: fresh, previousKey: old }, viejo, "cuenta-a")).toEqual({
+      plaintext: "llave",
+      current: false,
+    });
+    // Sin clave anterior, o con el contexto de otra cuenta, no abre.
+    expect(() => openWithAny({ key: fresh }, viejo, "cuenta-a")).toThrow();
+    expect(() => openWithAny({ key: fresh, previousKey: old }, viejo, "cuenta-b")).toThrow();
   });
 });

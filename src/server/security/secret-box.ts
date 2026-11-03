@@ -48,6 +48,24 @@ export function open(key: Buffer, envelope: string, context: string): string {
   }
 }
 
+/**
+ * Rotación de la clave (docs/runbooks/rotacion-de-claves.md): abre con la clave
+ * vigente y, si no puede, con la anterior. `current` dice si el sobre ya está
+ * cifrado con la vigente o hay que volver a cifrarlo.
+ */
+export function openWithAny(
+  keys: { key: Buffer; previousKey?: Buffer | null },
+  envelope: string,
+  context: string,
+): { plaintext: string; current: boolean } {
+  try {
+    return { plaintext: open(keys.key, envelope, context), current: true };
+  } catch (error) {
+    if (!keys.previousKey) throw error;
+    return { plaintext: open(keys.previousKey, envelope, context), current: false };
+  }
+}
+
 /** Subclave derivada para otro propósito (p. ej. firmar el estado de OAuth). */
 export function deriveKey(key: Buffer, purpose: string): Buffer {
   return createHmac("sha256", key).update(purpose).digest();

@@ -13,7 +13,7 @@ Qué clave hay, dónde vive, cada cuánto se cambia y qué hacer si se filtra. *
 | `CRON_SECRET`, `JOBS_HMAC_SECRET`                     | Vercel                         | Anual                              | Solo afecta a la ejecución de trabajos; rotar y redeploy                                                                                                                    |
 | `PREVIEW_HMAC_SECRET`                                 | Vercel                         | Anual                              | Invalida las vistas previas abiertas (se vuelven a abrir)                                                                                                                   |
 | `ORDER_LINK_SECRET`                                   | Vercel                         | Solo si se filtra                  | **Invalida** los enlaces de pedido de invitado y los de baja de recordatorios ya enviados. Avisar antes                                                                     |
-| `PAYMENT_CREDENTIALS_KEY`                             | Vercel                         | Solo si se filtra                  | Cifra las llaves de Mercado Pago de cada comercio: rotarla obliga a re-cifrar (pendiente de script) o a que cada comercio reconecte                                         |
+| `PAYMENT_CREDENTIALS_KEY`                             | Vercel                         | Solo si se filtra                  | Cifra las llaves de Mercado Pago de cada comercio: se rota sin que los comercios reconecten: ver «Rotar `PAYMENT_CREDENTIALS_KEY`»                                          |
 | `STRIPE_SECRET_KEY`, `STRIPE_*_WEBHOOK_SECRET`        | Stripe + Vercel                | Anual o si se filtra               | Stripe permite una clave nueva con la vieja vigente unas horas («roll key»)                                                                                                 |
 | `MERCADOPAGO_*`                                       | Mercado Pago + Vercel          | Anual o si se filtra               | Regenerar en la aplicación de Mercado Pago                                                                                                                                  |
 | `RESEND_API_KEY`                                      | Resend + Vercel                | Anual o si se filtra               | Crear la nueva, cambiar Vercel, redeploy, borrar la vieja                                                                                                                   |
@@ -31,7 +31,25 @@ Qué clave hay, dónde vive, cada cuánto se cambia y qué hacer si se filtra. *
 4. Si el valor llegó a git: rotarlo ya. Reescribir el historial **no** basta, porque un repositorio público pudo haberse copiado.
 5. Anotar en `docs/DECISIONS.md` qué pasó, cuándo y qué se rotó.
 
+## Rotar `PAYMENT_CREDENTIALS_KEY`
+
+Las llaves de Mercado Pago de cada comercio están cifradas con esta clave. Para cambiarla sin que nadie reconecte:
+
+1. Generar la clave nueva (32 bytes en base64, 44 caracteres que terminan en `=`).
+2. En Vercel → Settings → Environment Variables:
+   - crear `PAYMENT_CREDENTIALS_KEY_PREVIOUS` con el valor **actual**;
+   - reemplazar `PAYMENT_CREDENTIALS_KEY` por la **nueva**.
+3. Redesplegar. Desde ese momento el servidor lee con cualquiera de las dos y guarda todo con la nueva: los cobros no se interrumpen.
+4. Esperar a la pasada diaria del mantenimiento (job `payments.mercadopago_refresh`). Vuelve a cifrar todas las llaves con la nueva y deja en los logs `payments.credentials_resealed` con cuántas se cambiaron (`resealed`), cuántas ya estaban (`current`) y cuántas no abren con ninguna clave (`unreadable`).
+5. Con `unreadable` en 0 y una pasada que ya no cambie nada (`resealed` en 0), borrar `PAYMENT_CREDENTIALS_KEY_PREVIOUS` y redesplegar.
+
+Notas:
+
+- Si la clave se **filtró**, el paso 5 se hace en cuanto `resealed` llegue a 0, para que la clave filtrada deje de abrir algo.
+- Una llave en `unreadable` no abre ni con la vieja ni con la nueva. Esa tienda tiene que volver a conectar su cuenta en Ajustes → Pagos.
+- La escritura es condicional: si una renovación guarda tokens nuevos durante la pasada, no se pisan, porque ya quedaron con la clave nueva.
+- La configuración rechaza `PAYMENT_CREDENTIALS_KEY_PREVIOUS` sin una `PAYMENT_CREDENTIALS_KEY` nueva y distinta.
+
 ## Pendiente
 
-- Script para re-cifrar las llaves de Mercado Pago al rotar `PAYMENT_CREDENTIALS_KEY`, para que los comercios no tengan que reconectar.
 - El repositorio `angelit0486/Ecomerse` es **público**: cualquiera puede leer el código. No contiene secretos, pero conviene hacerlo privado antes de vender. Si se hace privado, el método manual de migraciones con `pg_net` deja de funcionar y hay que configurar `MIGRATION_DATABASE_URL` en Vercel.
