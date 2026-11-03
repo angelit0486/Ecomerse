@@ -25,6 +25,7 @@ import {
 } from "@/server/payments/registry";
 import { createHealthHandlers } from "@/server/platform/health-handlers";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
+import { createPurgeHandlers } from "@/server/privacy/purge-anonymized";
 import { invalidateStore } from "@/server/storefront/cache";
 import { storeOrigin } from "@/server/storefront/seo";
 
@@ -115,6 +116,17 @@ const handlers: Array<[string, JobHandler]> = [
   ["media.copy", lazy("media.copy", media)],
   ["media.fetch_remote", lazy("media.fetch_remote", media)],
   ["media.purge_orphans", lazy("media.purge_orphans", media)],
+  // ADR-046, paso 2: archivos de tiendas anonimizadas (Storage Admin, SR-2). El
+  // borrado de cuentas de compradores espera ADR-055 (amplía SR-1): sin deleteAuthUser no corre.
+  [
+    "privacy.purge_anonymized",
+    lazy("privacy.purge_anonymized", () =>
+      createPurgeHandlers(() => ({
+        db: workerDb(),
+        storage: createStorageAdmin(),
+      })),
+    ),
+  ],
   ["media.backfill_variants", lazy("media.backfill_variants", media)],
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],

@@ -67,7 +67,8 @@ export default defineConfig([
   },
   {
     // Lista blanca del service role (GATE0 §11.5): uso #1, reset de MFA (Auth Admin).
-    // Uso #2, Storage Admin del worker de medios (SR-2), inyectado desde el registro de jobs.
+    // Uso #2, Storage Admin (SR-2) del worker de medios y de la limpieza de tiendas
+    // anonimizadas (ADR-046), inyectado desde el registro de jobs.
     files: ["src/server/team/mfa-reset.ts", "src/server/jobs/registry.ts"],
     rules: {
       "no-restricted-imports": ["error", { paths: restrictedImports.paths }],
