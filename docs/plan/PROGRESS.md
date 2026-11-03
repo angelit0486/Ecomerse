@@ -80,6 +80,18 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - E2E de plantillas robusto ante la ventana de vista previa (`store-templates-design`).
 - Suites y staging: ver el resumen de esta sesión.
 
+### Misión de mejoras 2026-11 · rama `mejoras/2026-11`
+
+- Respaldo: rama `respaldo/pre-mejoras` en `255fa7f`. La etiqueta `respaldo-pre-mejoras` existe solo en local: este entorno no permite subir etiquetas (403).
+- Línea base ×2 en verde y capturas de referencia: `docs/audit/referencia/` (`d82fd79`).
+- Lote 1:
+  - pgTAP 29 hermética (DIN-11), `885308a`;
+  - staging en `20261029001500` = repo;
+  - aviso de migraciones faltantes ya existía (E2E `schema-version`);
+  - CI 160 verde.
+  - Vista previa en Vercel [NO VERIFICADO]: el conector no tiene acceso al equipo (B2) y faltan Resend y Send Email Hook (B3).
+- Siguiente: lote 2, cuando el propietario diga «sigue».
+
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                       | Efecto                                                      |
