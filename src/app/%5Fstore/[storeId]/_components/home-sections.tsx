@@ -477,6 +477,8 @@ export async function HomeSections({
                 : {}),
               alt: slide.alt,
               ...(slide.link ? { href: slide.link } : {}),
+              focal: slide.focal ?? null,
+              mobileFocal: slide.mobile_focal ?? null,
             }))}
           />
         );

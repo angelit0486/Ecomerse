@@ -75,6 +75,33 @@ function cleanSlide(slide: Json): Json {
   return out;
 }
 
+/** Punto focal: dos enteros de 0 a 100 (lo demás se descarta). */
+function cleanFocal(value: unknown): Json | null {
+  if (!value || typeof value !== "object") return null;
+  const { x, y } = value as Json;
+  const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n);
+  if (!ok(x) || !ok(y)) return null;
+  const clamp = (n: number) => Math.min(100, Math.max(0, Math.round(n)));
+  return { x: clamp(x as number), y: clamp(y as number) };
+}
+
+/** Una imagen de la portada de imágenes: solo sus campos; opcionales vacíos fuera. */
+function cleanImageSlide(slide: Json): Json {
+  const out: Json = { image_media_id: clean(slide.image_media_id), alt: clean(slide.alt) };
+  const mobile = clean(slide.mobile_image_media_id);
+  if (typeof mobile === "string" && mobile) out.mobile_image_media_id = mobile;
+  const link = typeof slide.link === "string" ? normalizeLink(slide.link) : "";
+  if (link) out.link = link;
+  for (const key of ["focal", "mobile_focal"]) {
+    const focal = cleanFocal(slide[key]);
+    if (focal) out[key] = focal;
+  }
+  for (const key of ["starts_at", "ends_at"]) {
+    if (typeof slide[key] === "string" && slide[key]) out[key] = slide[key];
+  }
+  return out;
+}
+
 const FIELD_LABELS: Record<string, string> = {
   heading: "Título",
   title: "Título",
@@ -101,6 +128,12 @@ const FIELD_LABELS: Record<string, string> = {
   ends_at: "Mostrar hasta",
   mobile_image_media_id: "Imagen para el celular",
   slides: "Portadas que rotan",
+  alt: "Texto alternativo",
+  link: "Destino",
+  interval_seconds: "Segundos entre imágenes",
+  transition: "Transición",
+  focal: "Punto focal",
+  mobile_focal: "Punto focal en el celular",
   autoplay: "Rotación",
 };
 
@@ -120,6 +153,9 @@ export function normalizeSections(input: unknown): unknown {
         const link = typeof cta.link === "string" ? normalizeLink(cta.link) : "";
         if (!label && !link) delete props.cta;
         else props.cta = { label, link };
+      } else if (key === "slides" && Array.isArray(value) && section.type === "image_carousel") {
+        // Portada de imágenes: la lista vacía se deja para que el esquema pida una imagen.
+        props.slides = value.map((slide: Json) => cleanImageSlide(slide ?? {}));
       } else if (key === "slides" && Array.isArray(value)) {
         // Portadas extra del hero (tema v3): mismas reglas que el hero.
         const slides = value.map((slide: Json) => cleanSlide(slide ?? {}));
@@ -177,7 +213,18 @@ export function sectionIssues(input: unknown): Record<string, string[]> | string
         : typeof issue.path[1] === "string"
           ? issue.path[1]
           : undefined;
-    const field = typeof key === "string" ? FIELD_LABELS[key] : undefined;
+    let field = typeof key === "string" ? FIELD_LABELS[key] : undefined;
+    // Portada de imágenes: «Imagen 2, Texto alternativo: …» (cuál y qué campo).
+    if (
+      sections[index!]?.type === "image_carousel" &&
+      key === "slides" &&
+      typeof issue.path[3] === "number"
+    ) {
+      const inner = typeof issue.path[4] === "string" ? FIELD_LABELS[issue.path[4]] : undefined;
+      field = `Imagen ${issue.path[3] + 1}${inner ? `, ${inner}` : ""}`;
+    } else if (sections[index!]?.type === "image_carousel" && key === "slides") {
+      field = "Imágenes";
+    }
     const message = field ? `${field}: ${issue.message}` : issue.message;
     const list = (out[id] ??= []);
     if (!list.includes(message)) list.push(message);

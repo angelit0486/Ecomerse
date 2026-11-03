@@ -167,4 +167,57 @@ describe("secciones del editor de portada", () => {
     ]);
     expect(issues).toEqual({ [ID]: ["Mostrar hasta: El fin debe ser después del inicio."] });
   });
+
+  it("portada de imágenes: conserva el texto alternativo, quita opcionales vacíos y no la confunde con el hero", () => {
+    const IMG = "00000000-0000-4000-8000-000000000009";
+    const [out] = normalizeSections([
+      {
+        id: ID,
+        type: "image_carousel",
+        enabled: true,
+        props: {
+          slides: [
+            {
+              image_media_id: IMG,
+              alt: "  Proteínas   con descuento ",
+              mobile_image_media_id: "",
+              link: "  /ofertas ",
+              focal: { x: 30.4, y: 140 },
+              mobile_focal: { x: "a", y: 1 },
+              starts_at: "",
+              heading: "no va",
+            },
+          ],
+          interval_seconds: 4,
+          transition: "slide",
+        },
+      },
+    ]) as { props: { slides: Record<string, unknown>[] } }[];
+    expect(out!.props.slides[0]).toEqual({
+      image_media_id: IMG,
+      alt: "Proteínas con descuento",
+      link: "/ofertas",
+      focal: { x: 30, y: 100 },
+    });
+    expect(sectionIssues([out])).toBeNull();
+  });
+
+  it("portada de imágenes: sin texto alternativo o sin imágenes, el error dice qué falta", () => {
+    const issues = sectionIssues(
+      normalizeSections([
+        {
+          id: ID,
+          type: "image_carousel",
+          enabled: true,
+          props: { slides: [{ image_media_id: "00000000-0000-4000-8000-000000000009", alt: "" }] },
+        },
+      ]),
+    );
+    expect(issues).toBeTruthy();
+    expect(JSON.stringify(issues)).toContain("Texto alternativo");
+    const empty = sectionIssues(
+      normalizeSections([{ id: ID, type: "image_carousel", enabled: true, props: { slides: [] } }]),
+    );
+    expect(JSON.stringify(empty)).toContain("Agrega al menos una imagen");
+  });
 });

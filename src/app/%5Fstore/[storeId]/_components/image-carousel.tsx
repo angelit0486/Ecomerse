@@ -26,6 +26,9 @@ export interface CarouselSlide {
   mobileSrcSet?: string;
   alt: string;
   href?: string;
+  /** Punto focal (%). En la tienda también llega por `<style>` con nonce, sin JS. */
+  focal?: { x: number; y: number } | null;
+  mobileFocal?: { x: number; y: number } | null;
 }
 
 const ASPECT_MOBILE = {
@@ -38,6 +41,12 @@ const ASPECT_DESKTOP = {
   "16:9": "sm:aspect-video",
   "3:1": "sm:aspect-[3/1]",
 } as const;
+/** Vista previa de computadora en el panel (clases completas: Tailwind solo genera las que ve). */
+const ASPECT_DESKTOP_PREVIEW = {
+  "21:9": "aspect-[21/9]",
+  "16:9": "aspect-video",
+  "3:1": "aspect-[3/1]",
+} as const;
 const SWIPE_PX = 40;
 
 export function ImageCarousel({
@@ -49,7 +58,13 @@ export function ImageCarousel({
   aspectMobile,
   aspectDesktop,
   priority,
+  device,
 }: {
+  /**
+   * Solo el editor del panel: dibuja como en ese dispositivo aunque la pantalla
+   * sea otra (vista previa de celular y de computadora).
+   */
+  device?: "mobile" | "desktop";
   /** Identificador del bloque (el `<style>` del punto focal lo usa). */
   id: string;
   slides: CarouselSlide[];
@@ -89,6 +104,28 @@ export function ImageCarousel({
     const timer = window.setTimeout(() => setWarm(true), 1200);
     return () => window.clearTimeout(timer);
   }, []);
+
+  // Punto focal desde JavaScript (CSSOM, permitido por la CSP): necesario en la
+  // vista previa del panel; en la tienda repite lo que ya dice el <style>.
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const query = window.matchMedia("(max-width: 639px)");
+    const apply = () => {
+      const mobile = device ? device === "mobile" : query.matches;
+      el.querySelectorAll<HTMLImageElement>("[data-slide] img").forEach((img, i) => {
+        const slide = slides[i];
+        const f = mobile
+          ? (slide?.mobileFocal ?? (slide?.mobileSrc ? null : slide?.focal))
+          : slide?.focal;
+        img.style.objectPosition = f ? `${f.x}% ${f.y}%` : "";
+      });
+    };
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, [slides, device]);
 
   const go = useCallback(
     (index: number, dir: 1 | -1) => {
@@ -156,8 +193,15 @@ export function ImageCarousel({
       role="region"
       aria-roledescription="carrusel"
       aria-label="Portada"
+      ref={root}
       data-carousel={id}
-      className={`group relative overflow-hidden ${ASPECT_MOBILE[aspectMobile]} ${ASPECT_DESKTOP[aspectDesktop]} bg-[var(--sf-surface)]`}
+      className={`group relative overflow-hidden ${
+        device === "mobile"
+          ? ASPECT_MOBILE[aspectMobile]
+          : device === "desktop"
+            ? ASPECT_DESKTOP_PREVIEW[aspectDesktop]
+            : `${ASPECT_MOBILE[aspectMobile]} ${ASPECT_DESKTOP[aspectDesktop]}`
+      } bg-[var(--sf-surface)]`}
       onFocusCapture={() => setFocused(true)}
       onBlurCapture={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
@@ -201,7 +245,7 @@ export function ImageCarousel({
           const eager = index === 0 && priority;
           const picture = (
             <picture className="contents">
-              {slide.mobileSrc ? (
+              {slide.mobileSrc && !device ? (
                 <source
                   media="(max-width: 639px)"
                   srcSet={slide.mobileSrcSet ?? slide.mobileSrc}
@@ -209,8 +253,8 @@ export function ImageCarousel({
                 />
               ) : null}
               <img
-                src={slide.src}
-                srcSet={slide.srcSet}
+                src={device === "mobile" && slide.mobileSrc ? slide.mobileSrc : slide.src}
+                srcSet={device === "mobile" && slide.mobileSrc ? undefined : slide.srcSet}
                 sizes="100vw"
                 alt={slide.alt}
                 width={slide.width}

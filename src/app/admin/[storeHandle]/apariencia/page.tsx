@@ -128,6 +128,18 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const navPicks = tab === "encabezado" ? await loadNavPicks(ctx.store.id, linkAccess(ctx)) : [];
   const homeOptions =
     tab === "portada" ? await loadHomeOptions(ctx.store.id, linkAccess(ctx), rows) : null;
+  // Interruptores encendidos para esta tienda: habilitan bloques nuevos del editor.
+  const enabledFlags =
+    tab === "portada"
+      ? (
+          ((await supabase.rpc("access_store_flags", { p_store_id: ctx.store.id })).data ?? []) as {
+            key: string;
+            enabled: boolean;
+          }[]
+        )
+          .filter((f) => f.enabled)
+          .map((f) => f.key)
+      : [];
   const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
   const siblingStores = tab === "historial" ? await loadSiblingStores(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
@@ -298,6 +310,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
           options={homeOptions}
           storeName={ctx.store.name}
           autosave
+          flags={enabledFlags}
         />
       ) : null}
       {tab === "historial" ? (

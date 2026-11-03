@@ -21,6 +21,7 @@ import { FormFeedback } from "../_shared/form-feedback";
 import { submitKeepingState } from "@/ui/submit";
 import { nativeControl } from "../productos/styles";
 import { HomePreview } from "./home-preview";
+import { ImageCarousel } from "../../../%5Fstore/[storeId]/_components/image-carousel";
 import { FLAGGED_SECTION_TYPES, SECTION_LABELS } from "./section-labels";
 import {
   finalizeBannerUpload,
@@ -53,11 +54,19 @@ export interface EditorSection {
 }
 
 export interface HomeEditorOptions {
-  banners: { id: string; url: string; alt: string | null }[];
+  banners: {
+    id: string;
+    url: string;
+    alt: string | null;
+    /** Para avisar de imágenes de baja resolución (portada de imágenes). */
+    width?: number | null;
+    height?: number | null;
+  }[];
   categories: { id: string; name: string }[];
   brands: { id: string; name: string; hasLogo: boolean }[];
   goals: { id: string; label: string }[];
-  products: { id: string; title: string }[];
+  /** `slug` solo de los publicados: destino de la portada de imágenes. */
+  products: { id: string; title: string; slug?: string }[];
   /** Páginas reales de la tienda para sugerir y revisar enlaces (DIAGNOSTICO-PORTADA R3). */
   links?: LinkTargets;
 }
@@ -1054,6 +1063,8 @@ function SectionFields({
           />
         </div>
       );
+    case "image_carousel":
+      return <CarouselFields id={id} props={p} options={options} onChange={update} />;
     case "contact_map":
       return (
         <div className="space-y-3">
@@ -1079,6 +1090,674 @@ function SectionFields({
         </div>
       );
   }
+}
+
+// -----------------------------------------------------------------------------
+// Portada de imágenes (interruptor hero_image_carousel)
+// -----------------------------------------------------------------------------
+
+interface ImageSlideDraft {
+  image_media_id: string;
+  alt: string;
+  mobile_image_media_id?: string;
+  link?: string;
+  focal?: { x: number; y: number };
+  mobile_focal?: { x: number; y: number };
+  starts_at?: string;
+  ends_at?: string;
+}
+
+/** Tamaño recomendado por proporción (ancho × alto en px). */
+const CAROUSEL_DESKTOP = {
+  "21:9": { label: "Panorámica (21:9)", size: "2400 × 1029" },
+  "16:9": { label: "Ancha (16:9)", size: "2400 × 1350" },
+  "3:1": { label: "Franja (3:1)", size: "2400 × 800" },
+} as const;
+const CAROUSEL_MOBILE = {
+  "4:5": { label: "Vertical (4:5)", size: "1080 × 1350" },
+  "1:1": { label: "Cuadrada (1:1)", size: "1080 × 1080" },
+  "3:4": { label: "Alta (3:4)", size: "1080 × 1440" },
+} as const;
+/** Por debajo de este ancho la imagen se ve borrosa en ese dispositivo. */
+const MIN_CAROUSEL_WIDTH = { desktop: 1600, mobile: 750 } as const;
+const MAX_CAROUSEL_SLIDES = 10;
+
+function lowResolution(
+  banner: HomeEditorOptions["banners"][number] | undefined,
+  device: "desktop" | "mobile",
+): string | null {
+  if (!banner?.width) return null;
+  return banner.width < MIN_CAROUSEL_WIDTH[device]
+    ? `Esta imagen mide ${banner.width} px de ancho: en ${
+        device === "desktop" ? "la computadora" : "el celular"
+      } se verá borrosa. Usa una de al menos ${MIN_CAROUSEL_WIDTH[device]} px.`
+    : null;
+}
+
+function CarouselImageSelect({
+  id,
+  text,
+  value,
+  required,
+  device,
+  banners,
+  onChange,
+}: {
+  id: string;
+  text: string;
+  value: string;
+  required?: boolean;
+  device: "desktop" | "mobile";
+  banners: HomeEditorOptions["banners"];
+  onChange: (v: string) => void;
+}) {
+  const banner = banners.find((b) => b.id === value);
+  const warning = lowResolution(banner, device);
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className={label}>
+        {text}
+      </label>
+      <div className="flex items-center gap-2">
+        {banner ? (
+          // eslint-disable-next-line @next/next/no-img-element -- imagen ya re-codificada
+          <img
+            src={banner.url}
+            alt=""
+            className={`${device === "desktop" ? "aspect-[21/9] w-24" : "aspect-[4/5] w-12"} shrink-0 rounded object-cover`}
+          />
+        ) : null}
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={control}
+          aria-describedby={warning ? `${id}-warning` : undefined}
+        >
+          <option value="">
+            {required ? "Elige una imagen" : "La misma que en la computadora"}
+          </option>
+          {banners.map((b, i) => (
+            <option key={b.id} value={b.id}>
+              {b.alt || `Imagen ${i + 1}`}
+              {b.width && b.height ? ` · ${b.width} × ${b.height}` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+      {warning ? (
+        <p id={`${id}-warning`} className="text-[13px] font-medium text-warning">
+          {warning}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Toca la foto para elegir lo importante; también con los deslizadores (teclado). */
+function FocalPicker({
+  id,
+  text,
+  src,
+  value,
+  onChange,
+}: {
+  id: string;
+  text: string;
+  src: string;
+  value: { x: number; y: number } | undefined;
+  onChange: (v: { x: number; y: number }) => void;
+}) {
+  const point = value ?? { x: 50, y: 50 };
+  const marker = useRef<HTMLSpanElement>(null);
+  const image = useRef<HTMLImageElement>(null);
+  // Posiciones con CSSOM (la CSP no admite estilos en línea).
+  useEffect(() => {
+    if (marker.current) {
+      marker.current.style.left = `${point.x}%`;
+      marker.current.style.top = `${point.y}%`;
+    }
+    if (image.current) image.current.style.objectPosition = `${point.x}% ${point.y}%`;
+  }, [point.x, point.y]);
+  return (
+    <fieldset className="space-y-2">
+      <legend className={label}>{text}</legend>
+      <button
+        type="button"
+        className="relative block w-full max-w-xs overflow-hidden rounded border border-border"
+        aria-label={`${text}: toca la parte más importante de la imagen`}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          onChange({
+            x: Math.round(((e.clientX - r.left) / r.width) * 100),
+            y: Math.round(((e.clientY - r.top) / r.height) * 100),
+          });
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- imagen ya re-codificada */}
+        <img src={src} alt="" className="block h-auto w-full" />
+        <span
+          ref={marker}
+          aria-hidden="true"
+          className="absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-black/50 shadow"
+        />
+      </button>
+      <div className="grid grid-cols-2 gap-3">
+        {(["x", "y"] as const).map((axis) => (
+          <label key={axis} className="flex flex-col gap-1 text-[13px]">
+            {axis === "x" ? "Horizontal" : "Vertical"}: {point[axis]} %
+            <input
+              id={`${id}-${axis}`}
+              type="range"
+              min={0}
+              max={100}
+              value={point[axis]}
+              onChange={(e) => onChange({ ...point, [axis]: Number(e.target.value) })}
+              className="min-h-11"
+            />
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Subir varias imágenes de una vez (la galería del celular); cada una se vuelve una diapositiva. */
+function MultiImageUpload({
+  banners,
+  disabled,
+  remaining,
+  onReady,
+}: {
+  banners: HomeEditorOptions["banners"];
+  disabled: boolean;
+  remaining: number;
+  onReady: (mediaIds: string[]) => void;
+}) {
+  const storeHandle = useContext(UploadStore);
+  const router = useRouter();
+  const id = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const uploader = useBannerUploader(storeHandle ?? "");
+  const [status, setStatus] = useState<{ error?: string; message?: string }>({});
+  const [pending, setPending] = useState<{ ids: string[]; tries: number } | null>(null);
+  const ready = pending ? pending.ids.every((m) => banners.some((b) => b.id === m)) : false;
+
+  useEffect(() => {
+    if (!pending) return;
+    const timer = window.setTimeout(
+      () => {
+        if (ready) {
+          onReady(pending.ids);
+          setPending(null);
+          setStatus({
+            message: "Imágenes listas y agregadas. Escribe el texto alternativo de cada una.",
+          });
+        } else if (pending.tries >= READY_POLL_TRIES) {
+          const done = pending.ids.filter((m) => banners.some((b) => b.id === m));
+          if (done.length) onReady(done);
+          setPending(null);
+          setStatus({
+            message:
+              "Algunas imágenes se siguen procesando; en un momento aparecen para elegirlas.",
+          });
+        } else {
+          router.refresh();
+          setPending({ ...pending, tries: pending.tries + 1 });
+        }
+      },
+      ready ? 0 : READY_POLL_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [pending, ready, banners, onReady, router]);
+
+  if (!storeHandle) return null;
+
+  async function send() {
+    setStatus({});
+    const files = Array.from(fileRef.current?.files ?? []).slice(0, remaining);
+    if (files.length === 0) return setStatus({ error: "Elige al menos una imagen." });
+    const ids: string[] = [];
+    for (const [i, file] of files.entries()) {
+      setStatus({ message: `Subiendo ${i + 1} de ${files.length}…` });
+      // El texto alternativo de la diapositiva se escribe después (obligatorio).
+      const result = await uploader.upload(file, `Imagen de portada ${i + 1}`);
+      if (!result.ok) {
+        setStatus({ error: `Imagen ${i + 1}: ${result.error}` });
+        break;
+      }
+      ids.push(result.mediaId);
+    }
+    if (fileRef.current) fileRef.current.value = "";
+    if (ids.length) {
+      setStatus({ message: "Procesando las imágenes…" });
+      setPending({ ids, tries: 0 });
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-border p-3">
+      <div className="flex flex-col gap-1">
+        <label htmlFor={`${id}-files`} className={label}>
+          Agregar imágenes (puedes elegir varias de tu galería)
+        </label>
+        <input
+          id={`${id}-files`}
+          ref={fileRef}
+          type="file"
+          multiple
+          accept={ALLOWED_IMAGE_MIME.join(",")}
+          disabled={disabled}
+          className="block min-h-11 text-sm"
+        />
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        loading={uploader.busy || pending !== null}
+        disabled={disabled}
+        onClick={send}
+      >
+        Subir y agregar
+      </Button>
+      <FormFeedback
+        state={{
+          ...(status.error ? { error: status.error } : {}),
+          ...(status.message ? { ok: true, message: status.message } : {}),
+        }}
+      />
+    </div>
+  );
+}
+
+function CarouselFields({
+  id,
+  props,
+  options,
+  onChange,
+}: {
+  id: string;
+  props: Props;
+  options: HomeEditorOptions;
+  onChange: (props: Props) => void;
+}) {
+  const timeZone = useStoreTimeZone();
+  const [device, setDevice] = useState<"mobile" | "desktop">("mobile");
+  const slides = (Array.isArray(props.slides) ? props.slides : []) as ImageSlideDraft[];
+  const aspectDesktop = (
+    String(props.aspect_desktop) in CAROUSEL_DESKTOP ? props.aspect_desktop : "21:9"
+  ) as keyof typeof CAROUSEL_DESKTOP;
+  const aspectMobile = (
+    String(props.aspect_mobile) in CAROUSEL_MOBILE ? props.aspect_mobile : "4:5"
+  ) as keyof typeof CAROUSEL_MOBILE;
+  const interval = Number(props.interval_seconds ?? 4);
+  const transition = props.transition === "fade" ? "fade" : "slide";
+  const set = (patch: Props) => onChange({ ...props, ...patch });
+  const setSlides = (next: ImageSlideDraft[]) => set({ slides: next });
+  const setSlide = (index: number, change: Partial<ImageSlideDraft>) =>
+    setSlides(slides.map((s, i) => (i === index ? { ...s, ...change } : s)));
+  const move = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= slides.length) return;
+    const next = [...slides];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    setSlides(next);
+  };
+  const banner = (mediaId: string | undefined) => options.banners.find((b) => b.id === mediaId);
+  const productLinks = options.products.flatMap((p) =>
+    p.slug ? [{ value: `/productos/${p.slug}`, label: p.title }] : [],
+  );
+  const previewSlides = slides.flatMap((slide, i) => {
+    const desktop = banner(slide.image_media_id);
+    if (!desktop) return [];
+    const mobile = banner(slide.mobile_image_media_id);
+    return [
+      {
+        key: `${id}-${i}`,
+        src: desktop.url,
+        width: desktop.width ?? 2400,
+        height: desktop.height ?? 1029,
+        ...(mobile ? { mobileSrc: mobile.url } : {}),
+        alt: slide.alt || `Imagen ${i + 1}`,
+        focal: slide.focal ?? null,
+        mobileFocal: slide.mobile_focal ?? null,
+      },
+    ];
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[13px] text-fg-muted">
+        Solo imágenes, sin texto encima. Tamaño recomendado: computadora{" "}
+        {CAROUSEL_DESKTOP[aspectDesktop].size} px y celular {CAROUSEL_MOBILE[aspectMobile].size} px.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${id}-interval`} className={label}>
+            Cambiar de imagen cada
+          </label>
+          <select
+            id={`${id}-interval`}
+            value={interval}
+            onChange={(e) => set({ interval_seconds: Number(e.target.value) })}
+            className={control}
+          >
+            {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+              <option key={n} value={n}>
+                {n} segundos
+              </option>
+            ))}
+          </select>
+        </div>
+        <fieldset className="flex flex-col gap-1">
+          <legend className={label}>Transición</legend>
+          <div className="flex flex-wrap gap-4">
+            {(
+              [
+                ["slide", "Deslizar"],
+                ["fade", "Desvanecer"],
+              ] as const
+            ).map(([value, text]) => (
+              <label key={value} className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name={`${id}-transition`}
+                  checked={transition === value}
+                  onChange={() => set({ transition: value })}
+                />
+                {text}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${id}-aspect-d`} className={label}>
+            Forma en la computadora
+          </label>
+          <select
+            id={`${id}-aspect-d`}
+            value={aspectDesktop}
+            onChange={(e) => set({ aspect_desktop: e.target.value })}
+            className={control}
+          >
+            {Object.entries(CAROUSEL_DESKTOP).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${id}-aspect-m`} className={label}>
+            Forma en el celular
+          </label>
+          <select
+            id={`${id}-aspect-m`}
+            value={aspectMobile}
+            onChange={(e) => set({ aspect_mobile: e.target.value })}
+            className={control}
+          >
+            {Object.entries(CAROUSEL_MOBILE).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={props.show_arrows === true}
+            onChange={(e) => set({ show_arrows: e.target.checked })}
+          />
+          Mostrar flechas (los puntos siempre se ven)
+        </label>
+      </div>
+
+      <MultiImageUpload
+        banners={options.banners}
+        disabled={slides.length >= MAX_CAROUSEL_SLIDES}
+        remaining={MAX_CAROUSEL_SLIDES - slides.length}
+        onReady={(ids) =>
+          setSlides(
+            [...slides, ...ids.map((mediaId) => ({ image_media_id: mediaId, alt: "" }))].slice(
+              0,
+              MAX_CAROUSEL_SLIDES,
+            ),
+          )
+        }
+      />
+
+      {productLinks.length ? (
+        <datalist id={`${id}-product-links`}>
+          {productLinks.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </datalist>
+      ) : null}
+
+      <ol className="space-y-3">
+        {slides.map((slide, index) => {
+          const n = index + 1;
+          const sid = `${id}-img${index}`;
+          const desktop = banner(slide.image_media_id);
+          const mobile = banner(slide.mobile_image_media_id);
+          const warning =
+            options.links && slide.link ? brokenLinkHint(slide.link.trim(), options.links) : null;
+          return (
+            <li key={index} className="space-y-3 rounded-md border border-border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Imagen {n}</p>
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={index === 0}
+                    onClick={() => move(index, -1)}
+                    aria-label={`Subir la imagen ${n}`}
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={index === slides.length - 1}
+                    onClick={() => move(index, 1)}
+                    aria-label={`Bajar la imagen ${n}`}
+                  >
+                    ↓
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={slides.length >= MAX_CAROUSEL_SLIDES}
+                    onClick={() =>
+                      setSlides([
+                        ...slides.slice(0, index + 1),
+                        { ...slide },
+                        ...slides.slice(index + 1),
+                      ])
+                    }
+                  >
+                    Duplicar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSlides(slides.filter((_, i) => i !== index))}
+                  >
+                    Quitar
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <CarouselImageSelect
+                  id={`${sid}-d`}
+                  text={`Imagen ${n} para computadora (obligatoria)`}
+                  value={slide.image_media_id ?? ""}
+                  required
+                  device="desktop"
+                  banners={options.banners}
+                  onChange={(image_media_id) => setSlide(index, { image_media_id })}
+                />
+                <CarouselImageSelect
+                  id={`${sid}-m`}
+                  text={`Imagen ${n} para celular (opcional)`}
+                  value={slide.mobile_image_media_id ?? ""}
+                  device="mobile"
+                  banners={options.banners}
+                  onChange={(mobile_image_media_id) => setSlide(index, { mobile_image_media_id })}
+                />
+              </div>
+              <TextField
+                id={`${sid}-alt`}
+                text={`Texto alternativo de la imagen ${n} (obligatorio)`}
+                value={slide.alt ?? ""}
+                maxLength={150}
+                hint="No se ve en la tienda: lo leen los lectores de pantalla y los buscadores. Describe lo que muestra la imagen."
+                onChange={(alt) => setSlide(index, { alt })}
+              />
+              <div className="flex flex-col gap-1">
+                <TextField
+                  id={`${sid}-link`}
+                  text={`Al tocar la imagen ${n}, ir a (opcional)`}
+                  value={slide.link ?? ""}
+                  maxLength={500}
+                  list={options.links ? "link-targets" : undefined}
+                  hint="Una categoría, oferta, marca o página de la lista; un producto (/productos/…); o https://…"
+                  describedBy={warning ? `${sid}-link-warning` : undefined}
+                  onChange={(link) => setSlide(index, { link })}
+                />
+                {productLinks.length ? (
+                  <label className="flex flex-col gap-1 text-[13px]">
+                    O elige un producto
+                    <select
+                      value=""
+                      onChange={(e) => e.target.value && setSlide(index, { link: e.target.value })}
+                      className={control}
+                    >
+                      <option value="">Productos publicados…</option>
+                      {productLinks.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {warning ? (
+                  <p id={`${sid}-link-warning`} className="text-[13px] font-medium text-warning">
+                    {warning}
+                  </p>
+                ) : null}
+              </div>
+              {desktop ? (
+                <details className="rounded-md border border-dashed border-border p-3">
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium md:min-h-0 md:py-0">
+                    Punto focal (qué no se debe recortar)
+                  </summary>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <FocalPicker
+                      id={`${sid}-fd`}
+                      text="En la computadora"
+                      src={desktop.url}
+                      value={slide.focal}
+                      onChange={(focal) => setSlide(index, { focal })}
+                    />
+                    <FocalPicker
+                      id={`${sid}-fm`}
+                      text="En el celular"
+                      src={(mobile ?? desktop).url}
+                      value={slide.mobile_focal ?? (mobile ? undefined : slide.focal)}
+                      onChange={(mobile_focal) => setSlide(index, { mobile_focal })}
+                    />
+                  </div>
+                </details>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ["starts_at", "Mostrar desde (opcional)"],
+                    ["ends_at", "Mostrar hasta (opcional)"],
+                  ] as const
+                ).map(([key, text]) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <label htmlFor={`${sid}-${key}`} className={label}>
+                      {text}
+                    </label>
+                    <input
+                      id={`${sid}-${key}`}
+                      type="datetime-local"
+                      value={toLocalInput(slide[key])}
+                      onChange={(e) => setSlide(index, { [key]: fromLocalInput(e.target.value) })}
+                      className={control}
+                      aria-describedby={`${sid}-tz`}
+                    />
+                  </div>
+                ))}
+                <p id={`${sid}-tz`} className="text-[13px] text-fg-muted sm:col-span-2">
+                  Hora de tu dispositivo{timeZone ? ` (la tienda usa ${timeZone})` : ""}.
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {slides.length === 0 ? (
+        <p className="text-[13px] text-fg-muted">Agrega al menos una imagen.</p>
+      ) : null}
+
+      {previewSlides.length ? (
+        <section aria-label="Vista previa en vivo" className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm font-semibold">Vista previa en vivo</p>
+            <div role="group" aria-label="Dispositivo" className="flex gap-1">
+              {(
+                [
+                  ["mobile", "Celular"],
+                  ["desktop", "Computadora"],
+                ] as const
+              ).map(([value, text]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={device === value ? "primary" : "secondary"}
+                  aria-pressed={device === value}
+                  onClick={() => setDevice(value)}
+                >
+                  {text}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className={device === "mobile" ? "w-[320px] max-w-full" : "w-full"}>
+            <ImageCarousel
+              key={`${device}-${transition}-${interval}`}
+              id={id}
+              slides={previewSlides}
+              interval={interval}
+              transition={transition}
+              showArrows={props.show_arrows === true}
+              aspectMobile={aspectMobile}
+              aspectDesktop={aspectDesktop}
+              priority={false}
+              device={device}
+            />
+          </div>
+          <p className="text-[13px] text-fg-muted">
+            Así se verá con el borrador. Para verla en la tienda, usa «Ver vista previa».
+          </p>
+        </section>
+      ) : null}
+    </div>
+  );
 }
 
 function LayoutSelect({

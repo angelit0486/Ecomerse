@@ -21,6 +21,8 @@ export async function loadHomeOptions(
     status: string;
     storage_path: string;
     alt_text: string | null;
+    width?: number | null;
+    height?: number | null;
   }[],
 ): Promise<HomeEditorOptions> {
   const supabase = await createSupabaseServerClient();
@@ -49,7 +51,7 @@ export async function loadHomeOptions(
       // muestran solo cuando se publican), los más recientes primero.
       supabase
         .from("products")
-        .select("id, title, status")
+        .select("id, title, status, slug")
         .eq("store_id", storeId)
         .is("deleted_at", null)
         .neq("status", "archived")
@@ -60,7 +62,13 @@ export async function loadHomeOptions(
   return {
     banners: media
       .filter((m) => m.owner_type === "banner" && m.status === "ready")
-      .map((m) => ({ id: m.id, url: publicMediaUrl(m.storage_path), alt: m.alt_text })),
+      .map((m) => ({
+        id: m.id,
+        url: publicMediaUrl(m.storage_path),
+        alt: m.alt_text,
+        width: m.width ?? null,
+        height: m.height ?? null,
+      })),
     categories: (categories ?? []).map((c) => ({
       id: c.id,
       name: `${"— ".repeat(c.depth ?? 0)}${c.name}`,
@@ -78,6 +86,7 @@ export async function loadHomeOptions(
     products: (products ?? []).map((p) => ({
       id: p.id,
       title: p.status === "active" ? p.title : `${p.title} (borrador)`,
+      ...(p.status === "active" && p.slug ? { slug: p.slug as string } : {}),
     })),
     links,
   };
