@@ -5,7 +5,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
 import { brandInitialsOf } from "@/lib/catalog/brand-initials";
-import { activeNavIndex, type NavBarConfig, type NavBarItem } from "@/lib/theme/nav-bar";
+import {
+  activeNavIndex,
+  leftCut,
+  navScrollTarget,
+  type NavBarConfig,
+  type NavBarItem,
+} from "@/lib/theme/nav-bar";
 
 /**
  * Barra de categorías del encabezado (misión Panel, Paso D). Corrige el primer
@@ -20,6 +26,12 @@ type Props = {
   /** Foto de cada categoría por enlace (estilo «con foto»). */
   thumbs?: Record<string, string>;
   config?: Pick<NavBarConfig, "style" | "align" | "size" | "visibility">;
+  /**
+   * Lote 2 (flag `storefront_nav_scroll_fix`): al centrar el activo, el borde
+   * izquierdo se alinea con el inicio de un enlace; al deslizar, la barra se
+   * acomoda al inicio de un enlace; si aun así queda uno cortado, se difumina.
+   */
+  scrollFix?: boolean;
 };
 
 export function NavBar(props: Props) {
@@ -40,10 +52,17 @@ function NavBarWithParams(props: Props) {
   return <NavBarView {...props} search={query ? `?${query}` : ""} />;
 }
 
-function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { search: string }) {
+function NavBarView({
+  items,
+  thumbs = {},
+  config = {},
+  scrollFix = false,
+  search,
+}: Props & { search: string }) {
   const pathname = usePathname();
   const list = useRef<HTMLUListElement>(null);
   const [more, setMore] = useState(false);
+  const [cut, setCut] = useState(false);
   const active = activeNavIndex(items, pathname ?? "/", search);
   const style = config.style ?? "text";
 
@@ -52,10 +71,34 @@ function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { searc
     const ul = list.current;
     if (!ul) return;
     const li = active >= 0 ? (ul.children[active] as HTMLElement | undefined) : undefined;
-    if (li && ul.scrollWidth > ul.clientWidth) {
+    const positions = () =>
+      Array.from(ul.children, (c) => ({
+        start: (c as HTMLElement).offsetLeft,
+        width: (c as HTMLElement).offsetWidth,
+      }));
+    const pad = parseFloat(getComputedStyle(ul).scrollPaddingLeft) || 0;
+    const update = () => {
+      setMore(ul.scrollLeft + ul.clientWidth < ul.scrollWidth - 4);
+      if (scrollFix) setCut(leftCut(positions(), ul.scrollLeft, pad));
+    };
+    // Con el interruptor: alinear con el inicio de un enlace (y volver a hacerlo
+    // cuando cargan las tipografías, que cambian los anchos).
+    const align = () => {
+      ul.style.paddingInlineEnd = "";
+      if (!li || ul.scrollWidth <= ul.clientWidth) return;
+      const { left, extraEnd } = navScrollTarget(positions(), active, ul.clientWidth, pad);
+      // Espacio al final solo si hace falta para no cortar el primer enlace.
+      ul.style.paddingInlineEnd =
+        extraEnd > 0 ? `calc(${getComputedStyle(ul).paddingRight} + ${extraEnd}px)` : "";
+      ul.scrollLeft = left;
+      update();
+    };
+    if (scrollFix) {
+      align();
+      void document.fonts?.ready.then(align);
+    } else if (li && ul.scrollWidth > ul.clientWidth) {
       ul.scrollLeft = Math.max(0, li.offsetLeft - (ul.clientWidth - li.offsetWidth) / 2);
     }
-    const update = () => setMore(ul.scrollLeft + ul.clientWidth < ul.scrollWidth - 4);
     update();
     ul.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
@@ -63,7 +106,7 @@ function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { searc
       ul.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [active]);
+  }, [active, scrollFix]);
 
   if (items.length === 0) return null;
   const text = config.size === "md" ? "text-base" : "text-sm";
@@ -79,7 +122,7 @@ function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { searc
         ref={list}
         className={`mx-auto flex max-w-6xl gap-1 overflow-x-auto scroll-px-1.5 px-1.5 py-1 sm:px-4 sm:scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
           centered ? "[&>li:first-child]:ms-auto [&>li:last-child]:me-auto" : ""
-        } ${more ? "[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] focus-within:[mask-image:none]" : ""}`}
+        } ${maskClass(more, scrollFix && cut)} ${scrollFix ? "relative snap-x snap-proximity" : ""}`}
       >
         {items.map((item, index) => {
           const current = index === active;
@@ -92,7 +135,10 @@ function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { searc
           const thumb = Object.hasOwn(thumbs, item.href) ? thumbs[item.href] : undefined;
           return (
             // Dos enlaces pueden repetir ruta y nombre: el índice desambigua.
-            <li key={`${index}:${item.href}`} className={`shrink-0 ${shown}`}>
+            <li
+              key={`${index}:${item.href}`}
+              className={`shrink-0 ${scrollFix ? "snap-start" : ""} ${shown}`}
+            >
               <Link
                 href={item.href}
                 aria-current={current ? "page" : undefined}
@@ -127,6 +173,20 @@ function NavBarView({ items, thumbs = {}, config = {}, search }: Props & { searc
       </ul>
     </nav>
   );
+}
+
+/** Degradado en el borde con más contenido; el foco lo quita para no ocultarlo. */
+function maskClass(right: boolean, left: boolean): string {
+  if (left && right) {
+    return "[mask-image:linear-gradient(to_right,transparent,#000_1.5rem,#000_calc(100%-2.5rem),transparent)] focus-within:[mask-image:none]";
+  }
+  if (left) {
+    return "[mask-image:linear-gradient(to_right,transparent,#000_1.5rem)] focus-within:[mask-image:none]";
+  }
+  if (right) {
+    return "[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] focus-within:[mask-image:none]";
+  }
+  return "";
 }
 
 function linkClass(style: NonNullable<NavBarConfig["style"]>, current: boolean, text: string) {

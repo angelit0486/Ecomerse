@@ -84,3 +84,48 @@ export function activeNavIndex(
   });
   return best;
 }
+
+/**
+ * Desplazamiento inicial de la barra en el celular (lote 2, flag
+ * `storefront_nav_scroll_fix`). Centra el enlace activo, pero con el borde
+ * izquierdo en el inicio de un enlace: el primero visible nunca queda cortado
+ * («dos» en vez de «Todos»). Cerca del final de la lista eso puede pedir
+ * desplazarse un poco más de lo que mide: `extraEnd` es el espacio que hay que
+ * agregar al final para lograrlo. `items` son posiciones dentro de la lista;
+ * `pad`, el relleno inicial (`scroll-padding`).
+ */
+export function navScrollTarget(
+  items: ReadonlyArray<{ start: number; width: number }>,
+  active: number,
+  viewport: number,
+  pad: number,
+): { left: number; extraEnd: number } {
+  const target = items[active];
+  if (!target) return { left: 0, extraEnd: 0 };
+  const last = items[items.length - 1]!;
+  const max = Math.max(0, last.start + last.width + pad - viewport);
+  const centered = Math.min(max, Math.max(0, target.start - (viewport - target.width) / 2));
+  if (centered <= 0) return { left: 0, extraEnd: 0 };
+  const edges = [0, ...items.map((i) => i.start - pad)].filter((e) => e >= 0);
+  const fits = edges.filter(
+    (e) => target.start >= e && target.start + target.width <= e + viewport,
+  );
+  if (fits.length === 0) return { left: centered, extraEnd: 0 };
+  // Primero los que no pasan del final; si ninguno, el menor (menos espacio extra).
+  const inside = fits.filter((e) => e <= max);
+  const left =
+    inside.length > 0
+      ? inside.reduce((best, e) => (Math.abs(e - centered) < Math.abs(best - centered) ? e : best))
+      : Math.min(...fits);
+  return { left, extraEnd: Math.max(0, Math.ceil(left - max)) };
+}
+
+/** ¿El primer enlace visible está cortado? (para difuminar el borde izquierdo). */
+export function leftCut(
+  items: ReadonlyArray<{ start: number }>,
+  scrollLeft: number,
+  pad: number,
+): boolean {
+  if (scrollLeft <= 1) return false;
+  return !items.some((i) => Math.abs(i.start - pad - scrollLeft) <= 1);
+}

@@ -14,6 +14,7 @@ import {
   mediaUrl,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 import { storefrontSchemaStatus } from "@/server/storefront/schema";
 import { iconVersion } from "@/server/storefront/icons";
 
@@ -109,16 +110,18 @@ export default async function StoreLayout({ children, params }: Props) {
   // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
   // el principio adelanta la imagen principal (LCP) en el celular.
   const mediaOrigin = new URL(mediaUrl("")).origin;
-  const [menus, nonce, cart, discovery, categoryThumbs, policies, methods] = await Promise.all([
-    getMenus(store.id),
-    headers().then((h) => h.get("x-nonce") ?? undefined),
-    // Sin caché: depende de la cookie del comprador (§44.7).
-    getCart(store.id).catch(() => null),
-    getDiscoverySummary(store.id),
-    getCategoryThumbs(store.id),
-    getPolicyLinks(store.id),
-    paymentMethods(store.id).catch(() => []),
-  ]);
+  const [menus, nonce, cart, discovery, categoryThumbs, policies, methods, flags] =
+    await Promise.all([
+      getMenus(store.id),
+      headers().then((h) => h.get("x-nonce") ?? undefined),
+      // Sin caché: depende de la cookie del comprador (§44.7).
+      getCart(store.id).catch(() => null),
+      getDiscoverySummary(store.id),
+      getCategoryThumbs(store.id),
+      getPolicyLinks(store.id),
+      paymentMethods(store.id).catch(() => []),
+      storeFlags(store.id),
+    ]);
   // Foto de cada categoría por enlace (misión Panel, Paso A): menú y barra.
   const thumbs = Object.fromEntries(
     Object.entries(categoryThumbs).map(([path, image]) => [
@@ -150,6 +153,7 @@ export default async function StoreLayout({ children, params }: Props) {
       })}
       thumbs={navConfig?.style === "photos" ? thumbs : {}}
       config={navConfig ?? {}}
+      scrollFix={flags.has("storefront_nav_scroll_fix")}
     />
   );
   const fonts = fontVariableClasses([theme.fonts.heading, theme.fonts.body]);
