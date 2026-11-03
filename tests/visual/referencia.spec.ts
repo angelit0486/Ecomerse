@@ -16,6 +16,28 @@ const WIDTHS = [375, 1280] as const;
 async function shot(page: Page, name: string, width: number) {
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
+  // Las fotos cargan de forma diferida: se recorre la página y se espera a todas
+  // (sin esto, dos capturas del mismo código difieren por fotos a medio cargar).
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 400) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 60));
+    }
+    window.scrollTo(0, 0);
+    await Promise.all(
+      Array.from(document.images).map((img) =>
+        img.complete
+          ? null
+          : new Promise<void>((resolve) => {
+              // Tope: las de carruseles horizontales fuera de pantalla no cargan nunca.
+              setTimeout(resolve, 3000);
+              img.addEventListener("load", () => resolve(), { once: true });
+              img.addEventListener("error", () => resolve(), { once: true });
+            }),
+      ),
+    );
+  });
+  await page.waitForLoadState("networkidle");
   mkdirSync(OUT, { recursive: true });
   await page.screenshot({
     path: `${OUT}/${name}-${width}.png`,
