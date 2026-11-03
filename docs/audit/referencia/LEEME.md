@@ -27,10 +27,12 @@ VISUAL_OUT=docs/audit/referencia pnpm exec playwright test -c playwright.visual.
 
 Para comparar después de un cambio, usar otro `VISUAL_OUT` y revisar las diferencias. El panel usa una tienda nueva en cada corrida, así que su nombre cambia (diferencia esperada).
 
-Las capturas se regeneraron el 2026-11-03 desde el código de la línea base (`885308a`, compilado aparte), con la herramienta corregida: recorre la página y espera las fotos diferidas. La primera versión capturaba fotos a medio cargar. Dos corridas del mismo código salen idénticas, salvo:
+Las capturas se generaron el 2026-11-03 compilando exactamente el commit `255fa7f` (punto de partida de la misión).
 
-- el nombre de la tienda en el panel;
-- `listado-375`, con ~0.1 % de píxeles dentro de fotos de producto que varían entre corridas (ruido del navegador al dibujar fotos, no del código).
+- **Para ver:** `*.png`, con fotos.
+- **Para comparar:** `comparar/*.png`, con las fotos tapadas en magenta. Las fotos cambian unos píxeles entre corridas del mismo código (decodificación y escalado del navegador), así que se comparan diseño y textos.
+
+Dos corridas de `255fa7f` salen idénticas en `comparar/`, salvo el nombre de la tienda del panel, que es nueva en cada corrida.
 
 Observado en la línea base, sin cambiar nada:
 

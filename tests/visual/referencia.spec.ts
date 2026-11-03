@@ -38,11 +38,20 @@ async function shot(page: Page, name: string, width: number) {
     );
   });
   await page.waitForLoadState("networkidle");
-  mkdirSync(OUT, { recursive: true });
+  mkdirSync(`${OUT}/comparar`, { recursive: true });
   await page.screenshot({
     path: `${OUT}/${name}-${width}.png`,
     fullPage: true,
     animations: "disabled",
+  });
+  // Versión para comparar: las fotos (que varían al dibujarse entre corridas)
+  // tapadas con un bloque de color; el diseño y los textos quedan intactos.
+  await page.screenshot({
+    path: `${OUT}/comparar/${name}-${width}.png`,
+    fullPage: true,
+    animations: "disabled",
+    mask: [page.locator("img, picture")],
+    maskColor: "#ff00ff",
   });
 }
 
