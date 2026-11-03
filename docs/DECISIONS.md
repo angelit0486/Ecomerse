@@ -1238,7 +1238,11 @@ Lo que sigue necesita la decisión del propietario.
   - **Carritos y opiniones:** se quitan correo, dirección y autor.
   - Montos, fechas y productos no cambian; nada se borra de pedidos ni de la auditoría.
   - **La excepción:** el guardián de pedidos acepta el cambio solo con la marca de la transacción y solo con los valores anónimos exactos. Lo mismo para el autor de una opinión.
-  - **Paso 2 pendiente** (necesita Auth/Storage Admin): cuentas de compradores en Auth y archivos de fotos. Los registros de auditoría con datos enmascarados se conservan (regla 9).
+  - **Paso 2** (2026-11-03, migración `20261029001500`):
+    - **Archivos:** una hora después de anonimizar, el worker borra todo objeto de `store-media` y `store-uploads` bajo el id de la tienda (fotos, copias por tamaño, subidas pendientes) con Storage Admin (SR-2: la ruta sale de la base y empieza por el id de la tienda). Al no quedar ninguno, `stores.files_purged_at` y auditoría `store.files_purged`. Las filas de `media` se conservan: no tienen datos personales y borrarlas chocaría con las FK del catálogo.
+    - **Cuentas de compradores:** al anonimizar se anotan sus ids de Auth en `system.auth_user_purge_queue` (el vínculo se pierde al anonimizar) y la base decide cuáles nadie más usa (otra tienda, un equipo, la plataforma). **El borrado espera ADR-055.**
+    - Pruebas: pgTAP 120 e integración `anonymized-purge`.
+  - Los registros de auditoría con datos enmascarados se conservan (regla 9).
   - Pruebas: pgTAP 111 (19), integración vía el mantenimiento real, y las pruebas anteriores de pedidos y opiniones en verde. No tiene pantalla, así que no hay E2E: es un proceso automático.
 
 ### ADR-047 — Integraciones: orden y alcance · **aprobado por el propietario el 2026-10-29: primero recuperación de carritos, después envíos** (cada una con su ADR corto)
@@ -1379,3 +1383,19 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   4. Pruebas pgTAP por rol y E2E del panel con un `viewer`.
 - **Por qué es ADR:** cambia el contrato de permisos y de lectura de pedidos (GATE0 §43).
 - **Pregunta:** ¿apruebas esta lista de roles con acceso a datos personales completos?
+
+## 32. Cabos sueltos (2026-11-03)
+
+- **Rotación de `PAYMENT_CREDENTIALS_KEY`** (migración `20261029001200`): `PAYMENT_CREDENTIALS_KEY_PREVIOUS` permite leer con la clave anterior mientras la pasada diaria vuelve a cifrar todo con la nueva; escritura condicional para no pisar una renovación. Pasos en `docs/runbooks/rotacion-de-claves.md`.
+- **Llaves e índices** (migración `20261029001300`): `system.auth_login_intents` tiene llave primaria e índice por tienda; 20 índices para llaves foráneas que crecen (pedidos, carritos, catálogo). La metaprueba 118 exige llave primaria en toda tabla e índice en toda FK salvo una lista justificada.
+- **Avisos al dueño** (migración `20261029001400`, cierra D-F2-16 y D-F2-20): suspender, reactivar o cerrar desde la plataforma y transferir la propiedad encolan un correo (`tenant.owner_notice`). El motivo que escribe la plataforma es nota interna y no viaja. La transferencia avisa a quien entrega («Si no fuiste tú…») y a quien recibe. Textos PENDIENTES DE REVISIÓN.
+
+### ADR-055 — Borrar cuentas de compradores de tiendas anonimizadas · **PROPUESTO, espera decisión del propietario**
+
+- **Contexto.** ADR-046 (aprobado) anonimiza a los compradores 30 días después de cerrar una tienda. Su cuenta de acceso (Supabase Auth: correo verificado) sigue existiendo. Borrarla exige la API de administración de Auth con service role, y la lista cerrada de GATE0 §11.5 (SR-1) solo prevé banear, resetear MFA e invalidar sesiones, a petición de una persona autorizada. Agregar «borrar cuenta» por un proceso automático cambia un contrato crítico (GATE0 §43, RC-02).
+- **Propuesta.**
+  1. Ampliar SR-1 con «borrar la cuenta de un comprador que ninguna tienda, equipo ni la plataforma usa, después de anonimizar su tienda (ADR-046)».
+  2. La base decide qué cuentas (`system.auth_user_purge_batch` y una segunda comprobación justo antes de borrar); el worker solo ejecuta. Cada cuenta borrada deja auditoría `privacy.buyer_account_deleted`, sin correo.
+  3. El código ya está hecho y probado (pgTAP 120, integración), pero **apagado**: el job no recibe la función de borrado hasta que lo apruebes.
+- **Riesgo.** Una cuenta borrada no se recupera; si la persona vuelve, crea una nueva con el mismo correo. Una cuenta que se sigue usando en otra tienda nunca se borra.
+- **Pregunta:** ¿apruebas que la plataforma borre esas cuentas automáticamente?

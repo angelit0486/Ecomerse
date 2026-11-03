@@ -70,6 +70,16 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Restauración local [VERIFICADO], 26 s. Restauración en proyecto aparte [NO VERIFICADO] porque staging está en plan Free.
 - Staging en `20261029001100`, con 139 migraciones = repo [VERIFICADO].
 
+### Cabos sueltos y ADR-046 paso 2 (2026-11-03)
+
+- Rotación de `PAYMENT_CREDENTIALS_KEY` sin reconectar comercios: `ce12dad`, migración `20261029001200`, pgTAP 117.
+- Llave primaria de `auth_login_intents` e índices de FK: `92240ff`, migración `20261029001300`, metaprueba 118.
+- Avisos al dueño (suspensión, reactivación, cierre, transferencia): `360b797`, migración `20261029001400`, pgTAP 119.
+- ADR-046 paso 2, archivos de tiendas anonimizadas: `3d97943`, migración `20261029001500`, pgTAP 120.
+- **Propuesto, espera decisión:** ADR-055, borrar cuentas de compradores (código listo y apagado).
+- E2E de plantillas robusto ante la ventana de vista previa (`store-templates-design`).
+- Suites y staging: ver el resumen de esta sesión.
+
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                       | Efecto                                                      |
@@ -91,10 +101,10 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 ## Entorno
 
 - Tras reiniciar el contenedor: `pg_ctlcluster 16 main start`; `bash scripts/dev/stack.sh up`; `pnpm build` y `pnpm start -H localhost -p 3000` con `.env.local` y `stack.sh env`.
+- Si el contenedor es nuevo: instalar `postgresql-16-pgtap` y `libtap-parser-sourcehandler-pgtap-perl`, contraseña `postgres` al rol `postgres`, `pnpm install`, `stack.sh install`, y `.env.local` con los mismos valores ficticios que el paso «Compilar y arrancar la app» de `.github/workflows/ci.yml`.
 - Push: remoto `angelit0486/Ecomerse`, rama `claude/ecommerce-regulated-platform-41vu1e`.
 - E2E: con la app levantada, `pnpm exec playwright test`. La primera prueba justo después de reiniciar el stack puede fallar por arranque en frío de Auth; se repite la corrida completa, no la prueba.
 
 ## Pendientes menores registrados
 
-- Aviso al dueño de suspensión/reactivación de tenant (D-F2-20) y de transferencia de propiedad (D-F2-16).
 - Endurecer con `is distinct from` las comparaciones `<> 'org_owner'` de la migración de equipo (D-F2-18).
