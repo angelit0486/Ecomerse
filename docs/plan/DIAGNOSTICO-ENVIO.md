@@ -55,3 +55,20 @@ El error aparece cuando la tienda no tiene ninguna tarifa de envío activa que c
 - **Una sola forma de envío:** se marca sola en el formulario. Ya se elegía sola al calcular el envío (`preferredRate`); queda cubierto por prueba.
 - **Datos de `demo2`:** no faltan; no se crea migración de datos.
 - **Mercado Pago:** `demo2` no tiene cuenta de Mercado Pago y staging no tiene credenciales de prueba (bloqueo B4). La captura llega a la pantalla del pago simulado. La de Mercado Pago requiere esas credenciales.
+
+## 6. Qué se aplicó (2026-11-04)
+
+| Commit    | Paso | Cambio                                                                                                                                                    |
+| --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `3e01a21` | 1–4  | Este diagnóstico y sus capturas                                                                                                                           |
+| `a356689` | 5–6  | Interruptor `checkout_shipping_messages` (apagado), mensaje que nombra el estado sin cobertura y forma de envío única marcada; migración `20261104000100` |
+| `c1b504f` | 7    | Pruebas unitarias y E2E `tests/e2e/checkout-shipping.spec.ts`; el mensaje ya no se repite en gris si el error lo dice                                     |
+
+- **Forma de envío única:** el servidor ya la elegía al confirmar. Lo nuevo cubre el caso en que la tarifa guardada en el carrito deja de ofrecerse (se desactivó o cambió la dirección): si queda una sola, se marca sola. Si eso cambia el total, la base pide confirmar con el total correcto (el navegador no manda en el total).
+- **Pruebas:** las dos E2E fallan con el código anterior y pasan con el nuevo [VERIFICADO]. Capturas `prueba-pantalla-de-pago.png` y `prueba-sin-cobertura-mensaje-claro.png`.
+- **Staging:** no se aplicó la migración. `demo2` no la necesita para cobrar, y el interruptor nace apagado.
+
+## 7. Cómo revertir
+
+1. **Sin desplegar nada:** apagar `checkout_shipping_messages` para la tienda (o no encenderlo). El checkout vuelve exactamente al comportamiento anterior; lo cubre la segunda prueba E2E.
+2. **Código:** `git revert c1b504f a356689`. La migración es aditiva (una fila en `feature_flags`) y puede quedarse; el código anterior la ignora.
