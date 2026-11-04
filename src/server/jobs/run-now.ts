@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { workerDb } from "@/server/db/role-clients";
 import { log as rootLog, type Logger } from "@/server/observability/logger";
 
+import { maintenanceThrottle } from "./maintenance-throttle";
 import { jobRegistry } from "./registry";
 import { runJobs, type RunJobsResult } from "./runner";
 import { createPostgresJobStore } from "./store";
@@ -35,9 +36,18 @@ export async function runQueuedJobs(log: Logger): Promise<RunJobsResult> {
  * diario la imagen o la importación esperan hasta la siguiente pasada. El
  * reclamo de jobs es atómico, así que varias pasadas a la vez no duplican nada.
  */
+const maintenanceDue = maintenanceThrottle();
+
 export function processQueueSoon(reason: string): void {
   after(async () => {
     const log = rootLog.child({ route: "jobs.run_now", reason });
+    // Sin depender solo del cron (que puede ser diario o no estar activo):
+    // vencer pedidos sin pagar y conciliar pagos también avanza con la actividad.
+    if (maintenanceDue(Date.now())) {
+      await workerDb()`select system.enqueue_maintenance()`.catch((error: unknown) =>
+        log.warn("No se pudo encolar el mantenimiento", { error }),
+      );
+    }
     try {
       const result = await runQueuedJobs(log);
       log.info("Cola procesada tras la acción", { ...result });

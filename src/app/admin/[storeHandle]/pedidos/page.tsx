@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { formatMoney } from "@/lib/money/format";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { hasPermission } from "@/server/auth/context";
+import { resumeQueue } from "@/server/jobs/run-now";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
@@ -33,6 +34,9 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   const { storeHandle } = await params;
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "orders.read")) notFound();
+  // Que los pendientes vencidos se cancelen aunque el cron no corra (como mucho
+  // una vez cada 10 s por instancia; el mantenimiento, una vez por minuto).
+  resumeQueue("orders.list");
   const sp = await searchParams;
   const filter = typeof sp.estado === "string" && FILTERS[sp.estado] ? sp.estado : "todos";
   // Por surtir se atiende del más antiguo al más nuevo (plan del panel, C2).

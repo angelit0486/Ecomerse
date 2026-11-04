@@ -10,7 +10,7 @@ Etiquetas: **[SIMULADOR]** = probado con una API falsa en las pruebas automátic
 2. Mercado Pago avisa por **webhook firmado**. PRUVA no confía en el aviso: vuelve a consultar el cobro en Mercado Pago y comprueba monto, moneda, referencia del pedido y cuenta de la tienda. Solo entonces el pedido pasa a **pagado**.
    - Volver de Mercado Pago al navegador **no** cambia nada.
 3. Con el pago confirmado sale **un solo** correo de confirmación al comprador (clave única por pedido) y el aviso a la tienda.
-4. Si el aviso nunca llega, la **reconciliación** (cada 10 minutos) consulta los intentos abiertos y aplica lo que encuentre.
+4. Si el aviso nunca llega, la **reconciliación** consulta los intentos abiertos y aplica lo que encuentre. Corre con el cron y también con la actividad de la tienda: compras, webhooks y la lista de pedidos del panel, como mucho una vez por minuto (D-MEJ-06).
 5. Si el comprador reintenta el pago, se usa **el mismo pedido**: no se duplica.
 
 ## Ante cada falla

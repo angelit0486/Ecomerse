@@ -1432,3 +1432,8 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
 - **Pregunta:** ¿se aprueba?
 
 - **D-MEJ-05. Campos de 16 px en el celular (`mobile_input_size`).** El iPhone acerca la página al tocar un campo de menos de 16 px. Con el interruptor, la tienda y el panel ponen `data-mobile-inputs`, y una regla de `globals.css` (solo por debajo de 640 px y fuera de `@layer`) fija esos campos en 16 px. El interruptor está apagado por defecto, es por tienda y no toca datos ni contratos.
+
+- **D-MEJ-06. Mantenimiento sin depender solo del cron.** En staging nunca corrieron `orders.expire` ni `payments.reconcile`, porque solo los encolaba `/api/jobs/run`, que llama el cron. Ahora `processQueueSoon` también llama `system.enqueue_maintenance()`, como mucho una vez por minuto por instancia. Esa función ya existía y es idempotente por minuto, hora o día. La lista de pedidos del panel retoma la cola (`resumeQueue`).
+  - No cambia el contrato de la cola (_Job_, GATE0 §43): no hay forma nueva de encolar ni tipos nuevos.
+  - El cron sigue siendo el respaldo.
+  - Prueba E2E: `maintenance.spec.ts` (falla antes, pasa después).
