@@ -1408,3 +1408,25 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - Estilos sin `style=` en el HTML (CSP con nonce): el punto focal va en un `<style>` con nonce y el arrastre se mueve desde JavaScript.
   - Evidencia y reversa: `docs/audit/parte-b/LEEME.md`.
 - **D-MEJ-03. Cuentas en staging.** La causa raíz es que no hay proveedor de correo (`docs/plan/DIAGNOSTICO-CUENTAS.md`). No se cambió código ni cuentas.
+
+## 34. Cobro con Mercado Pago en `demo2` (2026-11-04)
+
+- **D-MEJ-04. Teléfono con puntos, diagonales o «ext.».** La base solo acepta dígitos, espacios, paréntesis, guiones y «+». Los compradores escriben `222.123.4567`, y el pedido se rechazaba. La acción del checkout normaliza el teléfono antes de guardarlo (`src/lib/checkout/phone.ts`). No cambia la regla de la base, ni precios, ni pagos.
+
+### ADR-056 — Correo «pendiente de pago» para OXXO y transferencia de Mercado Pago · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:**
+  - El correo «Recibimos tu pedido… queda pendiente de pago» sale solo con el pago manual.
+  - Con Mercado Pago, el comprador que elige OXXO o transferencia no recibe nada hasta que paga. Entonces recibe la confirmación, una sola vez: la clave de envío es pedido + plantilla + destinatario.
+- **Propuesta:**
+  - `system.apply_payment_status` encola `payment.pending` la primera vez que un cobro de Mercado Pago pasa a pendiente, con clave única `payment.pending:<id del cobro>`.
+  - El trabajador manda «Tu pedido {número} está pendiente de pago». Lleva productos, total, dirección y el enlace al pedido.
+  - No sale si el pedido ya está pagado o cancelado.
+- **Lo que no cambia:**
+  - la firma del webhook;
+  - la nueva consulta a Mercado Pago;
+  - la comparación de monto y moneda;
+  - la idempotencia;
+  - «pagado» solo por webhook o conciliación.
+- **Por qué ADR:** toca una función de pagos (GATE0 §43). Va con migración aditiva, pgTAP y prueba de integración.
+- **Pregunta:** ¿se aprueba?
