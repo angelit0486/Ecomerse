@@ -77,4 +77,4 @@ bash scripts/bench/panel.sh                    # consultas del panel como la due
 node scripts/bench/load.mjs 8 15 distinct      # compradores, segundos, distinct|hot
 ```
 
-Para comparar antes y después de una migración de índices, aplícala a `pruva_bench`, corre `analyze public.orders` y repite `panel.sh`.
+Para comparar antes y después de una migración de índices, aplícala a `pruva_bench`, corre `vacuum analyze public.orders` y repite `panel.sh`. Sin el `vacuum` (base recién llenada, antes del autovacuum), el rango de 365 días mide ~176 ms en vez de ~47 ms: Postgres evita las lecturas solo-índice hasta que el mapa de visibilidad está al día. En producción el autovacuum lo mantiene.

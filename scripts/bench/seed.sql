@@ -37,5 +37,7 @@ select store_id, n, '#' || (1000 + n), 'bench-' || store_id || '-' || n, 'c' || 
        case when status = 'cancelled' then 'payment_expired' end,
        (n % 4000) = 7
   from gen;
-analyze;
+-- Como en producción tras el autovacuum: mapa de visibilidad al día (si no,
+-- Postgres evita las lecturas solo-índice y el rango de 365 días sale ~4× más lento).
+vacuum analyze;
 select count(*) as pedidos, count(*) filter (where store_id = tests.fx('store_big')) as tienda_grande from public.orders;
