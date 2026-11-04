@@ -106,7 +106,9 @@ jobs:
           # Stripe Billing contra el Stripe simulado de tests/e2e/billing-card.spec.ts (sin red real).
           export STRIPE_SECRET_KEY=sk_test_0000000000 STRIPE_BILLING_WEBHOOK_SECRET=whsec_0000000000 STRIPE_API_BASE=http://127.0.0.1:4599
           export APP_URL=http://localhost:3000 EMAIL_PROVIDER=mailpit "EMAIL_FROM=Plataforma <no-reply@ci.test>"
-          env | grep -E '^(APP_|WORKER_|GATEWAY_|CRON_|JOBS_|PREVIEW_|ORDER_LINK_|EMAIL_|NEXT_PUBLIC_|SUPABASE_SERVICE_ROLE_KEY|STRIPE_)' >> "$GITHUB_ENV"
+          # Mercado Pago contra el simulado de tests/e2e/fake-mercadopago.ts (sin red real).
+          export MERCADOPAGO_ACCESS_TOKEN=TEST-0000000000000000000000-e2e MERCADOPAGO_WEBHOOK_SECRET=e2ewebhooksecret00000000 MERCADOPAGO_API_BASE=http://127.0.0.1:4610
+          env | grep -E '^(APP_|WORKER_|GATEWAY_|CRON_|JOBS_|PREVIEW_|ORDER_LINK_|EMAIL_|NEXT_PUBLIC_|SUPABASE_SERVICE_ROLE_KEY|STRIPE_|MERCADOPAGO_)' >> "$GITHUB_ENV"
           pnpm build
           nohup pnpm start -H localhost -p 3000 > .stack/run/next.log 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/api/health && break; sleep 1; done
