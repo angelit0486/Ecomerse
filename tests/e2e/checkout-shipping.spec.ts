@@ -157,3 +157,24 @@ test("sin envío para la dirección: el mensaje dice qué falta; apagado, el de 
       .first(),
   ).toBeVisible();
 });
+
+test("teléfono escrito con puntos (222.123.4567): no se rechaza y llega al pago", async ({
+  page,
+}) => {
+  await setFlag(false);
+  await toCheckout(page);
+  await fillAddress(page, "72000", "Puebla");
+  await page.getByLabel(/^Teléfono/).fill("222.123.4567");
+  // Uno o dos clics: si el servidor elige el envío, pide confirmar con el total.
+  const confirm = page.getByRole("button", { name: /Confirmar pedido/ });
+  const paid = page.getByRole("heading", { name: "Pago de prueba" });
+  await confirm.click();
+  await expect(paid.or(page.getByText(/Elegimos «/))).toBeVisible();
+  if (!(await paid.isVisible())) await confirm.click();
+  await expect(paid).toBeVisible();
+  await expect(page.getByText("Escribe un teléfono válido.")).toHaveCount(0);
+  const [order] = await admin<{ phone: string }[]>`
+    select shipping_address->>'phone' as phone from public.orders
+     where store_id = ${tenant.storeId} order by created_at desc limit 1`;
+  expect(order!.phone).toBe("222 123 4567");
+});

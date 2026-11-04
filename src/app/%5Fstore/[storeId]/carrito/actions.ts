@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { normalizePhone } from "@/lib/checkout/phone";
 import { noShippingMessage, preferredRate } from "@/lib/checkout/shipping";
 import { formatMoney } from "@/lib/money/format";
 import { processQueueSoon } from "@/server/jobs/run-now";
@@ -185,7 +186,8 @@ function addressFrom(fd: FormData) {
   };
   const line2 = text(fd, "line2");
   if (line2) address.line2 = line2;
-  const phone = text(fd, "phone", 20);
+  // Puntos, diagonales o «ext.» no deben rechazar un teléfono válido.
+  const phone = normalizePhone(text(fd, "phone", 40));
   if (phone) address.phone = phone;
   return address;
 }
@@ -209,7 +211,8 @@ function missingFields(fd: FormData, email: string, requiresShipping: boolean) {
     if (text(fd, "country", 2).toUpperCase() === "MX" && !text(fd, "line2")) {
       fields.line2 = "Escribe la colonia.";
     }
-    if (!text(fd, "phone", 20)) fields.phone = "Escribe un teléfono para la paquetería.";
+    if (!normalizePhone(text(fd, "phone", 40)))
+      fields.phone = "Escribe un teléfono para la paquetería.";
   }
   return fields;
 }
@@ -298,7 +301,9 @@ export async function checkout(
     email,
     customer_name: text(formData, "customer_name", 160),
     payment_account_id: account.data,
-    ...(text(formData, "phone", 20) ? { phone: text(formData, "phone", 20) } : {}),
+    ...(normalizePhone(text(formData, "phone", 40))
+      ? { phone: normalizePhone(text(formData, "phone", 40)) }
+      : {}),
     ...(requiresShipping ? { shipping_address: addressFrom(formData) } : {}),
     ...(rate ? { shipping_rate_id: rate } : {}),
     ...(text(formData, "customer_note", 1000)
