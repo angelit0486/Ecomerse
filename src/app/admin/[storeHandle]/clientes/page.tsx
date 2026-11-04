@@ -111,7 +111,10 @@ export default async function CustomersPage({ params, searchParams }: Props) {
             {page.items.map((c) => (
               <tr key={c.id}>
                 <td className="py-2">
-                  <Link href={`${base}/${c.id}`} className="underline">
+                  <Link
+                    href={`${base}/${c.id}`}
+                    className="inline-flex min-h-6 items-center underline"
+                  >
                     {c.anonymized ? "Cliente anonimizado" : (c.name ?? c.email)}
                   </Link>
                   {!c.anonymized && c.name ? (

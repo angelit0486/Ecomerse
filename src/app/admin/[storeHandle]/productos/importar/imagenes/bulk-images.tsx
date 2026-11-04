@@ -198,7 +198,7 @@ export function BulkImages({
           disabled={running}
           aria-describedby="bulk-images-hint"
           onChange={(e) => choose(fromInput(e.target.files))}
-          className="block min-h-11 text-sm"
+          className="block w-full max-w-full min-h-11 text-sm"
         />
         <div className="pt-2">
           <input

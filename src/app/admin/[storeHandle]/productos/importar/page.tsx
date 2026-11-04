@@ -178,7 +178,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
                 type="file"
                 accept=".csv,text/csv"
                 required
-                className="block min-h-11 text-sm"
+                className="block w-full max-w-full min-h-11 text-sm"
               />
             </div>
             <div className="space-y-1">

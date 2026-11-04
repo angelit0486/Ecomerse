@@ -62,7 +62,7 @@ export default async function SupplierOrdersPage({ params, searchParams }: Props
               key={key}
               href={`${base}?estado=${key}`}
               aria-current={key === filter ? "page" : undefined}
-              className={key === filter ? "font-semibold underline" : "underline"}
+              className={`inline-flex min-h-6 items-center underline ${key === filter ? "font-semibold" : ""}`}
             >
               {label}
             </Link>

@@ -356,7 +356,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             type="file"
             accept=".csv,text/csv"
             required
-            className="block min-h-11 text-sm"
+            className="block w-full max-w-full min-h-11 text-sm"
           />
           <button
             type="submit"

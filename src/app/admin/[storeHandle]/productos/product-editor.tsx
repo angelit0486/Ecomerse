@@ -583,7 +583,7 @@ export function ProductEditor({
                             {inventoryHref ? (
                               <a
                                 href={`${inventoryHref}?q=${encodeURIComponent(draft.sku.trim() || title)}`}
-                                className="ml-2 text-[13px] underline"
+                                className="ml-2 inline-flex min-h-6 items-center text-[13px] underline"
                                 aria-label={`Ajustar existencias de ${label}`}
                               >
                                 Ajustar

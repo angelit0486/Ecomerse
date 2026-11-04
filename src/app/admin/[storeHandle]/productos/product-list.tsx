@@ -440,7 +440,7 @@ export function BulkProductsTable({
                   <span className="min-w-0">
                     <Link
                       href={row.href}
-                      className="inline-flex min-h-11 items-center font-medium underline-offset-2 hover:underline md:min-h-0"
+                      className="inline-flex min-h-11 items-center font-medium underline-offset-2 hover:underline md:min-h-6"
                     >
                       {row.title}
                     </Link>

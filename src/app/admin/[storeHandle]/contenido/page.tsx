@@ -90,7 +90,10 @@ export default async function ContentPage({ params, searchParams }: Props) {
                 {pages.map((p) => (
                   <tr key={p.id} className="border-b border-border">
                     <td className="py-2 pr-3">
-                      <Link href={`${base}/paginas/${p.id}`} className="underline">
+                      <Link
+                        href={`${base}/paginas/${p.id}`}
+                        className="inline-flex min-h-6 items-center underline"
+                      >
                         {p.title}
                       </Link>
                     </td>

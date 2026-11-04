@@ -60,7 +60,7 @@ export function MoveDesign({
           type="file"
           name="file"
           accept="application/json,.json"
-          className="block min-h-11 text-sm file:mr-3 file:min-h-11 file:rounded-md file:border file:border-control file:bg-surface file:px-3"
+          className="block w-full max-w-full min-h-11 text-sm file:mr-3 file:min-h-11 file:rounded-md file:border file:border-control file:bg-surface file:px-3"
         />
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" variant="secondary" loading={importing}>

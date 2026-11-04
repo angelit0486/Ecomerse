@@ -24,6 +24,7 @@ interface Finding {
   errorShown: boolean;
   consoleErrors: string[];
   overflow: number;
+  culprits: string[];
   axe: string[];
   smallTargets: string[];
 }
@@ -52,7 +53,16 @@ async function audit(page: Page, path: string, width: number): Promise<Finding> 
         (e) =>
           `${e.tagName.toLowerCase()} «${(e.textContent ?? e.getAttribute("aria-label") ?? "").trim().slice(0, 30)}»`,
       );
+    const w = window.innerWidth;
+    const culprits =
+      document.documentElement.scrollWidth > w
+        ? [...document.querySelectorAll<HTMLElement>("body *")]
+            .filter((e) => e.getBoundingClientRect().right > w + 0.5 && e.children.length === 0)
+            .slice(0, 3)
+            .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 60)}`)
+        : [];
     return {
+      culprits,
       overflow: document.documentElement.scrollWidth - window.innerWidth,
       errorShown: /Algo salió mal|Error inesperado|Application error/i.test(
         document.body.innerText,
@@ -89,6 +99,7 @@ async function audit(page: Page, path: string, width: number): Promise<Finding> 
     errorShown: info.errorShown,
     consoleErrors,
     overflow: info.overflow,
+    culprits: info.culprits,
     axe: axeIds,
     smallTargets: info.small,
   };
@@ -176,7 +187,7 @@ test("auditoría del panel de demo2", async ({ page }) => {
         (f.status ?? 0) >= 400 ? `HTTP ${f.status}` : "",
         f.errorShown ? "pantalla de error" : "",
         f.consoleErrors.length ? `consola: ${f.consoleErrors.join(" | ")}` : "",
-        f.overflow > 0 ? `desborde ${f.overflow}px` : "",
+        f.overflow > 0 ? `desborde ${f.overflow}px (${f.culprits.join(", ")})` : "",
         f.axe.length ? `axe: ${f.axe.join(", ")}` : "",
         f.smallTargets.length ? `objetivos < 24px: ${f.smallTargets.join("; ")}` : "",
       ]

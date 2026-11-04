@@ -1348,7 +1348,7 @@ function MultiImageUpload({
           multiple
           accept={ALLOWED_IMAGE_MIME.join(",")}
           disabled={disabled}
-          className="block min-h-11 text-sm"
+          className="block w-full max-w-full min-h-11 text-sm"
         />
       </div>
       <Button
@@ -2146,7 +2146,7 @@ function InlineUpload({
             ref={fileRef}
             type="file"
             accept={ALLOWED_IMAGE_MIME.join(",")}
-            className="block min-h-11 text-sm"
+            className="block w-full max-w-full min-h-11 text-sm"
           />
         </div>
         <TextField
@@ -2214,7 +2214,7 @@ function BannerUpload({ storeHandle }: { storeHandle: string }) {
             ref={inputRef}
             type="file"
             accept={ALLOWED_IMAGE_MIME.join(",")}
-            className="block min-h-11 text-sm"
+            className="block w-full max-w-full min-h-11 text-sm"
           />
         </div>
         <TextField
