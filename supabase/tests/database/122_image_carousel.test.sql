@@ -2,7 +2,8 @@
 -- Portada de imágenes (`image_carousel`, interruptor hero_image_carousel): solo
 -- imágenes con texto alternativo obligatorio, punto focal, destino y fechas
 -- opcionales. Las imágenes solo valen si son banners listos de la MISMA tienda
--- y el interruptor nace apagado y se enciende tienda por tienda.
+-- y el interruptor es por tienda: desde 2026-11-04 nace encendido (pedido del
+-- propietario) y cada tienda puede apagarlo (Ajustes → Funciones).
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -53,14 +54,15 @@ select tests.set_fx('cel', tests.banner_in('store_a'));
 select tests.set_fx('img2', tests.banner_in('store_a'));
 select tests.set_fx('ajena', tests.banner_in('store_b'));
 
--- 1. Interruptor: nace apagado y es por tienda.
-select is((select default_enabled from public.feature_flags where key = 'hero_image_carousel'), false,
-          'el interruptor nace apagado');
+-- 1. Interruptor: nace encendido (2026-11-04) y es por tienda.
+select is((select default_enabled from public.feature_flags where key = 'hero_image_carousel'), true,
+          'el interruptor nace encendido para todas las tiendas');
 insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
-values ('hero_image_carousel', 'store', tests.fx('store_a'), true, 'Tienda de pruebas de la parte B');
+values ('hero_image_carousel', 'store', tests.fx('store_a'), true, 'Tienda de pruebas de la parte B'),
+       ('hero_image_carousel', 'store', tests.fx('store_b'), false, 'B la apagó');
 select ok(app.flag_enabled('hero_image_carousel', tests.fx('store_a'))
           and not app.flag_enabled('hero_image_carousel', tests.fx('store_b')),
-          'encendido en la tienda A no lo enciende en la B');
+          'apagado en la tienda B no lo apaga en la A');
 
 select tests.login('owner');
 

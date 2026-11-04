@@ -128,6 +128,11 @@ export default async function StoreLayout({ children, params }: Props) {
           show: hasPermission(ctx, "notifications.manage"),
         },
         {
+          href: `${base}/ajustes/funciones`,
+          label: "Funciones",
+          show: hasPermission(ctx, "store.read"),
+        },
+        {
           href: `${base}/ajustes/cumplimiento`,
           label: "Cumplimiento sanitario",
           show: hasPermission(ctx, "store.update") || hasPermission(ctx, "products.update"),

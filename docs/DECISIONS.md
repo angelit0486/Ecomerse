@@ -1477,3 +1477,9 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   2. ¿Factura global diaria para las ventas sin factura? La pide el SAT. Recomendado: sí, automática.
   3. Revisión de un contador antes de encender.
 - **Tiempo:** 3–5 días después de tener la cuenta de pruebas del PAC.
+
+- **D-MEJ-07. Ajustes → Funciones (2026-11-04, pedido del propietario).** La tienda enciende o apaga en su tienda las funciones marcadas `feature_flags.store_toggle`: portada de imágenes, barra de categorías, mensajes de envío, campos de 16 px y correo «pendiente de pago».
+  - **Cómo:** `public.store_set_feature` exige `store.update`, escribe solo la excepción de alcance `store` de esa tienda y deja auditoría `store.feature_changed`. El kill switch de la plataforma manda.
+  - **Fuera de la lista:** pagos, planes y funciones de cobro no aparecen.
+  - **Cambio de valor por defecto:** la portada de imágenes nace encendida para todas las tiendas. La prueba pgTAP 122 y la E2E de la portada se actualizaron a ese comportamiento; no se desactivó ninguna.
+  - **Pruebas:** pgTAP 124 (permiso, lista cerrada, aislamiento entre tiendas, kill switch y auditoría) y E2E `store-features`.

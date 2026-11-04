@@ -56,7 +56,8 @@ test("subir varias imágenes, vista previa en vivo, guardar, publicar y verla en
   browser,
 }) => {
   await loginNewStaff(page, ownerEmail);
-  // Sin el interruptor, el panel no ofrece la portada de imágenes.
+  // Apagada para la tienda (nace encendida desde 2026-11-04), el panel no la ofrece.
+  await setFlag(false);
   await page.goto(`/admin/${tenant.handle}/apariencia?seccion=portada`);
   const options = await page.getByLabel("Nuevo bloque").locator("option").allTextContents();
   expect(options).toContain("Portada principal");
