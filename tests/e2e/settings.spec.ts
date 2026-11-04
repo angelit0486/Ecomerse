@@ -26,11 +26,18 @@ test("pagos y notificaciones de la tienda", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Pagos", level: 1 })).toBeVisible();
   // Sin claves de Stripe en el entorno: el cobro con tarjeta no se ofrece.
   await expect(page.getByText("El cobro con tarjeta aún no está disponible")).toBeVisible();
-  // Sin credenciales de Mercado Pago: se dice tal cual, sin botón de conectar (ADR-028).
-  await expect(
-    page.getByText("Aún no está disponible: faltan las credenciales de Mercado Pago"),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Conectar Mercado Pago" })).toHaveCount(0);
+  // Mercado Pago (ADR-028) según cómo arrancó la app: con las credenciales de la
+  // plataforma (CI y local usan el Mercado Pago simulado de fake-mercadopago.ts)
+  // se ofrece conectar; sin ellas se dice tal cual y no hay botón.
+  const missing = page.getByText("Aún no está disponible: faltan las credenciales de Mercado Pago");
+  const connect = page.getByRole("button", { name: "Conectar Mercado Pago" });
+  if (process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+    await expect(connect).toBeVisible();
+    await expect(missing).toHaveCount(0);
+  } else {
+    await expect(missing).toBeVisible();
+    await expect(connect).toHaveCount(0);
+  }
   await page.getByLabel("Instrucciones de pago").fill("Banco Ejemplo · CLABE 012345678901234567");
   await page.getByRole("button", { name: "Guardar pago" }).click();
   await expect(page.getByText("Pago por transferencia guardado.")).toBeVisible();
