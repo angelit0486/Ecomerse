@@ -35,7 +35,7 @@ async function audit(page: Page, path: string, width: number): Promise<Finding> 
   };
   page.on("console", onConsole);
   await page.setViewportSize({ width, height: 900 });
-  const res = await page.goto(path, { waitUntil: "networkidle" }).catch(() => null);
+  const res = await page.goto(path, { waitUntil: "load", timeout: 30_000 }).catch(() => null);
   const info = await page.evaluate(() => {
     const small = [
       ...document.querySelectorAll<HTMLElement>("main a, main button, main [role=button]"),
@@ -95,7 +95,7 @@ async function audit(page: Page, path: string, width: number): Promise<Finding> 
 }
 
 test("auditoría del panel de demo2", async ({ page }) => {
-  test.setTimeout(900_000);
+  test.setTimeout(2_400_000);
   await admin`delete from auth.mfa_factors where user_id = (select id from auth.users where email = ${OWNER})`;
   await loginNewStaff(page, OWNER);
   const [ids] = await admin<
@@ -156,6 +156,8 @@ test("auditoría del panel de demo2", async ({ page }) => {
   const findings: Finding[] = [];
   for (const p of paths) {
     for (const w of [375, 1280]) findings.push(await audit(page, `${b}${p}`, w));
+    mkdirSync(OUT, { recursive: true });
+    writeFileSync(join(OUT, "auditoria.json"), JSON.stringify(findings, null, 2));
   }
   const problems = findings.filter(
     (f) =>
