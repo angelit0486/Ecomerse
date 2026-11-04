@@ -61,3 +61,21 @@ export function shippingEstimate(
   if (reached || promo.price === 0) return "Gratis";
   return `${format(promo.price)} (gratis desde ${format(promo.free_over)})`;
 }
+
+/**
+ * Sin ninguna forma de envío para una dirección válida (interruptor
+ * `checkout_shipping_messages`): dice qué falta en vez de pedir «elegir» algo
+ * que no existe. Causa más común: la tienda no tiene tarifas activas para ese
+ * estado (docs/plan/DIAGNOSTICO-ENVIO.md).
+ */
+export function noShippingMessage(address: { region?: string | null } | null | undefined): string {
+  const region = address?.region?.trim();
+  return region
+    ? `Esta tienda todavía no hace envíos a ${region}. Revisa el estado de tu dirección o escríbele a la tienda.`
+    : "Esta tienda todavía no hace envíos a esta dirección. Revísala o escríbele a la tienda.";
+}
+
+/** Con una sola forma de envío disponible, esa se marca sola. */
+export function singleRateId(options: readonly { rate_id: string }[]): string | null {
+  return options.length === 1 ? options[0]!.rate_id : null;
+}

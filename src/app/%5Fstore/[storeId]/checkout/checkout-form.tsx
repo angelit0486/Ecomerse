@@ -13,6 +13,7 @@ import {
 const noSubscribe = () => () => {};
 
 import { MX_STATES, stateForPostalCode } from "@/lib/checkout/mx-states";
+import { noShippingMessage, singleRateId } from "@/lib/checkout/shipping";
 import type { CartView, PaymentMethod } from "@/server/storefront/cart";
 import { submitKeepingState } from "@/ui/submit";
 
@@ -86,6 +87,7 @@ export function CheckoutForm({
   idempotencyKey,
   shippingLabels,
   totalLabel,
+  clearShipping = false,
 }: {
   storeId: string;
   storeCountry: string;
@@ -96,6 +98,11 @@ export function CheckoutForm({
   shippingLabels: Record<string, string>;
   /** Total ya formateado, repetido en el botón de confirmar. */
   totalLabel: string;
+  /**
+   * Interruptor `checkout_shipping_messages`: sin envío para la dirección dice
+   * qué falta, y con una sola forma de envío la marca sola.
+   */
+  clearShipping?: boolean;
 }) {
   const [state, action, pending] = useActionState<CartActionState, FormData>(
     checkout.bind(null, storeId),
@@ -128,7 +135,8 @@ export function CheckoutForm({
     markEditedName((event.target as HTMLInputElement).name);
   }
   const selectedRate =
-    cart.shipping.status === "ok" ? cart.shipping.rate_id : cart.shipping_rate_id;
+    (cart.shipping.status === "ok" ? cart.shipping.rate_id : cart.shipping_rate_id) ??
+    (clearShipping ? singleRateId(cart.shipping_options) : null);
   // Solo el país de la tienda (las zonas de envío de hoy son nacionales); se
   // conserva el de una dirección ya guardada si fuera otro.
   const countryCodes = [...new Set([storeCountry, ...(a?.country ? [a.country] : [])])];
@@ -404,7 +412,9 @@ export function CheckoutForm({
               <p className="text-sm text-[var(--sf-muted)]">
                 {cart.shipping.status === "address_required"
                   ? "Escribe tu dirección completa para ver las formas de envío."
-                  : "No hay envíos disponibles para esta dirección."}
+                  : clearShipping
+                    ? noShippingMessage(cart.shipping_address)
+                    : "No hay envíos disponibles para esta dirección."}
               </p>
             ) : (
               cart.shipping_options.map((o) => (

@@ -7,6 +7,7 @@ import { getCart, getCartLegends, paymentMethods } from "@/server/storefront/car
 import { getPolicyLinks, getShippingPromo } from "@/server/storefront/catalog";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 
 import { money } from "../_components/format";
 import { PurchaseLegends } from "../_components/supplement-info";
@@ -101,6 +102,7 @@ export default async function CheckoutPage({ params }: Props) {
           idempotencyKey={newCheckoutKey()}
           shippingLabels={labels}
           totalLabel={totalLabel}
+          clearShipping={(await storeFlags(store.id)).has("checkout_shipping_messages")}
         />
         {/* Las políticas publicadas, junto al botón de pago (auditoría REG-07). */}
         {policies.length > 0 ? (

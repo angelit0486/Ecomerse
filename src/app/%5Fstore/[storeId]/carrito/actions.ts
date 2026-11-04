@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { preferredRate } from "@/lib/checkout/shipping";
+import { noShippingMessage, preferredRate } from "@/lib/checkout/shipping";
 import { formatMoney } from "@/lib/money/format";
 import { processQueueSoon } from "@/server/jobs/run-now";
 import { reportActionError } from "@/server/actions/report";
@@ -16,6 +16,7 @@ import {
   addToCart,
   dbDetail,
   discountGuard,
+  getCart,
   setCartDetails,
   setCartQuantity,
 } from "@/server/storefront/cart";
@@ -26,6 +27,7 @@ import {
   type PlaceOrderInput,
 } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 
 /**
  * Acciones del carrito y el checkout (GATE0 §17.2). La tienda se verifica con la
@@ -217,6 +219,22 @@ function missingFields(fd: FormData, email: string, requiresShipping: boolean) {
  * las tarifas; «Confirmar pedido» llama a place_order con el total que vio el
  * comprador (si cambió, `price_changed` y se muestra el nuevo).
  */
+/**
+ * Interruptor `checkout_shipping_messages`: si la base rechaza el envío y no
+ * hay ninguna forma de envío para la dirección, se dice qué falta en vez del
+ * genérico «elige una forma de envío» (docs/plan/DIAGNOSTICO-ENVIO.md). Solo
+ * cambia el texto: el carrito y los totales los sigue calculando la base.
+ */
+async function shippingFailure(storeId: string, error: unknown): Promise<CartActionState | null> {
+  const e = toAppError(error);
+  if (e.code !== "validation_failed" || dbDetail(e) !== "shipping_rate_id") return null;
+  if (!(await storeFlags(storeId)).has("checkout_shipping_messages")) return null;
+  const cart = await getCart(storeId).catch(() => null);
+  if (!cart || cart.shipping_options.length > 0 || !cart.shipping_address) return null;
+  const message = noShippingMessage(cart.shipping_address);
+  return { error: message, fields: { shipping_rate_id: message } };
+}
+
 export async function checkout(
   storeId: string,
   _: CartActionState,
@@ -256,7 +274,7 @@ export async function checkout(
       }
     }
   } catch (error) {
-    return failure(error);
+    return (await shippingFailure(s.id, error)) ?? failure(error);
   }
   refresh();
   if (intent === "quote") return { ok: true, message: "Formas de envío actualizadas." };
@@ -302,7 +320,7 @@ export async function checkout(
           : "El total cambió. Revísalo y confirma de nuevo.",
       };
     }
-    return failure(e);
+    return (await shippingFailure(s.id, e)) ?? failure(e);
   }
   // Correos y avisos del pedido sin esperar al cron (auditoría DIN-04).
   processQueueSoon("checkout.placed");
