@@ -14,7 +14,8 @@ import { gatewayDb } from "@/server/db/role-clients";
  * - Si la lectura falla (red, función o tabla inexistente), todo queda apagado:
  *   la tienda se comporta exactamente como antes de los interruptores.
  */
-export type StorefrontFlag = "storefront_nav_scroll_fix" | "checkout_shipping_messages";
+export type StorefrontFlag =
+  "storefront_nav_scroll_fix" | "checkout_shipping_messages" | "mobile_input_size";
 
 export async function readStoreFlags(
   query: () => Promise<ReadonlyArray<{ key: string; enabled: boolean }>>,

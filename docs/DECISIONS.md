@@ -1430,3 +1430,5 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - «pagado» solo por webhook o conciliación.
 - **Por qué ADR:** toca una función de pagos (GATE0 §43). Va con migración aditiva, pgTAP y prueba de integración.
 - **Pregunta:** ¿se aprueba?
+
+- **D-MEJ-05. Campos de 16 px en el celular (`mobile_input_size`).** El iPhone acerca la página al tocar un campo de menos de 16 px. Con el interruptor, la tienda y el panel ponen `data-mobile-inputs`, y una regla de `globals.css` (solo por debajo de 640 px y fuera de `@layer`) fija esos campos en 16 px. El interruptor está apagado por defecto, es por tienda y no toca datos ni contratos.

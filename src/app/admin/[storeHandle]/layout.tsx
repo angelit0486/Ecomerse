@@ -29,11 +29,16 @@ export default async function StoreLayout({ children, params }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   const supabase = await createSupabaseServerClient();
   const showPlan = canSeePlan(ctx);
-  const [stores, schema, billing] = await Promise.all([
+  const [stores, schema, billing, flags] = await Promise.all([
     callRpc<MyStore[]>(supabase, "access_list_my_stores"),
     checkSchemaVersion(supabase),
     showPlan ? loadPlanUsage(ctx.store.id) : Promise.resolve(null),
+    // Interruptores de la tienda; si la lectura falla, todo queda apagado.
+    supabase
+      .rpc("access_store_flags", { p_store_id: ctx.store.id })
+      .then(({ data }) => (data ?? []) as { key: string; enabled: boolean }[]),
   ]);
+  const mobileInputs = flags.some((f) => f.key === "mobile_input_size" && f.enabled);
   const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
@@ -144,7 +149,10 @@ export default async function StoreLayout({ children, params }: Props) {
 
   return (
     <StoreTimeZoneProvider timeZone={ctx.store.timezone}>
-      <div className="flex flex-col gap-5 md:flex-row md:gap-8">
+      <div
+        className="flex flex-col gap-5 md:flex-row md:gap-8"
+        data-mobile-inputs={mobileInputs ? "" : undefined}
+      >
         <aside className="md:w-56 md:shrink-0">
           <details className="mb-3 rounded-md border border-border md:mb-4">
             <summary className="flex min-h-11 cursor-pointer flex-col justify-center px-3 py-1 text-sm font-medium md:min-h-10">

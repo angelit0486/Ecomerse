@@ -157,3 +157,17 @@ select[aria-hidden="true"][tabindex="-1"] {
     height: 1.5rem;
   }
 }
+
+/* Interruptor `mobile_input_size` (docs/plan/PRIMER-PEDIDO.md): en el celular,
+   un campo de menos de 16 px hace que el iPhone acerque la página al escribir.
+   Fuera de @layer: gana a las utilidades de tamaño de texto. */
+@media (max-width: 639px) {
+  [data-mobile-inputs]
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]),
+      select,
+      textarea
+    ) {
+    font-size: 16px;
+  }
+}

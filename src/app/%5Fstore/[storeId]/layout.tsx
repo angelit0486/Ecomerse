@@ -163,6 +163,7 @@ export default async function StoreLayout({ children, params }: Props) {
       className={`sf-root relative ${fonts} flex min-h-dvh flex-col bg-[var(--sf-bg)] text-[var(--sf-fg)]`}
       data-cols={settings.listing?.columns_mobile === 1 ? "1" : undefined}
       data-brand={settings.listing?.show_brand === false ? "off" : undefined}
+      data-mobile-inputs={flags.has("mobile_input_size") ? "" : undefined}
     >
       <style
         nonce={nonce}

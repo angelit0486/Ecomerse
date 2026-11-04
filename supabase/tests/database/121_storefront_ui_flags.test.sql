@@ -3,7 +3,7 @@
 -- en una tienda no los enciende en otra.
 -- =============================================================================
 begin;
-select plan(7);
+select plan(9);
 
 select tests.create_user('owner_a', 'owner@a.io');
 select tests.create_user('owner_b', 'owner@b.io');
@@ -44,6 +44,15 @@ values ('checkout_shipping_messages', 'store', tests.fx('store_a'), true, 'Tiend
 select ok(pg_temp.gateway_flag(tests.fx('store_a'), 'checkout_shipping_messages')
           and not pg_temp.gateway_flag(tests.fx('store_b'), 'checkout_shipping_messages'),
           'encendido en A, apagado en B (aislamiento)');
+
+-- Celular: campos de 16 px (docs/plan/PRIMER-PEDIDO.md).
+select is((select default_enabled from public.feature_flags where key = 'mobile_input_size'), false,
+          'el interruptor de campos de 16 px nace apagado');
+insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
+values ('mobile_input_size', 'store', tests.fx('store_a'), true, 'Tienda de pruebas del celular');
+select ok(pg_temp.gateway_flag(tests.fx('store_a'), 'mobile_input_size')
+          and not pg_temp.gateway_flag(tests.fx('store_b'), 'mobile_input_size'),
+          'campos de 16 px: encendido en A, apagado en B (aislamiento)');
 
 select * from finish();
 rollback;
