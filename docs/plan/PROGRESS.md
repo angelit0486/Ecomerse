@@ -105,6 +105,9 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Envío al pagar (2026-11-04): `docs/plan/DIAGNOSTICO-ENVIO.md`.
   - `demo2` ya llegaba al pago; el error salía cuando ninguna tarifa activa cubría la dirección (caso real: `demo`, suspendida, sin tocar).
   - Arreglo detrás de `checkout_shipping_messages`, apagado (`a356689`, `c1b504f`). Sin migración en staging.
+- Cobro con Mercado Pago en `demo2` (2026-11-04): `docs/plan/DIAGNOSTICO-MERCADOPAGO.md`.
+  - Teléfono con puntos ya no impide pagar (`fa95e3d`); prueba nueva del webhook antes del regreso.
+  - Bloqueado: prueba real en modo prueba (red sin `api.mercadopago.com` y sin credenciales, B4); correo «pendiente de pago» (ADR-056 propuesto).
 - Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)

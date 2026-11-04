@@ -49,7 +49,9 @@ let storeId: string;
 let accountId: string;
 let variantId: string;
 
-async function order(qty = 1): Promise<{ orderId: string; paymentId: string; amount: number }> {
+async function order(
+  qty = 1,
+): Promise<{ orderId: string; paymentId: string; amount: number; guest: string }> {
   const token = randomBytes(32).toString("base64url");
   await admin`select storefront.cart_add_item(${storeId}, ${token}, ${variantId}, ${qty})`;
   const idem = `idem-${randomBytes(12).toString("hex")}`;
@@ -59,7 +61,7 @@ async function order(qty = 1): Promise<{ orderId: string; paymentId: string; amo
       ${10000 * qty}, ${idem}, ${createHash("sha256").update(idem).digest()}) as r`;
   await admin`select storefront.record_checkout_result(${storeId}, ${o!.r.payment.id}, true,
                                                        ${`${COLLECTOR}-${randomBytes(6).toString("hex")}`})`;
-  return { orderId: o!.r.order_id, paymentId: o!.r.payment.id, amount: 10000 * qty };
+  return { orderId: o!.r.order_id, paymentId: o!.r.payment.id, amount: 10000 * qty, guest: idem };
 }
 
 /** Un cobro en la API simulada para el intento. */
@@ -202,6 +204,23 @@ describe("webhook de Mercado Pago (§34.4)", () => {
       select max(provider_payment_id) as provider_payment_id, count(*)::int as n from public.payments
        where order_id = ${o.orderId} and status = 'succeeded'`;
     expect(p).toEqual({ provider_payment_id: id, n: 1 });
+  });
+
+  it("el webhook llega antes que el comprador: al regresar, la página del pedido ya dice pagado", async () => {
+    const o = await order();
+    const guestView = async () => {
+      const [r] = await admin<{ v: { status: string; payment_status: string } }[]>`
+        select storefront.get_order_for_guest(${storeId}, ${o.orderId},
+               ${createHash("sha256").update(o.guest).digest()}) as v`;
+      return r!.v;
+    };
+    // Antes del webhook: pendiente de pago (regresar a la tienda no confirma nada).
+    expect(await guestView()).toMatchObject({
+      status: "pending_payment",
+      payment_status: "pending",
+    });
+    expect((await deliver(charge(o.paymentId, "approved"))).body.outcome).toBe("paid");
+    expect(await guestView()).toMatchObject({ status: "open", payment_status: "paid" });
   });
 
   it("rechazado y reintento aprobado en el mismo checkout: el pedido se paga con el aprobado", async () => {
