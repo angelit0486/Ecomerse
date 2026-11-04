@@ -42,4 +42,39 @@ Para las listas se usaron índices compuestos normales y no parciales: PostgREST
 
 ## Checkout bajo carga
 
-En medición (banco de carga con compradores simultáneos).
+**Banco de carga:**
+
+- Compradores simultáneos en una sola tienda.
+- Cada uno agrega al carrito y confirma con `storefront.cart_add_item` y `storefront.place_order`, con el rol real `storefront_gateway`.
+- Pago manual, para no depender de la red.
+- 15 segundos por escenario y un correo distinto por pedido.
+
+| Compradores a la vez | Productos distintos               | Todos el mismo producto                               |
+| -------------------- | --------------------------------- | ----------------------------------------------------- |
+| 1                    | 6 300 pedidos/min (mediana 9 ms)  | 6 400/min (9 ms)                                      |
+| 8                    | **13 600/min** (28 ms; p95 82 ms) | **14 900/min** (25 ms; p95 76 ms)                     |
+| 32                   | 11 700/min (p95 0.5 s)            | 6 500/min (p95 1 s)                                   |
+| 64                   | 8 500/min (p95 1.6 s)             | 4 500/min (p95 2.9 s); 10 de 1 146 cortados a los 5 s |
+
+**Lectura:**
+
+- **Capacidad:** una tienda confirma miles de pedidos por minuto en la base. Es muy por encima de lo que necesita un comercio pequeño o mediano. En producción el límite real lo pondrán el tamaño de la base de Supabase y sus conexiones, no el código.
+- **Por qué hacen fila las compras de una misma tienda** (por diseño):
+  - el contador de número de pedido (`store_counters`), que garantiza números consecutivos;
+  - la fila de inventario del producto, que garantiza no vender de más.
+
+  Tiendas distintas no comparten bloqueos.
+
+- **El caso extremo:** 64 personas comprando el mismo producto en el mismo segundo. Unas cuantas compras superan el límite de 5 s del rol de la tienda. El comprador ve «No pudimos completar la acción. Inténtalo de nuevo.», y reintentar no duplica el pedido gracias a la clave de idempotencia.
+- **Si alguna tienda llega a ventas relámpago de ese tamaño:** se puede acortar el tiempo que se retiene el contador dentro de `place_order`. Es contrato crítico y requiere ADR; hoy no hace falta.
+- **Límite antifraude confirmado:** con el mismo correo, a partir del pedido 21 del día la base responde `rate_limited`.
+
+## Cómo repetir las mediciones (solo local)
+
+```bash
+bash scripts/bench/build.sh                    # base pruva_bench: migraciones + 300 000 pedidos
+bash scripts/bench/panel.sh                    # consultas del panel como la dueña (RLS activo)
+node scripts/bench/load.mjs 8 15 distinct      # compradores, segundos, distinct|hot
+```
+
+Para comparar antes y después de una migración de índices, aplícala a `pruva_bench`, corre `analyze public.orders` y repite `panel.sh`.

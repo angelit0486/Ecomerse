@@ -60,6 +60,9 @@ export default defineConfig([
       "scripts/dev/demo-seed.mjs",
       // Migraciones en el build de la vista previa (D-F9-17): conexión de dueño del esquema.
       "scripts/deploy/migrate.mjs",
+      // Banco de escalabilidad (docs/audit/escalabilidad-2026-11.md): solo contra la
+      // base local pruva_bench (URL fija a localhost), con los roles del stack.
+      "scripts/bench/load.mjs",
     ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
