@@ -44,6 +44,16 @@ function toRpc(n: NormalizedPayment) {
   };
 }
 
+/**
+ * ADR-056: con un cobro diferido (OXXO, transferencia, cajero) aún pendiente, se
+ * pide el correo «pendiente de pago». La base decide (interruptor de la tienda,
+ * pedido sin pagar) y lo encola una sola vez por intento.
+ */
+async function requestPendingNotice(db: Sql, paymentId: string, n: NormalizedPayment) {
+  if (n.status !== "pending" || !n.method) return;
+  await db`select system.request_payment_pending_notice(${paymentId}, ${n.method})`;
+}
+
 export async function handleMercadoPagoWebhook(deps: {
   db: Sql;
   provider: MercadoPagoProvider;
@@ -117,6 +127,7 @@ export async function handleMercadoPagoWebhook(deps: {
     }
     const [applied] = await db<{ r: { outcome: string } }[]>`
       select system.apply_mercadopago_payment(${found.p.id}, ${db.json(toRpc(payment))}) as r`;
+    await requestPendingNotice(db, found.p.id, payment);
     await db`select system.finish_payment_event(${event.id}, null)`;
     return { status: 200, body: { received: true, outcome: applied!.r.outcome } };
   } catch (error) {
@@ -158,6 +169,7 @@ export async function reconcileMercadoPagoPayments(deps: {
       });
       if (!n) continue; // Aún sin cobro: el comprador no ha pagado.
       await deps.db`select system.apply_mercadopago_payment(${row.payment_id}, ${deps.db.json(toRpc(n))})`;
+      await requestPendingNotice(deps.db, row.payment_id, n);
       applied += 1;
     } catch (error) {
       deps.log.warn("payment.reconcile_failed", { payment_id: row.payment_id, err: error });

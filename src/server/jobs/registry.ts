@@ -154,6 +154,7 @@ const handlers: Array<[string, JobHandler]> = [
     },
   ],
   ["payment.failed", lazy("payment.failed", orderNotifications)],
+  ["payment.pending", lazy("payment.pending", orderNotifications)],
   ["payment.late_without_stock", lazy("payment.late_without_stock", orderNotifications)],
   ["orders.complete", lazy("orders.complete", orders)],
   ["order.shipped", lazy("order.shipped", orderNotifications)],

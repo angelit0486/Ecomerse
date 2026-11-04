@@ -8,6 +8,7 @@ import { alreadyDelivered, payloadId, sendNotification } from "./handlers";
 import {
   orderCancelledEmail,
   orderConfirmationEmail,
+  orderPendingPaymentEmail,
   orderDeliveredEmail,
   orderReceivedEmail,
   orderShippedEmail,
@@ -187,6 +188,23 @@ export function createOrderNotificationHandlers(
     if (n.staff.notify_paid) await notifyStaff(job, n, "paid");
   };
 
+  /** ADR-056: pago diferido de Mercado Pago aún sin pagar. Una vez por intento. */
+  const pending: JobHandler = async (job, { log }) => {
+    const paymentId = payloadId(job, "payment_id");
+    const n = await load(job);
+    if (!n) return log.info("Pedido inexistente: nada que avisar");
+    // Si ya se pagó, se canceló o venció mientras esperaba, el aviso ya no sirve.
+    if (n.order.status !== "pending_payment" || n.order.payment_status === "paid") return;
+    const method = typeof job.payload.method === "string" ? job.payload.method : null;
+    await deliver(
+      job,
+      n,
+      paymentId,
+      "order_pending_payment",
+      orderPendingPaymentEmail(emailData(n), n.order.email, method),
+    );
+  };
+
   const failed: JobHandler = async (job, { log }) => {
     const paymentId = payloadId(job, "payment_id");
     const n = await load(job);
@@ -279,6 +297,7 @@ export function createOrderNotificationHandlers(
     ["order.created", created],
     ["order.paid", paid],
     ["payment.failed", failed],
+    ["payment.pending", pending],
     ["order.shipped", shipped],
     ["order.delivered", delivered],
     ["order.cancelled", cancelled],

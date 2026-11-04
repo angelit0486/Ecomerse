@@ -1355,7 +1355,7 @@ Contexto: misión «que comprar y pagar funcione sin errores y que el correo sal
   1. ¿Montos de revisión y límite (los de arriba u otros)?
   2. ¿Se aplica a todas las tiendas o cada tienda lo activa?
 
-### ADR-053 — Categorías que la plataforma bloquea (retoma ADR-042) · **PROPUESTO, espera decisión del propietario**
+### ADR-053 — Categorías que la plataforma bloquea (retoma ADR-042) · **RECHAZADO por el propietario 2026-11-04**
 
 - **Contexto:**
   - El propietario aplazó ADR-042 el 2026-10-29.
@@ -1413,7 +1413,7 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
 
 - **D-MEJ-04. Teléfono con puntos, diagonales o «ext.».** La base solo acepta dígitos, espacios, paréntesis, guiones y «+». Los compradores escriben `222.123.4567`, y el pedido se rechazaba. La acción del checkout normaliza el teléfono antes de guardarlo (`src/lib/checkout/phone.ts`). No cambia la regla de la base, ni precios, ni pagos.
 
-### ADR-056 — Correo «pendiente de pago» para OXXO y transferencia de Mercado Pago · **PROPUESTO, espera decisión del propietario**
+### ADR-056 — Correo «pendiente de pago» para OXXO y transferencia de Mercado Pago · **APROBADO 2026-11-04**
 
 - **Hoy:**
   - El correo «Recibimos tu pedido… queda pendiente de pago» sale solo con el pago manual.
@@ -1429,7 +1429,12 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - la idempotencia;
   - «pagado» solo por webhook o conciliación.
 - **Por qué ADR:** toca una función de pagos (GATE0 §43). Va con migración aditiva, pgTAP y prueba de integración.
-- **Pregunta:** ¿se aprueba?
+- **Implementación (2026-11-04):**
+  - migración `20261104000300`: interruptor `payment_pending_email` y `system.request_payment_pending_notice`;
+  - el webhook y la conciliación la llaman después de aplicar el cobro;
+  - trabajo `payment.pending` y plantilla `orderPendingPaymentEmail`;
+  - `apply_payment_status` no cambió;
+  - pruebas: pgTAP 123, integración (webhook y notificaciones) y unitaria.
 
 - **D-MEJ-05. Campos de 16 px en el celular (`mobile_input_size`).** El iPhone acerca la página al tocar un campo de menos de 16 px. Con el interruptor, la tienda y el panel ponen `data-mobile-inputs`, y una regla de `globals.css` (solo por debajo de 640 px y fuera de `@layer`) fija esos campos en 16 px. El interruptor está apagado por defecto, es por tienda y no toca datos ni contratos.
 
@@ -1438,7 +1443,7 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - El cron sigue siendo el respaldo.
   - Prueba E2E: `maintenance.spec.ts` (falla antes, pasa después).
 
-### ADR-057 — Guías de paquetería desde el pedido · **PROPUESTO, espera decisión del propietario**
+### ADR-057 — Guías de paquetería desde el pedido · **APROBADO 2026-11-04, con Skydropx** (falta la cuenta de pruebas)
 
 - **Hoy:** la tienda genera la guía fuera (en la página de la paquetería) y copia el número al pedido.
 - **Propuesta:** integrar un agregador mexicano, **Skydropx** o **Envia.com**. Con una sola cuenta se cotiza y se compra la guía de Estafeta, FedEx, DHL, Redpack y otras.
@@ -1455,7 +1460,7 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   2. ¿La guía la paga la tienda con su saldo? Recomendado: sí; la plataforma no cobra envíos.
 - **Tiempo:** 3–5 días después de tener la cuenta de pruebas del agregador.
 
-### ADR-058 — Facturación CFDI 4.0 para los compradores · **PROPUESTO, espera decisión del propietario**
+### ADR-058 — Facturación CFDI 4.0 para los compradores · **APROBADO 2026-11-04** (PAC por confirmar; recomendado Facturapi; falta la cuenta de pruebas)
 
 - **Hoy:** no existe. La tienda solo guarda su RFC (`stores.tax_id`).
 - **Propuesta:** un PAC con API, **Facturapi** o **Facturama**.

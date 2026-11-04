@@ -256,8 +256,22 @@ describe("webhook de Mercado Pago (§34.4)", () => {
   it("OXXO pendiente y después aprobado: un solo cobro, pedido pagado", async () => {
     const o = await order();
     const id = charge(o.paymentId, "pending", { payment_type_id: "ticket" });
+    const notices = async () =>
+      (
+        await admin<{ n: number }[]>`
+          select count(*)::int as n from system.jobs
+           where type = 'payment.pending' and payload ->> 'payment_id' = ${o.paymentId}`
+      )[0]!.n;
     expect((await deliver(id)).body.outcome).toBe("pending");
     expect((await state(o.orderId)).payment_status).toBe("pending");
+    // ADR-056: sin el interruptor de la tienda no se pide el aviso.
+    expect(await notices()).toBe(0);
+    await admin`insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
+                values ('payment_pending_email', 'store', ${storeId}, true, 'integración ADR-056')
+                on conflict (flag_key, scope, scope_id) do update set enabled = true`;
+    expect((await deliver(id)).body.outcome).toBe("pending");
+    expect((await deliver(id)).body.outcome).toBe("pending");
+    expect(await notices()).toBe(1);
     payments.get(id)!.status = "approved";
     expect((await deliver(id)).body.outcome).toBe("paid");
     expect((await state(o.orderId)).payment_status).toBe("paid");

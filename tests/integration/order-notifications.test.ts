@@ -103,6 +103,19 @@ afterAll(async () => {
 });
 
 describe("notificaciones de pedidos", () => {
+  it("pendiente de pago (OXXO, ADR-056): un solo correo, distinto de la confirmación", async () => {
+    const { orderId, paymentId } = await placeOrder("fake", "Ana");
+    await runJob("payment.pending", { order_id: orderId, payment_id: paymentId, method: "ticket" });
+    await runJob("payment.pending", { order_id: orderId, payment_id: paymentId, method: "ticket" });
+    expect(channel.sent).toHaveLength(1);
+    const m = channel.sent[0]!;
+    expect(m.to).toBe("comprador@example.test");
+    expect(m.subject).toMatch(/^Tu pedido #\d+ está pendiente de pago$/);
+    expect(m.text).toContain("OXXO");
+    expect(m.text).toContain("$200.00");
+    expect(m.text).not.toContain("Recibimos tu pago");
+  });
+
   it("pago diferido: comprador + tienda al crearse; reprocesar no reenvía", async () => {
     const { orderId, idem } = await placeOrder("manual", "<img src=x>");
     await runJob("order.created", { order_id: orderId });

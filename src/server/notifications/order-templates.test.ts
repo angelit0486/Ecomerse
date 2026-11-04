@@ -4,6 +4,7 @@ import {
   addressLines,
   deliveryEstimate,
   orderConfirmationEmail,
+  orderPendingPaymentEmail,
   orderDeliveredEmail,
   orderShippedEmail,
   paymentMethodLabel,
@@ -108,6 +109,37 @@ describe("plantillas de pedidos", () => {
     const r = staffOrderEmail(base, "s@x.test", "external_refund", "https://panel.test/p");
     expect(r.subject).toContain("se reembolsó fuera de la tienda");
     expect(r.text).toContain("https://panel.test/p");
+  });
+
+  it("pendiente de pago (ADR-056): número, productos, total, dirección e instrucción del medio", () => {
+    const d: OrderEmailData = {
+      ...base,
+      order: {
+        ...base.order,
+        shipping_address: {
+          recipient_name: "Ana",
+          line1: "Av. Juárez 10",
+          line2: "Centro",
+          postal_code: "72000",
+          city: "Puebla",
+          region: "Puebla",
+          country: "MX",
+        },
+      },
+    };
+    const oxxo = orderPendingPaymentEmail(d, "c@x.test", "ticket");
+    expect(oxxo.subject).toBe(`Tu pedido ${base.order.display_number} está pendiente de pago`);
+    expect(oxxo.text).toContain("OXXO");
+    expect(oxxo.text).toContain("Total: ");
+    expect(oxxo.text).toContain("Av. Juárez 10");
+    expect(oxxo.html).toContain("pendiente de pago");
+    expect(oxxo.text).not.toContain("Recibimos tu pago");
+    expect(orderPendingPaymentEmail(d, "c@x.test", "bank_transfer").text).toContain(
+      "transferencia",
+    );
+    expect(orderPendingPaymentEmail(d, "c@x.test", "otro").text).toContain(
+      "instrucciones de Mercado Pago",
+    );
   });
 
   it("confirmación: dirección de envío completa, escapada y en texto plano", () => {

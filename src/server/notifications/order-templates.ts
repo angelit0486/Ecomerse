@@ -219,6 +219,47 @@ export function orderReceivedEmail(d: OrderEmailData, to: string): EmailMessage 
   );
 }
 
+/** Medios diferidos de Mercado Pago (ADR-056). */
+const DEFERRED_METHOD: Record<string, string> = {
+  ticket: "Paga en efectivo con la referencia que te dio Mercado Pago (OXXO u otra tienda).",
+  bank_transfer: "Haz la transferencia con los datos que te dio Mercado Pago.",
+  atm: "Paga en el cajero con la referencia que te dio Mercado Pago.",
+};
+
+/**
+ * Pedido con pago diferido de Mercado Pago (OXXO, transferencia, cajero) aún sin
+ * pagar (ADR-056). Distinto de la confirmación: no dice «recibimos tu pago».
+ */
+export function orderPendingPaymentEmail(
+  d: OrderEmailData,
+  to: string,
+  method: string | null | undefined,
+): EmailMessage {
+  const subject = `Tu pedido ${d.order.display_number} está pendiente de pago`;
+  const how =
+    (method && DEFERRED_METHOD[method]) ??
+    "Completa el pago con las instrucciones de Mercado Pago.";
+  const after = "En cuanto se acredite te mandamos la confirmación y preparamos tu pedido.";
+  return message(
+    d,
+    to,
+    subject,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>. Está <strong>pendiente de pago</strong>.</p><p>${escapeHtml(how)} ${escapeHtml(after)}</p>${itemsHtml(d)}${addressHtml(d)}${
+      d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""
+    }`,
+    [
+      `Hola, ${d.order.customer_name}:`,
+      "",
+      `Recibimos tu pedido ${d.order.display_number}. Está pendiente de pago.`,
+      `${how} ${after}`,
+      "",
+      itemsText(d),
+      ...addressText(d),
+      d.orderUrl ? `Tu pedido: ${d.orderUrl}` : "",
+    ],
+  );
+}
+
 export function orderConfirmationEmail(d: OrderEmailData, to: string): EmailMessage {
   const subject = `Confirmamos tu pedido ${d.order.display_number}`;
   const method = paymentMethodLabel(d.payment);
