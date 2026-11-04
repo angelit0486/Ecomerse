@@ -108,6 +108,10 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Cobro con Mercado Pago en `demo2` (2026-11-04): `docs/plan/DIAGNOSTICO-MERCADOPAGO.md`.
   - Teléfono con puntos ya no impide pagar (`fa95e3d`); prueba nueva del webhook antes del regreso.
   - Bloqueado: prueba real en modo prueba (red sin `api.mercadopago.com` y sin credenciales, B4); correo «pendiente de pago» (ADR-056 propuesto).
+- Primer pedido en `demo2` (2026-11-04): `docs/plan/PRIMER-PEDIDO.md`, runbook `docs/runbooks/pedidos.md`.
+  - El recorrido completo funciona en local (compra, correos, panel, envío con guía, pendientes y cancelación).
+  - Celular: campos de 16 px detrás de `mobile_input_size`, apagado.
+  - Hallazgo: en staging nunca ha corrido el mantenimiento (`orders.expire`, `payments.reconcile`).
 - Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)

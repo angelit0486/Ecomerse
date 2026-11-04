@@ -1,0 +1,33 @@
+1. Ficha del producto → 01-producto.png
+2. Carrito → 02-carrito.png
+3. Datos del cliente y envío elegido, con el total → 03-checkout.png
+4. Pantalla del pago de prueba (proveedor simulado) → 04-pago-de-prueba.png
+5. Regreso a la tienda: pedido pagado → 05-regreso-a-la-tienda.png
+   pedido #1009: open / paid, total 34800 centavos
+   correo «Confirmamos tu pedido #1009» (envíos: 1); lleva número: true, dirección: true
+6. Correo de confirmación a comprador-5802fd42@example.test → 06-correo-confirmacion.png
+7. Ficha del producto → 07-producto.png
+8. Carrito → 08-carrito.png
+9. Datos del cliente y envío elegido, con el total → 09-checkout.png
+10. Pantalla del pago de prueba (proveedor simulado) → 10-pago-de-prueba.png
+11. Panel: lista de pedidos → 11-panel-pedidos.png
+12. Panel: detalle con estado, dirección, productos y total → 12-panel-detalle.png
+13. Panel: envío registrado con paquetería y guía → 13-panel-enviado.png
+   correo «Tu pedido #1009 va en camino»; lleva la guía: true
+14. Correo de envío al cliente → 14-correo-envio.png
+15. Panel: pedidos pendientes de pago → 15-panel-pendientes.png
+16. Panel: pedido pendiente cancelado → 16-panel-cancelado.png
+   celular panel: inicio: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular panel: pedidos: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular panel: detalle del pedido: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular panel: pendientes: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+17. Celular: panel, pendientes → 17-celular-panel-pendientes.png
+18. Celular: panel, detalle del pedido → 18-celular-panel-detalle.png
+   celular catálogo: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular ficha del producto: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular carrito: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular checkout con envío elegido: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+19. Celular: checkout con envío elegido → 19-celular-checkout.png
+   celular pantalla de pago: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+   celular gracias por tu compra: desborde horizontal 0px; campos < 16px: ninguno; cortados: ninguno; viewport «width=device-width, initial-scale=1»
+20. Celular: compra terminada → 20-celular-gracias.png
