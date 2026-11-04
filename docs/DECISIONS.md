@@ -1437,3 +1437,38 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - No cambia el contrato de la cola (_Job_, GATE0 §43): no hay forma nueva de encolar ni tipos nuevos.
   - El cron sigue siendo el respaldo.
   - Prueba E2E: `maintenance.spec.ts` (falla antes, pasa después).
+
+### ADR-057 — Guías de paquetería desde el pedido · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:** la tienda genera la guía fuera (en la página de la paquetería) y copia el número al pedido.
+- **Propuesta:** integrar un agregador mexicano, **Skydropx** o **Envia.com**. Con una sola cuenta se cotiza y se compra la guía de Estafeta, FedEx, DHL, Redpack y otras.
+  1. En el pedido, el botón «Cotizar guía» muestra opciones con precio y días. Peso y medidas salen de las variantes; la dirección, del pedido.
+  2. «Comprar guía»: se paga con el saldo de la cuenta del comercio en el agregador. El número de guía, la paquetería y la etiqueta en PDF se guardan en el envío. Se registra el envío y sale el correo «va en camino» actual.
+  3. El webhook del agregador actualiza el rastreo, y «entregado» se marca solo.
+- **Reglas:**
+  - la llave del agregador de cada tienda se cifra con `PAYMENT_CREDENTIALS_KEY` (como las de Mercado Pago);
+  - la compra de la guía va fuera de cualquier transacción, con clave de idempotencia por envío;
+  - el webhook va firmado;
+  - interruptor por tienda, apagado.
+- **Qué decide el propietario:**
+  1. ¿Skydropx o Envia.com? Recomendado: Skydropx, por su API documentada y su sandbox.
+  2. ¿La guía la paga la tienda con su saldo? Recomendado: sí; la plataforma no cobra envíos.
+- **Tiempo:** 3–5 días después de tener la cuenta de pruebas del agregador.
+
+### ADR-058 — Facturación CFDI 4.0 para los compradores · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:** no existe. La tienda solo guarda su RFC (`stores.tax_id`).
+- **Propuesta:** un PAC con API, **Facturapi** o **Facturama**.
+  1. La tienda sube su CSD (certificado y llave) **directo al PAC**, que lo resguarda. PRUVA no guarda el CSD.
+  2. El comprador pide factura desde la página de su pedido (RFC, razón social, régimen, CP y uso del CFDI) dentro del mes de la compra.
+  3. La factura se timbra con los datos del pedido pagado. El snapshot del pedido no cambia (regla 9). El XML y el PDF se envían por correo y se guardan para la tienda.
+  4. Cancelación y nota de crédito al reembolsar, desde el panel.
+- **Reglas:**
+  - el RFC del comprador es dato personal (se enmascara en registros);
+  - el timbrado va fuera de transacción, con idempotencia por pedido;
+  - interruptor por tienda, apagado.
+- **Qué decide el propietario:**
+  1. ¿Facturapi o Facturama? Recomendado: Facturapi, por su API y su modo de prueba.
+  2. ¿Factura global diaria para las ventas sin factura? La pide el SAT. Recomendado: sí, automática.
+  3. Revisión de un contador antes de encender.
+- **Tiempo:** 3–5 días después de tener la cuenta de pruebas del PAC.

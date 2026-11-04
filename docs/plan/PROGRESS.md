@@ -112,6 +112,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - El recorrido completo funciona en local (compra, correos, panel, envío con guía, pendientes y cancelación).
   - Celular: campos de 16 px detrás de `mobile_input_size`, apagado.
   - Hallazgo: en staging nunca ha corrido el mantenimiento (`orders.expire`, `payments.reconcile`).
+- Mantenimiento sin depender solo del cron (`8a61cd8`, D-MEJ-06). ADR-057 (guías) y ADR-058 (CFDI) propuestos.
+  - Lista única del propietario: `docs/plan/PENDIENTES-DEL-PROPIETARIO.md`.
 - Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)
