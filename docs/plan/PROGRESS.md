@@ -114,6 +114,7 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Hallazgo: en staging nunca ha corrido el mantenimiento (`orders.expire`, `payments.reconcile`).
 - Mantenimiento sin depender solo del cron (`8a61cd8`, D-MEJ-06). ADR-057 (guías) y ADR-058 (CFDI) propuestos.
   - Lista única del propietario: `docs/plan/PENDIENTES-DEL-PROPIETARIO.md`.
+- Staging (aprobado 11, 2026-11-04): migraciones `20261104000100` y `20261104000200` aplicadas (147, sha256 verificado); `checkout_shipping_messages` y `mobile_input_size` encendidos solo en `demo2`. Tienda `demo` reactivada con los 19 productos de vapeo/THC en borrador; cuenta `almanzaangel164` desbloqueada (rol de plataforma sigue suspendido).
 - Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)
