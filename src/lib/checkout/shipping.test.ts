@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { MX_STATES, stateForPostalCode } from "./mx-states";
 import {
   effectiveShippingPrice,
+  noShippingMessage,
   preferredRate,
   shippingEstimate,
+  singleRateId,
   type RateOption,
 } from "./shipping";
 
@@ -102,5 +104,26 @@ describe("stateForPostalCode", () => {
       Array.from({ length: 100 }, (_, i) => stateForPostalCode(`${String(i).padStart(2, "0")}000`)),
     );
     for (const state of MX_STATES) expect(covered).toContain(state);
+  });
+});
+
+describe("sin envío para la dirección y forma de envío única", () => {
+  it("el mensaje dice qué falta: el estado de la dirección", () => {
+    expect(noShippingMessage({ region: " Baja California Sur " })).toBe(
+      "Esta tienda todavía no hace envíos a Baja California Sur. Revisa el estado de tu dirección o escríbele a la tienda.",
+    );
+  });
+
+  it("sin estado, habla de la dirección", () => {
+    expect(noShippingMessage({ region: "" })).toBe(
+      "Esta tienda todavía no hace envíos a esta dirección. Revísala o escríbele a la tienda.",
+    );
+    expect(noShippingMessage(null)).toMatch(/esta dirección/);
+  });
+
+  it("solo con una forma de envío se marca sola", () => {
+    expect(singleRateId([{ rate_id: "std" }])).toBe("std");
+    expect(singleRateId([{ rate_id: "std" }, { rate_id: "express" }])).toBeNull();
+    expect(singleRateId([])).toBeNull();
   });
 });

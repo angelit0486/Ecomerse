@@ -134,9 +134,13 @@ export function CheckoutForm({
   function markEdited(event: FormEvent<HTMLFormElement>) {
     markEditedName((event.target as HTMLInputElement).name);
   }
+  const savedRate = cart.shipping.status === "ok" ? cart.shipping.rate_id : cart.shipping_rate_id;
+  // Con el interruptor, una tarifa guardada que ya no se ofrece (se desactivó o
+  // cambió la dirección) no deja el formulario sin marcar si queda una sola.
   const selectedRate =
-    (cart.shipping.status === "ok" ? cart.shipping.rate_id : cart.shipping_rate_id) ??
-    (clearShipping ? singleRateId(cart.shipping_options) : null);
+    clearShipping && !cart.shipping_options.some((o) => o.rate_id === savedRate)
+      ? singleRateId(cart.shipping_options)
+      : savedRate;
   // Solo el país de la tienda (las zonas de envío de hoy son nacionales); se
   // conserva el de una dirección ya guardada si fuera otro.
   const countryCodes = [...new Set([storeCountry, ...(a?.country ? [a.country] : [])])];
@@ -409,13 +413,16 @@ export function CheckoutForm({
               Forma de envío
             </p>
             {cart.shipping_options.length === 0 ? (
-              <p className="text-sm text-[var(--sf-muted)]">
-                {cart.shipping.status === "address_required"
-                  ? "Escribe tu dirección completa para ver las formas de envío."
-                  : clearShipping
-                    ? noShippingMessage(cart.shipping_address)
-                    : "No hay envíos disponibles para esta dirección."}
-              </p>
+              // Con el interruptor, si el error ya dice qué falta no se repite.
+              clearShipping && f.shipping_rate_id ? null : (
+                <p className="text-sm text-[var(--sf-muted)]">
+                  {cart.shipping.status === "address_required"
+                    ? "Escribe tu dirección completa para ver las formas de envío."
+                    : clearShipping
+                      ? noShippingMessage(cart.shipping_address)
+                      : "No hay envíos disponibles para esta dirección."}
+                </p>
+              )
             ) : (
               cart.shipping_options.map((o) => (
                 <label
