@@ -12,6 +12,7 @@ import { log } from "@/server/observability/logger";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { createImportHandlers } from "@/server/imports/handlers";
 import { createCartRecoveryHandlers } from "@/server/notifications/cart-recovery";
+import { createWeeklySummaryHandlers } from "@/server/notifications/weekly-summary";
 import { emailChannel } from "@/server/notifications/channel";
 import { createNotificationHandlers } from "@/server/notifications/handlers";
 import { createOrderNotificationHandlers } from "@/server/notifications/order-handlers";
@@ -75,6 +76,14 @@ const cartRecovery = () =>
     channel: emailChannel(),
     linkSecret: serverEnv().ORDER_LINK_SECRET,
     storeOrigin: ({ hostname, handle }) => storeOrigin({ primary_hostname: hostname, handle }),
+    appUrl: serverEnv().APP_URL,
+  });
+
+// Auditoría global, paso 19: resumen semanal a la dueña (interruptor weekly_summary).
+const weeklySummary = () =>
+  createWeeklySummaryHandlers({
+    db: workerDb(),
+    channel: emailChannel(),
     appUrl: serverEnv().APP_URL,
   });
 
@@ -173,6 +182,7 @@ const handlers: Array<[string, JobHandler]> = [
   ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],
   ["domains.verify", lazy("domains.verify", domains)],
   ["carts.recover", lazy("carts.recover", cartRecovery)],
+  ["stores.weekly_summary", lazy("stores.weekly_summary", weeklySummary)],
 ];
 
 export const jobRegistry: JobRegistry = new Map(handlers);

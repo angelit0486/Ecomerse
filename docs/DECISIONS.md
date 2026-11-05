@@ -1534,3 +1534,14 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Contenido:** cada línea muestra lo que falta por enviar (pedido − cancelado − enviado) y no lleva precios.
   - **Impresión:** CSS `@media print` sin JavaScript de terceros (solo `window.print`).
 - **D-MEJ-09. Particiones de auditoría con mantenimiento (auditoría global B1).** `system.enqueue_maintenance` mantiene 24 meses de particiones por delante y `system.platform_health` avisa (`audit_partitions`). No borra nada; la retención de datos espera el ADR-060.
+- **D-MEJ-10. Resumen semanal a la dueña (auditoría global, paso 19).** Interruptor por tienda `weekly_summary` (apagado; en Ajustes → Funciones).
+  - **Cuándo:** el mantenimiento encola un trabajo por semana ISO a partir del lunes 8:00, hora del centro de México (`system.weekly_summary_window`).
+  - **Datos:** `system.weekly_summaries` (solo el worker) calcula, por tienda con el interruptor:
+    - ventas y pedidos de 7 días contra los 7 anteriores;
+    - reembolsos;
+    - por surtir, en atención y pendientes de pago;
+    - carritos abandonados;
+    - stock bajo (5) y lo más vendido (3).
+  - **Destinatarios:** los de los avisos de la tienda o, si no hay, su correo de contacto.
+  - **Sin repetir:** clave única por semana, tienda y destinatario.
+  - **Pruebas:** pgTAP 128, integración `weekly-summary` y unitarias.

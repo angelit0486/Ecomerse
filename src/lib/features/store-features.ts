@@ -41,6 +41,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Imprime la nota de empaque de un pedido, o las de todos los pedidos por surtir, cada una en su hoja: productos, cantidades y dirección.",
     where: "Pedidos → un pedido o «Por surtir» → «Imprimir»",
   },
+  weekly_summary: {
+    title: "Resumen semanal",
+    description:
+      "Cada lunes te llega un correo con las ventas de la semana contra la anterior, los pedidos por surtir o en atención, el stock bajo y los carritos abandonados.",
+    where: "Tu correo (o el de los avisos de la tienda), cada lunes",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:
