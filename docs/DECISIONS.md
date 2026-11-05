@@ -1538,6 +1538,22 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 
 - Subir `.nvmrc`, `engines` y el CI a Node 24 antes del 2027-03-31, con todas las suites en verde.
 
+### ADR-063 — Apariencia avanzada: nuevas opciones de diseño del tema · **PROPUESTO, espera decisión del propietario**
+
+- **Pedido:** que cada tienda tenga su propia esencia y personalidad con una sección de Apariencia mucho más avanzada. Plan completo en `docs/plan/PLANTILLAS-APARIENCIA-PRODUCTOS-2026-11.md`.
+- **Hoy (verificado):** 10 tipografías, 4 radios, 2 estilos de botón, 3 sombras, 3 densidades, 15 bloques de portada. La base valida el tema campo por campo (`app.theme_settings_valid`), y el esquema del tema es un contrato crítico (GATE0 §43).
+- **Propuesta:** agregar opciones **con valores fijos, opcionales y compatibles hacia atrás** (si no están, la tienda se ve igual que hoy):
+  - tarjeta de producto: estilo, proporción de la foto, efecto al pasar el cursor, forma de las etiquetas;
+  - encabezado: clásico, centrado, mínimo o con búsqueda grande;
+  - portada: variantes del bloque principal;
+  - secciones: fondo y separador;
+  - tipografía: escala, mayúsculas en títulos, espaciado y 6 familias nuevas;
+  - modo claro u oscuro con contraste validado;
+  - movimiento sutil que respeta «reducir movimiento».
+- **Lo que no cambia:** sin CSS ni JavaScript libre de la tienda (regla 13), contraste AA validado en la base y en el panel, publicación auditada y todo detrás de un interruptor por tienda apagado.
+- **Costo:** una migración aditiva que amplía `app.theme_settings_valid`, cambios en el esquema Zod y en el render de la tienda, y 6 paquetes `@fontsource-variable/*` (dependencia nueva, regla 16; se justifican por familia antes de instalar).
+- **Pregunta:** ¿se aprueba?
+
 ### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
 
 - **Hoy (verificado en el código):** el token del enlace se deriva de la clave de idempotencia del checkout (`guestToken`) y no vence. Quien tenga un correo viejo ve el pedido para siempre.
