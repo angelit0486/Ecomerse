@@ -115,6 +115,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Mantenimiento sin depender solo del cron (`8a61cd8`, D-MEJ-06). ADR-057 (guías) y ADR-058 (CFDI) propuestos.
   - Lista única del propietario: `docs/plan/PENDIENTES-DEL-PROPIETARIO.md`.
 - Staging (aprobado 11, 2026-11-04): migraciones `20261104000100` y `20261104000200` aplicadas (147, sha256 verificado); `checkout_shipping_messages` y `mobile_input_size` encendidos solo en `demo2`. Tienda `demo` reactivada con los 19 productos de vapeo/THC en borrador; cuenta `almanzaangel164` desbloqueada (rol de plataforma sigue suspendido).
+- Auditoría global (2026-11-05): `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`, con 40 pasos ordenados. ADR-059, 060 y 061 propuestos.
+  - Hallazgo principal: los medios diferidos (OXXO, transferencia) vencen en 8 a 118 minutos.
 - Siguiente: parte C, cuando el propietario diga «sigue».
 
 ## Bloqueos (requieren al propietario)

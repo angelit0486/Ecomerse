@@ -1483,3 +1483,47 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   - **Fuera de la lista:** pagos, planes y funciones de cobro no aparecen.
   - **Cambio de valor por defecto:** la portada de imágenes nace encendida para todas las tiendas. La prueba pgTAP 122 y la E2E de la portada se actualizaron a ese comportamiento; no se desactivó ninguna.
   - **Pruebas:** pgTAP 124 (permiso, lista cerrada, aislamiento entre tiendas, kill switch y auditoría) y E2E `store-features`.
+
+## 35. Auditoría global (2026-11-05)
+
+Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
+
+### ADR-059 — Medios diferidos de Mercado Pago (OXXO, transferencia, cajero) frente al vencimiento del cobro · **PROPUESTO, espera decisión del propietario**
+
+- **Problema (verificado en el código):**
+  - El cobro vence en `reservation_ttl_minutes − 2 minutos`, es decir, de 8 a 118 minutos (30 por defecto).
+  - Ese vencimiento se manda a Mercado Pago como `expiration_date_to`.
+  - Un pago en OXXO o por transferencia tarda horas o días, así que el cliente no alcanza a pagar.
+- **Opción A (recomendada para arrancar):** excluir los medios diferidos de la preferencia (solo tarjeta y saldo de Mercado Pago).
+- **Opción B:** vencimiento propio de 72 horas para esos medios y reserva de stock extendida solo para esos intentos.
+- **Lo que no cambia:** la firma del webhook, la comparación de monto y moneda, y la idempotencia.
+- **Por qué ADR:** toca el cobro (GATE0 §43).
+- **Pregunta:** ¿A o B?
+
+### ADR-060 — Retención y limpieza de datos · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:**
+  - `system.purge_finished_jobs` y `system.maintain_audit_partitions` existen y nadie las llama.
+  - Las particiones de auditoría llegan hasta octubre de 2028.
+  - `notification_deliveries`, `payment_events`, `import_job_rows`, `security_events` y `carts` no tienen ninguna limpieza.
+- **Propuesta:**
+  - Particiones de auditoría: mantenimiento semanal (no borra nada; se hace sin esperar este ADR).
+  - Trabajos terminados: 30 días; fallidos: 90 días.
+  - Filas crudas de importación: 30 días.
+  - Notificaciones: 12 meses.
+  - Eventos de pago: 24 meses.
+  - Eventos de seguridad: 24 meses.
+  - Carritos abandonados: 90 días.
+- **Nunca se borran:** pedidos, pagos, movimientos de inventario ni auditoría (regla 9).
+- **Pregunta:** ¿se aprueban los plazos?
+
+### ADR-061 — Devoluciones y cambios · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy:** solo existen los estados de «devuelto» y el texto de la política.
+- **Propuesta:**
+  - El cliente solicita la devolución desde la página de su pedido, con motivo y plazo configurable por tienda.
+  - La tienda aprueba o rechaza, registra la recepción, y reembolsa o cambia.
+  - Se repone el stock solo si la tienda lo indica.
+  - Correos al cliente, auditoría y detrás de un interruptor por tienda.
+- **Por qué ADR:** toca reembolsos y existencias.
+- **Pregunta:** ¿se aprueba?
