@@ -11,13 +11,27 @@ import {
 } from "./support";
 
 /**
- * Misión vendible F2: las 6 plantillas por giro se ven completas el primer día,
+ * Misión vendible F2 y plan 2026-11-05: las plantillas por giro se ven completas el primer día,
  * sin fotos («Anaquel ilustrado»), a 360, 375, 768, 1280 y 1920 px: sin
  * desborde horizontal, con los objetos del giro en el hero, el buscador con el
  * nombre de la tienda y sin problemas graves de accesibilidad.
  * Con CAPTURE_DIR guarda capturas para docs/design.
  */
-const VERTICALS = ["Suplementos", "Ropa", "Belleza", "Abarrotes", "Hogar y decoración", "Mascotas"];
+const VERTICALS = [
+  "Suplementos",
+  "Ropa",
+  "Belleza",
+  "Abarrotes",
+  "Hogar y decoración",
+  "Mascotas",
+  // Segunda tanda (plan 2026-11-05, fase A).
+  "Joyería y accesorios",
+  "Electrónica y gadgets",
+  "Café y gourmet",
+  "Juguetes y bebés",
+  "Papelería y libros",
+  "Regalos y flores",
+];
 const WIDTHS = [360, 375, 768, 1280, 1920];
 const OUT = process.env.CAPTURE_DIR;
 

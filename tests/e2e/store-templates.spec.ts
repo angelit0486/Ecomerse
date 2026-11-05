@@ -39,7 +39,8 @@ test("plantilla Ropa: borrador con ejemplos marcados, bloqueo y quitar ejemplos"
   );
   await expect(steps.getByRole("link", { name: /^Dominio propio/ })).toContainText("Opcional");
   const section = page.getByRole("region", { name: "Plantilla por giro" });
-  await expect(section.getByRole("radio")).toHaveCount(8);
+  // 14 plantillas: 8 de la primera tanda y 6 de la segunda (plan 2026-11-05, fase A).
+  await expect(section.getByRole("radio")).toHaveCount(14);
   await expectNoSeriousA11yViolations(page);
 
   await section.getByRole("radio", { name: /^Ropa/ }).check();

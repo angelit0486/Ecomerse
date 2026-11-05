@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contrastIssues } from "@/lib/theme/palette";
+import { contrastIssues, themeContrastIssues } from "@/lib/theme/palette";
 import { HomeSectionsV2, ThemeSettingsV2 } from "@/lib/theme/schema";
 
 import {
@@ -19,6 +19,12 @@ describe("plantillas de tienda", () => {
       "abarrotes",
       "hogar",
       "mascotas",
+      "joyeria",
+      "electronica",
+      "gourmet",
+      "juguetes",
+      "papeleria",
+      "regalos",
       "generica",
       "blanco",
     ]);
@@ -42,6 +48,8 @@ describe("plantillas de tienda", () => {
       expect(ThemeSettingsV2.safeParse(payload.settings).success).toBe(true);
       expect(HomeSectionsV2.safeParse(payload.home_sections).success).toBe(true);
       expect(contrastIssues(t.colors, payload.settings.shape?.button_style ?? "solid")).toEqual([]);
+      // Igual que app.theme_contrast_issues: paleta, barra de anuncio y colores por elemento.
+      expect(themeContrastIssues(payload.settings)).toEqual([]);
       expect(payload.categories.length).toBeLessThanOrEqual(12);
       expect(payload.products.length).toBeLessThanOrEqual(24);
       const slugs = new Set(payload.categories.map((c) => c.slug));

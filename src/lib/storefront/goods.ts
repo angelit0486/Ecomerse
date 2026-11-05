@@ -31,6 +31,21 @@ export const GOODS = [
   "ball",
   "collar",
   "petbed",
+  "ring",
+  "necklace",
+  "headphones",
+  "plug",
+  "phone",
+  "bulb",
+  "notebook",
+  "pen",
+  "book",
+  "flower",
+  "teddy",
+  "blocks",
+  "balloon",
+  "gift",
+  "card",
   "tag",
   "box",
 ] as const;
@@ -38,12 +53,14 @@ export const GOODS = [
 export type Good = (typeof GOODS)[number];
 
 const RULES: ReadonlyArray<readonly [Good, readonly string[]]> = [
+  // Joyería antes que «collar»: «Collar de cadena» o «Collares y dijes» no son de mascota.
+  ["necklace", ["dije", "cadena", "gargantilla", "colgante"]],
   ["collar", ["collar", "correa", "pechera"]],
   ["petbed", ["cama", "descanso", "transportadora"]],
-  ["bowl", ["croqueta", "alimento", "comedero", "premio"]],
+  ["bowl", ["croqueta", "alimento", "comedero", "bebedero", "premio"]],
   ["ball", ["juguete", "pelota", "mordedera"]],
   // Antes que la piel (cuidado facial): «botas de piel». Y botanas antes que botas.
-  ["snack", ["botana", "papas", "snack", "galleta", "dulce"]],
+  ["snack", ["botana", "papas", "snack", "galleta", "dulce", "chocolate"]],
   ["shoe", ["tenis", "zapato", "calzado", "sandalia", "bota"]],
   ["shaker", ["preentreno", "pre-entreno", "pre entreno", "shaker", "energia"]],
   ["tub", ["proteina", "whey", "ganador", "gainer"]],
@@ -51,6 +68,22 @@ const RULES: ReadonlyArray<readonly [Good, readonly string[]]> = [
   ["lipstick", ["labial", "maquillaje", "rubor", "base de"]],
   ["dropper", ["piel", "serum", "suero facial", "facial", "crema", "hidratante"]],
   ["comb", ["cabello", "shampoo", "champu", "acondicionador", "peine"]],
+  // Giros de la segunda tanda de plantillas (plan 2026-11-05). Antes de «accesorio»
+  // (bolsa): «Accesorios para celular» es un celular.
+  ["ring", ["anillo", "arete", "pulsera", "joya"]],
+  ["headphones", ["audifono", "audio", "bocina", "altavoz"]],
+  ["plug", ["cargador", "cable", "bateria", "adaptador"]],
+  ["phone", ["celular", "telefono", "smartphone"]],
+  ["bulb", ["inteligente", "foco", "bombilla"]],
+  ["notebook", ["cuaderno", "libreta", "agenda"]],
+  ["pen", ["pluma", "boligrafo", "lapiz", "marcador", "escritura", "manualidad", "pincel"]],
+  ["book", ["libro"]],
+  ["flower", ["flor", "rosa", "ramo", "arreglo"]],
+  ["teddy", ["peluche", "bebe"]],
+  ["blocks", ["bloque", "didactic", "armable", "rompecabezas"]],
+  ["balloon", ["globo", "fiesta", "cumpleanos"]],
+  ["gift", ["regalo"]],
+  ["card", ["tarjeta", "felicitacion"]],
   ["hoodie", ["sudadera", "chamarra", "sueter", "abrigo"]],
   ["pants", ["pantalon", "jeans", "mezclilla", "short", "falda short"]],
   ["dress", ["vestido", "falda"]],
@@ -60,19 +93,19 @@ const RULES: ReadonlyArray<readonly [Good, readonly string[]]> = [
   ["plant", ["planta", "maceta", "jardin"]],
   ["cushion", ["cojin", "textil", "manta", "cobija", "almohada"]],
   ["lamp", ["lampara", "decoracion", "iluminacion", "decorativ"]],
-  ["mug", ["taza", "cocina", "vaso", "cafe"]],
+  ["mug", ["taza", "cocina", "vaso", "cafe", "infusion", " te "]],
   ["spray", ["limpieza", "detergente", "jabon", "desinfect", "cloro"]],
   ["bottle", ["bebida", "agua", "refresco", "jugo", "leche"]],
   ["jar", ["creatina", "despensa", "arroz", "frasco", "mermelada", "abarrote", "enlatado"]],
   ["bag", ["accesorio", "bolsa", "mochila", "cartera"]],
 ];
 
-/** Minúsculas y sin acentos, para comparar con las reglas. */
+/** Minúsculas y sin acentos, entre espacios (así « te » solo coincide con la palabra «té»). */
 function normalize(text: string): string {
-  return text
+  return ` ${text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()} `;
 }
 
 /** Objeto para un nombre; `fallback` si ninguna palabra coincide. */

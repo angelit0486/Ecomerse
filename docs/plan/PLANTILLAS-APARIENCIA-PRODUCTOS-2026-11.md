@@ -21,7 +21,7 @@ Etiquetas: **[VERIFICADO]** = lo comprobé en el código o en la base; **[PROPUE
 
 Se arman con las opciones que ya existen: no cambian la base de datos ni el esquema del tema, y las tiendas actuales no cambian.
 
-- **Primera tanda (6 plantillas):** joyería y accesorios, electrónica y gadgets, café y gourmet, juguetes y bebés, papelería y libros, regalos y flores. [PROPUESTA]
+- **Primera tanda (6 plantillas): hecha el 2026-11-05 (D-MEJ-19):** joyería y accesorios, electrónica y gadgets, café y gourmet, juguetes y bebés, papelería y libros, regalos y flores, con 15 dibujos nuevos para el primer día sin fotos.
 - **Segunda tanda (6 más):** deportes y outdoor, muebles, farmacia natural sin promesas de salud, fotografía y arte, restaurante y comida preparada, servicios con anticipo. [PROPUESTA]
 - **Estilos nuevos:** uno por personalidad (editorial, atrevido, cálido, minimalista, nocturno, fresco).
 - **Reglas de calidad:** contraste AA comprobado por una prueba para cada paleta, textos que no prometen efectos, tope de 12 categorías y 24 productos, y captura de pantalla de cada una a 360, 768 y 1280 px.

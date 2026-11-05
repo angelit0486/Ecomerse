@@ -1,3 +1,4 @@
+import type { BenefitIcon } from "@/lib/theme/constants";
 import type { Palette } from "@/lib/theme/palette";
 import type { HomeSection, ThemeSettings } from "@/lib/theme/schema";
 
@@ -33,7 +34,20 @@ export interface TemplateProduct {
 
 export interface StoreTemplate {
   key:
-    "suplementos" | "ropa" | "belleza" | "abarrotes" | "hogar" | "mascotas" | "generica" | "blanco";
+    | "suplementos"
+    | "ropa"
+    | "belleza"
+    | "abarrotes"
+    | "hogar"
+    | "mascotas"
+    | "joyeria"
+    | "electronica"
+    | "gourmet"
+    | "juguetes"
+    | "papeleria"
+    | "regalos"
+    | "generica"
+    | "blanco";
   name: string;
   description: string;
   colors: Palette;
@@ -702,6 +716,570 @@ const BLANCO: StoreTemplate = {
   products: [],
 };
 
+// ---------------------------------------------------------------------------
+// Segunda tanda de plantillas (plan 2026-11-05, fase A): cada una con su propia
+// personalidad usando solo opciones que el tema ya admite (tipografías, forma,
+// colores por elemento, barra de anuncio, barra de categorías, espaciado).
+// ---------------------------------------------------------------------------
+
+/** Mismo bloque con otro espacio arriba y abajo. */
+const spaced = (s: HomeSection, spacing: "compact" | "normal" | "spacious"): HomeSection => ({
+  ...s,
+  spacing,
+});
+
+const benefits = (
+  n: number,
+  items: { icon: BenefitIcon; title: string; text?: string }[],
+): HomeSection => ({ id: id(n), type: "benefits", enabled: true, props: { items } });
+
+const heroBlock = (
+  n: number,
+  heading: string,
+  subheading: string,
+  cta: { label: string; link: string },
+  align: "left" | "center",
+): HomeSection => ({
+  id: id(n),
+  type: "hero",
+  enabled: true,
+  props: { heading, subheading, cta, align },
+});
+
+const best = (n: number, title: string): HomeSection => ({
+  id: id(n),
+  type: "featured_products",
+  enabled: true,
+  props: { title, source: { type: "best_selling" }, limit: 8, show_view_all: true, layout: "grid" },
+});
+
+const JOYERIA: StoreTemplate = {
+  key: "joyeria",
+  name: "Joyería y accesorios",
+  description:
+    "Elegancia discreta: marfil y negro con un toque dorado, títulos con serifa, botones de contorno y mucho aire.",
+  colors: {
+    primary: "#1c1917",
+    accent: "#8a6a2f",
+    background: "#faf8f5",
+    foreground: "#1c1917",
+    muted: "#57534e",
+  },
+  settings: {
+    typography: { heading: "playfair-display", body: "manrope" },
+    shape: { radius: "none", button_style: "outline", shadow: "none", density: "spacious" },
+    header: {
+      logo_position: "center",
+      announcement: {
+        text: "Escribe aquí tu aviso de envíos o tu promoción",
+        background: "#8a6a2f",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "text", align: "center", size: "md", sticky: false },
+    },
+    element_colors: {
+      header: { background: "#1c1917", foreground: "#faf8f5" },
+      footer: { background: "#1c1917", foreground: "#e7e5e4" },
+    },
+    product_page: { gallery: "thumbnails", show_related: true, sticky_buy_bar: false },
+    listing: { columns_mobile: 2, show_brand: false },
+  },
+  home_sections: [
+    spaced(
+      heroBlock(
+        1,
+        "Piezas que se quedan contigo",
+        "Escribe aquí la historia de tu marca en una frase.",
+        { label: "Ver la colección", link: "/productos" },
+        "center",
+      ),
+      "spacious",
+    ),
+    spaced(newest(2, "Recién llegadas", "carousel"), "spacious"),
+    categoryGrid(3, "Compra por pieza"),
+    benefits(4, [
+      { icon: "gift", title: "Empaque para regalo" },
+      { icon: "return", title: "Cambios y devoluciones" },
+      { icon: "card", title: "Paga como prefieras" },
+    ]),
+    faqShipping(5),
+    contact(6),
+  ],
+  categories: [
+    { name: "Anillos", slug: "anillos" },
+    { name: "Collares y dijes", slug: "collares-y-dijes" },
+    { name: "Aretes", slug: "aretes" },
+    { name: "Pulseras", slug: "pulseras" },
+  ],
+  products: [
+    {
+      title: "Anillo liso",
+      category: "anillos",
+      description: "Banda lisa. Reemplaza este texto con el material y las medidas reales.",
+      options: [{ name: "Talla", values: ["5", "6", "7", "8"] }],
+      variants: ["5", "6", "7", "8"].map((talla) => ({ options: { Talla: talla }, price: 59900 })),
+    },
+    {
+      title: "Collar de cadena fina",
+      category: "collares-y-dijes",
+      description: "Cadena de 45 cm. Reemplaza este texto con el material real.",
+      variants: [{ price: 79900 }],
+    },
+    {
+      title: "Aretes de aro pequeño",
+      category: "aretes",
+      description: "Par de aros. Reemplaza este texto con el material real.",
+      variants: [{ price: 39900, compare_at_price: 49900 }],
+    },
+    {
+      title: "Pulsera ajustable",
+      category: "pulseras",
+      description: "Cierre ajustable. Reemplaza este texto con el material real.",
+      variants: [{ price: 49900 }],
+    },
+  ],
+};
+
+const ELECTRONICA: StoreTemplate = {
+  key: "electronica",
+  name: "Electrónica y gadgets",
+  description:
+    "Tecnológica y directa: encabezado oscuro, azul eléctrico, tipografía geométrica y fichas con barra de compra fija.",
+  colors: {
+    primary: "#2740d6",
+    accent: "#0e7490",
+    background: "#f4f6f8",
+    foreground: "#0f172a",
+    muted: "#475569",
+  },
+  settings: {
+    typography: { heading: "space-grotesk", body: "inter" },
+    shape: { radius: "sm", button_style: "solid", shadow: "strong", density: "compact" },
+    header: {
+      logo_position: "left",
+      announcement: {
+        text: "Escribe aquí tu promoción o tu aviso de envíos",
+        background: "#2740d6",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "pills", align: "start", size: "sm", sticky: true },
+    },
+    element_colors: {
+      header: { background: "#0b1220", foreground: "#e6edf7" },
+      nav_bar: { background: "#111a2e", foreground: "#e6edf7", active: "#7dd3fc" },
+      footer: { background: "#0b1220", foreground: "#cbd5e1" },
+    },
+    product_page: { gallery: "thumbnails", show_related: true, sticky_buy_bar: true },
+    listing: { columns_mobile: 2, show_brand: true },
+  },
+  home_sections: [
+    heroBlock(
+      1,
+      "Tecnología para tu día a día",
+      "Escribe aquí qué marcas y productos ofreces.",
+      { label: "Ver productos", link: "/productos" },
+      "left",
+    ),
+    best(2, "Lo más vendido"),
+    categoryGrid(3, "Explora por categoría"),
+    benefits(4, [
+      { icon: "shield", title: "Pregunta por la garantía" },
+      { icon: "truck", title: "Envíos a todo México" },
+      { icon: "chat", title: "Atención por WhatsApp" },
+    ]),
+    reviews(5),
+    faqShipping(6),
+  ],
+  categories: [
+    { name: "Audio", slug: "audio" },
+    { name: "Cargadores y cables", slug: "cargadores-y-cables" },
+    { name: "Accesorios para celular", slug: "accesorios-para-celular" },
+    { name: "Hogar inteligente", slug: "hogar-inteligente" },
+  ],
+  products: [
+    {
+      title: "Audífonos inalámbricos",
+      category: "audio",
+      description: "Con estuche de carga. Reemplaza este texto con la ficha real.",
+      options: [{ name: "Color", values: ["Negro", "Blanco"] }],
+      variants: ["Negro", "Blanco"].map((color) => ({ options: { Color: color }, price: 79900 })),
+    },
+    {
+      title: "Cargador de pared USB-C 20 W",
+      category: "cargadores-y-cables",
+      description: "Un puerto USB-C. Reemplaza este texto con la ficha real.",
+      variants: [{ price: 29900 }],
+    },
+    {
+      title: "Cable USB-C a USB-C 1 m",
+      category: "cargadores-y-cables",
+      description: "Cable trenzado de 1 metro. Reemplaza este texto con la ficha real.",
+      variants: [{ price: 14900 }],
+    },
+    {
+      title: "Soporte de escritorio para celular",
+      category: "accesorios-para-celular",
+      description: "Base ajustable. Reemplaza este texto con la ficha real.",
+      variants: [{ price: 19900 }],
+    },
+    {
+      title: "Foco inteligente Wi-Fi",
+      category: "hogar-inteligente",
+      description: "Foco de color regulable. Reemplaza este texto con la ficha real.",
+      variants: [{ price: 24900 }],
+    },
+  ],
+};
+
+const GOURMET: StoreTemplate = {
+  key: "gourmet",
+  name: "Café y gourmet",
+  description:
+    "Cálida y artesanal: tonos café y crema, serifa en títulos y textos, esquinas suaves y pie oscuro.",
+  colors: {
+    primary: "#6b3a1e",
+    accent: "#9a3412",
+    background: "#fbf6ee",
+    foreground: "#2a1d14",
+    muted: "#6b5a4c",
+  },
+  settings: {
+    typography: { heading: "playfair-display", body: "lora" },
+    shape: { radius: "md", button_style: "solid", shadow: "soft", density: "comfortable" },
+    header: {
+      logo_position: "center",
+      announcement: {
+        text: "Escribe aquí tus días de tueste y envío",
+        background: "#6b3a1e",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "text", align: "center", size: "md", sticky: false },
+    },
+    element_colors: {
+      footer: { background: "#2a1d14", foreground: "#f1e7d8" },
+    },
+    product_page: { gallery: "dots", show_related: true, sticky_buy_bar: false },
+    listing: { columns_mobile: 2, show_brand: false },
+  },
+  home_sections: [
+    spaced(
+      heroBlock(
+        1,
+        "Del origen a tu mesa",
+        "Escribe aquí de dónde vienen tus productos.",
+        { label: "Ver la tienda", link: "/productos" },
+        "center",
+      ),
+      "spacious",
+    ),
+    categoryGrid(2, "Nuestras selecciones"),
+    newest(3, "Para esta semana", "carousel"),
+    benefits(4, [
+      { icon: "leaf", title: "Hecho en lotes pequeños" },
+      { icon: "gift", title: "Cajas de regalo" },
+      { icon: "truck", title: "Envíos a todo México" },
+    ]),
+    contact(5),
+    faqShipping(6),
+  ],
+  categories: [
+    { name: "Café", slug: "cafe" },
+    { name: "Té e infusiones", slug: "te-e-infusiones" },
+    { name: "Dulces y chocolates", slug: "dulces-y-chocolates" },
+    { name: "Despensa gourmet", slug: "despensa-gourmet" },
+  ],
+  products: [
+    {
+      title: "Café de especialidad 250 g",
+      category: "cafe",
+      description: "Bolsa de 250 g. Reemplaza este texto con el origen y el tueste reales.",
+      options: [{ name: "Molienda", values: ["Grano", "Molido"] }],
+      variants: ["Grano", "Molido"].map((molienda) => ({
+        options: { Molienda: molienda },
+        price: 18900,
+        net_content: "250 g",
+      })),
+    },
+    {
+      title: "Té negro 20 sobres",
+      category: "te-e-infusiones",
+      description: "Caja con 20 sobres. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 9900, net_content: "20 sobres" }],
+    },
+    {
+      title: "Chocolate amargo 100 g",
+      category: "dulces-y-chocolates",
+      description: "Barra de 100 g. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 8900, net_content: "100 g" }],
+    },
+    {
+      title: "Mermelada artesanal 250 g",
+      category: "despensa-gourmet",
+      description: "Frasco de 250 g. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 12900, net_content: "250 g" }],
+    },
+  ],
+};
+
+const JUGUETES: StoreTemplate = {
+  key: "juguetes",
+  name: "Juguetes y bebés",
+  description:
+    "Alegre y redondeada: violeta y naranja, botones en píldora, barra de categorías en etiquetas y portada con fondo suave.",
+  colors: {
+    primary: "#6d28d9",
+    accent: "#c2410c",
+    background: "#fffdf7",
+    foreground: "#1f2937",
+    muted: "#4b5563",
+  },
+  settings: {
+    typography: { heading: "montserrat", body: "dm-sans" },
+    shape: { radius: "full", button_style: "solid", shadow: "soft", density: "comfortable" },
+    header: {
+      logo_position: "left",
+      announcement: {
+        text: "Escribe aquí tu promoción o tus fechas de entrega",
+        background: "#c2410c",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "pills", align: "start", size: "md", sticky: true },
+    },
+    element_colors: {
+      hero: { background: "#ede9fe", foreground: "#2e1065" },
+      nav_bar: { background: "#ffffff", foreground: "#1f2937", active: "#6d28d9" },
+      footer: { background: "#2e1065", foreground: "#f5f3ff" },
+    },
+    product_page: { gallery: "thumbnails", show_related: true, sticky_buy_bar: true },
+    listing: { columns_mobile: 2, show_brand: true },
+  },
+  home_sections: [
+    heroBlock(
+      1,
+      "A jugar se ha dicho",
+      "Escribe aquí para qué edades es tu tienda.",
+      { label: "Ver juguetes", link: "/productos" },
+      "center",
+    ),
+    categoryGrid(2, "Compra por edad o tipo"),
+    newest(3, "Novedades"),
+    benefits(4, [
+      { icon: "gift", title: "Envoltura de regalo" },
+      { icon: "truck", title: "Envíos a todo México" },
+      { icon: "return", title: "Cambios y devoluciones" },
+    ]),
+    reviews(5),
+    faqShipping(6),
+  ],
+  categories: [
+    { name: "Juegos y didácticos", slug: "juegos-y-didacticos" },
+    { name: "Peluches", slug: "peluches" },
+    { name: "Bebés", slug: "bebes" },
+    { name: "Fiesta y cumpleaños", slug: "fiesta-y-cumpleanos" },
+  ],
+  products: [
+    {
+      title: "Bloques de construcción 100 piezas",
+      category: "juegos-y-didacticos",
+      description: "Caja con 100 piezas. Reemplaza este texto con la edad recomendada real.",
+      variants: [{ price: 29900 }],
+    },
+    {
+      title: "Peluche mediano",
+      category: "peluches",
+      description: "Peluche de 30 cm. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Color", values: ["Beige", "Rosa", "Azul"] }],
+      variants: ["Beige", "Rosa", "Azul"].map((color) => ({
+        options: { Color: color },
+        price: 24900,
+      })),
+    },
+    {
+      title: "Sonaja para bebé",
+      category: "bebes",
+      description: "Sonaja ligera. Reemplaza este texto con la edad recomendada real.",
+      variants: [{ price: 8900 }],
+    },
+    {
+      title: "Set de fiesta para 8 invitados",
+      category: "fiesta-y-cumpleanos",
+      description: "Platos, vasos y servilletas. Reemplaza este texto con el contenido real.",
+      variants: [{ price: 17900 }],
+    },
+  ],
+};
+
+const PAPELERIA: StoreTemplate = {
+  key: "papeleria",
+  name: "Papelería y libros",
+  description:
+    "Sobria y ordenada: azul tinta sobre papel, títulos condensados, esquinas rectas, botones de contorno y listado compacto.",
+  colors: {
+    primary: "#1e3a8a",
+    accent: "#b91c1c",
+    background: "#fbfbf8",
+    foreground: "#1f2430",
+    muted: "#4b5563",
+  },
+  settings: {
+    typography: { heading: "oswald", body: "work-sans" },
+    shape: { radius: "sm", button_style: "outline", shadow: "none", density: "compact" },
+    header: {
+      logo_position: "left",
+      announcement: {
+        text: "Escribe aquí tu aviso de pedidos al mayoreo o de envíos",
+        background: "#1f2430",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "text", align: "start", size: "sm", sticky: true },
+    },
+    element_colors: {
+      footer: { background: "#1e3a8a", foreground: "#ffffff" },
+    },
+    product_page: { gallery: "thumbnails", show_related: true, sticky_buy_bar: false },
+    listing: { columns_mobile: 2, show_brand: true },
+  },
+  home_sections: [
+    heroBlock(
+      1,
+      "Todo para escribir, estudiar y crear",
+      "Escribe aquí qué categorías tienes y si vendes al mayoreo.",
+      { label: "Ver productos", link: "/productos" },
+      "left",
+    ),
+    newest(2, "Lo más pedido"),
+    categoryGrid(3, "Departamentos"),
+    faqShipping(4),
+    contact(5),
+  ],
+  categories: [
+    { name: "Cuadernos", slug: "cuadernos" },
+    { name: "Escritura", slug: "escritura" },
+    { name: "Arte y manualidades", slug: "arte-y-manualidades" },
+    { name: "Libros", slug: "libros" },
+  ],
+  products: [
+    {
+      title: "Cuaderno profesional 100 hojas",
+      category: "cuadernos",
+      description: "Pasta flexible. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Rayado", values: ["Raya", "Cuadro"] }],
+      variants: ["Raya", "Cuadro"].map((rayado) => ({
+        options: { Rayado: rayado },
+        price: 4900,
+      })),
+    },
+    {
+      title: "Set de plumas 6 piezas",
+      category: "escritura",
+      description: "Tinta de colores surtidos. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 8900 }],
+    },
+    {
+      title: "Marcadores de colores 12 piezas",
+      category: "arte-y-manualidades",
+      description: "Punta gruesa. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 11900 }],
+    },
+    {
+      title: "Libro de bolsillo",
+      category: "libros",
+      description: "Edición de bolsillo. Reemplaza este texto con título, autor y editorial.",
+      variants: [{ price: 17900 }],
+    },
+  ],
+};
+
+const REGALOS: StoreTemplate = {
+  key: "regalos",
+  name: "Regalos y flores",
+  description:
+    "Romántica y festiva: rosa profundo y crema, serifa suave, esquinas redondeadas y portada en color tenue.",
+  colors: {
+    primary: "#9d174d",
+    accent: "#b45309",
+    background: "#fff7f5",
+    foreground: "#3b1d2a",
+    muted: "#6b4a58",
+  },
+  settings: {
+    typography: { heading: "lora", body: "manrope" },
+    shape: { radius: "full", button_style: "solid", shadow: "soft", density: "spacious" },
+    header: {
+      logo_position: "center",
+      announcement: {
+        text: "Escribe aquí tu horario de entrega para fechas especiales",
+        background: "#9d174d",
+        foreground: "#ffffff",
+      },
+      nav_bar: { style: "text", align: "center", size: "md", sticky: false },
+    },
+    element_colors: {
+      hero: { background: "#fce7f3", foreground: "#500724" },
+      footer: { background: "#3b1d2a", foreground: "#fde8ef" },
+    },
+    product_page: { gallery: "dots", show_related: true, sticky_buy_bar: true },
+    listing: { columns_mobile: 2, show_brand: false },
+  },
+  home_sections: [
+    spaced(
+      heroBlock(
+        1,
+        "Detalles que se recuerdan",
+        "Escribe aquí tus zonas de entrega y fechas especiales.",
+        { label: "Elegir un regalo", link: "/productos" },
+        "center",
+      ),
+      "spacious",
+    ),
+    newest(2, "Para regalar hoy", "carousel"),
+    benefits(3, [
+      { icon: "gift", title: "Tarjeta con tu mensaje" },
+      { icon: "clock", title: "Entrega el día que elijas" },
+      { icon: "card", title: "Paga como prefieras" },
+    ]),
+    categoryGrid(4, "Para cada ocasión"),
+    reviews(5),
+    contact(6),
+  ],
+  categories: [
+    { name: "Ramos y arreglos", slug: "ramos-y-arreglos" },
+    { name: "Cajas de regalo", slug: "cajas-de-regalo" },
+    { name: "Globos y fiesta", slug: "globos-y-fiesta" },
+    { name: "Tarjetas y detalles", slug: "tarjetas-y-detalles" },
+  ],
+  products: [
+    {
+      title: "Ramo de rosas",
+      category: "ramos-y-arreglos",
+      description: "Ramo envuelto en papel. Reemplaza este texto con tu descripción.",
+      options: [{ name: "Tamaño", values: ["Mediano", "Grande"] }],
+      variants: [
+        { options: { Tamaño: "Mediano" }, price: 49900 },
+        { options: { Tamaño: "Grande" }, price: 79900 },
+      ],
+    },
+    {
+      title: "Caja de regalo sorpresa",
+      category: "cajas-de-regalo",
+      description: "Caja con detalles surtidos. Reemplaza este texto con el contenido real.",
+      variants: [{ price: 59900 }],
+    },
+    {
+      title: "Set de globos para fiesta",
+      category: "globos-y-fiesta",
+      description: "Globos de colores surtidos. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 14900 }],
+    },
+    {
+      title: "Tarjeta de felicitación",
+      category: "tarjetas-y-detalles",
+      description: "Tarjeta con sobre. Reemplaza este texto con tu descripción.",
+      variants: [{ price: 4900 }],
+    },
+  ],
+};
+
 export const STORE_TEMPLATES: readonly StoreTemplate[] = [
   SUPLEMENTOS,
   ROPA,
@@ -709,6 +1287,12 @@ export const STORE_TEMPLATES: readonly StoreTemplate[] = [
   ABARROTES,
   HOGAR,
   MASCOTAS,
+  JOYERIA,
+  ELECTRONICA,
+  GOURMET,
+  JUGUETES,
+  PAPELERIA,
+  REGALOS,
   GENERICA,
   BLANCO,
 ];

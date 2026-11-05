@@ -27,6 +27,34 @@ describe("goodFor", () => {
     ["Cama acolchada lavable", "petbed"],
     ["Botas de piel", "shoe"],
     ["Funda para laptop", "tag"],
+    // Segunda tanda de plantillas (plan 2026-11-05).
+    ["Anillos", "ring"],
+    ["Aretes de aro pequeño", "ring"],
+    ["Collares y dijes", "necklace"],
+    ["Collar de cadena fina", "necklace"],
+    ["Audio", "headphones"],
+    ["Audífonos inalámbricos", "headphones"],
+    ["Cargadores y cables", "plug"],
+    ["Cable USB-C a USB-C 1 m", "plug"],
+    ["Accesorios para celular", "phone"],
+    ["Hogar inteligente", "bulb"],
+    ["Foco inteligente Wi-Fi", "bulb"],
+    ["Cuaderno profesional 100 hojas", "notebook"],
+    ["Set de plumas 6 piezas", "pen"],
+    ["Arte y manualidades", "pen"],
+    ["Libro de bolsillo", "book"],
+    ["Ramos y arreglos", "flower"],
+    ["Peluches", "teddy"],
+    ["Sonaja para bebé", "teddy"],
+    ["Juegos y didácticos", "blocks"],
+    ["Fiesta y cumpleaños", "balloon"],
+    ["Cajas de regalo", "gift"],
+    ["Tarjetas y detalles", "card"],
+    ["Café de especialidad 250 g", "mug"],
+    ["Té e infusiones", "mug"],
+    ["Té negro 20 sobres", "mug"],
+    ["Chocolate amargo 100 g", "snack"],
+    ["Bebedero automático", "bowl"],
   ] as const)("%s → %s", (name, good) => {
     expect(goodFor(name)).toBe(good);
   });
@@ -34,6 +62,15 @@ describe("goodFor", () => {
   it("sin coincidencia usa el respaldo", () => {
     expect(goodFor("Destacados")).toBe("tag");
     expect(goodFor("Novedades", "box")).toBe("box");
+  });
+
+  it("palabras parecidas no se confunden con las nuevas", () => {
+    expect(goodFor("Detergente líquido")).toBe("spray");
+    expect(goodFor("Tenis deportivos")).toBe("shoe");
+    expect(goodFor("Proteína de suero")).toBe("tub");
+    expect(goodFor("Bebidas")).toBe("bottle");
+    expect(goodFor("Collar ajustable para perro")).toBe("collar");
+    expect(goodFor("Correas y collares")).toBe("collar");
   });
 
   it("lo específico gana: un collar no es un accesorio cualquiera", () => {
