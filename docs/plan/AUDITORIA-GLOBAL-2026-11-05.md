@@ -456,7 +456,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - **Hecho cuando:** E2E, y la dueña lo apaga desde Ajustes → Funciones.
 - **Tiempo:** 2 días.
 
-**Paso 20. Correos del comprador editables.** 🤖
+**Paso 20. Correos del comprador editables.** 🤖 · **Hecho el 2026-11-05 (D-MEJ-17): asunto y mensaje de la tienda; lo esencial no se edita**
 
 - La dueña edita el texto de cada correo con variables fijas (número de pedido, nombre) y una vista previa.
 - **Hecho cuando:** E2E, y el texto del comprador se escapa siempre (sin HTML libre).

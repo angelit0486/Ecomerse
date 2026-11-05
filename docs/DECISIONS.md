@@ -1591,6 +1591,12 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Receptor `/api/csp-report`:** sin base de datos. Acepta los dos formatos, rechaza lo que no es JSON (400) y más de 16 KB (413), lee como mucho 20 reportes por petición y registra como mucho 30 por minuto por instancia.
   - **Sin datos personales:** de cada URL solo se guardan origen y ruta; nunca la consulta ni el fragmento, porque el enlace del pedido lleva su token en `?t=`.
   - **Pruebas:** unitarias (`csp-report`, `headers`) y E2E `csp-report`.
+- **D-MEJ-17. Correos del comprador con el texto de la tienda (auditoría global, paso 20).** Migración `20261105000800`, interruptor por tienda `email_texts` (apagado; en Ajustes → Funciones). Pantalla Ajustes → Correos.
+  - **Qué se edita:** el asunto y un mensaje de la tienda en 6 correos (pedido recibido, pago confirmado, enviado, entregado, cancelado y reembolso), con las variables `{nombre}`, `{pedido}` y `{tienda}` y vista previa con un cliente de ejemplo.
+  - **Qué no se edita:** los datos del pedido (productos, montos, guía y enlaces) siempre van. Interpretación del paso 20 para que un cambio de texto nunca quite información que el cliente necesita.
+  - **Seguridad:** todo es texto. La base quita caracteres de control y limita el largo (asunto de una línea, hasta 150; mensaje hasta 1000); al armar el correo se escapa y los saltos de línea pasan a `<br>` (regla 13). Los correos al personal no se editan.
+  - **Datos:** `public.store_email_texts` con RLS forzado (lectura con `store.read`), guardado por `public.email_texts_save` (`store.update`, auditado). Con los dos campos vacíos vuelve al texto de siempre. El worker los lee con `system.store_email_texts`, que devuelve vacío si el interruptor está apagado.
+  - **Pruebas:** pgTAP 133 (con aislamiento entre tiendas), unitarias y E2E `email-texts`.
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

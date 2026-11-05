@@ -132,7 +132,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Devoluciones (ADR-061, D-MEJ-13): migración `20261105000600`, interruptor `returns` apagado. Suites en verde con Node 24: verify 1134, pgTAP 2786, integración 404, E2E 136/136.
 - «Salud de tu tienda» (paso 19, D-MEJ-15): migración `20261105000700`, interruptor `store_health` apagado. Suites en verde con Node 24: verify 1138, pgTAP 2804, integración 404, E2E 137/137.
 - Paso 23 (D-MEJ-16): CSP con `report-uri`/`report-to` hacia `/api/csp-report` del panel, sin consulta ni fragmento de las URL. Suites: verify 1144, pgTAP 2804, integración 404, E2E 137/138; la que falló era la prueba nueva (Playwright volvía a serializar el texto «no es json»), corregida y en verde. ADR-062 (vigencia del enlace) propuesto; `pg_net` espera al propietario.
-- Siguiente: paso 20 (correos editables) y aplicar `20261105000500` en adelante en staging cuando el código esté desplegado.
+- Paso 20 (D-MEJ-17): correos con el asunto y un mensaje de la tienda; migración `20261105000800`, interruptor `email_texts` apagado. Suites en verde con Node 24: verify 1148, pgTAP 2819, integración 404, E2E 139/139.
+- Fase 1 de la auditoría global: lo que puedo hacer solo está hecho. Falta lo del propietario (`PENDIENTES-DEL-PROPIETARIO.md`) y aplicar `20261105000500` en adelante en staging cuando el código esté desplegado.
 
 ## Bloqueos (requieren al propietario)
 

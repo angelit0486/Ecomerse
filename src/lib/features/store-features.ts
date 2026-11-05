@@ -65,6 +65,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Una pantalla con lo que falta o está por fallar: avisos, pagos, envíos, productos sin foto o sin existencias, políticas, uso de tu plan y pedidos que esperan.",
     where: "Este panel, junto a «Avisos»",
   },
+  email_texts: {
+    title: "Correos con tu texto",
+    description:
+      "Cambia el asunto y agrega un mensaje tuyo a los correos que reciben tus clientes (pedido, pago, envío, entrega, cancelación y reembolso).",
+    where: "Ajustes → Correos",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

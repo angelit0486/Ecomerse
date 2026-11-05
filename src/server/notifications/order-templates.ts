@@ -1,3 +1,4 @@
+import { STORE_NOTE_MARK } from "@/lib/emails/store-texts";
 import { formatMoney } from "@/lib/money/format";
 import { RETURN_REASON_LABEL } from "@/lib/returns/labels";
 
@@ -131,7 +132,7 @@ function layout(d: OrderEmailData, title: string, body: string): string {
   const contact = d.store.contact_email
     ? `<p style="color:#555;font-size:13px">¿Dudas? Responde a este correo o escribe a ${escapeHtml(d.store.contact_email)}.</p>`
     : "";
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="font-family:system-ui,sans-serif;color:#1a1a1a;line-height:1.5;max-width:560px;margin:0 auto;padding:24px"><div style="margin-bottom:24px">${header}</div>${body}${contact}</body></html>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="font-family:system-ui,sans-serif;color:#1a1a1a;line-height:1.5;max-width:560px;margin:0 auto;padding:24px"><div style="margin-bottom:24px">${header}</div>${body}${STORE_NOTE_MARK}${contact}</body></html>`;
 }
 
 function thumb(url: string | null | undefined): string {

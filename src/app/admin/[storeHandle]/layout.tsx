@@ -41,6 +41,7 @@ export default async function StoreLayout({ children, params }: Props) {
   const mobileInputs = flags.some((f) => f.key === "mobile_input_size" && f.enabled);
   const showHelp = flags.some((f) => f.key === "panel_help" && f.enabled);
   const showHealth = flags.some((f) => f.key === "store_health" && f.enabled);
+  const showEmailTexts = flags.some((f) => f.key === "email_texts" && f.enabled);
   const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
@@ -133,6 +134,12 @@ export default async function StoreLayout({ children, params }: Props) {
           href: `${base}/ajustes/funciones`,
           label: "Funciones",
           show: hasPermission(ctx, "store.read"),
+        },
+        {
+          href: `${base}/ajustes/correos`,
+          label: "Correos",
+          // Paso 20 (interruptor email_texts).
+          show: showEmailTexts && hasPermission(ctx, "store.read"),
         },
         {
           href: `${base}/ajustes/cumplimiento`,

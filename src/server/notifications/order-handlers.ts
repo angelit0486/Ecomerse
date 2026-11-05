@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { applyStoreText, EDITABLE_KEYS, type StoreText } from "@/lib/emails/store-texts";
 import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
 import { guestToken } from "@/server/payments/order-links";
@@ -127,6 +128,12 @@ export function createOrderNotificationHandlers(
     };
   }
 
+  async function storeText(storeId: string, template: string): Promise<StoreText | null> {
+    const [row] = await deps.db<{ value: Record<string, StoreText> | null }[]>`
+      select system.store_email_texts(${storeId}::uuid) as value`;
+    return row?.value?.[template] ?? null;
+  }
+
   async function deliver(
     job: JobRecord,
     n: OrderNotification,
@@ -137,12 +144,20 @@ export function createOrderNotificationHandlers(
     if (!isEmail(message.to)) return;
     const dedupeKey = `${job.type}:${entity}:${template}:${recipientHash(message.to)}`;
     if (await alreadyDelivered(deps.db, dedupeKey)) return;
+    // Paso 20: asunto y mensaje de la tienda (solo correos del comprador y con el interruptor).
+    const final = EDITABLE_KEYS.has(template)
+      ? applyStoreText(message, await storeText(n.store.id, template), {
+          nombre: n.order.customer_name,
+          pedido: n.order.display_number,
+          tienda: n.store.name,
+        })
+      : message;
     await sendNotification(deps, {
       dedupeKey,
       template,
       organizationId: n.store.organization_id,
       idempotencyKey: dedupeKey,
-      message,
+      message: final,
     });
   }
 
