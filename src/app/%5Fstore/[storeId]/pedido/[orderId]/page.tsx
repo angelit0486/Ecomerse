@@ -8,6 +8,7 @@ import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestOrder } from "@/server/storefront/checkout";
+import { returnOptions } from "@/server/storefront/returns";
 import { mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
 import { orderReviewables } from "@/server/storefront/reviews";
@@ -15,7 +16,9 @@ import { orderReviewables } from "@/server/storefront/reviews";
 import { money } from "../../_components/format";
 import { Totals } from "../../_components/totals";
 import { RetryPayment } from "./retry-form";
+import { sendReturn } from "./return-actions";
 import { sendReview } from "./review-actions";
+import { OrderReturn } from "./order-return";
 import { OrderReviews } from "./order-reviews";
 
 export const metadata: Metadata = {
@@ -42,7 +45,11 @@ export default async function OrderPage({ params, searchParams }: Props) {
 
   // Solo pedidos pagados y entregados ofrecen opinar (lo decide la base, ADR-029).
   // Un fallo al leer las opiniones no tumba la página del pedido.
-  const reviewables = await orderReviewables(store.id, order.id, t).catch(() => []);
+  // Devoluciones (ADR-061): null si la tienda no las ofrece; un fallo no tumba la página.
+  const [reviewables, returns] = await Promise.all([
+    orderReviewables(store.id, order.id, t).catch(() => []),
+    returnOptions(store.id, order.id, t).catch(() => null),
+  ]);
   const label = visibleStatus(order);
   const steps = orderProgress(order);
   const settings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
@@ -205,6 +212,20 @@ export default async function OrderPage({ params, searchParams }: Props) {
         reviewables={reviewables}
         actionFor={(productId) => sendReview.bind(null, store.id, order.id, t, productId)}
       />
+      {returns ? (
+        <OrderReturn
+          options={returns}
+          action={sendReturn.bind(null, store.id, order.id, t)}
+          deadlineLabel={
+            returns.deadline
+              ? new Date(returns.deadline).toLocaleDateString("es-MX", {
+                  timeZone: store.timezone ?? "America/Mexico_City",
+                  dateStyle: "long",
+                })
+              : null
+          }
+        />
+      ) : null}
       {email || phone || whatsapp ? (
         <section aria-labelledby="ayuda" className="space-y-1 text-sm">
           <h2 id="ayuda" className="font-semibold">

@@ -10,6 +10,10 @@ import {
   paymentMethodLabel,
   staffOrderEmail,
   type OrderEmailData,
+  returnDecisionEmail,
+  returnRequestedEmail,
+  type ReturnEmailData,
+  staffReturnEmail,
 } from "./order-templates";
 
 const base: OrderEmailData = {
@@ -286,5 +290,56 @@ describe("confirmación completa (misión pagos, 2026-10-29)", () => {
     expect(m.html).toContain("2 × Proteína");
     expect(m.text).toContain("Panel: https://panel.test/admin/t/pedidos/1");
     expect(m.html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("devoluciones (ADR-061)", () => {
+  const r: ReturnEmailData = {
+    status: "requested",
+    reason: "damaged",
+    customer_message: null,
+    customer_note: "El asa <b>venía</b> rota",
+    items: [{ title: "Taza", variant: "Azul", quantity: 1 }],
+  };
+
+  it("acuse al cliente con lo que pidió devolver y el enlace al pedido", () => {
+    const m = returnRequestedEmail(base, r, "ana@example.test");
+    expect(m.subject).toBe(
+      `Recibimos tu solicitud de devolución del pedido ${base.order.display_number}`,
+    );
+    expect(m.text).toContain("- Taza (Azul) × 1");
+  });
+
+  it("aprobada lleva las instrucciones; rechazada, el motivo (escapados)", () => {
+    const ok = returnDecisionEmail(
+      base,
+      { ...r, status: "approved", customer_message: "Envíala a <Reforma 22>" },
+      "ana@example.test",
+      true,
+    );
+    expect(ok.subject).toMatch(/fue aprobada$/);
+    expect(ok.text).toContain("Instrucciones de la tienda: Envíala a <Reforma 22>");
+    expect(ok.html).toContain("Envíala a &lt;Reforma 22&gt;");
+    const no = returnDecisionEmail(
+      base,
+      { ...r, status: "rejected", customer_message: "Pasaron más de 30 días" },
+      "ana@example.test",
+      false,
+    );
+    expect(no.subject).toMatch(/no fue aprobada$/);
+    expect(no.text).toContain("Motivo: Pasaron más de 30 días");
+  });
+
+  it("a la tienda: motivo en español, nota del cliente escapada y enlace al panel", () => {
+    const m = staffReturnEmail(
+      base,
+      r,
+      "tienda@example.test",
+      "https://app.test/admin/x/pedidos/devoluciones/1",
+    );
+    expect(m.subject).toBe(`Devolución solicitada: pedido ${base.order.display_number}`);
+    expect(m.text).toContain("Motivo: Llegó dañado");
+    expect(m.html).toContain("El asa &lt;b&gt;venía&lt;/b&gt; rota");
+    expect(m.html).toContain("https://app.test/admin/x/pedidos/devoluciones/1");
   });
 });

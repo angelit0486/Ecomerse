@@ -112,6 +112,17 @@ export default async function OrdersPage({ params, searchParams }: Props) {
     filter === "por-surtir" &&
     rows.length > 0 &&
     (await panelFlagEnabled(supabase, ctx.store.id, "order_printing"));
+  // Devoluciones (ADR-061, interruptor returns): enlace con las que esperan revisión.
+  const returnsOn = await panelFlagEnabled(supabase, ctx.store.id, "returns");
+  const pendingReturns = returnsOn
+    ? ((
+        await supabase
+          .from("return_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("store_id", ctx.store.id)
+          .eq("status", "requested")
+      ).count ?? 0)
+    : 0;
 
   return (
     <section className="space-y-6">
@@ -124,6 +135,14 @@ export default async function OrdersPage({ params, searchParams }: Props) {
               className="inline-flex min-h-11 items-center text-sm underline"
             >
               Imprimir notas de empaque
+            </Link>
+          ) : null}
+          {returnsOn ? (
+            <Link
+              href={`${base}/devoluciones`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
+              Devoluciones{pendingReturns > 0 ? ` (${pendingReturns} por revisar)` : ""}
             </Link>
           ) : null}
           {(dispatches.count ?? 0) > 0 ? (

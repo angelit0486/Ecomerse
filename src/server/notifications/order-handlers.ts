@@ -14,7 +14,11 @@ import {
   orderShippedEmail,
   paymentFailedEmail,
   refundIssuedEmail,
+  returnDecisionEmail,
+  returnRequestedEmail,
+  type ReturnEmailData,
   staffOrderEmail,
+  staffReturnEmail,
   type OrderEmailData,
   type StaffEmailKind,
 } from "./order-templates";
@@ -293,6 +297,57 @@ export function createOrderNotificationHandlers(
     await notifyStaff(job, n, reason === "chargeback" ? "chargeback" : "external_refund");
   };
 
+  // ADR-061: devoluciones. Los datos de la solicitud vienen de la base, igual que
+  // los del pedido; cada correo tiene su clave (devolución + plantilla + destinatario).
+  async function loadReturn(job: JobRecord): Promise<ReturnEmailData | null> {
+    const [row] = await deps.db<{ value: ReturnEmailData | null }[]>`
+      select system.return_notification(${payloadId(job, "return_id")}::uuid) as value`;
+    return row?.value ?? null;
+  }
+
+  const returnRequested: JobHandler = async (job, { log }) => {
+    const n = await load(job);
+    const r = n ? await loadReturn(job) : null;
+    if (!n || !r) return log.info("Devolución inexistente: nada que avisar");
+    const returnId = payloadId(job, "return_id");
+    const data = emailData(n);
+    await deliver(
+      job,
+      n,
+      returnId,
+      "return_requested",
+      returnRequestedEmail(data, r, n.order.email),
+    );
+    const panel = new URL(
+      `/admin/${encodeURIComponent(n.store.handle)}/pedidos/devoluciones/${returnId}`,
+      deps.appUrl,
+    ).toString();
+    for (const to of n.staff.emails) {
+      await deliver(
+        job,
+        n,
+        returnId,
+        "staff_return_requested",
+        staffReturnEmail(data, r, to, panel),
+      );
+    }
+  };
+
+  const returnDecided =
+    (approved: boolean): JobHandler =>
+    async (job, { log }) => {
+      const n = await load(job);
+      const r = n ? await loadReturn(job) : null;
+      if (!n || !r) return log.info("Devolución inexistente: nada que avisar");
+      await deliver(
+        job,
+        n,
+        payloadId(job, "return_id"),
+        approved ? "return_approved" : "return_rejected",
+        returnDecisionEmail(emailData(n), r, n.order.email, approved),
+      );
+    };
+
   return [
     ["order.created", created],
     ["order.paid", paid],
@@ -305,5 +360,8 @@ export function createOrderNotificationHandlers(
     ["payment.late_without_stock", lateWithoutStock],
     ["payment.after_cancel", afterCancel],
     ["payment.external_reversal", externalReversal],
+    ["return.requested", returnRequested],
+    ["return.approved", returnDecided(true)],
+    ["return.rejected", returnDecided(false)],
   ];
 }

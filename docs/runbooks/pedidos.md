@@ -48,3 +48,15 @@ Una página para la tienda, pensada para el celular. El detalle técnico de pago
   - Los tiempos los pone el banco: de 2 a 10 días hábiles.
 - **Nunca reembolses desde Mercado Pago directamente.** Si se hace, la tienda lo detecta y deja el pedido «en atención», pero el panel es el registro oficial.
 - **Si el cliente abre un contracargo:** detén el envío si no ha salido. Responde en Mercado Pago con la guía, la paquetería y la fecha de entrega.
+
+## 5. Devoluciones (si encendiste «Devoluciones» en Ajustes → Funciones)
+
+- **El cliente la pide** desde la página de su pedido (el enlace de sus correos): elige unidades, motivo y, si quiere, una nota. Puede hacerlo desde que el paquete sale y hasta el plazo de tu tienda (30 días si no lo cambias).
+- **Te llega un correo** y la ves en **Pedidos → Devoluciones → Por revisar**.
+- **Apruébala** escribiendo a dónde y cómo mandarla (por ejemplo: «Envíala a Av. Juárez 10, Puebla, con tu número de pedido»). O **recházala** con el motivo; el cliente lo recibe por correo.
+- **Cuando llegue el paquete**, toca **Registrar que llegó**.
+- **Resuélvela:**
+  - **Reembolsar:** el monto viene calculado con lo que pagó por esas unidades; puedes ajustarlo. Deja marcada «Regresar las unidades al inventario» si se pueden volver a vender.
+  - **Cerrar sin reembolso:** si le mandas otro producto (cambio) o si no corresponde devolver dinero.
+- **El plazo** se cambia arriba en **Pedidos → Devoluciones** (de 1 a 365 días).
+- Revisa que tu política de devoluciones publicada diga lo mismo que el plazo. **PENDIENTE DE REVISIÓN** legal: la Ley Federal de Protección al Consumidor y tus propias condiciones pueden exigir otros plazos.

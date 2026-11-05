@@ -1,4 +1,5 @@
 import { formatMoney } from "@/lib/money/format";
+import { RETURN_REASON_LABEL } from "@/lib/returns/labels";
 
 import { escapeHtml } from "./templates";
 import type { EmailMessage } from "./types";
@@ -471,5 +472,139 @@ export function staffOrderEmail(
       ...addressText(d),
       `Panel: ${panelUrl}`,
     ].join("\n"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// ADR-061: devoluciones.
+// ---------------------------------------------------------------------------
+
+/** Solicitud de devolución, tal como la ve el cliente (system.return_notification). */
+export interface ReturnEmailData {
+  status: string;
+  reason: string;
+  customer_message: string | null;
+  customer_note?: string | null;
+  items: { title: string; variant: string | null; quantity: number }[];
+}
+
+function returnItemsHtml(r: ReturnEmailData): string {
+  return `<ul>${r.items
+    .map(
+      (i) =>
+        `<li>${escapeHtml(i.title)}${i.variant ? ` (${escapeHtml(i.variant)})` : ""} × ${i.quantity}</li>`,
+    )
+    .join("")}</ul>`;
+}
+
+function returnItemsText(r: ReturnEmailData): string[] {
+  return r.items.map((i) => `- ${i.title}${i.variant ? ` (${i.variant})` : ""} × ${i.quantity}`);
+}
+
+function orderLink(d: OrderEmailData): { html: string; text: string[] } {
+  return d.orderUrl
+    ? {
+        html: button("Ver mi pedido", d.orderUrl, color(d)),
+        text: ["", `Ver tu pedido: ${d.orderUrl}`],
+      }
+    : { html: "", text: [] };
+}
+
+/** Al cliente: recibimos tu solicitud. */
+export function returnRequestedEmail(
+  d: OrderEmailData,
+  r: ReturnEmailData,
+  to: string,
+): EmailMessage {
+  const subject = `Recibimos tu solicitud de devolución del pedido ${d.order.display_number}`;
+  const link = orderLink(d);
+  return message(
+    d,
+    to,
+    subject,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu solicitud de devolución del pedido <strong>${escapeHtml(d.order.display_number)}</strong>. La tienda la revisará y te escribiremos con la respuesta.</p>${returnItemsHtml(r)}${link.html}`,
+    [
+      `Hola, ${d.order.customer_name}:`,
+      "",
+      `Recibimos tu solicitud de devolución del pedido ${d.order.display_number}. La tienda la revisará y te escribiremos con la respuesta.`,
+      "",
+      ...returnItemsText(r),
+      ...link.text,
+    ],
+  );
+}
+
+/** Al cliente: la tienda aprobó (con instrucciones) o rechazó (con el motivo). */
+export function returnDecisionEmail(
+  d: OrderEmailData,
+  r: ReturnEmailData,
+  to: string,
+  approved: boolean,
+): EmailMessage {
+  const n = d.order.display_number;
+  const subject = approved
+    ? `Tu devolución del pedido ${n} fue aprobada`
+    : `Tu devolución del pedido ${n} no fue aprobada`;
+  const intro = approved
+    ? "La tienda aprobó tu devolución."
+    : "La tienda revisó tu solicitud y no pudo aprobarla.";
+  const note = r.customer_message
+    ? approved
+      ? `Instrucciones de la tienda: ${r.customer_message}`
+      : `Motivo: ${r.customer_message}`
+    : approved
+      ? "La tienda te escribirá con los pasos para enviarla."
+      : "";
+  const link = orderLink(d);
+  return message(
+    d,
+    to,
+    subject,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>${escapeHtml(intro)}</p>${returnItemsHtml(r)}${
+      note ? `<p>${escapeHtml(note)}</p>` : ""
+    }${link.html}`,
+    [
+      `Hola, ${d.order.customer_name}:`,
+      "",
+      intro,
+      "",
+      ...returnItemsText(r),
+      ...(note ? ["", note] : []),
+      ...link.text,
+    ],
+  );
+}
+
+/** A la tienda: llegó una solicitud de devolución. */
+export function staffReturnEmail(
+  d: OrderEmailData,
+  r: ReturnEmailData,
+  to: string,
+  panelUrl: string,
+): EmailMessage {
+  const subject = `Devolución solicitada: pedido ${d.order.display_number}`;
+  const reason = RETURN_REASON_LABEL[r.reason] ?? r.reason;
+  return {
+    to,
+    subject,
+    html: layout(
+      d,
+      subject,
+      `<p>${escapeHtml(d.order.customer_name)} pidió devolver productos del pedido ${escapeHtml(d.order.display_number)}.</p><p><strong>Motivo:</strong> ${escapeHtml(reason)}</p>${
+        r.customer_note
+          ? `<p><strong>Nota del cliente:</strong> ${escapeHtml(r.customer_note)}</p>`
+          : ""
+      }${returnItemsHtml(r)}${button("Revisar en el panel", panelUrl, "#1a1a1a")}`,
+    ),
+    text: [
+      `${d.order.customer_name} pidió devolver productos del pedido ${d.order.display_number}.`,
+      `Motivo: ${reason}`,
+      ...(r.customer_note ? [`Nota del cliente: ${r.customer_note}`] : []),
+      "",
+      ...returnItemsText(r),
+      "",
+      `Revisar en el panel: ${panelUrl}`,
+    ].join("\n"),
+    fromName: d.store.name,
   };
 }

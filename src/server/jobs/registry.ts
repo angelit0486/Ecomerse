@@ -177,6 +177,10 @@ const handlers: Array<[string, JobHandler]> = [
   ["payment.expire_checkout", lazy("payment.expire_checkout", refunds)],
   ["payment.after_cancel", lazy("payment.after_cancel", orderNotifications)],
   ["payment.external_reversal", lazy("payment.external_reversal", orderNotifications)],
+  // ADR-061: correos de devoluciones.
+  ["return.requested", lazy("return.requested", orderNotifications)],
+  ["return.approved", lazy("return.approved", orderNotifications)],
+  ["return.rejected", lazy("return.rejected", orderNotifications)],
   ["order.created", lazy("order.created", orderNotifications)],
   ["order.paid", lazy("order.paid", orderNotifications)],
   ["import.commit", lazy("import.commit", imports)],

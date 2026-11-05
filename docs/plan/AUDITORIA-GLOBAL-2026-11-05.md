@@ -442,7 +442,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - Ya está en el código (ADR-056).
 - Falta aplicarlo en staging y encender el interruptor (te lo pido con «aprobado staging»).
 
-**Paso 18. Devoluciones y cambios.** 🤖 con ADR-061
+**Paso 18. Devoluciones y cambios.** 🤖 con ADR-061 · **Hecho el 2026-11-05 (D-MEJ-13)**
 
 - Flujo completo: el cliente solicita desde su pedido, la tienda aprueba, se registra la recepción y se reembolsa o se repone el stock.
 - Con correos, plazo configurable por tienda y auditoría.

@@ -129,7 +129,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Staging (2026-11-05, aprobado por el propietario): migraciones `20261104000300` a `20261105000400` aplicadas desde `88618a0`, cada una con su sha256 verificado. Staging en `20261105000400` (154). Interruptores nuevos apagados. Hallazgo: la cola de staging no avanza (`queue_stalled`), pendiente B del propietario.
   - `20261105000500` (retención) y las siguientes se aplican cuando esté desplegado el código que atiende sus trabajos.
 - Node 24 (D-MEJ-14): todas las suites en verde con Node 24.21.0: verify 1129, pgTAP 2742, integración 404, E2E 135/135. Falta confirmar en Vercel que el despliegue tome 24.x.
-- Siguiente: ADR-061 (devoluciones).
+- Devoluciones (ADR-061, D-MEJ-13): migración `20261105000600`, interruptor `returns` apagado. Suites en verde con Node 24: verify 1134, pgTAP 2786, integración 404, E2E 136/136.
+- Siguiente: aplicar `20261105000500` y `0600` en staging cuando el código esté desplegado; luego los pasos restantes de la auditoría global.
 
 ## Bloqueos (requieren al propietario)
 

@@ -53,6 +53,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Agrega «Ayuda» arriba del panel: guías cortas, paso a paso, para pedidos, pagos, envíos, productos, reembolsos y más.",
     where: "Este panel, junto a «Avisos»",
   },
+  returns: {
+    title: "Devoluciones",
+    description:
+      "Tus clientes piden la devolución desde la página de su pedido; tú la apruebas, registras cuando llega y reembolsas o haces un cambio.",
+    where: "Pedidos → Devoluciones, y la página del pedido de tu cliente",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

@@ -1568,6 +1568,12 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Vigilancia:** `system.maintenance_runs` guarda la última corrida. La salud avisa `retention_stale` a los 8 días sin correr y muestra el tamaño estimado de lo que no se borra. Cada corrida que borra algo deja auditoría `data.retention`.
   - **Panel:** la importación cuyas filas se borraron lo explica, y su CSV de errores responde 410.
   - **Pruebas:** pgTAP 130 (incluye aislamiento: la dueña no corre la purga ni ve el registro), integración `data-retention` y unitarias.
+- **D-MEJ-13. Devoluciones (ADR-061 aprobado; auditoría global, paso 18).** Migración `20261105000600`, interruptor por tienda `returns` (apagado; en Ajustes → Funciones).
+  - **Cliente:** en la página de su pedido (enlace con token) pide la devolución con unidades, motivo y nota. Solo si el pedido está pagado, ya salió y está dentro del plazo de la tienda (`stores.return_window_days`, 30 por defecto, desde la entrega o, si no se marcó, el envío del último paquete). Una solicitud abierta por pedido; límite de 10 intentos por hora.
+  - **Tienda:** Pedidos → Devoluciones. Aprueba (con instrucciones) o rechaza (con motivo obligatorio), registra que llegó y resuelve: reembolso por `app.request_refund` (mismo dinero, idempotencia y reposición que el reembolso del pedido) o cierre con cambio o sin dinero. Permisos: `orders.refund` para decidir y resolver, `orders.fulfill` para recibir, `store.update` para el plazo.
+  - **Datos:** `public.return_requests` con RLS forzado (lectura con `orders.read`), FK compuestas, sin DELETE; lo que pidió el cliente no se reescribe y el estado solo avanza (trigger).
+  - **Correos:** acuse al cliente y aviso a la tienda; aprobada o rechazada al cliente. El reembolso confirmado usa el correo de siempre.
+  - **Pruebas:** pgTAP 131 (44 casos, incluye aislamiento entre tiendas), unitarias de textos y plantillas, E2E `returns`.
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

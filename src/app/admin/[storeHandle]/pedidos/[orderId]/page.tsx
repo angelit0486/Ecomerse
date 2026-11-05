@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { RETURN_STATUS_LABEL } from "@/lib/returns/labels";
 import { centsToInput, formatMoney } from "@/lib/money/format";
 import {
   axisValueLabel,
@@ -163,11 +164,23 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       .order("created_at"),
   ]);
   for (const r of [items, events, shipments, shipmentItems, refunds]) if (r.error) throw r.error;
-  const [supplierOrders, canPrint] = await Promise.all([
+  const [supplierOrders, canPrint, returnsOn] = await Promise.all([
     getOrderSupplierOrders(supabase, ctx.store.id, orderId),
     // Nota de empaque (interruptor order_printing).
     panelFlagEnabled(supabase, ctx.store.id, "order_printing"),
+    // Devoluciones (ADR-061, interruptor returns).
+    panelFlagEnabled(supabase, ctx.store.id, "returns"),
   ]);
+  const { data: lastReturn } = returnsOn
+    ? await supabase
+        .from("return_requests")
+        .select("id, status")
+        .eq("store_id", ctx.store.id)
+        .eq("order_id", orderId)
+        .order("requested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
   const m = (cents: number) => formatMoney(cents, order.currency as string);
   // Fechas en el calendario de la tienda (el servidor corre en UTC).
   const when = new Intl.DateTimeFormat("es-MX", {
@@ -259,6 +272,16 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             className="inline-flex min-h-11 items-center text-sm underline"
           >
             Imprimir nota de empaque
+          </Link>
+        ) : null}
+        {lastReturn ? (
+          <Link
+            href={`/admin/${ctx.store.handle}/pedidos/devoluciones/${lastReturn.id as string}`}
+            className="inline-flex min-h-11 items-center text-sm underline"
+          >
+            {lastReturn.status === "requested"
+              ? "Devolución por revisar"
+              : `Devolución: ${RETURN_STATUS_LABEL[lastReturn.status as string] ?? ""}`}
           </Link>
         ) : null}
       </header>
