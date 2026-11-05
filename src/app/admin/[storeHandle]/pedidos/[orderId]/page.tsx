@@ -28,6 +28,7 @@ import {
   StaffNoteForm,
 } from "../order-forms";
 import { SupplierOrderCard } from "../despachos/supplier-order-card";
+import { panelFlagEnabled } from "../../_shared/panel-flags";
 
 export const metadata: Metadata = { title: "Pedido" };
 
@@ -162,7 +163,11 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       .order("created_at"),
   ]);
   for (const r of [items, events, shipments, shipmentItems, refunds]) if (r.error) throw r.error;
-  const supplierOrders = await getOrderSupplierOrders(supabase, ctx.store.id, orderId);
+  const [supplierOrders, canPrint] = await Promise.all([
+    getOrderSupplierOrders(supabase, ctx.store.id, orderId),
+    // Nota de empaque (interruptor order_printing).
+    panelFlagEnabled(supabase, ctx.store.id, "order_printing"),
+  ]);
   const m = (cents: number) => formatMoney(cents, order.currency as string);
   // Fechas en el calendario de la tienda (el servidor corre en UTC).
   const when = new Intl.DateTimeFormat("es-MX", {
@@ -248,6 +253,14 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         <p className="text-sm text-fg-muted">
           {visibleStatus(order as never)} · {when.format(new Date(order.placed_at as string))}
         </p>
+        {canPrint ? (
+          <Link
+            href={`/admin/${ctx.store.handle}/pedidos/${orderId}/imprimir`}
+            className="inline-flex min-h-11 items-center text-sm underline"
+          >
+            Imprimir nota de empaque
+          </Link>
+        ) : null}
       </header>
 
       {notice ? (

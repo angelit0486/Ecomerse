@@ -171,3 +171,28 @@ select[aria-hidden="true"][tabindex="-1"] {
     font-size: 16px;
   }
 }
+
+/* Notas de empaque (interruptor `order_printing`): al imprimir solo se ve
+   `data-print-root`, cada nota en su hoja; lo marcado `data-print-hide` no sale. */
+@media print {
+  body:has([data-print-root]) * {
+    visibility: hidden;
+  }
+  /* Misma base (body:has) para ganarle en especificidad a la regla de arriba. */
+  body:has([data-print-root]) [data-print-root],
+  body:has([data-print-root]) [data-print-root] * {
+    visibility: visible;
+  }
+  [data-print-root] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  [data-print-slip] {
+    break-after: page;
+    border: none;
+  }
+  [data-print-hide] {
+    display: none !important;
+  }
+}

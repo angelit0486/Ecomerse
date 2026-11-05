@@ -35,6 +35,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Los campos para escribir se ven más grandes en el celular y el iPhone no acerca la página al tocarlos.",
     where: "La tienda y este panel, en el celular",
   },
+  order_printing: {
+    title: "Notas de empaque",
+    description:
+      "Imprime la nota de empaque de un pedido, o las de todos los pedidos por surtir, cada una en su hoja: productos, cantidades y dirección.",
+    where: "Pedidos → un pedido o «Por surtir» → «Imprimir»",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

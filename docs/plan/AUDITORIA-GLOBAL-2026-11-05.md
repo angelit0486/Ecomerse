@@ -316,7 +316,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
   - queda documentado en `docs/runbooks/pagos.md`.
 - **Tiempo:** 0.5 día (A) o 2 días (B).
 
-**Paso 2. Programar el mantenimiento de datos.** 🤖
+**Paso 2. Programar el mantenimiento de datos.** 🤖 · **Particiones hechas el 2026-11-05 (D-MEJ-09); las purgas esperan el ADR-060**
 
 - Hacer en una migración y un trabajo periódico:
   1. Llamar `maintain_audit_partitions` cada semana.
@@ -462,7 +462,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - **Hecho cuando:** E2E, y el texto del comprador se escapa siempre (sin HTML libre).
 - **Tiempo:** 2 días.
 
-**Paso 21. Impresión.** 🤖
+**Paso 21. Impresión.** 🤖 · **Hecho el 2026-11-05 (D-MEJ-08)**
 
 - Nota de empaque, lista de surtido e impresión en lote desde «Por surtir».
 - **Tiempo:** 1 día.

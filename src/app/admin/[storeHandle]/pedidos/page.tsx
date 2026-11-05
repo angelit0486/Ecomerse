@@ -10,6 +10,8 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
+import { panelFlagEnabled } from "../_shared/panel-flags";
+
 import { OrdersTable } from "./orders-table";
 
 export const metadata: Metadata = { title: "Pedidos" };
@@ -105,11 +107,25 @@ export default async function OrdersPage({ params, searchParams }: Props) {
     timeZone: ctx.store.timezone,
   });
 
+  // Notas de empaque en lote (interruptor order_printing): solo en «Por surtir».
+  const canPrint =
+    filter === "por-surtir" &&
+    rows.length > 0 &&
+    (await panelFlagEnabled(supabase, ctx.store.id, "order_printing"));
+
   return (
     <section className="space-y-6">
       <header className="space-y-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-xl font-semibold">Pedidos</h1>
+          {canPrint ? (
+            <Link
+              href={`${base}/imprimir`}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
+              Imprimir notas de empaque
+            </Link>
+          ) : null}
           {(dispatches.count ?? 0) > 0 ? (
             <Link
               href={`${base}/despachos`}

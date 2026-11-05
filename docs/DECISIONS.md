@@ -1527,3 +1527,10 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - Correos al cliente, auditoría y detrás de un interruptor por tienda.
 - **Por qué ADR:** toca reembolsos y existencias.
 - **Pregunta:** ¿se aprueba?
+
+- **D-MEJ-08. Notas de empaque (auditoría global, paso 21).** Interruptor por tienda `order_printing` (apagado; la tienda lo enciende en Ajustes → Funciones).
+  - **Pantallas:** `/pedidos/[id]/imprimir` (un pedido) y `/pedidos/imprimir` (hasta 50 de «Por surtir», del más antiguo al más reciente).
+  - **Permisos:** los mismos que el detalle del pedido. La dirección y el teléfono salen de `orders_get_contact`, que exige `customers.pii.read`; sin ese permiso la nota sale sin datos del cliente.
+  - **Contenido:** cada línea muestra lo que falta por enviar (pedido − cancelado − enviado) y no lleva precios.
+  - **Impresión:** CSS `@media print` sin JavaScript de terceros (solo `window.print`).
+- **D-MEJ-09. Particiones de auditoría con mantenimiento (auditoría global B1).** `system.enqueue_maintenance` mantiene 24 meses de particiones por delante y `system.platform_health` avisa (`audit_partitions`). No borra nada; la retención de datos espera el ADR-060.
