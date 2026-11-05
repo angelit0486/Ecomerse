@@ -160,10 +160,12 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 
 ### C. Seguridad y cumplimiento
 
-**C1. Sin enlace al aviso de privacidad en el checkout.** [VERIFICADO: la captura del checkout solo muestra «© 2026 Tienda…» y el código de esa pantalla no menciona «privacidad»]
+**C1. Aviso de privacidad en el checkout: ya resuelto.** [VERIFICADO el 2026-11-05; corrige la primera versión de este informe]
 
-- El pie de la tienda sí enlaza las políticas, pero el checkout es donde se recogen los datos.
-- **Plan:** paso 10.
+- El checkout muestra las políticas publicadas junto al botón de pagar («Antes de pagar puedes revisar: …», auditoría REG-07).
+- La lista de lanzamiento exige publicar el aviso de privacidad, los términos y las devoluciones (y los envíos, si hay productos físicos) antes de abrir la tienda.
+- La primera versión de este informe lo marcó como faltante. Fue un error: los títulos salen de la base y `demo2` local no tiene políticas publicadas.
+- **Plan:** nada que hacer (paso 10 cerrado).
 
 **C2. Textos legales y sanitarios sin firma.**
 
@@ -390,12 +392,9 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - **Hecho cuando:** un cambio de prueba pasa de rama a producción sin pasos manuales y `/api/health/ready` responde en verde.
 - **Tiempo:** medio día.
 
-**Paso 10. Aviso de privacidad en el checkout.** 🤖
+**Paso 10. Aviso de privacidad en el checkout: ya resuelto.**
 
-- Texto «Al confirmar aceptas… [Aviso de privacidad] [Términos]» con enlaces a las políticas ya publicadas, marcado PENDIENTE DE REVISIÓN.
-- Detrás de un interruptor por tienda (apagado hasta aprobar el texto).
-- **Hecho cuando:** E2E con axe en celular y computadora.
-- **Tiempo:** 0.5 día.
+- El checkout ya enlaza las políticas y la tienda no puede abrir sin ellas (ver C1). Sin trabajo pendiente.
 
 **Paso 11. Revisión legal y sanitaria.** ⚖️
 
