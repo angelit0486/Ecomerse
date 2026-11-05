@@ -130,7 +130,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - `20261105000500` (retención) y las siguientes se aplican cuando esté desplegado el código que atiende sus trabajos.
 - Node 24 (D-MEJ-14): todas las suites en verde con Node 24.21.0: verify 1129, pgTAP 2742, integración 404, E2E 135/135. Falta confirmar en Vercel que el despliegue tome 24.x.
 - Devoluciones (ADR-061, D-MEJ-13): migración `20261105000600`, interruptor `returns` apagado. Suites en verde con Node 24: verify 1134, pgTAP 2786, integración 404, E2E 136/136.
-- Siguiente: aplicar `20261105000500` y `0600` en staging cuando el código esté desplegado; luego los pasos restantes de la auditoría global.
+- «Salud de tu tienda» (paso 19, D-MEJ-15): migración `20261105000700`, interruptor `store_health` apagado. Suites en verde con Node 24: verify 1138, pgTAP 2804, integración 404, E2E 137/137.
+- Siguiente: paso 23 (CSP con reportes; ADR para la vigencia del enlace de invitado), paso 20 (correos editables) y aplicar `20261105000500` en adelante en staging cuando el código esté desplegado.
 
 ## Bloqueos (requieren al propietario)
 

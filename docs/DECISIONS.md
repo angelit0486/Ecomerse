@@ -1574,6 +1574,10 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Datos:** `public.return_requests` con RLS forzado (lectura con `orders.read`), FK compuestas, sin DELETE; lo que pidió el cliente no se reescribe y el estado solo avanza (trigger).
   - **Correos:** acuse al cliente y aviso a la tienda; aprobada o rechazada al cliente. El reembolso confirmado usa el correo de siempre.
   - **Pruebas:** pgTAP 131 (44 casos, incluye aislamiento entre tiendas), unitarias de textos y plantillas, E2E `returns`.
+- **D-MEJ-15. «Salud de tu tienda» (auditoría global, paso 19, 2.ª parte).** Migración `20261105000700`, interruptor por tienda `store_health` (apagado; en Ajustes → Funciones). Pantalla `/admin/[tienda]/salud`, con enlace «Salud» junto a «Avisos».
+  - **Revisa siempre, no solo al lanzar:** quién recibe los avisos de pedidos, pagos activos (aviso si solo hay manuales), tarifas de envío, productos sin foto, productos agotados, políticas publicadas (sin aviso de privacidad es urgente), uso del plan (aviso al 80 %, urgente al 100 %), pedidos pagados con más de 3 días sin enviar y pedidos en atención.
+  - **Solo lee** (`public.store_health`, permiso `store.read`). Los umbrales viven en la base; los textos y los enlaces, en `src/lib/store-health/checks.ts`. Una prueba comprueba que cada enlace lleva a una pantalla que existe.
+  - **Pruebas:** pgTAP 132 (con aislamiento entre tiendas), unitarias y E2E `store-health`.
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

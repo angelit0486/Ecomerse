@@ -59,6 +59,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Tus clientes piden la devolución desde la página de su pedido; tú la apruebas, registras cuando llega y reembolsas o haces un cambio.",
     where: "Pedidos → Devoluciones, y la página del pedido de tu cliente",
   },
+  store_health: {
+    title: "Salud de tu tienda",
+    description:
+      "Una pantalla con lo que falta o está por fallar: avisos, pagos, envíos, productos sin foto o sin existencias, políticas, uso de tu plan y pedidos que esperan.",
+    where: "Este panel, junto a «Avisos»",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

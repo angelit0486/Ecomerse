@@ -40,6 +40,7 @@ export default async function StoreLayout({ children, params }: Props) {
   ]);
   const mobileInputs = flags.some((f) => f.key === "mobile_input_size" && f.enabled);
   const showHelp = flags.some((f) => f.key === "panel_help" && f.enabled);
+  const showHealth = flags.some((f) => f.key === "store_health" && f.enabled);
   const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
@@ -204,6 +205,14 @@ export default async function StoreLayout({ children, params }: Props) {
           <div className="flex items-start gap-2">
             <GlobalSearch storeHandle={ctx.store.handle} />
             <NoticesButton storeHandle={ctx.store.handle} />
+            {showHealth ? (
+              <Link
+                href={`${base}/salud`}
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-control px-3 text-sm"
+              >
+                Salud
+              </Link>
+            ) : null}
             {showHelp ? (
               <Link
                 href={`${base}/ayuda`}

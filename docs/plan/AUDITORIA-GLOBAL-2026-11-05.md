@@ -449,7 +449,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - **Hecho cuando:** E2E del flujo completo y pgTAP de aislamiento.
 - **Tiempo:** 3 días.
 
-**Paso 19. Resumen semanal y «Salud de tu tienda».** 🤖 · **Resumen semanal hecho el 2026-11-05 (D-MEJ-10); la pantalla «Salud de tu tienda» queda pendiente**
+**Paso 19. Resumen semanal y «Salud de tu tienda».** 🤖 · **Hecho el 2026-11-05: resumen semanal (D-MEJ-10) y «Salud de tu tienda» (D-MEJ-15)**
 
 - Correo cada lunes a la dueña: ventas, pedidos por surtir, stock bajo, carritos abandonados, pagos con problema.
 - Pantalla continua: correo configurado, pagos activos, productos sin foto, políticas publicadas y aviso de uso del plan al 80%.
