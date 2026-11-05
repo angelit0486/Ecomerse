@@ -295,3 +295,106 @@ describe("planProductImport · image_urls (ADR-033)", () => {
     expect(plan(many)[0]!.errors).toEqual(["image_urls: máximo 10 fotos por producto"]);
   });
 });
+
+describe("hoja simple en español (Excel o Google Sheets, sin nombre corto)", () => {
+  const headers = [
+    "Producto",
+    "Precio",
+    "Precio anterior",
+    "Existencias",
+    "Categoría",
+    "Marca",
+    "Fotos",
+    "Peso (kg)",
+  ];
+
+  it("se reconoce por «Producto» o «Nombre» y «Precio», sin handle", () => {
+    expect(detectPlatform(headers)).toBe("hoja");
+    expect(detectPlatform(["Nombre", "Precio"])).toBe("hoja");
+    expect(detectPlatform(["Nombre del producto", "Precio de venta"])).toBe("hoja");
+    // Los formatos conocidos no cambian.
+    expect(detectPlatform(["handle", "title", "price"])).toBe("pruva");
+    expect(detectPlatform(["Identificador de URL", "Nombre", "Precio"])).toBe("tiendanube");
+    expect(detectPlatform(["Handle", "Title", "Variant Price"])).toBe("shopify");
+    // Sin precio no es una hoja de productos.
+    expect(detectPlatform(["Producto", "Color"])).toBe("pruva");
+  });
+
+  it("crea el nombre corto desde el nombre, sin repetirlo", () => {
+    const t = translatePlatformCsv(
+      ["Producto", "Precio"],
+      [
+        ["Taza de barro azul", "199"],
+        ["Café de olla 250 g", "89"],
+        ["Taza de barro azul", "210"],
+        ["¡Oferta! Plato 100 % hondo", "50"],
+      ],
+      [2, 3, 4, 5],
+    );
+    expect(t.platform).toBe("hoja");
+    expect(t.headers).toEqual(["handle", "title", "price"]);
+    expect(t.rows.map((r) => r[0])).toEqual([
+      "taza-de-barro-azul",
+      "cafe-de-olla-250-g",
+      "taza-de-barro-azul-2",
+      "oferta-plato-100-hondo",
+    ]);
+    expect(t.rowNumbers).toEqual([2, 3, 4, 5]);
+  });
+
+  it("traduce importes, existencias, listas, fotos y peso a las columnas de la tienda", () => {
+    const t = translatePlatformCsv(
+      headers,
+      [
+        [
+          "Taza azul",
+          "$1,299.50",
+          "1.499,00",
+          "-3",
+          "Cocina, Regalos",
+          "Barro MX",
+          "https://a.example/1.jpg https://a.example/2.jpg, https://a.example/1.jpg",
+          "0.4",
+        ],
+      ],
+      [2],
+    );
+    const row = Object.fromEntries(t.headers.map((h, i) => [h, t.rows[0]![i]]));
+    expect(row).toEqual({
+      handle: "taza-azul",
+      title: "Taza azul",
+      price: "1299.50",
+      compare_at_price: "1499.00",
+      inventory_quantity: "0",
+      categories: "Cocina|Regalos",
+      brand: "Barro MX",
+      image_urls: "https://a.example/1.jpg|https://a.example/2.jpg",
+      weight_g: "400",
+    });
+    expect(t.productsWithImageUrl).toBe(1);
+  });
+
+  it("sin nombre, la fila queda sin título para que la base diga que falta (al crear)", () => {
+    const t = translatePlatformCsv(["Producto", "Precio"], [["", "50"]], [7]);
+    expect(t.rows[0]![0]).toBe("fila-7");
+    const [planned] = planProductImport(t.headers, t.rows, t.rowNumbers);
+    expect(planned!.normalized!.product.title).toBeUndefined();
+  });
+
+  it("columnas que no entiende: las avisa y no las usa", () => {
+    const t = translatePlatformCsv(["Producto", "Precio", "Color favorito"], [["Taza", "50"]], [2]);
+    expect(t.ignored).toEqual(["Color favorito"]);
+    expect(t.headers).toEqual(["handle", "title", "price"]);
+  });
+
+  it("pasa el mismo validador que los demás archivos y produce un plan correcto", () => {
+    const t = translatePlatformCsv(
+      headers,
+      [["Taza azul", "199.5", "", "10", "", "", "", ""]],
+      [2],
+    );
+    const [planned] = planProductImport(t.headers, t.rows, t.rowNumbers);
+    expect(planned!.errors).toEqual([]);
+    expect(planned!.normalized!.product.title).toBe("Taza azul");
+  });
+});

@@ -75,7 +75,11 @@ function errorsByColumn(rows: { errors: unknown }[]): [string, number][] {
   return [...counts].sort((a, b) => b[1] - a[1]);
 }
 
-const PLATFORM_NAMES: Record<string, string> = { shopify: "Shopify", tiendanube: "Tiendanube" };
+const PLATFORM_NAMES: Record<string, string> = {
+  shopify: "Shopify",
+  tiendanube: "Tiendanube",
+  hoja: "tu hoja",
+};
 
 /** Vista previa (F8-T04b, Gate F8): totales, avisos, errores por fila y confirmación. */
 export default async function ImportJobPage({ params, searchParams }: Props) {
@@ -192,11 +196,19 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       ) : null}
       {origin && job.status === "validated" ? (
         <div role="status" className="space-y-1 rounded-md border border-border p-3 text-sm">
-          <p>
-            Leímos tu archivo de {origin} y lo pasamos al formato de tu tienda: nombre, descripción,
-            marca, etiquetas, presentaciones, precios, existencias, peso y SEO. Las categorías no se
-            copian: asígnalas después en bloque desde Productos.
-          </p>
+          {origin === "tu hoja" ? (
+            <p>
+              Leímos tu hoja: creamos el nombre corto de cada producto con su nombre y pasamos lo
+              demás al formato de tu tienda. Las categorías que escribiste deben existir; si alguna
+              no existe, la fila lo dice abajo.
+            </p>
+          ) : (
+            <p>
+              Leímos tu archivo de {origin} y lo pasamos al formato de tu tienda: nombre,
+              descripción, marca, etiquetas, presentaciones, precios, existencias, peso y SEO. Las
+              categorías no se copian: asígnalas después en bloque desde Productos.
+            </p>
+          )}
           {Number.isInteger(withPhotoUrl) && withPhotoUrl > 0 ? (
             <p>
               {withPhotoUrl === 1

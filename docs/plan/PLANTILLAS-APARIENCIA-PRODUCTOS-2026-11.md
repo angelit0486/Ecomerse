@@ -45,13 +45,13 @@ Costos y riesgos: las 6 familias nuevas se agregan como paquetes `@fontsource-va
 
 ### C. Llenar la tienda más rápido · sin ADR salvo que toque un contrato
 
-Reutiliza el importador actual (misma validación y vista previa), así que no abre caminos nuevos hacia la base. [PROPUESTA]
+Reutiliza el importador actual (misma validación y vista previa), así que no abre caminos nuevos hacia la base.
 
-- **Tabla para pegar:** copiar filas de Excel o Google Sheets y pegarlas en una tabla del panel; se convierte al CSV del importador y muestra los errores por fila antes de confirmar.
-- **Edición en bloque ampliada:** categorías, etiquetas, estado, existencias y cambio de precio por porcentaje.
-- **Duplicar con variantes y fotos**, y **fotos por lote** arrastrando carpetas completas con detección del SKU.
-- **Catálogo inicial por giro:** categorías y atributos listos para cada giro (sin datos de marcas reales).
-- **Asistente «Llena tu tienda»:** pasos cortos (categorías, primeros 10 productos, fotos, precios) con avance visible.
+- **Hecho el 2026-11-05 (D-MEJ-20): pegar filas desde Excel o Google Sheets.** Se copian las celdas y se pegan en el panel; entiende encabezados en español («Producto», «Precio», «Existencias», «Categoría», «Fotos»…), crea solo el nombre corto de cada producto y muestra los errores por fila antes de confirmar. También sirve para subir una hoja simple como archivo.
+- **Ya existía (lo comprobé en el código, así que no se construye):** acciones en bloque para publicar, pausar, archivar, marca, categorías, etiquetas, precios en porcentaje, ofertas y eliminar; duplicar; fotos por lote según el SKU y fotos desde un enlace.
+- **Siguiente [PROPUESTA]: crear las categorías que no existan al importar.** Hoy una categoría escrita que no existe da error en su fila. Requiere cambiar `imports_create` y `system.import_commit` (migración aditiva con pgTAP).
+- **Después [PROPUESTA]: asistente «Llena tu tienda»:** pasos cortos (categorías, primeros productos, fotos, precios, publicar) con avance visible.
+- **Después [PROPUESTA]: catálogo inicial por giro:** categorías y atributos listos para cada giro (sin datos de marcas reales).
 
 ## 3. Decisión del propietario
 

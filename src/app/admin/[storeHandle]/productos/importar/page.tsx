@@ -10,6 +10,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { linkButton, nativeControl } from "../styles";
 import { JOB_STATUS } from "./labels";
+import { PasteSheet } from "./paste-sheet";
 
 export const metadata: Metadata = { title: "Importar productos" };
 
@@ -114,6 +115,13 @@ export default async function ImportPage({ params, searchParams }: Props) {
         </p>
       </section>
 
+      <PasteSheet action={`${base}/subir`} />
+
+      <p className="text-sm text-fg-muted">
+        ¿Prefieres un archivo? Sigue estos tres pasos con la plantilla, o sube directamente tu hoja
+        con las mismas columnas de arriba.
+      </p>
+
       <ol className="space-y-4">
         <li className="space-y-2 rounded-md border border-border p-4">
           <h2 className="font-semibold">1. Descarga la plantilla</h2>
@@ -170,7 +178,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
           >
             <div className="space-y-1">
               <label htmlFor="file" className="text-sm font-medium">
-                Archivo CSV de esta plataforma, Shopify o Tiendanube (hasta 4 MB y 5 000 filas)
+                Archivo CSV de esta plataforma, Shopify, Tiendanube o una hoja simple (hasta 4 MB y
+                5 000 filas)
               </label>
               <input
                 id="file"

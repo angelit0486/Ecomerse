@@ -13,7 +13,7 @@
  *     descarga al confirmar con los controles de SSRF (ADR-033, GATE0 T-08).
  */
 
-export type SourcePlatform = "pruva" | "shopify" | "tiendanube";
+export type SourcePlatform = "pruva" | "shopify" | "tiendanube" | "hoja";
 
 export interface TranslatedCsv {
   platform: SourcePlatform;
@@ -33,10 +33,21 @@ export function normalizeHeader(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Hoja simple en español (plan 2026-11-05, fase C): nombre y precio, sin nombre corto. */
+const SHEET_TITLE = ["producto", "nombre del producto", "nombre"];
+const SHEET_PRICE = ["precio", "precio de venta"];
+
 export function detectPlatform(headers: readonly string[]): SourcePlatform {
   const set = new Set(headers.map(normalizeHeader));
   if (set.has("identificador de url") && set.has("nombre")) return "tiendanube";
   if (set.has("handle") && (set.has("variant price") || set.has("body (html)"))) return "shopify";
+  if (
+    !set.has("handle") &&
+    SHEET_TITLE.some((h) => set.has(h)) &&
+    SHEET_PRICE.some((h) => set.has(h))
+  ) {
+    return "hoja";
+  }
   return "pruva";
 }
 
@@ -238,7 +249,7 @@ const TIENDANUBE: PlatformSpec = {
   },
 };
 
-const SPECS: Record<Exclude<SourcePlatform, "pruva">, PlatformSpec> = {
+const SPECS: Record<Exclude<SourcePlatform, "pruva" | "hoja">, PlatformSpec> = {
   shopify: SHOPIFY,
   tiendanube: TIENDANUBE,
 };
@@ -249,6 +260,7 @@ export function translatePlatformCsv(
   rowNumbers: readonly number[],
 ): TranslatedCsv {
   const platform = detectPlatform(headers);
+  if (platform === "hoja") return translateSheet(headers, rows, rowNumbers);
   if (platform === "pruva") {
     return {
       platform,
@@ -319,5 +331,136 @@ export function translatePlatformCsv(
     ignored: [...new Set(headers.filter((h) => h.trim() && !used.has(normalizeHeader(h))))],
     imageOnlyRows,
     productsWithImageUrl: [...images.values()].filter((l) => l.length > 0).length,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Hoja simple en español (plan 2026-11-05, fase C): una fila por producto, con
+// encabezados como los escribe cualquiera («Producto», «Precio», «Existencias»…).
+// El nombre corto (handle) se crea del nombre del producto: nadie tiene que
+// inventarlo. Sirve igual para un archivo subido que para filas pegadas.
+// -----------------------------------------------------------------------------
+
+interface SheetColumn {
+  column: string;
+  /** Encabezados de origen (normalizados), en orden de preferencia. */
+  from: readonly string[];
+  convert?: (value: string, header: string) => string;
+}
+
+/** Enlaces separados por espacio, coma, punto y coma o «|», sin repetir. */
+const urlList = (value: string): string =>
+  [...new Set(value.split(/[\s,;|]+/).filter(Boolean))].join("|");
+
+const SHEET_COLUMNS: readonly SheetColumn[] = [
+  { column: "title", from: SHEET_TITLE },
+  { column: "description", from: ["descripcion"] },
+  { column: "price", from: SHEET_PRICE, convert: normalizeMoney },
+  {
+    column: "compare_at_price",
+    from: ["precio anterior", "precio de lista", "precio tachado"],
+    convert: normalizeMoney,
+  },
+  { column: "cost", from: ["costo"], convert: normalizeMoney },
+  {
+    column: "inventory_quantity",
+    from: ["existencias", "inventario", "stock", "cantidad"],
+    convert: quantity,
+  },
+  { column: "sku", from: ["sku", "codigo"] },
+  { column: "barcode", from: ["codigo de barras"] },
+  { column: "brand", from: ["marca"] },
+  { column: "categories", from: ["categoria", "categorias"], convert: commaList },
+  { column: "tags", from: ["etiquetas"], convert: commaList },
+  {
+    column: "image_urls",
+    from: [
+      "foto",
+      "fotos",
+      "imagen",
+      "imagenes",
+      "url de la foto",
+      "url de las fotos",
+      "enlace de la foto",
+    ],
+    convert: urlList,
+  },
+  {
+    column: "weight_g",
+    from: ["peso (g)", "peso en gramos", "peso (kg)"],
+    convert: (value, header) => scaled(value, header === "peso (kg)" ? 1000 : 1),
+  },
+  {
+    column: "status",
+    from: ["estado", "publicado"],
+    // «Publicado: sí/no» → activo o borrador; «Estado» se pasa tal cual (activo, borrador).
+    convert: (value, header) => {
+      if (header !== "publicado" || !value) return value;
+      const answer = yesNo(value);
+      return answer === "true" ? "active" : answer === "false" ? "draft" : value;
+    },
+  },
+];
+
+/** «Taza de barro azul» → «taza-de-barro-azul» (minúsculas, sin acentos ni signos). */
+function slugify(text: string): string {
+  return normalizeHeader(text)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100)
+    .replace(/-+$/g, "");
+}
+
+function translateSheet(
+  headers: readonly string[],
+  rows: readonly string[][],
+  rowNumbers: readonly number[],
+): TranslatedCsv {
+  const position = new Map<string, number>();
+  headers.forEach((h, i) => {
+    const key = normalizeHeader(h);
+    if (!position.has(key)) position.set(key, i);
+  });
+  // Por columna de la tienda, el primer encabezado de la hoja que la trae.
+  const used = SHEET_COLUMNS.flatMap((c) => {
+    const header = c.from.find((h) => position.has(h));
+    return header ? [{ spec: c, header, at: position.get(header)! }] : [];
+  });
+  const taken = new Set<string>();
+  const handleFor = (title: string, rowNumber: number): string => {
+    const base = slugify(title);
+    if (!base) return `fila-${rowNumber}`;
+    let handle = base;
+    for (let n = 2; taken.has(handle); n += 1) handle = `${base}-${n}`;
+    taken.add(handle);
+    return handle;
+  };
+
+  const titleAt = used.find((u) => u.spec.column === "title")?.at;
+  const translated: string[][] = [];
+  const numbers: number[] = [];
+  let withImages = 0;
+  rows.forEach((row, i) => {
+    const rowNumber = rowNumbers[i] ?? i + 2;
+    const cells = used.map(({ spec, header, at }) => {
+      const raw = (row[at] ?? "").trim();
+      return spec.convert ? spec.convert(raw, header) : raw;
+    });
+    const title = titleAt === undefined ? "" : (row[titleAt] ?? "").trim();
+    const imageIndex = used.findIndex((u) => u.spec.column === "image_urls");
+    if (imageIndex >= 0 && cells[imageIndex]) withImages += 1;
+    translated.push([handleFor(title, rowNumber), ...cells]);
+    numbers.push(rowNumber);
+  });
+
+  const known = new Set(SHEET_COLUMNS.flatMap((c) => c.from));
+  return {
+    platform: "hoja",
+    headers: ["handle", ...used.map((u) => u.spec.column)],
+    rows: translated,
+    rowNumbers: numbers,
+    ignored: [...new Set(headers.filter((h) => h.trim() && !known.has(normalizeHeader(h))))],
+    imageOnlyRows: 0,
+    productsWithImageUrl: withImages,
   };
 }
