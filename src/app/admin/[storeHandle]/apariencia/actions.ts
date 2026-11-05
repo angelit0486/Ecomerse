@@ -16,6 +16,7 @@ import { invalidateStore } from "@/server/storefront/cache";
 import { themeRpcError } from "@/server/theme/errors";
 
 import { storeClient, type FormState } from "../_shared/action-state";
+import { panelFlagEnabled } from "../_shared/panel-flags";
 import { sectionPatch, THEME_SECTIONS, validatePatch, type ThemeSection } from "./patch";
 
 /**
@@ -122,6 +123,12 @@ export async function saveThemeSection(
   }
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
+    // Personalidad (tema v5, ADR-063): solo con su interruptor encendido.
+    if (
+      section === "personalidad" &&
+      !(await panelFlagEnabled(supabase, storeId, "theme_personality"))
+    )
+      return { error: "Enciende «Personalidad del diseño» en Ajustes → Funciones." };
     await callRpc(supabase, "appearance_save_theme_draft", {
       p_store_id: storeId,
       p_patch: result.patch,

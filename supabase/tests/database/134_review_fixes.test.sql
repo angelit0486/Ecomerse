@@ -89,7 +89,7 @@ update public.shipments set shipped_at = now() - interval '40 days' where order_
 set local session_replication_role = origin;
 select is((storefront.return_options(tests.fx('store_b'), tests.fx('o_b'), sha256('tok-b'::bytea))
            ->> 'window_closed')::boolean, true, 'enviado hace 40 días: el plazo ya pasó');
-select is(public.app_schema_version(), '20261105000900', 'versión de la base');
+select is(public.app_schema_version(), '20261105001000', 'versión de la base');
 
 select * from finish();
 rollback;

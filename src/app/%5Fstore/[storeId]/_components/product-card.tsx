@@ -124,13 +124,13 @@ function ProductCard({
   return (
     // `relative`: los textos sr-only (absolutos) quedan dentro de la tarjeta y del
     // carrusel; sin él escapaban al viewport y abrían scroll horizontal en móvil.
-    <article className="sf-el-card group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
+    <article className="sf-card sf-el-card group relative flex h-full flex-col rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] bg-[var(--sf-bg)] p-2.5 shadow-[var(--sf-shadow-card)] sm:p-3">
       <Link
         prefetch={false}
         href={href}
         className="flex flex-col rounded-[var(--sf-radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-primary)]"
       >
-        <div className="relative aspect-square overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)]">
+        <div className="sf-card-media relative aspect-square overflow-hidden rounded-[var(--sf-radius-control)] bg-[var(--sf-surface)]">
           {product.unpublished || badges.length > 0 ? (
             <div className="absolute left-2 top-2 z-[1] flex flex-col items-start gap-1.5">
               {product.unpublished ? <UnpublishedBadge /> : null}
@@ -155,7 +155,7 @@ function ProductCard({
               decoding="async"
               {...(eager ? { fetchPriority: "high" as const } : {})}
               // Multiplicar: el fondo blanco de una foto de producto toma el gris del anaquel.
-              className={`h-full w-full object-contain p-1.5 [mix-blend-mode:var(--sf-photo-blend,multiply)] motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
+              className={`sf-card-img h-full w-full object-contain p-1.5 [mix-blend-mode:var(--sf-photo-blend,multiply)] motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.04] ${soldOut ? "opacity-55 grayscale" : ""}`}
             />
           ) : (
             // Sin foto: el objeto que corresponde a su nombre, tenue (no «Sin imagen»).
@@ -183,7 +183,7 @@ function ProductCard({
         ) : null}
       </Link>
       {rating && rating.count > 0 ? (
-        <p className="mt-1 flex items-center gap-1 text-xs tabular-nums">
+        <p className="sf-card-row mt-1 flex items-center gap-1 text-xs tabular-nums">
           <Stars value={rating.average} className="text-[0.8125rem]" />
           <span className="font-medium">
             {rating.average.toLocaleString("es-MX", {
@@ -200,7 +200,7 @@ function ProductCard({
       {product.min_price !== null ? (
         // Partes separadas con flex-wrap: sin espacios entre elementos JSX la línea
         // no se puede partir y desbordaba la tarjeta en móvil.
-        <p className="mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 tabular-nums">
+        <p className="sf-card-row mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 tabular-nums">
           <span
             className={`text-lg font-extrabold leading-tight tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${sale ? "text-[var(--sf-sale-text)]" : ""}`}
           >

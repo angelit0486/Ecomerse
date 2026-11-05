@@ -124,6 +124,16 @@ const SUPLEMENTOS: StoreTemplate = {
   settings: {
     typography: { heading: "barlow-condensed", body: "inter" },
     shape: { radius: "sm", button_style: "solid", shadow: "soft", density: "comfortable" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "raised",
+      card_hover: "lift",
+      heading_case: "uppercase",
+      heading_tracking: "tight",
+      heading_weight: "bold",
+      type_scale: "large",
+      motion: "subtle",
+    },
   },
   home_sections: [
     {
@@ -222,6 +232,17 @@ const ROPA: StoreTemplate = {
     listing: { columns_mobile: 1, show_brand: false },
     typography: { heading: "playfair-display", body: "work-sans" },
     shape: { radius: "none", button_style: "solid", shadow: "none", density: "spacious" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "flat",
+      image_ratio: "3:4",
+      image_fit: "cover",
+      heading_case: "uppercase",
+      heading_tracking: "wide",
+      heading_weight: "regular",
+      type_scale: "large",
+      motion: "subtle",
+    },
   },
   home_sections: [
     {
@@ -317,6 +338,15 @@ const BELLEZA: StoreTemplate = {
   settings: {
     typography: { heading: "lora", body: "dm-sans" },
     shape: { radius: "full", button_style: "solid", shadow: "soft", density: "spacious" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "flat",
+      image_ratio: "4:5",
+      card_hover: "lift",
+      card_align: "center",
+      heading_weight: "regular",
+      motion: "subtle",
+    },
   },
   home_sections: [
     {
@@ -391,6 +421,8 @@ const ABARROTES: StoreTemplate = {
     listing: { columns_mobile: 2, show_brand: true },
     typography: { heading: "manrope", body: "inter" },
     shape: { radius: "md", button_style: "solid", shadow: "none", density: "compact" },
+    // Personalidad (tema v5, ADR-063).
+    personality: { card_hover: "none", heading_weight: "bold", type_scale: "compact" },
   },
   home_sections: [
     {
@@ -470,6 +502,15 @@ const HOGAR: StoreTemplate = {
     listing: { columns_mobile: 2, show_brand: false },
     typography: { heading: "lora", body: "dm-sans" },
     shape: { radius: "md", button_style: "solid", shadow: "none", density: "spacious" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "flat",
+      image_ratio: "4:5",
+      image_fit: "cover",
+      heading_weight: "regular",
+      type_scale: "large",
+      motion: "subtle",
+    },
   },
   home_sections: [
     {
@@ -566,6 +607,15 @@ const MASCOTAS: StoreTemplate = {
     listing: { columns_mobile: 2, show_brand: true },
     typography: { heading: "space-grotesk", body: "dm-sans" },
     shape: { radius: "full", button_style: "solid", shadow: "soft", density: "comfortable" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "raised",
+      card_hover: "lift",
+      card_align: "center",
+      heading_tracking: "tight",
+      heading_weight: "bold",
+      motion: "subtle",
+    },
   },
   home_sections: [
     {
@@ -768,6 +818,17 @@ const JOYERIA: StoreTemplate = {
   settings: {
     typography: { heading: "playfair-display", body: "manrope" },
     shape: { radius: "none", button_style: "outline", shadow: "none", density: "spacious" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "flat",
+      image_ratio: "4:5",
+      card_align: "center",
+      heading_case: "uppercase",
+      heading_tracking: "wide",
+      heading_weight: "regular",
+      type_scale: "large",
+      motion: "subtle",
+    },
     header: {
       logo_position: "center",
       announcement: {
@@ -855,6 +916,8 @@ const ELECTRONICA: StoreTemplate = {
   settings: {
     typography: { heading: "space-grotesk", body: "inter" },
     shape: { radius: "sm", button_style: "solid", shadow: "strong", density: "compact" },
+    // Personalidad (tema v5, ADR-063).
+    personality: { card_hover: "lift", heading_tracking: "tight", heading_weight: "semibold" },
     header: {
       logo_position: "left",
       announcement: {
@@ -946,6 +1009,15 @@ const GOURMET: StoreTemplate = {
   settings: {
     typography: { heading: "playfair-display", body: "lora" },
     shape: { radius: "md", button_style: "solid", shadow: "soft", density: "comfortable" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "flat",
+      image_ratio: "4:5",
+      card_align: "center",
+      heading_weight: "regular",
+      type_scale: "large",
+      motion: "subtle",
+    },
     header: {
       logo_position: "center",
       announcement: {
@@ -1036,6 +1108,15 @@ const JUGUETES: StoreTemplate = {
   settings: {
     typography: { heading: "montserrat", body: "dm-sans" },
     shape: { radius: "full", button_style: "solid", shadow: "soft", density: "comfortable" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "raised",
+      card_hover: "lift",
+      card_align: "center",
+      heading_weight: "bold",
+      type_scale: "large",
+      motion: "subtle",
+    },
     header: {
       logo_position: "left",
       announcement: {
@@ -1124,6 +1205,14 @@ const PAPELERIA: StoreTemplate = {
   settings: {
     typography: { heading: "oswald", body: "work-sans" },
     shape: { radius: "sm", button_style: "outline", shadow: "none", density: "compact" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      image_ratio: "3:4",
+      card_hover: "none",
+      heading_case: "uppercase",
+      heading_tracking: "wide",
+      heading_weight: "semibold",
+    },
     header: {
       logo_position: "left",
       announcement: {
@@ -1205,6 +1294,15 @@ const REGALOS: StoreTemplate = {
   settings: {
     typography: { heading: "lora", body: "manrope" },
     shape: { radius: "full", button_style: "solid", shadow: "soft", density: "spacious" },
+    // Personalidad (tema v5, ADR-063).
+    personality: {
+      card_style: "raised",
+      image_ratio: "4:5",
+      card_hover: "lift",
+      card_align: "center",
+      heading_weight: "semibold",
+      motion: "subtle",
+    },
     header: {
       logo_position: "center",
       announcement: {

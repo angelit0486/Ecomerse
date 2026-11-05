@@ -1,6 +1,7 @@
 import { COLOR_KEYS } from "@/lib/theme/palette";
 import { SOCIAL_NETWORKS } from "@/lib/theme/links";
 import { PAYMENT_METHODS, ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
+import { PERSONALITY_OPTIONS, type PersonalityKey } from "@/lib/theme/constants";
 
 /**
  * Formulario de Apariencia → parche del tema (F9-DESIGN §7, §13 C2). Cada
@@ -15,6 +16,7 @@ export const THEME_SECTIONS = [
   "seo",
   "presentacion",
   "colores",
+  "personalidad",
 ] as const;
 export type ThemeSection = (typeof THEME_SECTIONS)[number];
 
@@ -26,6 +28,8 @@ export const SECTION_KEYS: Record<ThemeSection, readonly (keyof ThemeSettings)[]
   presentacion: ["product_page", "listing"],
   // Portada → Colores (misión Panel, Paso C): solo colores; el diseño no se toca.
   colores: ["colors", "element_colors"],
+  // Tema v5 (ADR-063): su propia clave; Marca y los estilos no la tocan.
+  personalidad: ["personality"],
 };
 
 /** Elementos con colores propios (tema v4), en el orden del formulario. */
@@ -178,6 +182,8 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
       address: multiline(get("address")) || undefined,
       hours: multiline(get("hours")) || undefined,
     });
+  } else if (section === "personalidad") {
+    patch.personality = personalityPatch(get);
   } else if (section === "presentacion") {
     patch.product_page = compact({
       gallery: get("gallery") === "dots" ? "dots" : undefined,
@@ -197,6 +203,21 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
     });
   }
   return patch;
+}
+
+/**
+ * Personalidad (tema v5): solo valores de la lista; lo que es igual a como se ve
+ * hoy (el primero de cada lista, o el peso vacío) no se guarda.
+ */
+function personalityPatch(get: Get): Record<string, string> | null {
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(PERSONALITY_OPTIONS) as PersonalityKey[]) {
+    const options = PERSONALITY_OPTIONS[key] as readonly string[];
+    const value = get(key);
+    const isDefault = key === "heading_weight" ? value === "" : value === options[0];
+    if (!isDefault && options.includes(value)) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 /** La barra de categorías del formulario; `undefined` si queda como viene por omisión. */
@@ -272,6 +293,7 @@ export function validatePatch(patch: Record<string, unknown>): PatchResult {
     let field = FIELD_FOR_PATH[path];
     if (!field && path.startsWith("colors.")) field = path.slice("colors.".length);
     if (!field && path.startsWith("header.nav_bar")) field = "nav_items";
+    if (!field && path.startsWith("personality.")) field = String(issue.path[1]);
     if (!field && path.startsWith("element_colors.")) {
       const [, key, part] = issue.path.map(String);
       field =

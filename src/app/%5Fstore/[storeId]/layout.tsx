@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { navBarItems } from "@/lib/theme/nav-bar";
+import { PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart, paymentMethods } from "@/server/storefront/cart";
 import {
@@ -164,10 +165,14 @@ export default async function StoreLayout({ children, params }: Props) {
       data-cols={settings.listing?.columns_mobile === 1 ? "1" : undefined}
       data-brand={settings.listing?.show_brand === false ? "off" : undefined}
       data-mobile-inputs={flags.has("mobile_input_size") ? "" : undefined}
+      // Tema v5 (ADR-063): personalidad como atributos con valores de la lista blanca.
+      {...personalityAttributes(settings.personality, {
+        cardColors: Boolean(theme.elements.cards),
+      })}
     >
       <style
         nonce={nonce}
-      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}${elementCss(theme)}`}</style>
+      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}${PERSONALITY_CSS}${elementCss(theme)}`}</style>
       {/* React lo sube al <head>. */}
       <link rel="preconnect" href={mediaOrigin} />
       {preview ? (

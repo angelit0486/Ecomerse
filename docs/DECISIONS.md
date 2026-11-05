@@ -1538,7 +1538,7 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 
 - Subir `.nvmrc`, `engines` y el CI a Node 24 antes del 2027-03-31, con todas las suites en verde.
 
-### ADR-063 — Apariencia avanzada: nuevas opciones de diseño del tema · **PROPUESTO, espera decisión del propietario**
+### ADR-063 — Apariencia avanzada: nuevas opciones de diseño del tema · **APROBADO por el propietario el 2026-11-05 («Si realmente es conveniente prosigue»); fase B-1 hecha (D-MEJ-21)**
 
 - **Pedido:** que cada tienda tenga su propia esencia y personalidad con una sección de Apariencia mucho más avanzada. Plan completo en `docs/plan/PLANTILLAS-APARIENCIA-PRODUCTOS-2026-11.md`.
 - **Hoy (verificado):** 10 tipografías, 4 radios, 2 estilos de botón, 3 sombras, 3 densidades, 15 bloques de portada. La base valida el tema campo por campo (`app.theme_settings_valid`), y el esquema del tema es un contrato crítico (GATE0 §43).
@@ -1552,7 +1552,10 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - movimiento sutil que respeta «reducir movimiento».
 - **Lo que no cambia:** sin CSS ni JavaScript libre de la tienda (regla 13), contraste AA validado en la base y en el panel, publicación auditada y todo detrás de un interruptor por tienda apagado.
 - **Costo:** una migración aditiva que amplía `app.theme_settings_valid`, cambios en el esquema Zod y en el render de la tienda, y 6 paquetes `@fontsource-variable/*` (dependencia nueva, regla 16; se justifican por familia antes de instalar).
-- **Pregunta:** ¿se aprueba?
+- **Decisión:** aprobado con la condición de que convenga. Se hace por partes, empezando por lo que más se nota y menos riesgo tiene:
+  - **B-1 (hecha, D-MEJ-21):** tarjeta de producto (estilo, proporción y ajuste de la foto, efecto al pasar el cursor, alineación), títulos (mayúsculas, espaciado, peso, escala) y movimiento sutil. Sin dependencias nuevas.
+  - **B-2 (siguiente):** variantes de encabezado y de portada, fondo y separador de secciones.
+  - **B-3 (después, se justifica antes de instalar):** las 6 familias tipográficas nuevas (dependencias, regla 16) y el modo oscuro con contraste validado.
 
 ### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
 
@@ -1636,6 +1639,15 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Nombre corto automático:** sale del nombre del producto (sin acentos ni signos, único dentro del archivo). Es estable, así que volver a pegar el mismo producto con otro precio lo actualiza en lugar de duplicarlo.
   - **Una fila por producto.** Las categorías deben existir (igual que con el archivo de la plantilla); crearlas al importar queda como siguiente paso.
   - **Pruebas:** unitarias del traductor y del lector de lo pegado (incluye que el límite de tamaño es el del importador), del componente, y E2E `paste-products` (errores por fila, corregir, confirmar, ver los productos y actualizar uno).
+- **D-MEJ-21. Personalidad del diseño, tema v5 (ADR-063, fase B-1).** Migración aditiva `20261105001000`: un tema v4 sigue siendo válido y una tienda sin personalidad se ve igual que antes.
+  - **Opciones (`personality`, solo valores fijos, sin CSS de la tienda):** tarjeta con borde, plana o elevada; foto 1:1, 4:5 o 3:4, completa o llenando el espacio; al pasar el cursor, acercar, elevar o nada; texto a la izquierda o centrado; títulos en mayúsculas o no, con espaciado junto, normal o abierto, peso delgado, medio o grueso, y escala compacta, normal o grande; movimiento ninguno o sutil.
+  - **Base:** `app.theme_personality_valid` y `app.theme_settings_valid` la validan campo por campo (paridad con Zod en `theme-schema-cases.ts`). Viaja con el diseño portátil (`appearance_import_design`).
+  - **Tienda:** la personalidad se vuelve atributos `data-*` de la raíz con valores de una lista blanca, y unas reglas CSS fijas los leen (`src/lib/theme/personality.ts`). El movimiento solo existe si el visitante no pidió reducirlo y su navegador anima con el desplazamiento; el primer bloque de la portada nunca se mueve.
+  - **Panel:** Apariencia → «Personalidad», con vista rápida, detrás del interruptor `theme_personality` (apagado; la tienda lo enciende en Ajustes → Funciones y la plataforma por tienda). Guardar también lo exige en el servidor. La pestaña Marca y los estilos no la tocan (clave propia).
+  - **Plantillas:** las 12 de giro traen su personalidad y ninguna se repite (por ejemplo, joyería: tarjetas planas y fotos 4:5 centradas, títulos en mayúsculas espaciados y delgados; suplementos: tarjetas elevadas, mayúsculas juntas y gruesas). «Genérica» y «En blanco» se quedan con el aspecto de siempre.
+  - **Reversa:** `kill_switch` de `theme_personality` oculta la pestaña; las reglas solo actúan con los atributos.
+  - **Suites (2026-11-05):** verify 1248, pgTAP 2850, integración 435 y E2E 147/147. La migración aún no está en staging (espera la aprobación del propietario).
+  - **Pruebas:** pgTAP 135 (validador, guardar y publicar, diseño portátil, aislamiento entre tiendas, interruptor y privilegios), paridad Zod ↔ SQL, unitarias (atributos, lista blanca, CSS fijo, parche del panel, formulario y plantillas distintas) y E2E `theme-personality` (apagado no cambia nada; encendido, la dueña elige, publica y la tienda cambia, sin violaciones de accesibilidad).
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

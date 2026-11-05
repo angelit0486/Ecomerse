@@ -23,6 +23,7 @@ import { MoveDesign } from "./move-design";
 import { ColorsEditor } from "./colors-editor";
 import { HomeEditor } from "./home-editor";
 import { SECTION_LABELS } from "./section-labels";
+import { PersonalityForm } from "./personality-form";
 import { linkAccess, loadHomeOptions, loadNavPicks } from "./home-options";
 import { loadSiblingStores } from "../_shared/sibling-stores";
 
@@ -35,6 +36,8 @@ type Props = {
 
 const TABS = [
   { key: "marca", label: "Marca" },
+  // Tema v5 (ADR-063): solo con el interruptor `theme_personality`.
+  { key: "personalidad", label: "Personalidad" },
   { key: "encabezado", label: "Encabezado y pie" },
   { key: "redes", label: "Redes y contacto" },
   { key: "seo", label: "SEO" },
@@ -54,11 +57,22 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "appearance.manage")) notFound();
   const sp = await searchParams;
-  const tab: Tab = TABS.some((t) => t.key === sp.seccion) ? (sp.seccion as Tab) : "marca";
+  const supabase = await createSupabaseServerClient();
+  // Interruptores encendidos para esta tienda: habilitan bloques y pestañas nuevas.
+  const enabledFlags = (
+    ((await supabase.rpc("access_store_flags", { p_store_id: ctx.store.id })).data ?? []) as {
+      key: string;
+      enabled: boolean;
+    }[]
+  )
+    .filter((f) => f.enabled)
+    .map((f) => f.key);
+  const personalityOn = enabledFlags.includes("theme_personality");
+  const tabs = TABS.filter((t) => t.key !== "personalidad" || personalityOn);
+  const tab: Tab = tabs.some((t) => t.key === sp.seccion) ? (sp.seccion as Tab) : "marca";
   const discarded = typeof sp.descartado === "string" && /^\d{1,9}$/.test(sp.descartado);
   const base = `/admin/${ctx.store.handle}`;
 
-  const supabase = await createSupabaseServerClient();
   const [{ data: theme }, { data: store }, { data: media }, { data: domain }] = await Promise.all([
     supabase
       .from("store_themes")
@@ -128,18 +142,6 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   const navPicks = tab === "encabezado" ? await loadNavPicks(ctx.store.id, linkAccess(ctx)) : [];
   const homeOptions =
     tab === "portada" ? await loadHomeOptions(ctx.store.id, linkAccess(ctx), rows) : null;
-  // Interruptores encendidos para esta tienda: habilitan bloques nuevos del editor.
-  const enabledFlags =
-    tab === "portada"
-      ? (
-          ((await supabase.rpc("access_store_flags", { p_store_id: ctx.store.id })).data ?? []) as {
-            key: string;
-            enabled: boolean;
-          }[]
-        )
-          .filter((f) => f.enabled)
-          .map((f) => f.key)
-      : [];
   const versions = tab === "historial" ? await loadVersions(ctx.store.id) : [];
   const siblingStores = tab === "historial" ? await loadSiblingStores(ctx.store.id) : [];
   const homeSections = ((hasDraft ? theme?.draft_home_sections : theme?.home_sections) ??
@@ -185,7 +187,7 @@ export default async function AppearancePage({ params, searchParams }: Props) {
 
       <nav aria-label="Secciones de apariencia">
         <ul className="flex flex-wrap gap-2 border-b border-border">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <li key={t.key}>
               <Link
                 href={`${base}/apariencia?seccion=${t.key}`}
@@ -225,6 +227,14 @@ export default async function AppearancePage({ params, searchParams }: Props) {
             faviconCandidates={faviconCandidates}
           />
         </div>
+      ) : null}
+      {tab === "personalidad" ? (
+        <PersonalityForm
+          key={formKey}
+          storeHandle={ctx.store.handle}
+          revision={revision}
+          personality={settings.personality ?? {}}
+        />
       ) : null}
       {tab === "encabezado" ? (
         <HeaderFooterForm

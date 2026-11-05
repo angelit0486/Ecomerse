@@ -28,6 +28,8 @@ Se arman con las opciones que ya existen: no cambian la base de datos ni el esqu
 
 ### B. Apariencia avanzada · requiere ADR-063 (contrato del tema)
 
+**ADR-063 aprobado el 2026-11-05. B-1 hecha (D-MEJ-21):** tarjeta de producto, títulos y movimiento sutil, en Apariencia → «Personalidad» (interruptor `theme_personality`), y las 12 plantillas de giro con personalidad propia. Siguen B-2 (encabezado, portada y secciones) y B-3 (6 familias nuevas y modo oscuro).
+
 La base valida el tema campo por campo (`app.theme_settings_valid`) y el esquema es un contrato crítico (GATE0 §43), así que cada opción nueva necesita ADR, migración aditiva, pruebas y su versión.
 
 Opciones propuestas, todas con valores fijos (nunca texto libre):
@@ -55,5 +57,5 @@ Reutiliza el importador actual (misma validación y vista previa), así que no a
 
 ## 3. Decisión del propietario
 
-- **ADR-063 (fase B):** ¿se aprueba ampliar el tema con estas opciones? Ver DECISIONS.
+- **ADR-063 (fase B):** aprobado el 2026-11-05; se hace por partes (B-1 hecha). Ver DECISIONS.
 - La fase A y la C no necesitan decisión; empiezo por la A.

@@ -30,7 +30,7 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 
 ## E. Aprobar (responde con los números)
 
-- **ADR-063, Apariencia avanzada (opciones nuevas de diseño):** ¿se aprueba? Detalle en `docs/plan/PLANTILLAS-APARIENCIA-PRODUCTOS-2026-11.md`. Las plantillas nuevas y la carga rápida de productos no lo necesitan.
+- **ADR-063, Apariencia avanzada:** aprobado el 2026-11-05; la fase B-1 (Personalidad) está hecha. Para que una tienda la use, enciende «Personalidad del diseño» en Ajustes → Funciones de esa tienda. Antes de desplegar, aplicar en staging la migración `20261105001000` (con tu aprobación).
 - **ADR-062, enlace de pedido de invitado:** ¿A (180 días desde la última actividad, con «Mandarme un enlace nuevo») o B (90 días fijos)? Recomiendo A.
 - **`pg_net` fuera de `public` (paso 23):** el aviso de Supabase pide moverla al esquema `extensions`. Hacerlo en staging toca una extensión de la base y no encontré en la documentación oficial cómo moverla sin reinstalarla [NO VERIFICADO]; la uso para comprobar cada migración de staging. Respóndeme «sí pg_net» y lo preparo con su plan de reversa antes de tocar nada.
 

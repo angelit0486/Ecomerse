@@ -13,6 +13,8 @@ export const DESIGN_KEYS = [
   "header",
   "product_page",
   "listing",
+  // Tema v5 (ADR-063): la personalidad es diseño, viaja con él.
+  "personality",
 ] as const;
 
 export const THEME_FILE_FORMAT = "pruva-theme";

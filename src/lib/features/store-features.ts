@@ -71,6 +71,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Cambia el asunto y agrega un mensaje tuyo a los correos que reciben tus clientes (pedido, pago, envío, entrega, cancelación y reembolso).",
     where: "Ajustes → Correos",
   },
+  theme_personality: {
+    title: "Personalidad del diseño",
+    description:
+      "Dale a tu tienda su propio estilo: tarjetas de producto con borde, planas o elevadas, fotos cuadradas o verticales, títulos en mayúsculas o con otro peso y tamaño, y un movimiento sutil al bajar por la portada.",
+    where: "Apariencia → Personalidad",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

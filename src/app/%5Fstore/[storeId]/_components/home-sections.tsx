@@ -417,7 +417,8 @@ export async function HomeSections({
   // Sin hero arriba, las primeras imágenes de productos son el LCP: sin lazy.
   const eagerIndex = heroFirst ? -1 : sections.findIndex((s) => s.type === "featured_products");
   return (
-    <div className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
+    // `sf-home`: el movimiento sutil del tema v5 (ADR-063) anima sus bloques.
+    <div className="sf-home flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]">
       {colorCss ? <style nonce={nonce}>{colorCss}</style> : null}
       {focalCss ? <style nonce={nonce}>{focalCss}</style> : null}
       {/* Un solo h1: el del hero si va primero; si no, el nombre de la tienda. */}

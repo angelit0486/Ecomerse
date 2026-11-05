@@ -250,3 +250,54 @@ describe("tema v2 en el panel (ADR-034)", () => {
     });
   });
 });
+
+describe("Personalidad (tema v5, ADR-063)", () => {
+  it("es dueña solo de su clave y no toca Marca", () => {
+    expect(SECTION_KEYS.personalidad).toEqual(["personality"]);
+    expect(SECTION_KEYS.marca).not.toContain("personality");
+    expect(THEME_SECTIONS).toContain("personalidad");
+  });
+
+  it("guarda solo lo que cambia respecto de cómo se ve hoy", () => {
+    const f = form({
+      card_style: "flat",
+      image_ratio: "1:1",
+      image_fit: "cover",
+      card_hover: "zoom",
+      card_align: "center",
+      heading_case: "uppercase",
+      heading_tracking: "normal",
+      heading_weight: "",
+      type_scale: "large",
+      motion: "subtle",
+    });
+    const patch = sectionPatch("personalidad", f.get, f.getAll);
+    expect(patch).toEqual({
+      personality: {
+        card_style: "flat",
+        image_fit: "cover",
+        card_align: "center",
+        heading_case: "uppercase",
+        type_scale: "large",
+        motion: "subtle",
+      },
+    });
+    expect(validatePatch(patch)).toEqual({ ok: true, patch });
+  });
+
+  it("todo como hoy quita la clave (null) y un valor ajeno a la lista no se guarda", () => {
+    const f = form({ card_style: "outlined", heading_weight: "", motion: "none" });
+    expect(sectionPatch("personalidad", f.get, f.getAll)).toEqual({ personality: null });
+    const bad = form({ card_style: "neon", heading_weight: "900", image_ratio: "4:5" });
+    expect(sectionPatch("personalidad", bad.get, bad.getAll)).toEqual({
+      personality: { image_ratio: "4:5" },
+    });
+  });
+
+  it("un error del esquema se marca en su campo", () => {
+    expect(validatePatch({ personality: { motion: "loud" } })).toEqual({
+      ok: false,
+      fields: { motion: expect.any(String) },
+    });
+  });
+});

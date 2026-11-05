@@ -78,3 +78,26 @@ export function isValidInstant(value: string): boolean {
 
 /** Tema v4: enlaces de la barra de categorías del encabezado. */
 export const MAX_NAV_ITEMS = 12;
+
+/**
+ * Tema v5 (ADR-063, fase B-1): personalidad del diseño. Solo valores fijos; el
+ * primero de cada lista es lo que la tienda hace hoy (si falta, se ve igual),
+ * salvo el peso: sin valor, cada título conserva el suyo. La base repite la
+ * lista (`app.theme_personality_valid`).
+ */
+export const PERSONALITY_OPTIONS = {
+  card_style: ["outlined", "flat", "raised"],
+  image_ratio: ["1:1", "4:5", "3:4"],
+  image_fit: ["contain", "cover"],
+  card_hover: ["zoom", "lift", "none"],
+  card_align: ["start", "center"],
+  heading_case: ["normal", "uppercase"],
+  heading_tracking: ["normal", "tight", "wide"],
+  heading_weight: ["regular", "semibold", "bold"],
+  type_scale: ["normal", "compact", "large"],
+  motion: ["none", "subtle"],
+} as const;
+export type PersonalityKey = keyof typeof PERSONALITY_OPTIONS;
+export type Personality = {
+  [K in PersonalityKey]?: (typeof PERSONALITY_OPTIONS)[K][number];
+};

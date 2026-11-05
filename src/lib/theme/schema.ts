@@ -50,6 +50,7 @@ import {
   MAX_RICH_TEXT_BYTES,
   MAX_SECTIONS,
   PAYMENT_METHODS,
+  PERSONALITY_OPTIONS,
   SHADOWS,
   VIDEO_ID_RE,
   VISIBILITIES,
@@ -169,6 +170,20 @@ const announcement = z
 
 const quickLink = z.strictObject({ label: text(1, 20), link });
 
+/** Tema v5 (ADR-063, fase B-1): personalidad del diseño, solo valores fijos. */
+const personality = z.strictObject({
+  card_style: z.enum(PERSONALITY_OPTIONS.card_style).optional(),
+  image_ratio: z.enum(PERSONALITY_OPTIONS.image_ratio).optional(),
+  image_fit: z.enum(PERSONALITY_OPTIONS.image_fit).optional(),
+  card_hover: z.enum(PERSONALITY_OPTIONS.card_hover).optional(),
+  card_align: z.enum(PERSONALITY_OPTIONS.card_align).optional(),
+  heading_case: z.enum(PERSONALITY_OPTIONS.heading_case).optional(),
+  heading_tracking: z.enum(PERSONALITY_OPTIONS.heading_tracking).optional(),
+  heading_weight: z.enum(PERSONALITY_OPTIONS.heading_weight).optional(),
+  type_scale: z.enum(PERSONALITY_OPTIONS.type_scale).optional(),
+  motion: z.enum(PERSONALITY_OPTIONS.motion).optional(),
+});
+
 export const ThemeSettingsV2 = z.strictObject({
   colors: colors.optional(),
   favicon_media_id: uuid.optional(),
@@ -246,6 +261,7 @@ export const ThemeSettingsV2 = z.strictObject({
       show_brand: z.boolean().optional(),
     })
     .optional(),
+  personality: personality.optional(),
 });
 export type ThemeSettings = z.infer<typeof ThemeSettingsV2>;
 

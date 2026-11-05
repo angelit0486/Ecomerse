@@ -82,4 +82,18 @@ describe("plantillas de tienda", () => {
       "Plantilla «Ropa» aplicada al borrador con 4 productos de ejemplo. Revísala en la vista previa.",
     );
   });
+
+  it("cada giro tiene su propia personalidad (tema v5): ninguna se repite", () => {
+    const withPersonality = STORE_TEMPLATES.filter((t) => !["generica", "blanco"].includes(t.key));
+    for (const t of withPersonality) {
+      expect(Object.keys(t.settings.personality ?? {}).length, t.key).toBeGreaterThan(0);
+    }
+    // La genérica y la de inicio en blanco se quedan con el aspecto de siempre.
+    expect(findTemplate("generica")?.settings.personality).toBeUndefined();
+    expect(findTemplate("blanco")?.settings.personality).toBeUndefined();
+    const looks = withPersonality.map((t) =>
+      JSON.stringify([t.settings.typography, t.settings.shape, t.settings.personality]),
+    );
+    expect(new Set(looks).size).toBe(withPersonality.length);
+  });
 });
