@@ -97,7 +97,9 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   const supabase = await createSupabaseServerClient();
   const { data: job } = await supabase
     .from("import_jobs")
-    .select("id, file_name, mode, status, totals, error, ignored_columns, created_at, committed_at")
+    .select(
+      "id, file_name, mode, status, totals, error, ignored_columns, created_at, committed_at, rows_purged_at",
+    )
     .eq("store_id", ctx.store.id)
     .eq("id", jobId)
     .maybeSingle();
@@ -250,6 +252,21 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             <p>Corrige el archivo y vuelve a subirlo.</p>
           )}
         </div>
+      ) : null}
+
+      {job.rows_purged_at ? (
+        // ADR-060: las filas del archivo se borran 30 días después de terminar.
+        <p role="note" className="rounded-md border border-border p-3 text-sm">
+          {job.error?.startsWith("La vista previa venció")
+            ? "Esta vista previa venció: pasaron 30 días sin confirmarla. Vuelve a subir el archivo para importarlo."
+            : "Las filas de este archivo se borraron 30 días después de terminar la importación; los totales se conservan."}{" "}
+          Fecha del borrado:{" "}
+          {new Date(job.rows_purged_at).toLocaleDateString("es-MX", {
+            timeZone: ctx.store.timezone,
+            dateStyle: "long",
+          })}
+          .
+        </p>
       ) : null}
 
       {ignored.length > 0 ? (

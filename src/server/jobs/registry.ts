@@ -24,6 +24,7 @@ import {
   mercadoPagoProvider,
   stripeProvider,
 } from "@/server/payments/registry";
+import { createRetentionHandlers } from "@/server/maintenance/retention";
 import { createHealthHandlers } from "@/server/platform/health-handlers";
 import { createStorageAdmin } from "@/server/privileged/storage-admin";
 import { createPurgeHandlers } from "@/server/privacy/purge-anonymized";
@@ -139,6 +140,8 @@ const handlers: Array<[string, JobHandler]> = [
   ["media.backfill_variants", lazy("media.backfill_variants", media)],
   ["orders.expire", lazy("orders.expire", orders)],
   ["rate_limits.purge", lazy("rate_limits.purge", orders)],
+  // ADR-060: limpieza diaria de datos vencidos (la base decide qué y cuándo).
+  ["data.retention", lazy("data.retention", () => createRetentionHandlers({ db: workerDb() }))],
   ["payments.reconcile", lazy("payments.reconcile", orders)],
   [
     "platform.health_check",

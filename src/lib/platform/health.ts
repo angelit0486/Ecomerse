@@ -33,6 +33,14 @@ export const healthSchema = z.object({
   orders_24h: z.number(),
   // Opcional: la base anterior a 20261105000100 no lo trae.
   audit: z.object({ months_ahead: z.number(), default_has_rows: z.boolean() }).optional(),
+  // Opcional: la base anterior a 20261105000500 no lo trae (ADR-060).
+  retention: z
+    .object({
+      last_run_at: z.string().nullable(),
+      payment_events_rows: z.number(),
+      security_events_rows: z.number(),
+    })
+    .optional(),
 });
 
 export type Health = z.infer<typeof healthSchema>;
@@ -93,6 +101,12 @@ export function describeIssue(issue: HealthIssue): { title: string; action: stri
             action:
               "El mantenimiento las crea solo cada mes: revisa que la cola de trabajos esté corriendo.",
           };
+    case "retention_stale":
+      return {
+        title: `La limpieza diaria de datos no corre desde hace ${issue.value} día(s)`,
+        action:
+          "Revisa en Consola → Trabajos el último «data.retention» y que la cola esté corriendo (docs/runbooks/salud-y-alertas.md).",
+      };
     default:
       return { title: `Problema: ${issue.code}`, action: "Revisa Consola → Salud." };
   }

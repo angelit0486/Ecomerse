@@ -9,6 +9,8 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 
 ## B. Que el sistema corra solo (20 min)
 
+> **Comprobado el 2026-11-05 en staging [VERIFICADO]:** la cola de trabajos no avanza. Hay una foto (`media.process`) esperando desde el 2026-11-04 a las 16:42 UTC, y la salud marca `queue_stalled`. No lo causó ninguna migración: falta que el cron o la versión desplegada procesen la cola. Los puntos 3 y 4 lo resuelven.
+
 3. **Vercel → proyecto → Settings → Environment Variables:** confirma que existe `CRON_SECRET` (32 o más caracteres) en Production.
 4. **Vercel → Settings → Cron Jobs:** confirma que `/api/jobs/run` aparece activo. Dime tu plan, Hobby o Pro:
    - **Hobby:** el cron corre una vez al día. Desde D-MEJ-06 el mantenimiento también avanza con la actividad de la tienda.

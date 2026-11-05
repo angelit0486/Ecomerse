@@ -36,6 +36,16 @@ Misión vendible F1.6. Qué se revisa, quién recibe los avisos y qué hacer con
   3. Adjúntala: `alter table audit.audit_logs attach partition audit.audit_logs_AAAAMM for values from (…) to (…)`.
   4. Aplica RLS forzado y quita los grants, igual que `audit.ensure_partitions`.
 
+### `retention_stale` (desde 20261105000500, ADR-060)
+
+- **Aviso:** la limpieza diaria de datos (`data.retention`) no corre desde hace 8 días o más. El valor son los días.
+- **Qué borra cuando corre:** trabajos terminados de más de 30 días y fallidos de más de 90; filas crudas de importaciones terminadas hace más de 30 días; correos entregados de más de 12 meses; carritos sin convertir, sin actividad en 90 días y sin pedido.
+- **Qué nunca borra:** pedidos, pagos, eventos de pago, movimientos de inventario, auditoría ni eventos de seguridad (regla 9). Su tamaño estimado sale en el bloque `retention` de la salud (`payment_events_rows`, `security_events_rows`).
+- **Qué hacer:**
+  1. Si también hay `queue_stalled`, arregla primero la cola.
+  2. Consola → Trabajos: busca el último `data.retention`. Si está fallido, el error dice qué tabla falló; reintenta.
+  3. El resultado de la última corrida está en `system.maintenance_runs` (columna `last_result`), y cada corrida que borró algo deja un registro de auditoría `data.retention`.
+
 Los umbrales viven en la migración; cambiarlos requiere una migración nueva.
 
 ## Probarlo en local

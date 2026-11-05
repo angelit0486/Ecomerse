@@ -316,7 +316,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
   - queda documentado en `docs/runbooks/pagos.md`.
 - **Tiempo:** 0.5 día (A) o 2 días (B).
 
-**Paso 2. Programar el mantenimiento de datos.** 🤖 · **Particiones hechas el 2026-11-05 (D-MEJ-09); ADR-060 aprobado el 2026-11-05, purgas en curso**
+**Paso 2. Programar el mantenimiento de datos.** 🤖 · **Hecho el 2026-11-05: particiones (D-MEJ-09) y purgas (D-MEJ-12, ADR-060). Sin la prueba de 36 meses: las particiones se prueban con pgTAP 126**
 
 - Hacer en una migración y un trabajo periódico:
   1. Llamar `maintain_audit_partitions` cada semana.

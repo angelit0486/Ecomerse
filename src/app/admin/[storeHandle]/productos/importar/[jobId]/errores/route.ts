@@ -23,11 +23,18 @@ export async function GET(_request: Request, { params }: Params) {
     if (!hasPermission(ctx, "imports.run")) return new NextResponse(null, { status: 404 });
     const { data: job } = await supabase
       .from("import_jobs")
-      .select("id, file_name, columns")
+      .select("id, file_name, columns, rows_purged_at")
       .eq("store_id", storeId)
       .eq("id", jobId)
       .maybeSingle();
     if (!job) return new NextResponse(null, { status: 404 });
+    // ADR-060: las filas ya se borraron (30 días después de terminar).
+    if (job.rows_purged_at) {
+      return new NextResponse("Las filas de esta importación se borraron a los 30 días.", {
+        status: 410,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
     const { data: rows, error } = await supabase
       .from("import_job_rows")
       .select("row_number, raw, errors")

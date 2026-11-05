@@ -117,7 +117,18 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Staging (aprobado 11, 2026-11-04): migraciones `20261104000100` y `20261104000200` aplicadas (147, sha256 verificado); `checkout_shipping_messages` y `mobile_input_size` encendidos solo en `demo2`. Tienda `demo` reactivada con los 19 productos de vapeo/THC en borrador; cuenta `almanzaangel164` desbloqueada (rol de plataforma sigue suspendido).
 - Auditoría global (2026-11-05): `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`, con 40 pasos ordenados. ADR-059, 060 y 061 propuestos.
   - Hallazgo principal: los medios diferidos (OXXO, transferencia) vencen en 8 a 118 minutos.
-- Siguiente: parte C, cuando el propietario diga «sigue».
+- Pasos de la auditoría global hechos el 2026-11-05 (rama `mejoras/2026-11`):
+  - paso 2, particiones de auditoría (`6258620`, D-MEJ-09) y retención de datos (ADR-060, D-MEJ-12);
+  - paso 21, notas de empaque (`aae3875`, D-MEJ-08);
+  - paso 19, resumen semanal (`94670cb`, D-MEJ-10);
+  - paso 22, Ayuda en el panel (`258fc43`, D-MEJ-11);
+  - paso 1, ADR-059 opción A: Mercado Pago sin OXXO, transferencia ni cajero (`88618a0`).
+  - Aprobado por el propietario el 2026-11-05 («Continue con lo mas recomendado»): ADR-059 A, ADR-060 (con ajuste por la regla 9), ADR-061 y Node 24.
+  - Suites en verde tras `258fc43`: verify 1120, pgTAP 2716, integración 402, E2E 135/135.
+  - Suites en verde con la retención (ADR-060): verify 1129, pgTAP 2742, integración 404, E2E 135/135.
+- Staging (2026-11-05, aprobado por el propietario): migraciones `20261104000300` a `20261105000400` aplicadas desde `88618a0`, cada una con su sha256 verificado. Staging en `20261105000400` (154). Interruptores nuevos apagados. Hallazgo: la cola de staging no avanza (`queue_stalled`), pendiente B del propietario.
+  - `20261105000500` (retención) y las siguientes se aplican cuando esté desplegado el código que atiende sus trabajos.
+- Siguiente: ADR-061 (devoluciones) y Node 24.
 
 ## Bloqueos (requieren al propietario)
 

@@ -1560,3 +1560,11 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Destino:** cada guía lleva a la pantalla donde se hace la tarea, y una prueba unitaria comprueba que esa pantalla existe.
   - **Acceso:** el enlace «Ayuda» va junto a «Avisos» y usa los interruptores que el layout ya lee, sin consultas extra.
   - **Mantenimiento:** al cambiar el nombre de un botón o campo, actualizar la guía.
+- **D-MEJ-12. Retención de datos (ADR-060 aprobado; auditoría global, paso 2).** Migración `20261105000500`.
+  - **Trabajo diario `data.retention`** (encolado por `system.enqueue_maintenance`; handler en `src/server/maintenance/retention.ts`): llama `system.purge_retention`, por lotes de 5 000 filas por tabla, hasta 10 lotes por corrida.
+  - **Plazos:** trabajos terminados 30 días y fallidos 90; filas crudas de importación 30 días después de terminar (el trabajo y sus totales se quedan con `rows_purged_at`, y una vista previa sin confirmar se cancela); correos entregados 12 meses; carritos sin convertir, sin actividad en 90 días y sin ningún pedido.
+  - **Correos entregados:** siguen sin UPDATE. El DELETE solo pasa con la marca local `app.retention_purge` y con más de 12 meses (mismo patrón que `app.inventory_purge`).
+  - **Nunca se borran:** pedidos, pagos, eventos de pago, movimientos, auditoría ni eventos de seguridad (ajuste del ADR-060 por la regla 9).
+  - **Vigilancia:** `system.maintenance_runs` guarda la última corrida. La salud avisa `retention_stale` a los 8 días sin correr y muestra el tamaño estimado de lo que no se borra. Cada corrida que borra algo deja auditoría `data.retention`.
+  - **Panel:** la importación cuyas filas se borraron lo explica, y su CSV de errores responde 410.
+  - **Pruebas:** pgTAP 130 (incluye aislamiento: la dueña no corre la purga ni ve el registro), integración `data-retention` y unitarias.
