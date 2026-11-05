@@ -1488,7 +1488,7 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
 
 Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 
-### ADR-059 — Medios diferidos de Mercado Pago (OXXO, transferencia, cajero) frente al vencimiento del cobro · **PROPUESTO, espera decisión del propietario**
+### ADR-059 — Medios diferidos de Mercado Pago (OXXO, transferencia, cajero) frente al vencimiento del cobro · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**, opción A
 
 - **Problema (verificado en el código):**
   - El cobro vence en `reservation_ttl_minutes − 2 minutos`, es decir, de 8 a 118 minutos (30 por defecto).
@@ -1498,9 +1498,15 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 - **Opción B:** vencimiento propio de 72 horas para esos medios y reserva de stock extendida solo para esos intentos.
 - **Lo que no cambia:** la firma del webhook, la comparación de monto y moneda, y la idempotencia.
 - **Por qué ADR:** toca el cobro (GATE0 §43).
-- **Pregunta:** ¿A o B?
+- **Decisión:** opción A.
+- **Implementación:**
+  - `src/server/payments/mercadopago.ts`: la preferencia manda `payment_methods.excluded_payment_types` con `ticket`, `bank_transfer` y `atm` (`DEFERRED_PAYMENT_TYPES`), y el proveedor declara `delayedMethods: false`.
+  - El sello «OXXO» del pie de la tienda no se muestra aunque la tienda lo haya marcado (`paymentBadges`); en Apariencia se explica por qué.
+  - El manejo de un cobro diferido pendiente se queda igual (ADR-056): sigue cubriendo una ficha emitida antes del cambio.
+  - Pruebas: unitarias de `mercadopago` y `payment-badges`; la E2E de Mercado Pago comprueba la exclusión en la preferencia y la de Apariencia, que el pie ya no muestra OXXO.
+- **Para volver a ofrecer OXXO** hace falta la opción B (vencimiento propio y reserva extendida), con su propio ADR.
 
-### ADR-060 — Retención y limpieza de datos · **PROPUESTO, espera decisión del propietario**
+### ADR-060 — Retención y limpieza de datos · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
 
 - **Hoy:**
   - `system.purge_finished_jobs` y `system.maintain_audit_partitions` existen y nadie las llama.
@@ -1515,9 +1521,9 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - Eventos de seguridad: 24 meses.
   - Carritos abandonados: 90 días.
 - **Nunca se borran:** pedidos, pagos, movimientos de inventario ni auditoría (regla 9).
-- **Pregunta:** ¿se aprueban los plazos?
+- **Ajuste al implementar (más conservador que la propuesta):** los **eventos de pago** y los **eventos de seguridad** no se borran. Son historia de pagos y de auditoría, que la regla 9 protege. Su tamaño se vigila con la salud de la plataforma; si algún día pesan, se archivan con otro ADR, sin borrarlos.
 
-### ADR-061 — Devoluciones y cambios · **PROPUESTO, espera decisión del propietario**
+### ADR-061 — Devoluciones y cambios · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
 
 - **Hoy:** solo existen los estados de «devuelto» y el texto de la política.
 - **Propuesta:**
@@ -1526,7 +1532,11 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - Se repone el stock solo si la tienda lo indica.
   - Correos al cliente, auditoría y detrás de un interruptor por tienda.
 - **Por qué ADR:** toca reembolsos y existencias.
-- **Pregunta:** ¿se aprueba?
+- **Decisión:** aprobado. Los reembolsos usan el flujo que ya existe (`refunds-job`); la devolución no crea otro camino de dinero.
+
+### Node 24 (auditoría global, paso 14) · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
+
+- Subir `.nvmrc`, `engines` y el CI a Node 24 antes del 2027-03-31, con todas las suites en verde.
 
 - **D-MEJ-08. Notas de empaque (auditoría global, paso 21).** Interruptor por tienda `order_printing` (apagado; la tienda lo enciende en Ajustes → Funciones).
   - **Pantallas:** `/pedidos/[id]/imprimir` (un pedido) y `/pedidos/imprimir` (hasta 50 de «Por surtir», del más antiguo al más reciente).

@@ -16,6 +16,7 @@ interface Pref {
   total: number;
   external_reference: string;
   back_urls: { success: string; pending: string; failure: string };
+  payment_methods?: { excluded_payment_types?: { id: string }[] };
 }
 type Payment = Record<string, unknown> & { id: number; status: string; external_reference: string };
 
@@ -123,6 +124,7 @@ export class FakeMercadoPago {
         items: { unit_price: number; quantity: number }[];
         external_reference: string;
         back_urls: Pref["back_urls"];
+        payment_methods?: Pref["payment_methods"];
       };
       const id = `${this.collector}-${randomInt(100_000_000, 999_999_999)}fake`;
       const total = Number(
@@ -133,6 +135,7 @@ export class FakeMercadoPago {
         total,
         external_reference: body.external_reference,
         back_urls: body.back_urls,
+        payment_methods: body.payment_methods,
       });
       const init = `https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=${id}`;
       return send(201, { id, init_point: init, sandbox_init_point: init });

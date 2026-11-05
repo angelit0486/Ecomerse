@@ -76,7 +76,8 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   visa: "Visa",
   mastercard: "Mastercard",
   amex: "American Express",
-  oxxo: "OXXO",
+  // ADR-059 (opción A): no se muestra en la tienda mientras OXXO no se pueda cobrar.
+  oxxo: "OXXO (por ahora no se muestra: no se puede cobrar)",
   spei: "SPEI (transferencia)",
   paypal: "PayPal",
   mercado_pago: "Mercado Pago",

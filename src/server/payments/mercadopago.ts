@@ -44,6 +44,14 @@ export class MercadoPagoHttpError extends ProviderHttpError {
   }
 }
 
+/**
+ * Medios diferidos de Mercado Pago que no se ofrecen (ADR-059, opción A, aprobada
+ * el 2026-11-05): OXXO y otros pagos en efectivo (`ticket`), transferencia
+ * (`bank_transfer`) y cajero (`atm`). Para volver a ofrecerlos hace falta la
+ * opción B (vencimiento propio de 72 h y reserva extendida).
+ */
+export const DEFERRED_PAYMENT_TYPES = ["ticket", "bank_transfer", "atm"] as const;
+
 const NUMERIC_ID_RE = /^[0-9]{1,20}$/;
 const PREFERENCE_ID_RE = /^[A-Za-z0-9-]{8,200}$/;
 /** Solo el checkout alojado por Mercado Pago (nunca otra URL aunque la API la devolviera). */
@@ -284,7 +292,8 @@ export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoPr
     capabilities: {
       redirectCheckout: true,
       embeddedCheckout: false,
-      delayedMethods: true,
+      // ADR-059 (opción A): sin medios diferidos; ver DEFERRED_PAYMENT_TYPES.
+      delayedMethods: false,
       refunds: true,
       partialRefunds: true,
       providerSideExpiration: true,
@@ -326,6 +335,11 @@ export function createMercadoPagoProvider(cfg: MercadoPagoConfig): MercadoPagoPr
           expires: true,
           expiration_date_to: input.expiresAt.toISOString(),
           metadata: { payment_id: input.payment.id, order_id: input.order.id },
+          // ADR-059 (opción A): el cobro vence con la reserva de stock (8 a 118 min),
+          // así que OXXO, transferencia y cajero no alcanzarían a pagarse.
+          payment_methods: {
+            excluded_payment_types: DEFERRED_PAYMENT_TYPES.map((id) => ({ id })),
+          },
         },
       });
       const url =

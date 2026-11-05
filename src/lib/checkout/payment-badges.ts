@@ -19,5 +19,7 @@ export function paymentBadges(
     const badge = PROVIDER_BADGE[p];
     return badge ? [badge] : [];
   });
-  return [...new Set([...chosen, ...derived])];
+  // ADR-059 (opción A): OXXO solo se cobra con Mercado Pago, que hoy no lo ofrece;
+  // anunciarlo prometería un medio que no se acepta. SPEI sigue (transferencia).
+  return [...new Set([...chosen, ...derived])].filter((m) => m !== "oxxo");
 }

@@ -235,6 +235,24 @@ describe("adaptador", () => {
     });
   });
 
+  it("ADR-059 (opción A): sin OXXO, transferencia ni cajero, que vencerían antes de poder pagarse", async () => {
+    const { p, calls } = provider(
+      () =>
+        new Response(
+          JSON.stringify({
+            id: "4444-abcdef12",
+            init_point: "https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=x",
+          }),
+        ),
+    );
+    await p.createCheckout(checkout);
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body.payment_methods).toEqual({
+      excluded_payment_types: [{ id: "ticket" }, { id: "bank_transfer" }, { id: "atm" }],
+    });
+    expect(p.capabilities.delayedMethods).toBe(false);
+  });
+
   it("nunca redirige fuera de Mercado Pago ni cobra otra moneda", async () => {
     const { p } = provider(
       () =>

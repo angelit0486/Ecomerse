@@ -158,7 +158,10 @@ test("editar por pestañas, vista previa privada y publicar", async ({ page, bro
   // Oswald (títulos) e Inter (textos): solo las dos fuentes elegidas, del propio dominio.
   expect(fonts.size).toBeGreaterThanOrEqual(1);
   expect(fonts.size).toBeLessThanOrEqual(2);
-  await expect(shopper.getByRole("contentinfo").getByText("OXXO")).toBeVisible();
+  // ADR-059 A: OXXO no se puede cobrar (el pago caducaría con la reserva), así que su
+  // sello no se muestra aunque esté marcado; SPEI sí.
+  await expect(shopper.getByRole("contentinfo").getByText("SPEI", { exact: true })).toBeVisible();
+  await expect(shopper.getByRole("contentinfo").getByText("OXXO")).toHaveCount(0);
   await expect(shopper.getByRole("link", { name: /WhatsApp \+525512345678/ })).toHaveAttribute(
     "href",
     "https://wa.me/525512345678",

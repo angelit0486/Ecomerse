@@ -133,6 +133,11 @@ test("tarjeta aprobada: pagado solo por el webhook firmado; repetido no duplica 
 }) => {
   const email = `aprobado-${run}@example.test`;
   const prefId = await toMercadoPago(page, email);
+  // ADR-059 A: la preferencia no ofrece pagos diferidos (OXXO, transferencia, cajero),
+  // que caducarían junto con la reserva del inventario.
+  expect(fake.preferences.get(prefId)!.payment_methods).toEqual({
+    excluded_payment_types: [{ id: "ticket" }, { id: "bank_transfer" }, { id: "atm" }],
+  });
   const before = await order(email);
   expect(before).toMatchObject({ status: "pending_payment" });
   const [stock] = await admin<{ on_hand: number; reserved: number }[]>`
@@ -169,6 +174,9 @@ test("rechazado: el pedido sigue pendiente y se puede reintentar", async ({ page
   expect(await order(email)).toMatchObject({ status: "pending_payment", payment_status: "failed" });
 });
 
+// Las preferencias nuevas ya no ofrecen OXXO (ADR-059 A); esta prueba cubre un cobro
+// diferido que Mercado Pago avise de todos modos (p. ej., una ficha emitida antes del
+// cambio): queda pendiente y solo se paga cuando se acredita.
 test("OXXO: pendiente con su correo, y pagado cuando se acredita", async ({ page }) => {
   const email = `oxxo-${run}@example.test`;
   const prefId = await toMercadoPago(page, email);

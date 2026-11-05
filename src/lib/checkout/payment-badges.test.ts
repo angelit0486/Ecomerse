@@ -8,6 +8,14 @@ describe("paymentBadges", () => {
     expect(paymentBadges(["mercado_pago"], ["mercadopago"])).toEqual(["mercado_pago"]);
   });
 
+  it("ADR-059 (opción A): no anuncia OXXO, que hoy no se puede cobrar; SPEI sí (transferencia)", () => {
+    expect(paymentBadges(["visa", "oxxo", "spei"], ["mercadopago"])).toEqual([
+      "visa",
+      "spei",
+      "mercado_pago",
+    ]);
+  });
+
   it("no inventa insignias para pagos manuales o simulados", () => {
     expect(paymentBadges([], ["manual", "fake"])).toEqual([]);
   });

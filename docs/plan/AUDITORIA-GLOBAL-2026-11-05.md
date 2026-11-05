@@ -306,7 +306,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 
 ### Fase 0: antes del primer cobro real (1 a 2 semanas)
 
-**Paso 1. Medios diferidos (OXXO, transferencia, cajero).** 🤖 con decisión 🧑
+**Paso 1. Medios diferidos (OXXO, transferencia, cajero).** 🤖 con decisión 🧑 · **Hecho el 2026-11-05 con la opción A (ADR-059 aprobado)**
 
 - **Decisión que necesito (ADR-059):**
   - **A (recomendada para arrancar):** ofrecer solo tarjeta y saldo de Mercado Pago, excluyendo los medios diferidos en la preferencia.
@@ -316,7 +316,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
   - queda documentado en `docs/runbooks/pagos.md`.
 - **Tiempo:** 0.5 día (A) o 2 días (B).
 
-**Paso 2. Programar el mantenimiento de datos.** 🤖 · **Particiones hechas el 2026-11-05 (D-MEJ-09); las purgas esperan el ADR-060**
+**Paso 2. Programar el mantenimiento de datos.** 🤖 · **Particiones hechas el 2026-11-05 (D-MEJ-09); ADR-060 aprobado el 2026-11-05, purgas en curso**
 
 - Hacer en una migración y un trabajo periódico:
   1. Llamar `maintain_audit_partitions` cada semana.
@@ -546,6 +546,8 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 ## 6. Decisiones que necesito de ti
 
 Responde con el número y la letra.
+
+> **Respuesta del 2026-11-05 («Continue con lo mas recomendado»):** 1 → A; 2 → aprobado, con un ajuste más conservador: los eventos de pago y de seguridad no se borran (regla 9); 3 → aprobado; 4 → aprobado; 8 → aprobado (cada migración se aplica a staging desde un commit ya subido, comprobando su sha256). Siguen abiertas la 5, la 6 y la 7.
 
 1. **ADR-059, medios diferidos:** ¿A (excluirlos al arrancar) o B (vencimiento de 72 horas)? Recomiendo A.
 2. **ADR-060, retención de datos:** ¿apruebas los plazos propuestos? Jobs terminados 30 días, importaciones crudas 30 días, notificaciones 12 meses, eventos de pago 24 meses, carritos abandonados 90 días, eventos de seguridad 24 meses.

@@ -12,6 +12,9 @@ Etiquetas: **[SIMULADOR]** = probado con una API falsa en las pruebas automátic
 3. Con el pago confirmado sale **un solo** correo de confirmación al comprador (clave única por pedido) y el aviso a la tienda.
 4. Si el aviso nunca llega, la **reconciliación** consulta los intentos abiertos y aplica lo que encuentre. Corre con el cron y también con la actividad de la tienda: compras, webhooks y la lista de pedidos del panel, como mucho una vez por minuto (D-MEJ-06).
 5. Si el comprador reintenta el pago, se usa **el mismo pedido**: no se duplica.
+6. **Medios que se ofrecen (ADR-059, opción A, desde el 2026-11-05):** tarjeta y saldo de Mercado Pago. OXXO, transferencia y cajero se excluyen de la preferencia (`excluded_payment_types`): el cobro vence junto con la reserva del inventario (de 8 a 118 minutos), así que esos pagos caducarían antes de que el cliente pagara. El sello «OXXO» tampoco se muestra en el pie de la tienda.
+   - Si un cliente pregunta por OXXO: hoy no se ofrece. Volver a ofrecerlo requiere la opción B del ADR-059 (vencimiento propio y reserva extendida).
+   - Para pagos por transferencia sin Mercado Pago, la tienda puede activar **Ajustes → Pagos → Transferencia** (pago manual que la tienda confirma).
 
 ## Ante cada falla
 
@@ -34,19 +37,20 @@ Etiquetas: **[SIMULADOR]** = probado con una API falsa en las pruebas automátic
 
 ## Estado de la verificación (2026-10-29)
 
-| Caso                                 | Prueba automática                                                                                | Con Mercado Pago real                          |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Aprobado                             | integración `mercadopago-webhook`                                                                | [NO VERIFICADO]: faltan credenciales de prueba |
-| Rechazado y luego aprobado           | integración «rechazado y reintento aprobado»                                                     | [NO VERIFICADO]                                |
-| Pendiente (OXXO) y después pagado    | integración «OXXO pendiente y después aprobado»                                                  | [NO VERIFICADO]                                |
-| Expirado                             | pgTAP `29_payments_expiry`                                                                       | [NO VERIFICADO]                                |
-| Reembolso total y parcial            | integración `refunds-job`; pgTAP `32_fulfillment_refunds` (parcial)                              | [NO VERIFICADO]                                |
-| Webhook duplicado                    | integración `mercadopago-webhook` (idempotencia) y `order-notifications` (un solo correo)        | [NO VERIFICADO]                                |
-| Webhook fuera de orden               | integración `stripe-webhook` «fuera de orden» (la misma regla de la base para ambos proveedores) | [NO VERIFICADO]                                |
-| Pago tardío con y sin existencias    | integración `stripe-webhook` «pago tardío…» (misma regla de la base)                             | [NO VERIFICADO]                                |
-| Correo de confirmación completo      | unitarias `order-templates` y pgTAP 115                                                          | Correo real: [NO VERIFICADO] (falta Resend)    |
-| Rebotes, quejas y correo mal escrito | unitarias `email-events`; pgTAP 115; integración `order-notifications`                           | [NO VERIFICADO contra Resend]                  |
-| Vista en Gmail, Outlook y celular    | Solo HTML con tablas, estilos en línea y ancho máximo de 560 px                                  | [NO VERIFICADO]: necesita envíos reales        |
+| Caso                                   | Prueba automática                                                                                | Con Mercado Pago real                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Aprobado                               | integración `mercadopago-webhook`                                                                | [NO VERIFICADO]: faltan credenciales de prueba |
+| Rechazado y luego aprobado             | integración «rechazado y reintento aprobado»                                                     | [NO VERIFICADO]                                |
+| Pendiente (OXXO) y después pagado      | integración «OXXO pendiente y después aprobado» (solo fichas emitidas antes del ADR-059 A)       | [NO VERIFICADO]                                |
+| OXXO, transferencia y cajero excluidos | unitaria `mercadopago` y E2E `mercadopago-checkout` [SIMULADOR]                                  | [NO VERIFICADO]: faltan credenciales de prueba |
+| Expirado                               | pgTAP `29_payments_expiry`                                                                       | [NO VERIFICADO]                                |
+| Reembolso total y parcial              | integración `refunds-job`; pgTAP `32_fulfillment_refunds` (parcial)                              | [NO VERIFICADO]                                |
+| Webhook duplicado                      | integración `mercadopago-webhook` (idempotencia) y `order-notifications` (un solo correo)        | [NO VERIFICADO]                                |
+| Webhook fuera de orden                 | integración `stripe-webhook` «fuera de orden» (la misma regla de la base para ambos proveedores) | [NO VERIFICADO]                                |
+| Pago tardío con y sin existencias      | integración `stripe-webhook` «pago tardío…» (misma regla de la base)                             | [NO VERIFICADO]                                |
+| Correo de confirmación completo        | unitarias `order-templates` y pgTAP 115                                                          | Correo real: [NO VERIFICADO] (falta Resend)    |
+| Rebotes, quejas y correo mal escrito   | unitarias `email-events`; pgTAP 115; integración `order-notifications`                           | [NO VERIFICADO contra Resend]                  |
+| Vista en Gmail, Outlook y celular      | Solo HTML con tablas, estilos en línea y ancho máximo de 560 px                                  | [NO VERIFICADO]: necesita envíos reales        |
 
 ## Lo que falta del propietario
 

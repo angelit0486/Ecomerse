@@ -56,7 +56,7 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:
-      "Si el cliente elige pagar en OXXO, por transferencia o en cajero con Mercado Pago, le mandamos su pedido con las instrucciones mientras paga.",
+      "Si un pago en OXXO, por transferencia o en cajero queda pendiente, le mandamos al cliente su pedido con las instrucciones. Por ahora Mercado Pago no ofrece esos pagos en tu tienda: caducarían antes de que el cliente pagara.",
     where: "Correo al cliente",
   },
 };
