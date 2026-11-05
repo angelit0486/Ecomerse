@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 
-import { applyStoreText, EDITABLE_KEYS, type StoreText } from "@/lib/emails/store-texts";
+import { applyStoreText, EDITABLE_KEYS } from "@/lib/emails/store-texts";
+import { log } from "@/server/observability/logger";
 import type { Sql } from "@/server/db/role-clients";
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
 import { guestToken } from "@/server/payments/order-links";
 
 import { alreadyDelivered, payloadId, sendNotification } from "./handlers";
+import { fetchStoreText } from "./store-texts-db";
 import {
   orderCancelledEmail,
   orderConfirmationEmail,
@@ -128,11 +130,9 @@ export function createOrderNotificationHandlers(
     };
   }
 
-  async function storeText(storeId: string, template: string): Promise<StoreText | null> {
-    const [row] = await deps.db<{ value: Record<string, StoreText> | null }[]>`
-      select system.store_email_texts(${storeId}::uuid) as value`;
-    return row?.value?.[template] ?? null;
-  }
+  // Si falla la lectura, el correo sale con el texto de siempre (fetchStoreText).
+  const storeText = (storeId: string, template: string) =>
+    fetchStoreText(deps.db, storeId, template, log);
 
   async function deliver(
     job: JobRecord,

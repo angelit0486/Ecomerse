@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { STORE_FEATURES } from "@/lib/features/store-features";
+import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
 
-import { failureFrom, storeClient, type FormState } from "../../_shared/action-state";
-
-const failure = failureFrom("features", {});
+import { storeClient, type FormState } from "../../_shared/action-state";
 
 /** Enciende o apaga una función en esta tienda (la base valida permiso y lista). */
 export async function setStoreFeature(
@@ -28,7 +27,15 @@ export async function setStoreFeature(
       p_enabled: enabled,
     });
   } catch (error) {
-    return failure(error, {});
+    const e = reportActionError("features", error);
+    // Apagada por la plataforma (kill switch) o con una excepción suya para esta tienda.
+    if (e.code === "conflict") {
+      return {
+        error:
+          "La plataforma administra esta función por ahora. Si necesitas cambiarla, escríbenos.",
+      };
+    }
+    return { error: e.message };
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
   return { ok: true, message: `${copy.title}: ${now ? "encendida" : "apagada"}.` };

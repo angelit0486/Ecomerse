@@ -49,9 +49,20 @@ function toRpc(n: NormalizedPayment) {
  * pide el correo «pendiente de pago». La base decide (interruptor de la tienda,
  * pedido sin pagar) y lo encola una sola vez por intento.
  */
-async function requestPendingNotice(db: Sql, paymentId: string, n: NormalizedPayment) {
+export async function requestPendingNotice(
+  db: Sql,
+  paymentId: string,
+  n: NormalizedPayment,
+  log: Logger,
+): Promise<void> {
   if (n.status !== "pending" || !n.method) return;
-  await db`select system.request_payment_pending_notice(${paymentId}, ${n.method})`;
+  // Solo un aviso por correo: si falla, el cobro ya aplicado no se reporta como
+  // error (el webhook no devuelve 500 ni la reconciliación lo cuenta como fallo).
+  try {
+    await db`select system.request_payment_pending_notice(${paymentId}, ${n.method})`;
+  } catch (error) {
+    log.warn("payment.pending_notice_failed", { payment_id: paymentId, err: error });
+  }
 }
 
 export async function handleMercadoPagoWebhook(deps: {
@@ -127,7 +138,7 @@ export async function handleMercadoPagoWebhook(deps: {
     }
     const [applied] = await db<{ r: { outcome: string } }[]>`
       select system.apply_mercadopago_payment(${found.p.id}, ${db.json(toRpc(payment))}) as r`;
-    await requestPendingNotice(db, found.p.id, payment);
+    await requestPendingNotice(db, found.p.id, payment, log);
     await db`select system.finish_payment_event(${event.id}, null)`;
     return { status: 200, body: { received: true, outcome: applied!.r.outcome } };
   } catch (error) {
@@ -169,7 +180,7 @@ export async function reconcileMercadoPagoPayments(deps: {
       });
       if (!n) continue; // Aún sin cobro: el comprador no ha pagado.
       await deps.db`select system.apply_mercadopago_payment(${row.payment_id}, ${deps.db.json(toRpc(n))})`;
-      await requestPendingNotice(deps.db, row.payment_id, n);
+      await requestPendingNotice(deps.db, row.payment_id, n, deps.log);
       applied += 1;
     } catch (error) {
       deps.log.warn("payment.reconcile_failed", { payment_id: row.payment_id, err: error });

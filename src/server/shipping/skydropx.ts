@@ -75,11 +75,26 @@ interface RawRate {
 const ID_RE = /^[A-Za-z0-9-]{1,80}$/;
 const POSTAL_RE = /^\d{5}$/;
 
-/** Pesos con decimales (número o texto) → centavos enteros; null si no es válido. */
+const DECIMAL_RE = /^(\d{1,7})(?:\.(\d+))?$/;
+
+/**
+ * Pesos con decimales (número o texto) → centavos enteros; null si no es válido.
+ * Exacto sobre el texto decimal (regla 14: el dinero nunca pasa por punto
+ * flotante): se redondea a la mitad hacia arriba con el tercer decimal.
+ */
 export function toCents(value: unknown): number | null {
-  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) return null;
-  return Math.round(n * 100);
+  const text =
+    typeof value === "number" && Number.isFinite(value)
+      ? String(value)
+      : typeof value === "string"
+        ? value.trim()
+        : "";
+  const m = DECIMAL_RE.exec(text);
+  if (!m) return null;
+  const decimals = (m[2] ?? "").padEnd(3, "0");
+  const cents =
+    Number(m[1]) * 100 + Number(decimals.slice(0, 2)) + (Number(decimals[2]) >= 5 ? 1 : 0);
+  return cents > 100_000_000 ? null : cents;
 }
 
 /** Solo tarifas exitosas, en MXN y con datos completos; de la más barata a la más cara. */

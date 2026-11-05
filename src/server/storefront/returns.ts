@@ -21,6 +21,8 @@ export interface ReturnSummary {
 
 export interface ReturnOptions {
   deadline: string | null;
+  /** El plazo ya pasó (lo decide la base). */
+  window_closed: boolean;
   open: boolean;
   window_days: number;
   last: ReturnSummary | null;

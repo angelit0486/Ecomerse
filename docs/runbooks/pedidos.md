@@ -59,4 +59,5 @@ Una página para la tienda, pensada para el celular. El detalle técnico de pago
   - **Reembolsar:** el monto viene calculado con lo que pagó por esas unidades; puedes ajustarlo. Deja marcada «Regresar las unidades al inventario» si se pueden volver a vender.
   - **Cerrar sin reembolso:** si le mandas otro producto (cambio) o si no corresponde devolver dinero.
 - **El plazo** se cambia arriba en **Pedidos → Devoluciones** (de 1 a 365 días).
+- **Si el reembolso de una devolución falla** (por ejemplo, la tarjeta ya no existe), el pedido queda «en atención». Reembolsa desde el pedido, con «Reembolsar dinero», o resuelve con el cliente por otro medio.
 - Revisa que tu política de devoluciones publicada diga lo mismo que el plazo. **PENDIENTE DE REVISIÓN** legal: la Ley Federal de Protección al Consumidor y tus propias condiciones pueden exigir otros plazos.

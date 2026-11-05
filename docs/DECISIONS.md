@@ -1523,15 +1523,6 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 - **Nunca se borran:** pedidos, pagos, movimientos de inventario ni auditoría (regla 9).
 - **Ajuste al implementar (más conservador que la propuesta):** los **eventos de pago** y los **eventos de seguridad** no se borran. Son historia de pagos y de auditoría, que la regla 9 protege. Su tamaño se vigila con la salud de la plataforma; si algún día pesan, se archivan con otro ADR, sin borrarlos.
 
-### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
-
-- **Hoy (verificado en el código):** el token del enlace se deriva de la clave de idempotencia del checkout (`guestToken`) y no vence. Quien tenga un correo viejo ve el pedido para siempre.
-- **Por qué ADR:** el token es parte del contrato de Checkout (`place_order → guest_token`, GATE0 §43) y de la página del pedido (§16.5).
-- **Opción A (recomendada):** el enlace vale 180 días desde la última actividad del pedido (pago, envío, entrega o devolución). Al vencer, la página ofrece «Mandarme un enlace nuevo» al correo del pedido, que renueva la vigencia sin mostrar nada.
-- **Opción B:** 90 días fijos, sin renovación; quien tenga cuenta usa «Mi cuenta».
-- **Lo que no cambia:** el token sigue sin guardarse en claro (solo su sha256) y una tienda nunca ve pedidos de otra.
-- **Pregunta:** ¿A o B?
-
 ### ADR-061 — Devoluciones y cambios · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
 
 - **Hoy:** solo existen los estados de «devuelto» y el texto de la política.
@@ -1546,6 +1537,15 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 ### Node 24 (auditoría global, paso 14) · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
 
 - Subir `.nvmrc`, `engines` y el CI a Node 24 antes del 2027-03-31, con todas las suites en verde.
+
+### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy (verificado en el código):** el token del enlace se deriva de la clave de idempotencia del checkout (`guestToken`) y no vence. Quien tenga un correo viejo ve el pedido para siempre.
+- **Por qué ADR:** el token es parte del contrato de Checkout (`place_order → guest_token`, GATE0 §43) y de la página del pedido (§16.5).
+- **Opción A (recomendada):** el enlace vale 180 días desde la última actividad del pedido (pago, envío, entrega o devolución). Al vencer, la página ofrece «Mandarme un enlace nuevo» al correo del pedido, que renueva la vigencia sin mostrar nada.
+- **Opción B:** 90 días fijos, sin renovación; quien tenga cuenta usa «Mi cuenta».
+- **Lo que no cambia:** el token sigue sin guardarse en claro (solo su sha256) y una tienda nunca ve pedidos de otra.
+- **Pregunta:** ¿A o B?
 
 - **D-MEJ-08. Notas de empaque (auditoría global, paso 21).** Interruptor por tienda `order_printing` (apagado; la tienda lo enciende en Ajustes → Funciones).
   - **Pantallas:** `/pedidos/[id]/imprimir` (un pedido) y `/pedidos/imprimir` (hasta 50 de «Por surtir», del más antiguo al más reciente).
@@ -1597,6 +1597,19 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Seguridad:** todo es texto. La base quita caracteres de control y limita el largo (asunto de una línea, hasta 150; mensaje hasta 1000); al armar el correo se escapa y los saltos de línea pasan a `<br>` (regla 13). Los correos al personal no se editan.
   - **Datos:** `public.store_email_texts` con RLS forzado (lectura con `store.read`), guardado por `public.email_texts_save` (`store.update`, auditado). Con los dos campos vacíos vuelve al texto de siempre. El worker los lee con `system.store_email_texts`, que devuelve vacío si el interruptor está apagado.
   - **Pruebas:** pgTAP 133 (con aislamiento entre tiendas), unitarias y E2E `email-texts`.
+- **D-MEJ-18. Revisión completa de la misión (2026-11-05).** Revisión del código de `255fa7f` a hoy, más los asesores de Supabase en staging. 10 hallazgos, todos verificados y corregidos, cada uno con una prueba que falla antes y pasa después:
+  1. Al anonimizar una tienda cerrada (ADR-046) no se borraban las notas de sus devoluciones; ahora sí, y el guardia de `return_requests` solo lo permite dentro de la anonimización (migración `20261105000900`, pgTAP 134).
+  2. Desde Ajustes → Funciones, la tienda reemplazaba una excepción que la plataforma había puesto para su tienda; ahora no puede y la ve bloqueada (pgTAP 134).
+  3. El resumen semanal ordenaba «stock bajo» como texto (10 antes que 2); ahora por número (pgTAP 134).
+  4. En la página del pedido, «el plazo terminó» salía con el plazo vigente cuando no había nada por devolver; la base dice si el plazo pasó (`window_closed`).
+  5. Un `$'` en el mensaje de la tienda o en el nombre del cliente se interpretaba como patrón de reemplazo en el correo.
+  6. Si fallaba el aviso «pendiente de pago», un cobro ya aplicado se reportaba como error del webhook (500); ahora el aviso es lo único que falla, con su registro.
+  7. El receptor de reportes de CSP no respondía la verificación de CORS que manda Chromium desde el host de las tiendas.
+  8. El receptor leía completo un cuerpo sin `Content-Length` antes de medirlo; ahora deja de leer al pasar de 16 KB.
+  9. La barra de categorías podía alinearse con un enlace viejo al cargar las tipografías.
+  10. Skydropx convertía precios a centavos con punto flotante (regla 14); ahora es exacto.
+  - **Además:** si la lectura de los textos de la tienda falla (p. ej. código desplegado antes que la migración), el correo sale con el texto de siempre en lugar de no enviarse.
+  - **Asesores de Supabase en staging:** sin hallazgos de nivel ERROR. Quedan los ya conocidos: `pg_net` en `public` y protección de contraseñas filtradas (del propietario), funciones `SECURITY DEFINER` ejecutables por `authenticated` (diseño: cada una exige su permiso, metatest 15) y llaves foráneas sin índice o índices sin uso (informativos, ver `docs/audit/escalabilidad-2026-11.md`).
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

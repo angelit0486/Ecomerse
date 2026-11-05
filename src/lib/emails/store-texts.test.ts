@@ -39,4 +39,21 @@ describe("textos de la tienda en los correos (paso 20)", () => {
   it("los asuntos de ejemplo usan solo variables conocidas", () => {
     for (const e of EDITABLE_EMAILS) expect(e.defaultSubject).not.toMatch(/\{(?!pedido\})/);
   });
+
+  it("los signos $ del mensaje o del nombre se copian tal cual (no son patrones de reemplazo)", () => {
+    const out = applyStoreText(msg, { subject: null, note: "Usa el código $' y $& $`" }, vars);
+    expect(out.html).toBe(
+      `<body><p>Hola</p><p style="margin-top:16px;padding:12px;border-left:3px solid #999">Usa el código $&#39; y $&amp; $\`</p><p>Contacto</p></body>`,
+    );
+    const named = applyStoreText(
+      msg,
+      { subject: "Hola {nombre}", note: "{nombre}" },
+      {
+        ...vars,
+        nombre: "$'Ana",
+      },
+    );
+    expect(named.subject).toBe("Hola $'Ana");
+    expect(named.html).toContain(">$&#39;Ana</p>");
+  });
 });

@@ -11,6 +11,7 @@ import {
   navScrollTarget,
   type NavBarConfig,
   type NavBarItem,
+  whenFontsReady,
 } from "@/lib/theme/nav-bar";
 
 /**
@@ -93,9 +94,10 @@ function NavBarView({
       ul.scrollLeft = left;
       update();
     };
+    let cancelFonts = () => {};
     if (scrollFix) {
       align();
-      void document.fonts?.ready.then(align);
+      cancelFonts = whenFontsReady(document.fonts?.ready, align);
     } else if (li && ul.scrollWidth > ul.clientWidth) {
       ul.scrollLeft = Math.max(0, li.offsetLeft - (ul.clientWidth - li.offsetWidth) / 2);
     }
@@ -103,6 +105,7 @@ function NavBarView({
     ul.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => {
+      cancelFonts();
       ul.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };

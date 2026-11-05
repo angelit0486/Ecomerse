@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { activeNavIndex, leftCut, navBarItems, navScrollTarget } from "./nav-bar";
+import { activeNavIndex, leftCut, navBarItems, navScrollTarget, whenFontsReady } from "./nav-bar";
 
 const menu = [
   { label: "Proteínas", href: "/categoria/proteinas", children: [] },
@@ -109,5 +109,27 @@ describe("navScrollTarget (lote 2: sin palabras cortadas)", () => {
     expect(leftCut(items, 0, 6)).toBe(false);
     expect(leftCut(items, 104, 6)).toBe(false);
     expect(leftCut(items, 361, 6)).toBe(true);
+  });
+});
+
+describe("alinear al cargar las tipografías (revisión 2026-11-05)", () => {
+  it("no corre si se canceló antes (otro enlace activo o el componente se fue)", async () => {
+    let resolve!: () => void;
+    const ready = new Promise<void>((r) => (resolve = r));
+    const calls: string[] = [];
+    const cancelOld = whenFontsReady(ready, () => calls.push("viejo"));
+    whenFontsReady(ready, () => calls.push("nuevo"));
+    cancelOld();
+    resolve();
+    await ready;
+    await Promise.resolve();
+    expect(calls).toEqual(["nuevo"]);
+  });
+
+  it("sin la API de tipografías no hace nada", () => {
+    const cancel = whenFontsReady(undefined, () => {
+      throw new Error("no debía correr");
+    });
+    expect(() => cancel()).not.toThrow();
   });
 });

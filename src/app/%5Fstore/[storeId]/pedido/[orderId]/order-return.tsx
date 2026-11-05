@@ -25,16 +25,19 @@ export function OrderReturn({
   options,
   action: send,
   deadlineLabel,
+  windowClosed,
 }: {
   options: ReturnOptions;
   action: Action;
   deadlineLabel: string | null;
+  /** El plazo ya pasó (lo calcula el servidor con la fecha de la base). */
+  windowClosed: boolean;
 }) {
   const [state, action, pending] = useActionState<ReturnActionState, FormData>(send, {});
   const id = useId();
   const last = options.last;
   const canRequest = options.open && options.lines.length > 0;
-  if (!last && !canRequest && !deadlineLabel) return null;
+  if (!last && !canRequest && !(deadlineLabel && windowClosed)) return null;
   return (
     <section
       aria-labelledby={`${id}-h`}
@@ -128,7 +131,7 @@ export function OrderReturn({
             {pending ? "Enviando…" : "Pedir devolución"}
           </button>
         </form>
-      ) : !last && deadlineLabel ? (
+      ) : !last && deadlineLabel && windowClosed ? (
         <p className="text-sm text-[var(--sf-muted)]">
           El plazo para pedir una devolución terminó el {deadlineLabel}.
         </p>

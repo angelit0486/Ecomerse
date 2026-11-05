@@ -156,3 +156,20 @@ describe("Skydropx: dinero", () => {
     expect(normalizeRates("x")).toEqual([]);
   });
 });
+
+describe("toCents sin aritmética de punto flotante (regla 14; revisión 2026-11-05)", () => {
+  it("redondea al centavo de forma exacta, también con más de 2 decimales", () => {
+    expect(toCents("1.005")).toBe(101);
+    expect(toCents(1.005)).toBe(101);
+    expect(toCents("123.45")).toBe(12345);
+    expect(toCents(0.29)).toBe(29);
+    expect(toCents("99")).toBe(9900);
+    expect(toCents("1.004")).toBe(100);
+  });
+
+  it("rechaza lo que no es un monto válido", () => {
+    for (const bad of ["1e3", "-1", "abc", "", "1.2.3", 1_000_001, Number.NaN, null]) {
+      expect(toCents(bad), String(bad)).toBeNull();
+    }
+  });
+});

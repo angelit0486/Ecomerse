@@ -57,7 +57,8 @@ export function FeatureToggle({
       </div>
       {locked ? (
         <p className="text-sm text-fg-muted">
-          La plataforma la apagó por mantenimiento. Vuelve a estar disponible cuando termine.
+          La plataforma administra esta función por ahora (mantenimiento o una revisión de tu
+          tienda). Si necesitas cambiarla, escríbenos.
         </p>
       ) : canEdit ? (
         <div className="flex flex-wrap items-center gap-3">

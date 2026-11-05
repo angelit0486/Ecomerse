@@ -91,9 +91,11 @@ export function applyStoreText<M extends Message>(
   const note = text.note ? renderText(text.note, vars).trim() : "";
   if (!subject && !note) return msg;
   const html = note
-    ? msg.html.replace(
+    ? // Con función: un texto de reemplazo trataría «$'», «$&» o «$`» como patrones.
+      msg.html.replace(
         STORE_NOTE_MARK,
-        `<p style="margin-top:16px;padding:12px;border-left:3px solid #999">${escapeHtml(note).replace(/\n/g, "<br>")}</p>`,
+        () =>
+          `<p style="margin-top:16px;padding:12px;border-left:3px solid #999">${escapeHtml(note).replace(/\n/g, "<br>")}</p>`,
       )
     : msg.html;
   // En el texto, el mensaje va antes de la firma (el último renglón es la tienda).

@@ -216,6 +216,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
         <OrderReturn
           options={returns}
           action={sendReturn.bind(null, store.id, order.id, t)}
+          windowClosed={returns.window_closed}
           deadlineLabel={
             returns.deadline
               ? new Date(returns.deadline).toLocaleDateString("es-MX", {

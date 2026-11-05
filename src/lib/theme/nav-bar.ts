@@ -129,3 +129,18 @@ export function leftCut(
   if (scrollLeft <= 1) return false;
   return !items.some((i) => Math.abs(i.start - pad - scrollLeft) <= 1);
 }
+
+/**
+ * Corre `fn` cuando cargan las tipografías (cambian los anchos de la barra),
+ * salvo que se cancele antes: al cambiar el enlace activo o al desmontar, la
+ * alineación vieja no debe mover la barra (revisión 2026-11-05).
+ */
+export function whenFontsReady(ready: Promise<unknown> | undefined, fn: () => void): () => void {
+  let cancelled = false;
+  void ready?.then(() => {
+    if (!cancelled) fn();
+  });
+  return () => {
+    cancelled = true;
+  };
+}
