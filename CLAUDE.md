@@ -10,7 +10,7 @@ Contrato técnico: `docs/architecture/GATE0-ARCHITECTURE-REVIEW.md`. Decisiones 
 ## Comandos
 
 ```bash
-pnpm install            # Node 22 (ver .nvmrc), pnpm 10
+pnpm install            # Node 24 (ver .nvmrc), pnpm 10
 pnpm dev                # requiere .env.local (plantilla: .env.example)
 pnpm verify             # lint + formato + tipos + unit + build  (obligatorio antes de cada commit)
 pnpm db:test            # migraciones + pgTAP + integración contra PostgreSQL local

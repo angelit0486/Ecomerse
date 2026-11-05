@@ -1568,3 +1568,7 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Vigilancia:** `system.maintenance_runs` guarda la última corrida. La salud avisa `retention_stale` a los 8 días sin correr y muestra el tamaño estimado de lo que no se borra. Cada corrida que borra algo deja auditoría `data.retention`.
   - **Panel:** la importación cuyas filas se borraron lo explica, y su CSV de errores responde 410.
   - **Pruebas:** pgTAP 130 (incluye aislamiento: la dueña no corre la purga ni ve el registro), integración `data-retention` y unitarias.
+- **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
+  - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
+  - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.
+  - Sin cambios de dependencias.

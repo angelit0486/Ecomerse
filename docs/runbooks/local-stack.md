@@ -6,7 +6,7 @@ Entorno de desarrollo con los mismos servidores que Supabase: **Supabase Auth (G
 
 - Linux x86_64. En macOS o Windows usa `supabase start` (Docker).
 - PostgreSQL ≥ 15 con pgTAP en `localhost:5432` (`postgres:postgres` por defecto; se cambia con `PGHOST`, `PGPORT`, `PGUSER` y `PGPASSWORD`).
-- Node 22 para la app. Storage necesita Node 24: `install` lo descarga (sha256 fijado) en `.stack/bin/node24`, sin tocar el Node del sistema.
+- Node 24 para la app y para Storage (D-MEJ-14). `install` lo descarga (sha256 fijado) en `.stack/bin/node24`, sin tocar el Node del sistema; si el sistema tiene otro Node, usa `export PATH="$PWD/.stack/bin/node24/bin:$PATH"` antes de `pnpm`.
 - `git` y acceso a GitHub y npm la primera vez: Storage se compila desde el código fuente de un commit fijado (`npm ci` con su lockfile).
 
 ## Uso

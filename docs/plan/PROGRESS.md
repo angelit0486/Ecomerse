@@ -128,7 +128,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Suites en verde con la retención (ADR-060): verify 1129, pgTAP 2742, integración 404, E2E 135/135.
 - Staging (2026-11-05, aprobado por el propietario): migraciones `20261104000300` a `20261105000400` aplicadas desde `88618a0`, cada una con su sha256 verificado. Staging en `20261105000400` (154). Interruptores nuevos apagados. Hallazgo: la cola de staging no avanza (`queue_stalled`), pendiente B del propietario.
   - `20261105000500` (retención) y las siguientes se aplican cuando esté desplegado el código que atiende sus trabajos.
-- Siguiente: ADR-061 (devoluciones) y Node 24.
+- Node 24 (D-MEJ-14): todas las suites en verde con Node 24.21.0: verify 1129, pgTAP 2742, integración 404, E2E 135/135. Falta confirmar en Vercel que el despliegue tome 24.x.
+- Siguiente: ADR-061 (devoluciones).
 
 ## Bloqueos (requieren al propietario)
 

@@ -419,7 +419,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 
 ### Fase 1: primer mes (satisfacción y operación diaria)
 
-**Paso 14. Node 24.** 🤖 con tu aprobación
+**Paso 14. Node 24.** 🤖 con tu aprobación · **Hecho el 2026-11-05 (D-MEJ-14); falta confirmar en Vercel que el despliegue usa 24.x**
 
 - Subir `.nvmrc`, `engines` y el CI a Node 24; correr todas las suites.
 - **Fecha límite:** 2027-03-31, un mes antes del fin de parches de Node 22.
