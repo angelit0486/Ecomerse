@@ -31,6 +31,8 @@ export const healthSchema = z.object({
   }),
   emails: z.object({ sent_24h: z.number(), suppressed_24h: z.number() }),
   orders_24h: z.number(),
+  // Opcional: la base anterior a 20261105000100 no lo trae.
+  audit: z.object({ months_ahead: z.number(), default_has_rows: z.boolean() }).optional(),
 });
 
 export type Health = z.infer<typeof healthSchema>;
@@ -79,6 +81,18 @@ export function describeIssue(issue: HealthIssue): { title: string; action: stri
         action:
           "La reconciliación debería cerrarlos; si no, revisa las credenciales del proveedor.",
       };
+    case "audit_partitions":
+      return issue.severity === "critical"
+        ? {
+            title: "Hay registros de auditoría fuera de su partición mensual",
+            action:
+              "Muévelos a su partición antes de crear la siguiente (docs/runbooks/salud-y-alertas.md, «audit_partitions»).",
+          }
+        : {
+            title: `Quedan ${issue.value} mes(es) de particiones de auditoría`,
+            action:
+              "El mantenimiento las crea solo cada mes: revisa que la cola de trabajos esté corriendo.",
+          };
     default:
       return { title: `Problema: ${issue.code}`, action: "Revisa Consola → Salud." };
   }

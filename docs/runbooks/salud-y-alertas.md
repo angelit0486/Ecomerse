@@ -27,6 +27,15 @@ Misión vendible F1.6. Qué se revisa, quién recibe los avisos y qué hacer con
 | `payment_reversals` | Aviso    | Contracargos o reembolsos hechos en el panel de Mercado Pago en 24 h | Los pedidos quedaron en atención y la tienda recibió aviso; revisa el caso en Mercado Pago.                        |
 | `payments_stale`    | Aviso    | Pagos abiertos más de 2 h                                            | Normal si el comprador no terminó; si son muchos, revisa que lleguen los webhooks.                                 |
 
+### `audit_partitions` (desde 20261105000100)
+
+- **Aviso:** quedan menos de 3 meses de particiones de auditoría. El mantenimiento las crea solo cada mes (siempre 24 meses por delante). Si aparece, la cola no está corriendo: revisa `queue_stalled`.
+- **Urgente:** hay registros en `audit.audit_logs_default`, es decir, con fecha sin partición. Mientras estén ahí, crear la partición de ese mes falla. Desde una conexión de dueño del esquema:
+  1. Crea la partición que falta como tabla suelta: `create table audit.audit_logs_AAAAMM (like audit.audit_logs including all)`.
+  2. Mueve las filas: `insert into audit.audit_logs_AAAAMM select * from audit.audit_logs_default where occurred_at >= … and occurred_at < …`. El borrado de `default` necesita desactivar por un momento el trigger que impide borrar la auditoría; deja constancia en un ADR.
+  3. Adjúntala: `alter table audit.audit_logs attach partition audit.audit_logs_AAAAMM for values from (…) to (…)`.
+  4. Aplica RLS forzado y quita los grants, igual que `audit.ensure_partitions`.
+
 Los umbrales viven en la migración; cambiarlos requiere una migración nueva.
 
 ## Probarlo en local
