@@ -7,6 +7,7 @@ import {
   RETURN_REASONS,
   RETURN_STATUS_FOR_CUSTOMER,
   RETURN_STATUS_LABEL,
+  refundStatusNote,
 } from "./labels";
 
 const migration = readFileSync("supabase/migrations/20261105000600_returns.sql", "utf8");
@@ -24,5 +25,15 @@ describe("devoluciones: textos (ADR-061)", () => {
       expect(RETURN_STATUS_LABEL[s]).toBeTruthy();
       expect(RETURN_STATUS_FOR_CUSTOMER[s]).toBeTruthy();
     }
+  });
+});
+
+describe("estado del reembolso de una devolución (revisión 2026-11-05)", () => {
+  it("dice si está en proceso o si falló y qué hacer", () => {
+    expect(refundStatusNote("pending")).toBe(" (en proceso)");
+    expect(refundStatusNote("failed")).toBe(
+      " (falló: el pedido quedó «en atención»; reembolsa desde el pedido)",
+    );
+    expect(refundStatusNote("succeeded")).toBe("");
   });
 });

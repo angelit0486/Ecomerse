@@ -36,3 +36,11 @@ export const RETURN_STATUS_FOR_CUSTOMER: Record<string, string> = {
   closed: "Tu devolución está cerrada.",
   rejected: "La tienda no aprobó tu devolución.",
 };
+
+/** Nota del reembolso de una devolución en el panel: en proceso o falló (y qué hacer). */
+export function refundStatusNote(status: string | null | undefined): string {
+  if (status === "pending") return " (en proceso)";
+  if (status === "failed")
+    return " (falló: el pedido quedó «en atención»; reembolsa desde el pedido)";
+  return "";
+}

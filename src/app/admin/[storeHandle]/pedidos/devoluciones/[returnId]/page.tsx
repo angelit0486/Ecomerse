@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { centsToInput, formatMoney } from "@/lib/money/format";
-import { RETURN_REASON_LABEL, RETURN_STATUS_LABEL } from "@/lib/returns/labels";
+import { refundStatusNote, RETURN_REASON_LABEL, RETURN_STATUS_LABEL } from "@/lib/returns/labels";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
@@ -174,7 +174,7 @@ export default async function ReturnPage({ params, searchParams }: Props) {
               <dd className="inline">
                 {RESOLUTION_LABEL[r.resolution]}
                 {r.refund ? ` de ${money(r.refund.amount)}` : ""}
-                {r.refund?.status === "pending" ? " (en proceso)" : ""}
+                {refundStatusNote(r.refund?.status)}
                 {r.restock ? "; las unidades regresaron al inventario" : ""}
               </dd>
             </div>
