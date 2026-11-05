@@ -39,6 +39,7 @@ export default async function StoreLayout({ children, params }: Props) {
       .then(({ data }) => (data ?? []) as { key: string; enabled: boolean }[]),
   ]);
   const mobileInputs = flags.some((f) => f.key === "mobile_input_size" && f.enabled);
+  const showHelp = flags.some((f) => f.key === "panel_help" && f.enabled);
   const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
@@ -203,6 +204,14 @@ export default async function StoreLayout({ children, params }: Props) {
           <div className="flex items-start gap-2">
             <GlobalSearch storeHandle={ctx.store.handle} />
             <NoticesButton storeHandle={ctx.store.handle} />
+            {showHelp ? (
+              <Link
+                href={`${base}/ayuda`}
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-control px-3 text-sm"
+              >
+                Ayuda
+              </Link>
+            ) : null}
           </div>
           {schema.ok ? null : (
             <p role="alert" className="rounded-md border border-danger px-3 py-2 text-sm">

@@ -47,6 +47,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Cada lunes te llega un correo con las ventas de la semana contra la anterior, los pedidos por surtir o en atención, el stock bajo y los carritos abandonados.",
     where: "Tu correo (o el de los avisos de la tienda), cada lunes",
   },
+  panel_help: {
+    title: "Ayuda en el panel",
+    description:
+      "Agrega «Ayuda» arriba del panel: guías cortas, paso a paso, para pedidos, pagos, envíos, productos, reembolsos y más.",
+    where: "Este panel, junto a «Avisos»",
+  },
   payment_pending_email: {
     title: "Correo «pendiente de pago»",
     description:

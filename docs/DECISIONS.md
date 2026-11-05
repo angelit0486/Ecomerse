@@ -1545,3 +1545,8 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Destinatarios:** los de los avisos de la tienda o, si no hay, su correo de contacto.
   - **Sin repetir:** clave única por semana, tienda y destinatario.
   - **Pruebas:** pgTAP 128, integración `weekly-summary` y unitarias.
+- **D-MEJ-11. Ayuda dentro del panel (auditoría global, paso 22).** Interruptor por tienda `panel_help` (apagado; en Ajustes → Funciones).
+  - **Contenido:** 10 guías cortas en `src/lib/help/guides.ts`, con los nombres reales de botones y campos: pedidos, cobro, envíos, productos, inventario, reembolsos, descuentos, portada, equipo y funciones.
+  - **Destino:** cada guía lleva a la pantalla donde se hace la tarea, y una prueba unitaria comprueba que esa pantalla existe.
+  - **Acceso:** el enlace «Ayuda» va junto a «Avisos» y usa los interruptores que el layout ya lee, sin consultas extra.
+  - **Mantenimiento:** al cambiar el nombre de un botón o campo, actualizar la guía.

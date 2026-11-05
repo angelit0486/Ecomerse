@@ -467,7 +467,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - Nota de empaque, lista de surtido e impresión en lote desde «Por surtir».
 - **Tiempo:** 1 día.
 
-**Paso 22. Ayuda dentro del panel.** 🤖
+**Paso 22. Ayuda dentro del panel.** 🤖 · **Hecho el 2026-11-05 (D-MEJ-11), sin capturas por ahora**
 
 - Botón «Ayuda» en cada pantalla con 5 a 8 guías cortas y capturas, escritas en español de México.
 - **Tiempo:** 2 días.
