@@ -18,7 +18,14 @@ export interface SecurityHeaderOptions {
    * Storage y las muestra desde su URL pública. Solo ese origen, nunca comodines.
    */
   storageOrigin?: string | undefined;
+  /**
+   * Origen del panel (APP_URL), a donde el navegador manda los reportes de CSP
+   * (paso 23). Absoluto: en el host de una tienda, /api/* es de la tienda.
+   */
+  reportOrigin?: string | undefined;
 }
+
+import { CSP_REPORT_PATH } from "./csp-report";
 
 export function generateNonce(): string {
   const bytes = new Uint8Array(16);
@@ -43,8 +50,10 @@ export function buildContentSecurityPolicy({
   nonce,
   isDev,
   storageOrigin,
-}: Pick<SecurityHeaderOptions, "nonce" | "isDev" | "storageOrigin">): string {
+  reportOrigin,
+}: Pick<SecurityHeaderOptions, "nonce" | "isDev" | "storageOrigin" | "reportOrigin">): string {
   const storage = originOf(storageOrigin);
+  const report = reportEndpoint(reportOrigin);
   const directives: Array<[string, string[]]> = [
     ["default-src", ["'self'"]],
     [
@@ -63,14 +72,29 @@ export function buildContentSecurityPolicy({
     ["frame-src", ["https://www.youtube-nocookie.com", "https://player.vimeo.com"]],
     ["frame-ancestors", ["'none'"]],
     ...(isDev ? [] : ([["upgrade-insecure-requests", []]] as Array<[string, string[]]>)),
+    // report-uri para Firefox y Safari; report-to (Reporting-Endpoints) para Chromium.
+    ...(report
+      ? ([
+          ["report-uri", [report]],
+          ["report-to", ["csp"]],
+        ] as Array<[string, string[]]>)
+      : []),
   ];
   return directives
     .map(([name, values]) => (values.length ? `${name} ${values.join(" ")}` : name))
     .join("; ");
 }
 
+/** URL absoluta del receptor de reportes; null si el origen no es http(s) válido. */
+export function reportEndpoint(origin: string | undefined): string | null {
+  const base = originOf(origin);
+  return base ? `${base}${CSP_REPORT_PATH}` : null;
+}
+
 export function buildSecurityHeaders(options: SecurityHeaderOptions): Record<string, string> {
+  const report = reportEndpoint(options.reportOrigin);
   return {
+    ...(report ? { "Reporting-Endpoints": `csp="${report}"` } : {}),
     "Content-Security-Policy": buildContentSecurityPolicy(options),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",

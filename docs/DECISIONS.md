@@ -1523,6 +1523,15 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
 - **Nunca se borran:** pedidos, pagos, movimientos de inventario ni auditoría (regla 9).
 - **Ajuste al implementar (más conservador que la propuesta):** los **eventos de pago** y los **eventos de seguridad** no se borran. Son historia de pagos y de auditoría, que la regla 9 protege. Su tamaño se vigila con la salud de la plataforma; si algún día pesan, se archivan con otro ADR, sin borrarlos.
 
+### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
+
+- **Hoy (verificado en el código):** el token del enlace se deriva de la clave de idempotencia del checkout (`guestToken`) y no vence. Quien tenga un correo viejo ve el pedido para siempre.
+- **Por qué ADR:** el token es parte del contrato de Checkout (`place_order → guest_token`, GATE0 §43) y de la página del pedido (§16.5).
+- **Opción A (recomendada):** el enlace vale 180 días desde la última actividad del pedido (pago, envío, entrega o devolución). Al vencer, la página ofrece «Mandarme un enlace nuevo» al correo del pedido, que renueva la vigencia sin mostrar nada.
+- **Opción B:** 90 días fijos, sin renovación; quien tenga cuenta usa «Mi cuenta».
+- **Lo que no cambia:** el token sigue sin guardarse en claro (solo su sha256) y una tienda nunca ve pedidos de otra.
+- **Pregunta:** ¿A o B?
+
 ### ADR-061 — Devoluciones y cambios · **APROBADO por el propietario el 2026-11-05 («Continue con lo mas recomendado»)**
 
 - **Hoy:** solo existen los estados de «devuelto» y el texto de la política.
@@ -1578,6 +1587,10 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **Revisa siempre, no solo al lanzar:** quién recibe los avisos de pedidos, pagos activos (aviso si solo hay manuales), tarifas de envío, productos sin foto, productos agotados, políticas publicadas (sin aviso de privacidad es urgente), uso del plan (aviso al 80 %, urgente al 100 %), pedidos pagados con más de 3 días sin enviar y pedidos en atención.
   - **Solo lee** (`public.store_health`, permiso `store.read`). Los umbrales viven en la base; los textos y los enlaces, en `src/lib/store-health/checks.ts`. Una prueba comprueba que cada enlace lleva a una pantalla que existe.
   - **Pruebas:** pgTAP 132 (con aislamiento entre tiendas), unitarias y E2E `store-health`.
+- **D-MEJ-16. Reportes de CSP (auditoría global, paso 23).** La CSP lleva `report-uri` (Firefox y Safari) y `report-to csp` con `Reporting-Endpoints` (Chromium), siempre con URL absoluta al panel (`APP_URL/api/csp-report`): en el host de una tienda, `/api/*` es de la tienda.
+  - **Receptor `/api/csp-report`:** sin base de datos. Acepta los dos formatos, rechaza lo que no es JSON (400) y más de 16 KB (413), lee como mucho 20 reportes por petición y registra como mucho 30 por minuto por instancia.
+  - **Sin datos personales:** de cada URL solo se guardan origen y ruta; nunca la consulta ni el fragmento, porque el enlace del pedido lleva su token en `?t=`.
+  - **Pruebas:** unitarias (`csp-report`, `headers`) y E2E `csp-report`.
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

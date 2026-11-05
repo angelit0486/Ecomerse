@@ -30,6 +30,9 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 
 ## E. Aprobar (responde con los números)
 
+- **ADR-062, enlace de pedido de invitado:** ¿A (180 días desde la última actividad, con «Mandarme un enlace nuevo») o B (90 días fijos)? Recomiendo A.
+- **`pg_net` fuera de `public` (paso 23):** el aviso de Supabase pide moverla al esquema `extensions`. Hacerlo en staging toca una extensión de la base y no encontré en la documentación oficial cómo moverla sin reinstalarla [NO VERIFICADO]; la uso para comprobar cada migración de staging. Respóndeme «sí pg_net» y lo preparo con su plan de reversa antes de tocar nada.
+
 11. **Aplicar en staging** las migraciones `20261104000100` y `20261104000200`, y encender en `demo2` `checkout_shipping_messages` y `mobile_input_size`.
 12. **ADR-056:** correo «pendiente de pago» para OXXO y transferencia.
 13. **ADR-053:** lista de categorías bloqueadas (vapes, THC y las demás). Así no se pueden volver a publicar.

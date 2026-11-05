@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildContentSecurityPolicy, buildSecurityHeaders, generateNonce } from "./headers";
+import {
+  buildContentSecurityPolicy,
+  buildSecurityHeaders,
+  generateNonce,
+  reportEndpoint,
+} from "./headers";
 
 describe("cabeceras de seguridad", () => {
   it("genera nonces aleatorios en base64 de 128 bits", () => {
@@ -58,5 +63,27 @@ describe("cabeceras de seguridad", () => {
     expect(prod["Permissions-Policy"]).toContain("camera=()");
     const dev = buildSecurityHeaders({ nonce: "n", isDev: true, enableHsts: false });
     expect(dev["Strict-Transport-Security"]).toBeUndefined();
+  });
+
+  it("manda los reportes de CSP al panel, nunca a otro lado (paso 23)", () => {
+    const csp = buildContentSecurityPolicy({
+      nonce: "n",
+      isDev: false,
+      reportOrigin: "https://app.pruva.mx/cualquier/ruta?x=1",
+    });
+    expect(csp).toContain("report-uri https://app.pruva.mx/api/csp-report; report-to csp");
+    const headers = buildSecurityHeaders({
+      nonce: "n",
+      isDev: false,
+      enableHsts: false,
+      reportOrigin: "https://app.pruva.mx",
+    });
+    expect(headers["Reporting-Endpoints"]).toBe('csp="https://app.pruva.mx/api/csp-report"');
+    for (const bad of [undefined, "javascript:alert(1)", "nada"]) {
+      expect(reportEndpoint(bad)).toBeNull();
+      expect(
+        buildContentSecurityPolicy({ nonce: "n", isDev: false, reportOrigin: bad }),
+      ).not.toContain("report-");
+    }
   });
 });

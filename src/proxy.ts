@@ -55,6 +55,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     nonce,
     isDev: process.env.NODE_ENV === "development",
     storageOrigin: env.NEXT_PUBLIC_SUPABASE_URL,
+    reportOrigin: env.APP_URL,
     enableHsts: process.env.NODE_ENV === "production",
   });
 

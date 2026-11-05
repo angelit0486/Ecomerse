@@ -472,7 +472,7 @@ Cada hallazgo lleva: evidencia, qué pasa si no se atiende y a qué paso del pla
 - Botón «Ayuda» en cada pantalla con 5 a 8 guías cortas y capturas, escritas en español de México.
 - **Tiempo:** 2 días.
 
-**Paso 23. Seguridad pendiente.** 🤖 y 🧑
+**Paso 23. Seguridad pendiente.** 🤖 y 🧑 · **2026-11-05: CSP con reportes hecho (D-MEJ-16); vigencia del enlace propuesta como ADR-062; `pg_net` y contraseñas filtradas esperan al propietario**
 
 - Vigencia del enlace de invitado.
 - CSP con `report-to`.
