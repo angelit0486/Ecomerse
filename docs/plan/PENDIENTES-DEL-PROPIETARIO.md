@@ -30,7 +30,7 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 
 ## E. Aprobar (responde con los números)
 
-- **ADR-063, Apariencia avanzada:** aprobado el 2026-11-05; la fase B-1 (Personalidad) está hecha. Para que una tienda la use (y para que se vea la personalidad de su plantilla), enciende «Personalidad del diseño» en Ajustes → Funciones de esa tienda. Antes de desplegar, aplicar en staging la migración `20261105001000` (con tu aprobación).
+- **ADR-063, Apariencia avanzada:** aprobado el 2026-11-05; la fase B-1 (Personalidad) está hecha. Para que una tienda la use (y para que se vea la personalidad de su plantilla), enciende «Personalidad del diseño» en Ajustes → Funciones de esa tienda. La migración `20261105001000` ya está en staging y el código está desplegado (2026-11-10).
 - **ADR-062, enlace de pedido de invitado:** ¿A (180 días desde la última actividad, con «Mandarme un enlace nuevo») o B (90 días fijos)? Recomiendo A.
 - **`pg_net` fuera de `public` (paso 23):** el aviso de Supabase pide moverla al esquema `extensions`. Hacerlo en staging toca una extensión de la base y no encontré en la documentación oficial cómo moverla sin reinstalarla [NO VERIFICADO]; la uso para comprobar cada migración de staging. Respóndeme «sí pg_net» y lo preparo con su plan de reversa antes de tocar nada.
 
@@ -51,4 +51,4 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 
 ## G. Opcional, para que yo pruebe más desde aquí
 
-22. **En el entorno de esta sesión** (menú del título → Edit → Network access), permite `api.mercadopago.com`, `www.mercadopago.com.mx` y `*.vercel.app`. Guarda el token de prueba de Mercado Pago como secreto del entorno. Toma efecto en una sesión nueva.
+22. **Entorno «PRUVA» de esta sesión:** ya permite los dominios de staging (`pruva-panel-demo`, `pruva-tienda-demo2` y `ecomerse-amber` en `vercel.app`, 2026-11-10). Para probar Mercado Pago faltan `api.mercadopago.com` y `www.mercadopago.com.mx`, y su token de prueba como secreto del entorno; te lo pediré con una tarjeta segura cuando lleguemos a ese paso.
