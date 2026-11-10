@@ -166,7 +166,7 @@ select ok(not has_function_privilege('authenticated', 'app.platform_store_hostna
           and not has_function_privilege('authenticated', 'app.store_creation_defaults(uuid, text, uuid)', 'execute')
           and not has_function_privilege('anon', 'app.store_creation_defaults(uuid, text, uuid)', 'execute'),
           'las funciones de app no se exponen');
-select is(public.app_schema_version(), '20261110000200', 'versión de la base');
+select is(public.app_schema_version(), '20261110000300', 'versión de la base');
 
 select * from finish();
 rollback;

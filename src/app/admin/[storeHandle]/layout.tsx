@@ -42,6 +42,7 @@ export default async function StoreLayout({ children, params }: Props) {
   const showHelp = flags.some((f) => f.key === "panel_help" && f.enabled);
   const showHealth = flags.some((f) => f.key === "store_health" && f.enabled);
   const showEmailTexts = flags.some((f) => f.key === "email_texts" && f.enabled);
+  const showProfit = flags.some((f) => f.key === "profit_report" && f.enabled);
   const billingNotice = planNotice(billing?.subscription ?? null);
 
   const base = `/admin/${ctx.store.handle}`;
@@ -71,6 +72,15 @@ export default async function StoreLayout({ children, params }: Props) {
           href: `${base}/descuentos`,
           label: "Descuentos",
           show: hasPermission(ctx, "discounts.read"),
+        },
+        {
+          href: `${base}/rentabilidad`,
+          label: "Rentabilidad",
+          // Interruptor profit_report; el costo es dato reservado.
+          show:
+            showProfit &&
+            hasPermission(ctx, "analytics.read") &&
+            hasPermission(ctx, "products.cost.read"),
         },
       ]),
     },

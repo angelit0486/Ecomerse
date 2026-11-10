@@ -21,8 +21,8 @@ $$;
 select ok(pg_temp.on_(tests.fx('store_a'), 'hero_image_carousel')
           and pg_temp.on_(tests.fx('store_b'), 'hero_image_carousel'),
           'la portada de imágenes nace encendida en todas las tiendas');
-select is((select count(*)::int from public.feature_flags where store_toggle), 12,
-          'doce funciones que la tienda puede cambiar (theme_personality, ADR-063)');
+select is((select count(*)::int from public.feature_flags where store_toggle), 13,
+          'trece funciones que la tienda puede cambiar (profit_report, 2026-11-10)');
 
 select tests.login('viewer');
 select throws_ok(format($$ select public.store_set_feature(%L, 'hero_image_carousel', false) $$, tests.fx('store_a')),

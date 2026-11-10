@@ -154,6 +154,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Crear tiendas en la demostración (D-MEJ-24, autorizado el 2026-11-10: «Autorizo N-1»): dirección temporal `pruva-tienda-<dirección>.vercel.app`, alta en Vercel por job y funciones encendidas al nacer (migración `20261110000200`). Rol de plataforma del propietario restaurado en staging con auditoría.
   - Suites con Node 24: verify 1269, pgTAP 2908, E2E 148/148.
   - Informe para el propietario: «PRUVA — Diagnóstico integral e informe ejecutivo» (Claude Docs).
+  - Staging y despliegue (2026-11-10): migración `20261110000200` aplicada desde `88edc6d` con su sha256 (162 = repo); rama de Vercel `bf34410..88edc6d`; CI 210 verde. Primera tienda creada por el propietario (`tenis`), dirección `pruva-tienda-tenis.vercel.app` agregada a mano en Vercel (falta `VERCEL_DOMAINS_TOKEN`).
+- Reporte de rentabilidad (D-MEJ-25, interruptor `profit_report` apagado, migración `20261110000300`): suites con Node 24 en verde (verify 1275, pgTAP 2935, integración 437, E2E 149/149). Pendiente de aplicar en staging y desplegar.
 
 ## Bloqueos (requieren al propietario)
 

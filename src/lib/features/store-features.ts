@@ -65,6 +65,12 @@ export const STORE_FEATURES: Record<string, StoreFeatureCopy> = {
       "Una pantalla con lo que falta o está por fallar: avisos, pagos, envíos, productos sin foto o sin existencias, políticas, uso de tu plan y pedidos que esperan.",
     where: "Este panel, junto a «Avisos»",
   },
+  profit_report: {
+    title: "Rentabilidad",
+    description:
+      "Cuánto te dejó lo que vendiste después del costo de cada producto: utilidad y margen por producto y por pedido. Necesita que captures el costo de tus productos.",
+    where: "Este panel, en «Vender» → Rentabilidad",
+  },
   email_texts: {
     title: "Correos con tu texto",
     description:
