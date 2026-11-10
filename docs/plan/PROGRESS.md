@@ -146,6 +146,8 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Entorno de sesión «PRUVA» (aprobado por el propietario): solo esos dominios de staging permitidos.
   - Informe para el propietario: «Auditoría PRUVA: lo construido y lo que falta» (Claude Docs).
 
+- ADR-062 A (aprobado el 2026-11-10, «Continúa con lo más recomendado»): enlace del pedido de invitado con vigencia de 180 días desde la última actividad y «Mandarme un enlace nuevo» (D-MEJ-23, migración `20261110000100`). Facturapi elegido para el ADR-058.
+
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                       | Efecto                                                      |

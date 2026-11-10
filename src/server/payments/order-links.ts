@@ -10,9 +10,18 @@ import { constantTimeEqual } from "@/server/security/hmac";
 const IDEM_RE = /^[A-Za-z0-9_-]{16,100}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-export function guestToken(secret: string, idempotencyKey: string): string {
+/**
+ * ADR-062: cada «enlace nuevo» sube la generación y cambia el token; la 0 es el
+ * del checkout y se calcula igual que siempre (los enlaces ya enviados siguen valiendo).
+ */
+export function guestToken(secret: string, idempotencyKey: string, generation = 0): string {
   if (!IDEM_RE.test(idempotencyKey)) throw new Error("clave de idempotencia inválida");
-  return createHmac("sha256", secret).update(`order-guest:${idempotencyKey}`).digest("base64url");
+  if (!Number.isInteger(generation) || generation < 0 || generation > 10_000)
+    throw new Error("generación inválida");
+  const base = `order-guest:${idempotencyKey}`;
+  return createHmac("sha256", secret)
+    .update(generation === 0 ? base : `${base}:g${generation}`)
+    .digest("base64url");
 }
 
 export function tokenHash(token: string): Buffer {

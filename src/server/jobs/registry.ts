@@ -183,6 +183,8 @@ const handlers: Array<[string, JobHandler]> = [
   ["return.rejected", lazy("return.rejected", orderNotifications)],
   ["order.created", lazy("order.created", orderNotifications)],
   ["order.paid", lazy("order.paid", orderNotifications)],
+  // ADR-062: enlace nuevo del pedido de invitado.
+  ["order.link_renewed", lazy("order.link_renewed", orderNotifications)],
   ["import.commit", lazy("import.commit", imports)],
   ["compliance.recheck", lazy("compliance.recheck", compliance)],
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],

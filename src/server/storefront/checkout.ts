@@ -206,6 +206,51 @@ export async function guestOrder(
   };
 }
 
+/**
+ * ADR-062: estado del enlace del invitado cuando el pedido no se muestra:
+ * «expired» (pasaron 180 días sin actividad), «replaced» (ya se pidió uno nuevo),
+ * «ok» o null (no coincide; la página responde el mismo 404).
+ */
+export type GuestLinkState = "ok" | "expired" | "replaced" | null;
+
+export async function guestLinkState(
+  storeId: string,
+  orderId: string,
+  token: string,
+): Promise<GuestLinkState> {
+  const [row] = await gatewayDb()<{ value: GuestLinkState }[]>`
+    select storefront.guest_link_state(${storeId}, ${orderId}, ${tokenHash(token)}) as value`;
+  return row?.value ?? null;
+}
+
+/**
+ * «Mandarme un enlace nuevo»: la base dice qué generación sigue (solo con un
+ * enlace vencido o reemplazado), aquí se calcula su token con el secreto y la
+ * base guarda solo su sha256 y encola el correo al email del pedido.
+ */
+export async function renewGuestLink(
+  storeId: string,
+  orderId: string,
+  token: string,
+): Promise<"sent" | "too_soon" | "ok" | null> {
+  const hash = tokenHash(token);
+  const [info] = await gatewayDb()<{ value: { key: string; generation: number } | null }[]>`
+    select storefront.guest_link_renewal(${storeId}, ${orderId}, ${hash}) as value`;
+  if (!info?.value) return (await guestLinkState(storeId, orderId, token)) === "ok" ? "ok" : null;
+  const { key, generation } = info.value;
+  const next = guestToken(serverEnv().ORDER_LINK_SECRET, key, generation);
+  try {
+    const [row] = await gatewayDb()<{ value: "sent" | "too_soon" | "ok" | null }[]>`
+      select storefront.renew_guest_link(${storeId}, ${orderId}, ${hash}, ${tokenHash(next)},
+                                         ${generation}::integer) as value`;
+    return row?.value ?? null;
+  } catch (error) {
+    // Dos clics a la vez: el segundo llega con una generación vieja. Ya se envió uno.
+    if (toAppError(error).code === "conflict") return "too_soon";
+    throw error;
+  }
+}
+
 export async function retryPayment(
   storeId: string,
   orderId: string,

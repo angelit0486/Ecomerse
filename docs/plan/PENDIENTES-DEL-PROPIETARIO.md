@@ -31,14 +31,13 @@ En orden. Cada paso se hace desde el celular. Nunca pegues claves en el chat: va
 ## E. Aprobar (responde con los números)
 
 - **ADR-063, Apariencia avanzada:** aprobado el 2026-11-05; la fase B-1 (Personalidad) está hecha. Para que una tienda la use (y para que se vea la personalidad de su plantilla), enciende «Personalidad del diseño» en Ajustes → Funciones de esa tienda. La migración `20261105001000` ya está en staging y el código está desplegado (2026-11-10).
-- **ADR-062, enlace de pedido de invitado:** ¿A (180 días desde la última actividad, con «Mandarme un enlace nuevo») o B (90 días fijos)? Recomiendo A.
 - **`pg_net` fuera de `public` (paso 23):** el aviso de Supabase pide moverla al esquema `extensions`. Hacerlo en staging toca una extensión de la base y no encontré en la documentación oficial cómo moverla sin reinstalarla [NO VERIFICADO]; la uso para comprobar cada migración de staging. Respóndeme «sí pg_net» y lo preparo con su plan de reversa antes de tocar nada.
 
 11. **Aplicar en staging** las migraciones `20261104000100` y `20261104000200`, y encender en `demo2` `checkout_shipping_messages` y `mobile_input_size`.
 12. **ADR-056:** correo «pendiente de pago» para OXXO y transferencia.
 13. **ADR-053:** lista de categorías bloqueadas (vapes, THC y las demás). Así no se pueden volver a publicar.
 14. **ADR-057:** guías automáticas. ¿Skydropx o Envia.com?
-15. **ADR-058:** facturación CFDI. ¿Facturapi o Facturama?
+15. **ADR-058, facturación CFDI con Facturapi** (elegido el 2026-11-10): crea la cuenta de pruebas de Facturapi y guarda su llave como secreto del entorno; con eso lo construyo.
 16. **ADR-051, ADR-052, ADR-054, ADR-055:** respaldo de Mercado Pago, fraude, datos enmascarados y borrado de compradores.
 
 ## F. Antes del primer cliente real (días, con terceros)

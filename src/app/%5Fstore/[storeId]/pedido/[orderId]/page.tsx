@@ -7,7 +7,7 @@ import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { isGuestTokenShape } from "@/server/payments/order-links";
-import { guestOrder } from "@/server/storefront/checkout";
+import { guestLinkState, guestOrder } from "@/server/storefront/checkout";
 import { returnOptions } from "@/server/storefront/returns";
 import { mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
@@ -15,6 +15,7 @@ import { orderReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../_components/format";
 import { Totals } from "../../_components/totals";
+import { ExpiredLink } from "./expired-link";
 import { RetryPayment } from "./retry-form";
 import { sendReturn } from "./return-actions";
 import { sendReview } from "./review-actions";
@@ -41,7 +42,15 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const t = (await searchParams).t;
   if (!UUID_RE.test(orderId) || typeof t !== "string" || !isGuestTokenShape(t)) notFound();
   const order = await guestOrder(store.id, orderId, t);
-  if (!order) notFound();
+  if (!order) {
+    // ADR-062: con el enlace correcto pero vencido (o ya reemplazado), se ofrece uno
+    // nuevo por correo; con cualquier otro token, el mismo 404 de siempre.
+    const link = await guestLinkState(store.id, orderId, t);
+    if (link === "expired" || link === "replaced") {
+      return <ExpiredLink storeId={storeId} orderId={orderId} token={t} state={link} />;
+    }
+    notFound();
+  }
 
   // Solo pedidos pagados y entregados ofrecen opinar (lo decide la base, ADR-029).
   // Un fallo al leer las opiniones no tumba la página del pedido.

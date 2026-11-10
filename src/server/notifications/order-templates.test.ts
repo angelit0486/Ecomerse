@@ -6,6 +6,7 @@ import {
   orderConfirmationEmail,
   orderPendingPaymentEmail,
   orderDeliveredEmail,
+  orderLinkEmail,
   orderShippedEmail,
   paymentMethodLabel,
   staffOrderEmail,
@@ -341,5 +342,18 @@ describe("devoluciones (ADR-061)", () => {
     expect(m.text).toContain("Motivo: Llegó dañado");
     expect(m.html).toContain("El asa &lt;b&gt;venía&lt;/b&gt; rota");
     expect(m.html).toContain("https://app.test/admin/x/pedidos/devoluciones/1");
+  });
+});
+
+describe("enlace nuevo del pedido (ADR-062)", () => {
+  it("lleva el enlace, dice que el anterior ya no sirve y escapa los datos", () => {
+    const m = orderLinkEmail(base, "c@x.test");
+    expect(m.to).toBe("c@x.test");
+    expect(m.subject).toBe("Tu enlace para ver el pedido #1001");
+    expect(m.html).toContain('href="https://tienda.test/pedido/1?t=abc"');
+    expect(m.html).toContain("El enlace anterior ya no funciona");
+    expect(m.html).not.toContain("<script>");
+    expect(m.text).toContain("Tu pedido: https://tienda.test/pedido/1?t=abc");
+    expect(m.text).toContain("Si no lo pediste tú");
   });
 });

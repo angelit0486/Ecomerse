@@ -10,6 +10,7 @@ import { alreadyDelivered, payloadId, sendNotification } from "./handlers";
 import { fetchStoreText } from "./store-texts-db";
 import {
   orderCancelledEmail,
+  orderLinkEmail,
   orderConfirmationEmail,
   orderPendingPaymentEmail,
   orderDeliveredEmail,
@@ -64,6 +65,8 @@ interface OrderNotification {
     status: string;
     payment_status: string;
     checkout_idempotency_key: string | null;
+    /** ADR-062: generación vigente del enlace (0 = la del checkout). */
+    guest_link_generation?: number;
   };
   items: (Omit<OrderEmailData["items"][number], "image_url"> & { image_path?: string | null })[];
   payment: {
@@ -122,7 +125,9 @@ export function createOrderNotificationHandlers(
       })),
       orderUrl:
         origin && key
-          ? `${origin}/pedido/${n.order.id}?t=${encodeURIComponent(guestToken(deps.linkSecret, key))}`
+          ? `${origin}/pedido/${n.order.id}?t=${encodeURIComponent(
+              guestToken(deps.linkSecret, key, n.order.guest_link_generation ?? 0),
+            )}`
           : null,
       payment: n.payment,
       shipment: n.shipment ?? null,
@@ -292,6 +297,22 @@ export function createOrderNotificationHandlers(
     );
   };
 
+  /** ADR-062: enlace nuevo del pedido, solo al correo del pedido. Una vez por generación. */
+  const linkRenewed: JobHandler = async (job, { log }) => {
+    const generation = (job.payload as { generation?: unknown }).generation;
+    const n = await load(job);
+    if (!n) return log.info("Pedido inexistente: nada que avisar");
+    // Si ya se pidió otro enlace, este correo llevaría uno que ya no sirve.
+    if (typeof generation !== "number" || n.order.guest_link_generation !== generation) return;
+    await deliver(
+      job,
+      n,
+      `${n.order.id}:g${generation}`,
+      "order_link",
+      orderLinkEmail(emailData(n), n.order.email),
+    );
+  };
+
   const afterCancel: JobHandler = async (job, { log }) => {
     const n = await load(job);
     if (!n) return log.info("Pedido inexistente: nada que avisar");
@@ -378,5 +399,6 @@ export function createOrderNotificationHandlers(
     ["return.requested", returnRequested],
     ["return.approved", returnDecided(true)],
     ["return.rejected", returnDecided(false)],
+    ["order.link_renewed", linkRenewed],
   ];
 }

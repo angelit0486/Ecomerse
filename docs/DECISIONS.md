@@ -1460,7 +1460,7 @@ Modelo de amenazas: `docs/audit/AMENAZAS.md`. Registro de riesgos: `docs/audit/R
   2. ¿La guía la paga la tienda con su saldo? Recomendado: sí; la plataforma no cobra envíos.
 - **Tiempo:** 3–5 días después de tener la cuenta de pruebas del agregador.
 
-### ADR-058 — Facturación CFDI 4.0 para los compradores · **APROBADO 2026-11-04** (PAC por confirmar; recomendado Facturapi; falta la cuenta de pruebas)
+### ADR-058 — Facturación CFDI 4.0 para los compradores · **APROBADO 2026-11-04; PAC: Facturapi (2026-11-10, «Continúa con lo más recomendado»)** (falta la cuenta de pruebas)
 
 - **Hoy:** no existe. La tienda solo guarda su RFC (`stores.tax_id`).
 - **Propuesta:** un PAC con API, **Facturapi** o **Facturama**.
@@ -1557,14 +1557,14 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - **B-2 (siguiente):** variantes de encabezado y de portada, fondo y separador de secciones.
   - **B-3 (después, se justifica antes de instalar):** las 6 familias tipográficas nuevas (dependencias, regla 16) y el modo oscuro con contraste validado.
 
-### ADR-062 — Vigencia del enlace de pedido de invitado · **PROPUESTO, espera decisión del propietario**
+### ADR-062 — Vigencia del enlace de pedido de invitado · **APROBADO opción A el 2026-11-10 («Continúa con lo más recomendado»); hecho (D-MEJ-23)**
 
 - **Hoy (verificado en el código):** el token del enlace se deriva de la clave de idempotencia del checkout (`guestToken`) y no vence. Quien tenga un correo viejo ve el pedido para siempre.
 - **Por qué ADR:** el token es parte del contrato de Checkout (`place_order → guest_token`, GATE0 §43) y de la página del pedido (§16.5).
 - **Opción A (recomendada):** el enlace vale 180 días desde la última actividad del pedido (pago, envío, entrega o devolución). Al vencer, la página ofrece «Mandarme un enlace nuevo» al correo del pedido, que renueva la vigencia sin mostrar nada.
 - **Opción B:** 90 días fijos, sin renovación; quien tenga cuenta usa «Mi cuenta».
 - **Lo que no cambia:** el token sigue sin guardarse en claro (solo su sha256) y una tienda nunca ve pedidos de otra.
-- **Pregunta:** ¿A o B?
+- **Decisión:** A. Implementada en D-MEJ-23.
 
 - **D-MEJ-08. Notas de empaque (auditoría global, paso 21).** Interruptor por tienda `order_printing` (apagado; la tienda lo enciende en Ajustes → Funciones).
   - **Pantallas:** `/pedidos/[id]/imprimir` (un pedido) y `/pedidos/imprimir` (hasta 50 de «Por surtir», del más antiguo al más reciente).
@@ -1660,6 +1660,12 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
     7. Un valor ajeno a la lista en «Personalidad» se marca en su campo en lugar de cambiarse en silencio.
   - **Además:** el resumen de lo pegado no bloquea al escribir con miles de filas (y al enviar se usa el texto del momento), Apariencia lee los interruptores en paralelo, el selector de títulos es uno solo para la fuente y la personalidad, y la página del importe compara la clave `hoja` y no su texto.
   - **Despliegue de la rama:** sin variables de entorno nuevas ni cambios en `vercel.json`; Vercel admite Node 24 (`engines`), según su documentación.
+- **D-MEJ-23. Vigencia del enlace del pedido de invitado (ADR-062 A).** Migración aditiva `20261110000100`; los pedidos no se tocan (siguen inmutables).
+  - **Vigencia:** 180 días desde la última actividad del pedido: su creación o cualquier cambio del pedido, de sus envíos o de sus devoluciones, o la última renovación (`app.order_last_activity`). Ver el pedido, opinar y pedir una devolución exigen el enlace vigente (`app.guest_order_access = 'ok'`).
+  - **Vencido:** la página dice «Este enlace venció» sin mostrar nada del pedido y ofrece «Mandarme un enlace nuevo». La app calcula el token de la generación siguiente (HMAC con `ORDER_LINK_SECRET`; la generación 0 es el de siempre, así que los correos ya enviados siguen valiendo) y la base guarda solo su sha256 en `order_guest_links` (RLS forzado; la ve quien tiene `orders.read`).
+  - **El correo:** «Tu enlace para ver el pedido» va solo al email del pedido; los correos siguientes del pedido ya llevan el enlace nuevo. El anterior queda «reemplazado» (la página lo dice y deja pedir otro). Uno por hora por pedido; cada renovación queda en la auditoría.
+  - **Sin cambio:** reintentar el pago (un pedido sin pagar vence en horas) y un token cualquiera sigue dando el mismo 404.
+  - **Pruebas:** pgTAP 136 (vigente, vencido, renovación, reemplazado, límite por hora, aislamiento entre tiendas, RLS y permisos), unitarias (token por generación y correo), integración (el correo sale una vez y los siguientes usan el enlace nuevo) y E2E `guest-link-expiry`.
 - **D-MEJ-14. Node 24 (auditoría global, paso 14; aprobado el 2026-11-05).** `.nvmrc` = 24 y `engines.node` = `>=24.0.0 <25`. El CI toma la versión de `.nvmrc`; Vercel toma la de `engines`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.

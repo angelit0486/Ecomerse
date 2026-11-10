@@ -258,3 +258,38 @@ describe("notificaciones de pedidos", () => {
     });
   });
 });
+
+describe("enlace nuevo del pedido (ADR-062)", () => {
+  it("sale una sola vez, con el enlace nuevo, y los correos siguientes ya lo usan", async () => {
+    const { orderId, idem } = await placeOrder("manual", "Ana");
+    const current = createHash("sha256").update(idem).digest();
+    // Sin actividad en 181 días: el enlace venció.
+    await admin.begin(async (sql) => {
+      await sql`set local session_replication_role = replica`;
+      await sql`update public.orders set created_at = now() - interval '200 days',
+                                         updated_at = now() - interval '181 days' where id = ${orderId}`;
+    });
+    const next = guestToken(SECRET, idem, 1);
+    const [r] = await admin<{ v: string }[]>`
+      select storefront.renew_guest_link(${storeId}, ${orderId}, ${current},
+             ${createHash("sha256").update(next).digest()}, 1) as v`;
+    expect(r!.v).toBe("sent");
+
+    await runJob("order.link_renewed", { order_id: orderId, generation: 1 });
+    await runJob("order.link_renewed", { order_id: orderId, generation: 1 });
+    // Un aviso de una generación que ya no es la vigente no sale.
+    await runJob("order.link_renewed", { order_id: orderId, generation: 2 });
+    expect(channel.sent).toHaveLength(1);
+    const link = `https://nt-${run}.pruva.test/pedido/${orderId}?t=${next}`;
+    expect(channel.sent[0]!.to).toBe("comprador@example.test");
+    expect(channel.sent[0]!.subject).toContain("Tu enlace para ver el pedido");
+    expect(channel.sent[0]!.html).toContain(link);
+    expect(channel.sent[0]!.html).not.toContain(guestToken(SECRET, idem));
+
+    // «Recibimos tu pedido» (lleva el enlace) sale con la generación vigente.
+    await runJob("order.created", { order_id: orderId });
+    const received = channel.sent.find((m) => m.subject.startsWith("Recibimos tu pedido"))!;
+    expect(received.to).toBe("comprador@example.test");
+    expect(received.html).toContain(link);
+  });
+});

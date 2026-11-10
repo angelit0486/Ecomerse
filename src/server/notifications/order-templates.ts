@@ -412,6 +412,31 @@ export function refundIssuedEmail(d: OrderEmailData, to: string): EmailMessage {
   );
 }
 
+/**
+ * ADR-062: el comprador pidió un enlace nuevo porque el anterior venció. Lleva
+ * solo el enlace (el pedido se ve al abrirlo); el anterior ya no sirve.
+ */
+export function orderLinkEmail(d: OrderEmailData, to: string): EmailMessage {
+  const subject = `Tu enlace para ver el pedido ${d.order.display_number}`;
+  const ignore = "Si no lo pediste tú, puedes ignorar este correo: nadie más lo recibe.";
+  return message(
+    d,
+    to,
+    subject,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Aquí está tu enlace nuevo para ver el pedido <strong>${escapeHtml(d.order.display_number)}</strong>. El enlace anterior ya no funciona.</p>${
+      d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""
+    }<p style="color:#555;font-size:13px">${escapeHtml(ignore)}</p>`,
+    [
+      `Hola, ${d.order.customer_name}:`,
+      "",
+      `Aquí está tu enlace nuevo para ver el pedido ${d.order.display_number}. El enlace anterior ya no funciona.`,
+      d.orderUrl ? `Tu pedido: ${d.orderUrl}` : "",
+      "",
+      ignore,
+    ],
+  );
+}
+
 export type StaffEmailKind =
   "new" | "paid" | "attention" | "paid_after_cancel" | "chargeback" | "external_refund";
 
