@@ -91,6 +91,8 @@ export async function createTenant(_: ConsoleState, formData: FormData): Promise
             p_plan_key: text(formData, "plan"),
           },
         );
+        // Invitación y alta de la dirección en el hosting, sin esperar al cron.
+        processQueueSoon("platform.create_tenant");
         return `Tienda creada en ${result.hostname}. Enviamos la invitación al dueño.`;
       },
       "/platform",
@@ -120,6 +122,7 @@ export async function addStore(
           p_store_name: text(formData, "store_name"),
           p_store_handle: text(formData, "store_handle"),
         });
+        processQueueSoon("platform.add_store");
         return `Tienda creada en ${result.hostname}. La dueña ya la ve en su selector de tiendas; ahí elige una plantilla en «Configura tu tienda» o copia el diseño de otra de sus tiendas en Apariencia.`;
       },
       "/platform",

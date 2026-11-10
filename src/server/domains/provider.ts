@@ -14,6 +14,14 @@ export interface DomainProvider {
   state(hostname: string): Promise<ProviderState>;
 }
 
+/** El dominio ya lo tiene otro proyecto del hosting: reintentar no sirve. */
+export class DomainTakenError extends Error {
+  constructor(hostname: string) {
+    super(`el dominio ${hostname} ya está en otro proyecto`);
+    this.name = "DomainTakenError";
+  }
+}
+
 export const notConfiguredProvider: DomainProvider = {
   add: async () => ({ ref: null }),
   state: async () => "not_configured",
@@ -49,8 +57,15 @@ export function vercelDomainProvider(config: VercelConfig): DomainProvider {
         method: "POST",
         body: JSON.stringify({ name: hostname }),
       });
-      // 409: ya está en este proyecto (reintento del job).
-      if (res.ok || res.status === 409) return { ref: config.projectId };
+      if (res.ok) return { ref: config.projectId };
+      if (res.status === 409) {
+        // 409 = ya existe: en ESTE proyecto (reintento del job) o en otro. Solo
+        // se acepta si el proyecto lo tiene.
+        const own = await call(`/v9/projects/${project}/domains/${encodeURIComponent(hostname)}`);
+        if (own.ok) return { ref: config.projectId };
+        if (own.status === 404) throw new DomainTakenError(hostname);
+        throw new Error(`vercel domain lookup: ${own.status}`);
+      }
       throw new Error(`vercel add domain: ${res.status}`);
     },
     async state(hostname) {

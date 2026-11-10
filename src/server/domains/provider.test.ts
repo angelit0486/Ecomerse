@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { vercelDomainProvider, verificationRecordName } from "./provider";
+import { DomainTakenError, vercelDomainProvider, verificationRecordName } from "./provider";
 
 function fakeFetch(routes: Record<string, [number, unknown]>, seen: string[] = []) {
   return (async (input: URL | RequestInfo, init?: RequestInit) => {
@@ -18,15 +18,45 @@ const base = {
 };
 
 describe("vercelDomainProvider", () => {
-  it("agrega el dominio al proyecto (y tolera que ya esté)", async () => {
+  it("agrega el dominio al proyecto", async () => {
     const seen: string[] = [];
     const p = vercelDomainProvider({
       ...base,
       teamId: "team_abcdefghijk",
-      fetch: fakeFetch({ "POST /v10/projects/prj_abcdefghijk/domains": [409, {}] }, seen),
+      fetch: fakeFetch({ "POST /v10/projects/prj_abcdefghijk/domains": [200, {}] }, seen),
     });
     expect(await p.add("www.mitienda.mx")).toEqual({ ref: "prj_abcdefghijk" });
     expect(seen).toEqual(["POST /v10/projects/prj_abcdefghijk/domains?teamId=team_abcdefghijk"]);
+  });
+
+  it("si ya existe, lo acepta solo cuando está en ESTE proyecto", async () => {
+    const seen: string[] = [];
+    const conflict = (lookup: number) =>
+      vercelDomainProvider({
+        ...base,
+        fetch: fakeFetch(
+          {
+            "POST /v10/projects/prj_abcdefghijk/domains": [409, {}],
+            "GET /v9/projects/prj_abcdefghijk/domains/pruva-tienda-cafe.vercel.app": [lookup, {}],
+          },
+          seen,
+        ),
+      });
+    // Reintento del job: ya está en el proyecto.
+    expect(await conflict(200).add("pruva-tienda-cafe.vercel.app")).toEqual({
+      ref: "prj_abcdefghijk",
+    });
+    expect(seen).toEqual([
+      "POST /v10/projects/prj_abcdefghijk/domains",
+      "GET /v9/projects/prj_abcdefghijk/domains/pruva-tienda-cafe.vercel.app",
+    ]);
+    // Lo tiene otro proyecto: no se da por agregado.
+    await expect(conflict(404).add("pruva-tienda-cafe.vercel.app")).rejects.toBeInstanceOf(
+      DomainTakenError,
+    );
+    await expect(conflict(500).add("pruva-tienda-cafe.vercel.app")).rejects.toThrow(
+      "vercel domain lookup: 500",
+    );
   });
 
   it("listo solo con el dominio verificado y el DNS bien configurado", async () => {

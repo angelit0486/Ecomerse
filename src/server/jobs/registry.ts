@@ -190,6 +190,8 @@ const handlers: Array<[string, JobHandler]> = [
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
   ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],
   ["domains.verify", lazy("domains.verify", domains)],
+  // Dirección de la plataforma de una tienda nueva (2026-11-10).
+  ["domains.attach_platform", lazy("domains.attach_platform", domains)],
   ["carts.recover", lazy("carts.recover", cartRecovery)],
   ["stores.weekly_summary", lazy("stores.weekly_summary", weeklySummary)],
 ];

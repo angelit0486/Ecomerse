@@ -45,10 +45,21 @@ describe("toAppError", () => {
   });
 
   it("P0001 desconocido o 'internal' → internal, sin filtrar el mensaje", () => {
-    const error = toAppError({ code: "P0001", message: "platform_not_configured" });
+    const error = toAppError({ code: "P0001", message: "something_unknown" });
     expect(error.code).toBe("internal");
-    expect(error.message).not.toContain("platform_not_configured");
+    expect(error.message).not.toContain("something_unknown");
     expect(toAppError({ code: "P0001", message: "internal" }).code).toBe("internal");
+  });
+
+  it("plataforma sin dominio de tiendas: dice qué falta, sin filtrar el código", () => {
+    const error = toAppError({
+      code: "P0001",
+      message: "platform_not_configured",
+      details: "platform_settings.storefront.root_domain",
+    });
+    expect(error.code).toBe("conflict");
+    expect(error.message).toContain("dominio de las tiendas");
+    expect(error.message).not.toContain("platform_settings");
   });
 
   it("errores de integridad y de JWT", () => {

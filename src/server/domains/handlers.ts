@@ -3,6 +3,7 @@ import { PermanentJobError, type JobHandler } from "@/server/jobs/types";
 import { UUID_RE } from "@/server/notifications/handlers";
 
 import {
+  DomainTakenError,
   verificationRecordName,
   type DomainProvider,
   type ProviderState,
@@ -67,5 +68,42 @@ export function createDomainHandlers(deps: DomainDeps): Array<[string, JobHandle
       provider: state,
     });
   };
-  return [["domains.verify", verify]];
+
+  /**
+   * Job `domains.attach_platform`: da de alta en el hosting la dirección de la
+   * plataforma de una tienda nueva (p. ej. `pruva-tienda-<dirección>.vercel.app`)
+   * y lo anota. Sin proveedor configurado no hace nada (se da de alta a mano).
+   */
+  const attachPlatform: JobHandler = async (job, { log }) => {
+    const id = job.payload.domain_id;
+    if (typeof id !== "string" || !UUID_RE.test(id)) {
+      throw new PermanentJobError("payload.domain_id inválido");
+    }
+    const [row] = await deps.db<{ target: { store_id: string; hostname: string } | null }[]>`
+      select system.domains_platform_target(${id}) as target
+    `;
+    const target = row?.target;
+    if (!target) return; // ya dada de alta, quitada o no es de la plataforma
+
+    let ref: string | null;
+    try {
+      ref = (await deps.provider.add(target.hostname)).ref;
+    } catch (error) {
+      if (error instanceof DomainTakenError) throw new PermanentJobError(error.message);
+      throw error; // red o API: el job reintenta
+    }
+    if (!ref) {
+      log.warn("Sin proveedor de dominios: la dirección se da de alta a mano", {
+        hostname: target.hostname,
+      });
+      return;
+    }
+    await deps.db`select system.domains_platform_attached(${id}, ${ref})`;
+    log.info("Dirección de la tienda dada de alta en el hosting", { hostname: target.hostname });
+  };
+
+  return [
+    ["domains.verify", verify],
+    ["domains.attach_platform", attachPlatform],
+  ];
 }

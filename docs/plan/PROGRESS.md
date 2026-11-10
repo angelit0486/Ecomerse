@@ -151,6 +151,9 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Staging (2026-11-10): migración `20261110000100` aplicada desde `bf34410` con su sha256 verificado. Staging en `20261110000100` (161 = repo); `order_guest_links` con RLS forzado; 0 pedidos en staging, ninguno afectado.
   - Despliegue: la rama de Vercel avanzó `ef109e6..bf34410` sin reescribir historia.
   - Hallazgo: la salud de staging volvió a marcar `queue_stalled` (3 fotos y una tarea de miniaturas en cola desde las 07:51 UTC). No lo causó la migración: falta el cron de Vercel con `CRON_SECRET` (pendiente B del propietario).
+- Crear tiendas en la demostración (D-MEJ-24, autorizado el 2026-11-10: «Autorizo N-1»): dirección temporal `pruva-tienda-<dirección>.vercel.app`, alta en Vercel por job y funciones encendidas al nacer (migración `20261110000200`). Rol de plataforma del propietario restaurado en staging con auditoría.
+  - Suites con Node 24: verify 1269, pgTAP 2908, E2E 148/148.
+  - Informe para el propietario: «PRUVA — Diagnóstico integral e informe ejecutivo» (Claude Docs).
 
 ## Bloqueos (requieren al propietario)
 

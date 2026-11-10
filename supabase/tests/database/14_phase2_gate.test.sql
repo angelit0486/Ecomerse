@@ -43,7 +43,8 @@ select is((select count(*)::int from audit.audit_logs where action = 'config.ins
 select is((select count(*)::int from audit.audit_logs where action = 'config.update' and entity_type = 'subscriptions'
             and organization_id = tests.fx('org_a')), 1, 'cambio de suscripción auditado con su organización');
 insert into public.platform_settings (key, value) values ('gate.test', '{"x": 1}');
-select is((select count(*)::int from audit.audit_logs where action = 'config.insert' and entity_type = 'platform_settings'),
+select is((select count(*)::int from audit.audit_logs where action = 'config.insert' and entity_type = 'platform_settings'
+            and after ->> 'key' = 'gate.test'),
   1, 'cambio de configuración de plataforma auditado');
 
 -- Reset de MFA: no si el usuario tiene acceso en otra organización o es staff de plataforma.

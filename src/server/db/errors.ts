@@ -32,6 +32,12 @@ const BUSINESS_ALIASES: Record<string, { code: ErrorCode; message: string }> = {
     code: "forbidden",
     message: "Esta invitación es para otro email. Entra con la cuenta invitada.",
   },
+  // Sin `storefront.root_domain` no se pueden dar direcciones a tiendas nuevas.
+  platform_not_configured: {
+    code: "conflict",
+    message:
+      "Todavía no se pueden crear tiendas: falta configurar el dominio de las tiendas en la plataforma. Avísale al administrador de la plataforma.",
+  },
 };
 
 const AUTH_CODES = new Set<ErrorCode>(["unauthenticated", "mfa_required", "forbidden"]);

@@ -6,18 +6,16 @@ import { z } from "zod";
 import { formValues } from "@/lib/form-values";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
+import { processQueueSoon } from "@/server/jobs/run-now";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+
+import { newStoreErrorState, type NewStoreState } from "./errors";
 
 /**
  * ADR-038: la dueña o una administradora de la organización crea otra tienda.
  * La base decide el permiso (`org.stores.create`), la organización y el límite
  * del plan; aquí solo se traducen los errores.
  */
-export interface NewStoreState {
-  error?: string;
-  fields?: Record<string, string>;
-  values?: Record<string, string>;
-}
 
 const FIELDS = ["store_name", "store_handle"] as const;
 
@@ -39,33 +37,10 @@ export async function createStore(
       p_store_handle: String(formData.get("store_handle") ?? ""),
     });
     handle = result.handle;
+    // Alta de la dirección en el hosting (job `domains.attach_platform`).
+    processQueueSoon("org.create_store");
   } catch (error) {
-    const appError = reportActionError("org.create_store", error);
-    if (appError.code === "conflict") {
-      return {
-        error: "Ya existe una tienda con esa dirección.",
-        fields: { store_handle: "Ya existe una tienda con esa dirección. Elige otra." },
-        values,
-      };
-    }
-    if (appError.code === "limit_reached") {
-      return {
-        error: "Tu plan ya no permite más tiendas. Pide a la plataforma subir de plan.",
-        values,
-      };
-    }
-    if (appError.code === "forbidden") {
-      return { error: "Tu rol no permite crear tiendas en esta organización.", values };
-    }
-    const fields: Record<string, string> = {};
-    if (appError.fields && "store_name" in appError.fields) {
-      fields.store_name = "Escribe un nombre de 2 a 80 caracteres.";
-    }
-    if (appError.fields && "store_handle" in appError.fields) {
-      fields.store_handle =
-        "Usa de 3 a 40 minúsculas, números o guiones (sin «--» ni palabras reservadas como «admin»).";
-    }
-    return { error: appError.message, ...(Object.keys(fields).length ? { fields } : {}), values };
+    return newStoreErrorState(reportActionError("org.create_store", error), values);
   }
   // Directo a configurarla: plantilla, copiar estructura, logo y pagos.
   redirect(`/admin/${handle}/configuracion`);

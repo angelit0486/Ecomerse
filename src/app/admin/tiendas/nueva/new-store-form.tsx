@@ -5,7 +5,8 @@ import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
-import { createStore, type NewStoreState } from "./actions";
+import { createStore } from "./actions";
+import type { NewStoreState } from "./errors";
 
 /** ADR-038: nombre y dirección; lo demás se configura después, en borrador. */
 export function NewStoreForm({ organizationId }: { organizationId: string }) {
