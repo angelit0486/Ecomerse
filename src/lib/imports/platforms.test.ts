@@ -381,6 +381,18 @@ describe("hoja simple en español (Excel o Google Sheets, sin nombre corto)", ()
     expect(planned!.normalized!.product.title).toBeUndefined();
   });
 
+  it("«fila-N» también es único dentro del archivo (no choca con un producto «Fila 3»)", () => {
+    const t = translatePlatformCsv(
+      ["Producto", "Precio"],
+      [
+        ["Fila 3", "10"],
+        ["¡!", "20"],
+      ],
+      [2, 3],
+    );
+    expect(t.rows.map((r) => r[0])).toEqual(["fila-3", "fila-3-2"]);
+  });
+
   it("columnas que no entiende: las avisa y no las usa", () => {
     const t = translatePlatformCsv(["Producto", "Precio", "Color favorito"], [["Taza", "50"]], [2]);
     expect(t.ignored).toEqual(["Color favorito"]);

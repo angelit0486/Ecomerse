@@ -206,16 +206,18 @@ export function sectionPatch(section: ThemeSection, get: Get, getAll: (name: str
 }
 
 /**
- * Personalidad (tema v5): solo valores de la lista; lo que es igual a como se ve
- * hoy (el primero de cada lista, o el peso vacío) no se guarda.
+ * Personalidad (tema v5): lo que es igual a como se ve hoy (el primero de cada
+ * lista, o el peso vacío) no se guarda. Un valor ajeno a la lista se manda tal
+ * cual para que el esquema lo marque en su campo (no se cambia en silencio).
  */
 function personalityPatch(get: Get): Record<string, string> | null {
   const out: Record<string, string> = {};
   for (const key of Object.keys(PERSONALITY_OPTIONS) as PersonalityKey[]) {
-    const options = PERSONALITY_OPTIONS[key] as readonly string[];
     const value = get(key);
-    const isDefault = key === "heading_weight" ? value === "" : value === options[0];
-    if (!isDefault && options.includes(value)) out[key] = value;
+    // El peso no tiene valor «de hoy» en la lista: vacío es como hoy y «regular» es una elección.
+    const isDefault =
+      value === "" || (key !== "heading_weight" && value === PERSONALITY_OPTIONS[key][0]);
+    if (!isDefault) out[key] = value;
   }
   return Object.keys(out).length ? out : null;
 }

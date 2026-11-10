@@ -428,8 +428,8 @@ function translateSheet(
   });
   const taken = new Set<string>();
   const handleFor = (title: string, rowNumber: number): string => {
-    const base = slugify(title);
-    if (!base) return `fila-${rowNumber}`;
+    // Sin letras ni números en el nombre: «fila-N», también único dentro del archivo.
+    const base = slugify(title) || `fila-${rowNumber}`;
     let handle = base;
     for (let n = 2; taken.has(handle); n += 1) handle = `${base}-${n}`;
     taken.add(handle);

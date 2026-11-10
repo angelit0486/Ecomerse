@@ -1400,10 +1400,35 @@ export function findTemplate(key: string): StoreTemplate | undefined {
 }
 
 /** Lo que recibe `store_apply_template` (sin nombre ni descripción). */
+/**
+ * Claves de diseño que una plantilla define por completo. Las que no trae van
+ * como null (la base las quita): así no se queda la personalidad, los colores por
+ * elemento ni el encabezado de la plantilla anterior (revisión 2026-11-06). El
+ * contenido de la tienda (pie, redes, SEO, contacto y favicon) no se toca.
+ */
+export const TEMPLATE_DESIGN_KEYS = [
+  "colors",
+  "typography",
+  "shape",
+  "header",
+  "element_colors",
+  "product_page",
+  "listing",
+  "personality",
+] as const satisfies readonly (keyof ThemeSettings)[];
+
+export type TemplateSettingsPatch = {
+  [K in keyof ThemeSettings]?: ThemeSettings[K] | null;
+};
+
 export function templatePayload(t: StoreTemplate) {
+  const reset = Object.fromEntries(
+    TEMPLATE_DESIGN_KEYS.map((key) => [key, null]),
+  ) as TemplateSettingsPatch;
+  const settings: TemplateSettingsPatch = { ...reset, ...t.settings, colors: t.colors };
   return {
     key: t.key,
-    settings: { ...t.settings, colors: t.colors },
+    settings,
     home_sections: t.home_sections,
     categories: t.categories,
     products: t.products,

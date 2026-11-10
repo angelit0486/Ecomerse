@@ -196,11 +196,12 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       ) : null}
       {origin && job.status === "validated" ? (
         <div role="status" className="space-y-1 rounded-md border border-border p-3 text-sm">
-          {origin === "tu hoja" ? (
+          {sp.origen === "hoja" ? (
             <p>
               Leímos tu hoja: creamos el nombre corto de cada producto con su nombre y pasamos lo
-              demás al formato de tu tienda. Las categorías que escribiste deben existir; si alguna
-              no existe, la fila lo dice abajo.
+              demás al formato de tu tienda. Un producto con el mismo nombre que uno de tu catálogo
+              se toma como ese producto: revisa abajo cuáles se van a actualizar. Las categorías que
+              escribiste deben existir; si alguna no existe, la fila lo dice abajo.
             </p>
           ) : (
             <p>

@@ -18,6 +18,25 @@ export class PasteError extends Error {
   }
 }
 
+/**
+ * ¿La comilla en `start` abre una celda entre comillas? Solo si se cierra con una
+ * comilla seguida de tabulador, salto de línea o el final. Google Sheets no
+ * entrecomilla «"Edición" especial» (solo las celdas con saltos de línea): esa
+ * celda es texto tal cual y no debe tragarse las columnas siguientes.
+ */
+function opensQuotedCell(text: string, start: number): boolean {
+  for (let i = start + 1; i < text.length; i += 1) {
+    if (text[i] !== '"') continue;
+    if (text[i + 1] === '"') {
+      i += 1;
+      continue;
+    }
+    const next = text[i + 1];
+    return next === undefined || next === "\t" || next === "\n" || next === "\r";
+  }
+  return false;
+}
+
 /** Texto separado por tabuladores → filas. Quita las filas totalmente vacías. */
 export function parseTsv(input: string): string[][] {
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
@@ -55,7 +74,7 @@ export function parseTsv(input: string): string[][] {
       }
       continue;
     }
-    if (ch === '"' && !started) {
+    if (ch === '"' && !started && opensQuotedCell(text, i)) {
       quoted = true;
       started = true;
     } else if (ch === "\t") {

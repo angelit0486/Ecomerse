@@ -72,15 +72,18 @@ const RULES: ReadonlyArray<readonly [Good, readonly string[]]> = [
   // (bolsa): «Accesorios para celular» es un celular.
   ["ring", ["anillo", "arete", "pulsera", "joya"]],
   ["headphones", ["audifono", "audio", "bocina", "altavoz"]],
-  ["plug", ["cargador", "cable", "bateria", "adaptador"]],
+  // «Batería de cocina» no es un cargador; «Reloj inteligente» no es un foco.
+  ["plug", ["cargador", "cable", "bateria externa", "power bank", "adaptador"]],
   ["phone", ["celular", "telefono", "smartphone"]],
-  ["bulb", ["inteligente", "foco", "bombilla"]],
+  ["bulb", ["foco", "bombilla", "hogar inteligente", "casa inteligente"]],
   ["notebook", ["cuaderno", "libreta", "agenda"]],
   ["pen", ["pluma", "boligrafo", "lapiz", "marcador", "escritura", "manualidad", "pincel"]],
   ["book", ["libro"]],
-  ["flower", ["flor", "rosa", "ramo", "arreglo"]],
-  ["teddy", ["peluche", "bebe"]],
-  ["blocks", ["bloque", "didactic", "armable", "rompecabezas"]],
+  // «Rosa» sola es un color («Vestido rosa»): solo «rosas».
+  ["flower", ["flor", "ramo", "rosas", "girasol", "tulipan", "orquidea"]],
+  ["teddy", ["peluche"]],
+  // «Bloqueador solar» no son bloques.
+  ["blocks", ["bloques", "didactic", "armable", "rompecabezas"]],
   ["balloon", ["globo", "fiesta", "cumpleanos"]],
   ["gift", ["regalo"]],
   ["card", ["tarjeta", "felicitacion"]],
@@ -97,6 +100,8 @@ const RULES: ReadonlyArray<readonly [Good, readonly string[]]> = [
   ["spray", ["limpieza", "detergente", "jabon", "desinfect", "cloro"]],
   ["bottle", ["bebida", "agua", "refresco", "jugo", "leche"]],
   ["jar", ["creatina", "despensa", "arroz", "frasco", "mermelada", "abarrote", "enlatado"]],
+  // Después de la ropa: «Sudadera para bebé» es una sudadera.
+  ["teddy", ["bebe"]],
   ["bag", ["accesorio", "bolsa", "mochila", "cartera"]],
 ];
 

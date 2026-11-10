@@ -58,47 +58,48 @@ export default async function AppearancePage({ params, searchParams }: Props) {
   if (!hasPermission(ctx, "appearance.manage")) notFound();
   const sp = await searchParams;
   const supabase = await createSupabaseServerClient();
-  // Interruptores encendidos para esta tienda: habilitan bloques y pestañas nuevas.
-  const enabledFlags = (
-    ((await supabase.rpc("access_store_flags", { p_store_id: ctx.store.id })).data ?? []) as {
-      key: string;
-      enabled: boolean;
-    }[]
-  )
+  const discarded = typeof sp.descartado === "string" && /^\d{1,9}$/.test(sp.descartado);
+  const base = `/admin/${ctx.store.handle}`;
+
+  const [{ data: theme }, { data: store }, { data: media }, { data: domain }, { data: flagRows }] =
+    await Promise.all([
+      supabase
+        .from("store_themes")
+        .select(
+          "settings, draft_settings, home_sections, draft_home_sections, draft_revision, logo_media_id, draft_logo_media_id, published_at",
+        )
+        .eq("store_id", ctx.store.id)
+        .maybeSingle(),
+      supabase
+        .from("stores")
+        .select("contact_email, contact_phone")
+        .eq("id", ctx.store.id)
+        .single(),
+      supabase
+        .from("media")
+        .select("id, owner_type, status, storage_path, alt_text, width, height")
+        .eq("store_id", ctx.store.id)
+        .in("owner_type", ["store_branding", "banner"])
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(40),
+      supabase
+        .from("store_domains")
+        .select("hostname")
+        .eq("store_id", ctx.store.id)
+        .eq("status", "active")
+        .order("is_primary", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      // Interruptores encendidos para esta tienda: habilitan bloques y pestañas nuevas.
+      supabase.rpc("access_store_flags", { p_store_id: ctx.store.id }),
+    ]);
+  const enabledFlags = ((flagRows ?? []) as { key: string; enabled: boolean }[])
     .filter((f) => f.enabled)
     .map((f) => f.key);
   const personalityOn = enabledFlags.includes("theme_personality");
   const tabs = TABS.filter((t) => t.key !== "personalidad" || personalityOn);
   const tab: Tab = tabs.some((t) => t.key === sp.seccion) ? (sp.seccion as Tab) : "marca";
-  const discarded = typeof sp.descartado === "string" && /^\d{1,9}$/.test(sp.descartado);
-  const base = `/admin/${ctx.store.handle}`;
-
-  const [{ data: theme }, { data: store }, { data: media }, { data: domain }] = await Promise.all([
-    supabase
-      .from("store_themes")
-      .select(
-        "settings, draft_settings, home_sections, draft_home_sections, draft_revision, logo_media_id, draft_logo_media_id, published_at",
-      )
-      .eq("store_id", ctx.store.id)
-      .maybeSingle(),
-    supabase.from("stores").select("contact_email, contact_phone").eq("id", ctx.store.id).single(),
-    supabase
-      .from("media")
-      .select("id, owner_type, status, storage_path, alt_text, width, height")
-      .eq("store_id", ctx.store.id)
-      .in("owner_type", ["store_branding", "banner"])
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(40),
-    supabase
-      .from("store_domains")
-      .select("hostname")
-      .eq("store_id", ctx.store.id)
-      .eq("status", "active")
-      .order("is_primary", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
 
   const hasDraft = Boolean(theme?.draft_settings);
   const revision = theme?.draft_revision ?? 0;

@@ -35,8 +35,24 @@ describe("filas pegadas desde Excel o Google Sheets", () => {
     ]);
   });
 
-  it("comillas sin cerrar, demasiadas columnas o una celda enorme: error", () => {
-    expect(() => parseTsv('a\t"b')).toThrowError(PasteError);
+  it("una celda que empieza con comillas sin cerrarlas bien es texto tal cual (Google Sheets)", () => {
+    // Sheets no entrecomilla «"Edición" especial»; antes se perdían las comillas.
+    expect(parseTsv('Producto\tPrecio\n"Edición" especial\t199\n"Oferta\t50\nTaza\t89')).toEqual([
+      ["Producto", "Precio"],
+      ['"Edición" especial', "199"],
+      ['"Oferta', "50"],
+      ["Taza", "89"],
+    ]);
+    expect(parseTsv('a\t"b')).toEqual([["a", '"b']]);
+    // Excel sí entrecomilla y duplica las comillas: se leen como una celda.
+    expect(parseTsv('"""Edición"" especial"\t199')).toEqual([['"Edición" especial', "199"]]);
+    expect(parseTsv('"línea 1\nlínea 2"\t5\nx\t6')).toEqual([
+      ["línea 1\nlínea 2", "5"],
+      ["x", "6"],
+    ]);
+  });
+
+  it("demasiadas columnas o una celda enorme: error", () => {
     expect(() => parseTsv(Array.from({ length: 101 }, () => "x").join("\t"))).toThrowError(
       PasteError,
     );

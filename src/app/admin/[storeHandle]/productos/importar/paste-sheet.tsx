@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useDeferredValue, useId, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { CsvParseError, parseCsv } from "@/lib/csv-parse";
 import { PASTE_MAX_BYTES, PasteError, pastedToCsv } from "@/lib/imports/paste";
@@ -72,14 +72,18 @@ export function PasteSheet({ action }: { action: string }) {
   const form = useRef<HTMLFormElement>(null);
   const file = useRef<HTMLInputElement>(null);
   const id = useId();
-  const summary = useMemo(() => summarize(text), [text]);
+  // Diferido: con miles de filas pegadas, escribir no espera a releer todo.
+  const deferred = useDeferredValue(text);
+  const summary = useMemo(() => summarize(deferred), [deferred]);
   const ready = summary.state === "ok" && summary.products > 0;
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (summary.state !== "ok" || !file.current || !form.current) return;
+    // Con el texto de este momento (el resumen en pantalla puede ir un paso atrás).
+    const current = summarize(text);
+    if (current.state !== "ok" || !file.current || !form.current) return;
     const transfer = new DataTransfer();
-    transfer.items.add(new File([summary.csv], "hoja-pegada.csv", { type: "text/csv" }));
+    transfer.items.add(new File([current.csv], "hoja-pegada.csv", { type: "text/csv" }));
     file.current.files = transfer.files;
     form.current.submit();
   }

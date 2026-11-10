@@ -136,5 +136,17 @@ test("apagado sin pestaña; encendido, la dueña elige, publica y la tienda camb
   }));
   expect(heading).toEqual({ transform: "uppercase", weight: "400" });
   await expectNoSeriousA11yViolations(buyer);
+
+  // Apagar el interruptor devuelve la tienda a como se veía (la personalidad sigue guardada).
+  await admin`update public.feature_flag_overrides set enabled = false
+               where flag_key = 'theme_personality' and scope_id = ${tenant.storeId}`;
+  await buyer.reload();
+  await expect(buyer.getByRole("link", { name: "Collar de plata" })).toBeVisible();
+  await expect(buyer.locator(".sf-root")).not.toHaveAttribute("data-card", /.*/);
+  const square = await buyer
+    .locator(".sf-card-media")
+    .first()
+    .evaluate((el) => getComputedStyle(el).aspectRatio);
+  expect(square).toBe("1 / 1");
   await buyer.close();
 });

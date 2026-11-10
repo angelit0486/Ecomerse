@@ -39,9 +39,17 @@ describe("pegar filas desde la hoja (plan 2026-11-05, fase C)", () => {
 
   it("lo que no se puede leer no rompe la pantalla", () => {
     render(<PasteSheet action="/subir" />);
-    paste('Producto\tPrecio\n"Taza\t199');
+    // Más de 100 columnas no es una hoja de productos.
+    paste(`${Array.from({ length: 101 }, (_, i) => `c${i}`).join("\t")}\n1`);
     expect(screen.getByRole("status").textContent).toContain("No pudimos leer lo pegado");
     expect(button().disabled).toBe(true);
+  });
+
+  it("una celda que empieza con comillas sin cerrar se lee como texto (revisión 2026-11-06)", () => {
+    render(<PasteSheet action="/subir" />);
+    paste('Producto\tPrecio\n"Taza\t199\nPlato\t89');
+    expect(screen.getByRole("status").textContent).toContain("Entendimos 2 productos");
+    expect(button().disabled).toBe(false);
   });
 
   it("manda el archivo al mismo destino que la subida normal, con su modo", () => {

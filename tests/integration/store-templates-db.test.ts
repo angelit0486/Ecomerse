@@ -96,6 +96,26 @@ describe("plantillas de tienda en la base real", () => {
     },
   );
 
+  it("aplicar otra plantilla no deja el diseño de la anterior (revisión 2026-11-06)", async () => {
+    const storeId = await newStore();
+    const apply = (key: string) =>
+      asOwner(async (sql) => {
+        const [theme] = await sql<{ rev: number }[]>`
+          select coalesce(t.draft_revision, 0) as rev from public.store_themes t where t.store_id = ${storeId}`;
+        const payload = templatePayload(STORE_TEMPLATES.find((t) => t.key === key)!);
+        await sql`select public.store_apply_template(${storeId}, ${sql.json(payload as never)}, ${theme?.rev ?? 0})`;
+      });
+    await apply("joyeria");
+    await apply("generica");
+    const [after] = await admin<{ keys: string[] }[]>`
+      select array(select jsonb_object_keys(t.draft_settings) order by 1) as keys
+        from public.store_themes t where t.store_id = ${storeId}`;
+    expect(after?.keys).not.toContain("personality");
+    expect(after?.keys).not.toContain("element_colors");
+    expect(after?.keys).not.toContain("header");
+    expect(after?.keys).toContain("colors");
+  });
+
   it("una plantilla no se aplica a una tienda ya publicada", async () => {
     const storeId = await newStore();
     await admin`update public.stores set status = 'active', launched_at = now() where id = ${storeId}`;

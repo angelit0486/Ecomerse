@@ -15,7 +15,11 @@ import { gatewayDb } from "@/server/db/role-clients";
  *   la tienda se comporta exactamente como antes de los interruptores.
  */
 export type StorefrontFlag =
-  "storefront_nav_scroll_fix" | "checkout_shipping_messages" | "mobile_input_size";
+  | "storefront_nav_scroll_fix"
+  | "checkout_shipping_messages"
+  | "mobile_input_size"
+  // Tema v5 (ADR-063): sin él, la personalidad guardada no se dibuja.
+  | "theme_personality";
 
 export async function readStoreFlags(
   query: () => Promise<ReadonlyArray<{ key: string; enabled: boolean }>>,

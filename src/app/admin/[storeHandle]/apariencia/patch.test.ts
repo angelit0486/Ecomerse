@@ -285,12 +285,25 @@ describe("Personalidad (tema v5, ADR-063)", () => {
     expect(validatePatch(patch)).toEqual({ ok: true, patch });
   });
 
-  it("todo como hoy quita la clave (null) y un valor ajeno a la lista no se guarda", () => {
+  it("el peso «Delgado» (regular) se guarda: en el peso, como hoy es vacío", () => {
+    const f = form({ heading_weight: "regular", card_style: "outlined" });
+    expect(sectionPatch("personalidad", f.get, f.getAll)).toEqual({
+      personality: { heading_weight: "regular" },
+    });
+  });
+
+  it("todo como hoy quita la clave (null) y un valor ajeno a la lista se marca", () => {
     const f = form({ card_style: "outlined", heading_weight: "", motion: "none" });
     expect(sectionPatch("personalidad", f.get, f.getAll)).toEqual({ personality: null });
+    // Un valor ajeno a la lista no se cambia en silencio: el esquema lo marca en su campo.
     const bad = form({ card_style: "neon", heading_weight: "900", image_ratio: "4:5" });
-    expect(sectionPatch("personalidad", bad.get, bad.getAll)).toEqual({
-      personality: { image_ratio: "4:5" },
+    const patch = sectionPatch("personalidad", bad.get, bad.getAll);
+    expect(patch).toEqual({
+      personality: { card_style: "neon", heading_weight: "900", image_ratio: "4:5" },
+    });
+    expect(validatePatch(patch)).toEqual({
+      ok: false,
+      fields: { card_style: expect.any(String), heading_weight: expect.any(String) },
     });
   });
 

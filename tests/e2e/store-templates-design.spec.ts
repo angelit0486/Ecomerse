@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 import {
+  admin,
   createAuthUser,
   createTenant,
   expectNoSeriousA11yViolations,
@@ -41,6 +42,9 @@ for (const name of VERTICALS) {
     const run = uniq();
     const email = `diseno-${run}@example.test`;
     const tenant = await createTenant(`d${run}`, await createAuthUser(email));
+    // Con la personalidad de la plantilla encendida (tema v5): el diseño se revisa como lo verá el cliente.
+    await admin`insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
+                values ('theme_personality', 'store', ${tenant.storeId}, true, 'E2E diseño de plantillas')`;
     await loginNewStaff(page, email);
     await page.goto(`/admin/${tenant.handle}/configuracion`);
     const section = page.getByRole("region", { name: "Plantilla por giro" });

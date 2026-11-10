@@ -93,4 +93,23 @@ describe("shelfFor", () => {
     expect(shelfFor([])).toEqual(["bag", "tag", "box"]);
     expect(shelfFor(["Destacados", "Novedades"])).toEqual(["bag", "tag", "box"]);
   });
+
+  it("las palabras de los giros nuevos no chocan con colores, ropa ni cocina (revisión 2026-11-06)", () => {
+    expect(goodFor("Sudadera rosa")).toBe("hoodie");
+    expect(goodFor("Vestido rosa")).toBe("dress");
+    expect(goodFor("Sudadera para bebé")).toBe("hoodie");
+    expect(goodFor("Bloqueador solar")).not.toBe("blocks");
+    expect(goodFor("Reloj inteligente")).not.toBe("bulb");
+    expect(goodFor("Batería de cocina")).toBe("mug");
+    // Lo que sí debe coincidir, como en las plantillas.
+    expect(goodFor("Ramo de rosas")).toBe("flower");
+    expect(goodFor("Ramos y arreglos")).toBe("flower");
+    expect(goodFor("Bloques de construcción 100 piezas")).toBe("blocks");
+    expect(goodFor("Foco inteligente Wi-Fi")).toBe("bulb");
+    expect(goodFor("Hogar inteligente")).toBe("bulb");
+    expect(goodFor("Sonaja para bebé")).toBe("teddy");
+    expect(goodFor("Bebés")).toBe("teddy");
+    expect(goodFor("Oso de peluche")).toBe("teddy");
+    expect(goodFor("Cargador USB-C")).toBe("plug");
+  });
 });

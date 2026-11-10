@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { navBarItems } from "@/lib/theme/nav-bar";
-import { PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
+import { DISPLAY_HEADINGS, PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { getCart, paymentMethods } from "@/server/storefront/cart";
 import {
@@ -56,8 +56,7 @@ const BASE_CSS = [
 // 20 px para arriba (h1 y títulos text-xl o mayores): una condensada a 14–16 px
 // se lee peor, así que «Resumen», «Ingredientes» o «Contacto» van con la de
 // texto (revisión de conversión, B1). `.sf-text-font` la excluye siempre.
-const HEADING_CSS =
-  ".sf-root :is(h1,:is(h2,h3,h4):is([class*=text-xl],[class*=text-2xl],[class*=text-3xl],[class*=text-4xl],[class*=text-5xl])):not(.sf-text-font){font-family:var(--sf-font-heading),system-ui,sans-serif}";
+const HEADING_CSS = `.sf-root ${DISPLAY_HEADINGS}{font-family:var(--sf-font-heading),system-ui,sans-serif}`;
 
 // Opciones de listado del tema v2 (ADR-034), como atributos de la raíz: una
 // columna en el celular y tarjetas sin marca. Reglas fijas, sin valores de la tienda.
@@ -165,10 +164,13 @@ export default async function StoreLayout({ children, params }: Props) {
       data-cols={settings.listing?.columns_mobile === 1 ? "1" : undefined}
       data-brand={settings.listing?.show_brand === false ? "off" : undefined}
       data-mobile-inputs={flags.has("mobile_input_size") ? "" : undefined}
-      // Tema v5 (ADR-063): personalidad como atributos con valores de la lista blanca.
-      {...personalityAttributes(settings.personality, {
-        cardColors: Boolean(theme.elements.cards),
-      })}
+      // Tema v5 (ADR-063): personalidad como atributos con valores de la lista blanca,
+      // solo con su interruptor (apagarlo devuelve la tienda a como se veía).
+      {...(flags.has("theme_personality")
+        ? personalityAttributes(settings.personality, {
+            cardColors: Boolean(theme.elements.cards),
+          })
+        : {})}
     >
       <style
         nonce={nonce}

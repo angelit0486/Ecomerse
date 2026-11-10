@@ -6,9 +6,16 @@ import { HomeSectionsV2, ThemeSettingsV2 } from "@/lib/theme/schema";
 import {
   findTemplate,
   STORE_TEMPLATES,
+  TEMPLATE_DESIGN_KEYS,
   templateAppliedMessage,
   templatePayload,
+  type TemplateSettingsPatch,
 } from "./store-templates";
+
+/** El tema que queda tras aplicar la plantilla: los null solo quitan claves. */
+function present(settings: TemplateSettingsPatch) {
+  return Object.fromEntries(Object.entries(settings).filter(([, v]) => v !== null));
+}
 
 describe("plantillas de tienda", () => {
   it("hay una por giro y las claves no se repiten", () => {
@@ -45,11 +52,11 @@ describe("plantillas de tienda", () => {
     "%s: tema y portada válidos, contraste AA y límites de la base",
     (_, t) => {
       const payload = templatePayload(t);
-      expect(ThemeSettingsV2.safeParse(payload.settings).success).toBe(true);
+      const theme = ThemeSettingsV2.parse(present(payload.settings));
       expect(HomeSectionsV2.safeParse(payload.home_sections).success).toBe(true);
-      expect(contrastIssues(t.colors, payload.settings.shape?.button_style ?? "solid")).toEqual([]);
+      expect(contrastIssues(t.colors, theme.shape?.button_style ?? "solid")).toEqual([]);
       // Igual que app.theme_contrast_issues: paleta, barra de anuncio y colores por elemento.
-      expect(themeContrastIssues(payload.settings)).toEqual([]);
+      expect(themeContrastIssues(theme)).toEqual([]);
       expect(payload.categories.length).toBeLessThanOrEqual(12);
       expect(payload.products.length).toBeLessThanOrEqual(24);
       const slugs = new Set(payload.categories.map((c) => c.slug));
@@ -95,5 +102,21 @@ describe("plantillas de tienda", () => {
       JSON.stringify([t.settings.typography, t.settings.shape, t.settings.personality]),
     );
     expect(new Set(looks).size).toBe(withPersonality.length);
+  });
+
+  it("una plantilla reemplaza todo el diseño de la anterior, no el contenido de la tienda", () => {
+    for (const t of STORE_TEMPLATES) {
+      const keys = Object.keys(templatePayload(t).settings);
+      for (const key of TEMPLATE_DESIGN_KEYS) expect(keys, `${t.key}: ${key}`).toContain(key);
+      for (const key of ["footer", "social", "seo", "contact", "favicon_media_id"])
+        expect(keys, `${t.key}: ${key}`).not.toContain(key);
+    }
+    // «Genérica» quita la personalidad, los colores por elemento y el encabezado de otra.
+    const generic = templatePayload(findTemplate("generica")!).settings;
+    expect(generic.personality).toBeNull();
+    expect(generic.element_colors).toBeNull();
+    expect(templatePayload(findTemplate("joyeria")!).settings.personality).toEqual(
+      findTemplate("joyeria")!.settings.personality,
+    );
   });
 });

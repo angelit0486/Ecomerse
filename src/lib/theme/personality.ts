@@ -51,9 +51,13 @@ export function personalityAttributes(
   return a;
 }
 
-/** Títulos de la tienda: los mismos que llevan la fuente de títulos (layout). */
-const HEADINGS =
+/**
+ * Títulos de la tienda que llevan la fuente de títulos: h1 y los de 20 px para
+ * arriba (el layout los usa para la fuente; aquí para mayúsculas, espaciado y peso).
+ */
+export const DISPLAY_HEADINGS =
   ":is(h1,:is(h2,h3,h4):is([class*=text-xl],[class*=text-2xl],[class*=text-3xl],[class*=text-4xl],[class*=text-5xl])):not(.sf-text-font)";
+const HEADINGS = DISPLAY_HEADINGS;
 
 /** Tamaños de título (rem): xl, 2xl, 3xl, 4xl y 5xl de Tailwind en cada escala. */
 const SCALE: Record<"compact" | "large", readonly string[]> = {
@@ -66,6 +70,9 @@ function scaleRule(scale: "compact" | "large"): string {
   const vars = SIZE_VARS.map((v, i) => `${v}:${SCALE[scale][i]}`).join(";");
   return `.sf-root[data-scale='${scale}'] :is(h1,h2,h3,h4){${vars}}`;
 }
+
+/** Bloques de la portada que se mueven: todos los que no son <style>, menos el primero. */
+export const MOTION_TARGETS = ".sf-root[data-motion='subtle'] .sf-home>:not(style)~:not(style)";
 
 const RAISED_SHADOW = "0 2px 4px rgb(0 0 0/.06),0 10px 24px rgb(0 0 0/.1)";
 const LIFT_SHADOW = "0 4px 8px rgb(0 0 0/.08),0 16px 32px rgb(0 0 0/.14)";
@@ -99,9 +106,10 @@ export const PERSONALITY_CSS = [
   `.sf-root[data-hweight='bold'] ${HEADINGS}{font-weight:700}`,
   scaleRule("compact"),
   scaleRule("large"),
-  // Movimiento sutil: cada bloque de la portada (menos el primero) sube un poco al entrar.
+  // Movimiento sutil: cada bloque de la portada (menos el primero, que puede ir
+  // después de etiquetas <style>) sube un poco al entrar.
   "@keyframes sf-rise{from{transform:translateY(28px)}to{transform:none}}",
   "@media (prefers-reduced-motion:no-preference){@supports (animation-timeline:view()){" +
-    ".sf-root[data-motion='subtle'] .sf-home>:not(:first-child){animation:sf-rise linear both;" +
+    `${MOTION_TARGETS}{animation:sf-rise linear both;` +
     "animation-timeline:view();animation-range:entry 0% entry 35%}}}",
 ].join("");
