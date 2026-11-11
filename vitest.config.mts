@@ -38,6 +38,17 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          // Programa de capacidad (Orden 06): solo con `bash scripts/capacity/t04.sh`.
+          name: "capacity",
+          include: ["tests/capacity/**/*.test.ts"],
+          environment: "node",
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
           // Requiere el stack local levantado: `bash scripts/dev/stack.sh up`.
           name: "stack",
           include: ["tests/stack/**/*.test.ts"],

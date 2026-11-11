@@ -63,6 +63,10 @@ export default defineConfig([
       // Banco de escalabilidad (docs/audit/escalabilidad-2026-11.md): solo contra la
       // base local pruva_bench (URL fija a localhost), con los roles del stack.
       "scripts/bench/load.mjs",
+      // Programa de capacidad (Orden 06, docs/audit/EXECUTION_MASTER_LOG.md): solo
+      // bases locales `pruva_cap*` (URL fija a localhost), con los roles del stack.
+      "scripts/capacity/t05.mjs",
+      "tests/capacity/**",
     ],
     rules: {
       "no-restricted-imports": ["error", { patterns: restrictedImports.patterns }],
