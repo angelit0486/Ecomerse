@@ -10,9 +10,8 @@ import { productInputSchema } from "@/server/catalog/product-input";
 import { validateProduct } from "@/server/catalog/queries";
 import { callRpc } from "@/server/db/rpc";
 import { AppError } from "@/server/errors";
-import { processQueueSoon } from "@/server/jobs/run-now";
-import { imageProcessingBlocked } from "@/server/system/health";
-import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { finalizePanelUpload } from "@/server/media/finalize";
+import { createMediaUpload } from "@/server/media/upload";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -687,14 +686,11 @@ export async function finalizeProductImageUpload(
   if (!uuid.safeParse(mediaId).success) return { ok: false, error: "Subida no válida." };
   try {
     await withStore(storeHandle, ({ supabase, storeId }) =>
-      finalizeMediaUpload(supabase, storeId, mediaId),
+      finalizePanelUpload(supabase, storeId, mediaId, "media.finalize"),
     );
   } catch (error) {
     return { ok: false, error: failure("media.finalize", error).error };
   }
-  // La optimización (media.process) corre ya, no en la siguiente pasada del cron;
-  // sin la clave de Storage fallaría y gastaría un intento (D-PANEL-10).
-  if (!imageProcessingBlocked()) processQueueSoon("media.finalize");
   revalidatePath(productsPath(storeHandle), "layout");
   return { ok: true };
 }

@@ -156,6 +156,7 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Informe para el propietario: «PRUVA — Diagnóstico integral e informe ejecutivo» (Claude Docs).
   - Staging y despliegue (2026-11-10): migración `20261110000200` aplicada desde `88edc6d` con su sha256 (162 = repo); rama de Vercel `bf34410..88edc6d`; CI 210 verde. Primera tienda creada por el propietario (`tenis`), dirección `pruva-tienda-tenis.vercel.app` agregada a mano en Vercel (falta `VERCEL_DOMAINS_TOKEN`).
 - Reporte de rentabilidad (D-MEJ-25, interruptor `profit_report` apagado, migración `20261110000300`): suites con Node 24 en verde (verify 1275, pgTAP 2935, integración 437, E2E 149/149). Pendiente de aplicar en staging y desplegar.
+- Confiabilidad (D-MEJ-26, 2026-11-11, «mejorar y optimizar todo»): las cinco subidas del panel arrancan la cola (causa de los tres banners atorados); respaldo y restauración de la base en un comando (`scripts/ops/backup-export.sh`, `scripts/ops/restore-check.sh`), probados de punta a punta en local con 0 errores y metatests de seguridad 17/17 sobre la copia. Primera copia verificada de las 401 imágenes (ZIP entregado al propietario). Suites: verify 1279, pgTAP 2935, integración 437, E2E 149/149. Sin desplegar: la rama de despliegue sigue en `88edc6d` (D-9 pendiente).
 
 ## Bloqueos (requieren al propietario)
 

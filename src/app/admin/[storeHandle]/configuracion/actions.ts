@@ -17,7 +17,8 @@ import { hasPermission } from "@/server/auth/context";
 import { getStoreContext } from "@/server/auth/store-context";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
-import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { finalizePanelUpload } from "@/server/media/finalize";
+import { createMediaUpload } from "@/server/media/upload";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -120,7 +121,7 @@ export async function finalizeLogoUpload(
   try {
     const ctx = await getStoreContext(storeHandle);
     const supabase = await createSupabaseServerClient();
-    await finalizeMediaUpload(supabase, ctx.store.id, mediaId);
+    await finalizePanelUpload(supabase, ctx.store.id, mediaId, "store.logo");
   } catch (error) {
     return { ok: false, error: failure(error).error };
   }

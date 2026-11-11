@@ -49,13 +49,62 @@ Resultado del 2026-10-28 sobre `pruva_dev` (datos de demostración y de pruebas)
 4. Correr la reconciliación de pagos (se encola sola cada 10 min) para recuperar pagos confirmados por Mercado Pago después del punto restaurado.
 5. Fotos: si se borraron archivos después del respaldo, no vuelven con la base.
 
-## Respaldo manual mientras staging esté en Free
+## Respaldo de la base en un comando (desde la computadora del propietario)
 
-Desde una computadora con la CLI de Supabase (no desde el celular):
+Orden de trabajo 05. El respaldo nunca sale de tu computadora y la contraseña no
+va en ningún comando: cada herramienta la pide al conectarse (3 veces).
+
+Requisitos: macOS o Linux (en Windows, WSL), cliente de PostgreSQL 17 (`pg_dump`,
+`pg_restore`, `psql`) y el host y usuario del **Session pooler** (Supabase →
+proyecto → Connect). El puerto 6543 (modo transacción) no sirve.
 
 ```bash
-supabase db dump --db-url "$MIGRATION_DATABASE_URL" -f respaldo-esquema.sql
-supabase db dump --db-url "$MIGRATION_DATABASE_URL" --data-only -f respaldo-datos.sql
+export PGHOST='<host del session pooler>' PGUSER='<usuario del pooler>'
+export PGPORT=5432 PGDATABASE=postgres PGSSLMODE=require
+bash scripts/ops/backup-export.sh ~/pruva-respaldos/$(date +%F)
 ```
 
-Guardar ambos archivos fuera de Supabase (p. ej., en una carpeta privada). Nunca subirlos al repositorio: contienen datos de clientes.
+Qué hace y qué deja en la carpeta:
+
+| Archivo                     | Contenido                                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pruva-propio-*.dump`       | Los 7 esquemas de PRUVA: estructura, datos, permisos, RLS                                                                                                         |
+| `pruva-auth-storage-*.dump` | Solo datos: usuarios, identidades, buckets y catálogo de objetos                                                                                                  |
+| `pruva-extras-*.sql`        | El trigger de alta de perfil en `auth.users` y la política de subidas de `storage.objects`: viven en tablas de Supabase y un respaldo por esquemas no los incluye |
+| `pruva-conteos-*.txt`       | Filas por tabla y conteos del catálogo al exportar, para comparar al restaurar                                                                                    |
+| `evidencia-*.txt`           | Resumen **sin secretos** para compartir: versiones, tamaños, SHA-256, lectura completa, conteos y su comparación con el catálogo                                  |
+
+El script se niega si `PGPASSWORD` está definida, si la carpeta está dentro de un
+repositorio de Git, si el cliente es menor que 17 o si el puerto es 6543.
+
+## Restauración de prueba
+
+En una base **vacía** (un proyecto Supabase de simulacro, nunca staging):
+
+```bash
+DESTINO_CONFIRMADO="$PGHOST/$PGDATABASE" bash scripts/ops/restore-check.sh ~/pruva-respaldos/<fecha>
+```
+
+Orden que aplica: usuarios y buckets → PRUVA → permisos exactos → extras. Compara
+versión de esquema, tablas, funciones, triggers, políticas, RLS forzado, llaves
+foráneas, los extras, los permisos del público y las filas de cada tabla. Se niega
+si el destino tiene tablas o si el host es el de `pruva-staging`.
+
+Probado el 2026-11-11 contra una base local con la estructura de un proyecto
+Supabase nuevo: 0 errores, 119 tablas y 208,011 filas idénticas, 8 s, y los
+metatests de seguridad (`00_schema_security`, 17/17) en verde sobre la copia.
+
+### Dos trampas que encontró esa prueba (no las repitas a mano)
+
+1. **Usuarios primero.** 21 llaves foráneas de PRUVA apuntan a `auth.users`
+   (verificado en staging el 2026-11-11). Si los usuarios se restauran después,
+   esas llaves no se crean y la copia queda sin integridad referencial.
+2. **Permisos abiertos.** Supabase concede por defecto permisos a `anon`,
+   `authenticated` y `service_role` sobre todo objeto nuevo en `public`.
+   `pg_restore` aplica los permisos del respaldo pero **no retira** esos: una
+   restauración ingenua deja tablas y funciones de PRUVA al alcance del público.
+   El script los retira y vuelve a aplicar exactamente los del respaldo.
+
+Tras una restauración real, además: fijar contraseñas nuevas de
+`storefront_gateway` y `system_worker`, reponer las fotos desde la copia de
+imágenes y seguir «Qué hacer después de restaurar».

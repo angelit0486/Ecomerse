@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
-import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { finalizePanelUpload } from "@/server/media/finalize";
+import { createMediaUpload } from "@/server/media/upload";
 import { invalidateStore } from "@/server/storefront/cache";
 
 import { storeClient } from "../../_shared/action-state";
@@ -83,7 +84,7 @@ export async function attachEntityImage(
   const alt = `${kind.altPrefix} ${name || cfg.fallbackName}`;
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
-    await finalizeMediaUpload(supabase, storeId, input.mediaId);
+    await finalizePanelUpload(supabase, storeId, input.mediaId, `${input.entity}.image`);
     await callRpc(supabase, "media_set_alt_text", {
       p_store_id: storeId,
       p_media_id: input.mediaId,

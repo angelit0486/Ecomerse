@@ -6,7 +6,8 @@ import { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES } from "@/lib/media/constants";
 import { brokenLinkHint, sectionLinks } from "@/lib/theme/link-targets";
 import { reportActionError } from "@/server/actions/report";
 import { callRpc } from "@/server/db/rpc";
-import { createMediaUpload, finalizeMediaUpload } from "@/server/media/upload";
+import { finalizePanelUpload } from "@/server/media/finalize";
+import { createMediaUpload } from "@/server/media/upload";
 import { themeRpcError } from "@/server/theme/errors";
 
 import { storeClient } from "../_shared/action-state";
@@ -170,7 +171,7 @@ export async function finalizeBannerUpload(
   const alt = altText.replace(/\s+/g, " ").trim().slice(0, 250);
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
-    await finalizeMediaUpload(supabase, storeId, mediaId);
+    await finalizePanelUpload(supabase, storeId, mediaId, "appearance.banner");
     if (alt) {
       await callRpc(supabase, "media_set_alt_text", {
         p_store_id: storeId,
