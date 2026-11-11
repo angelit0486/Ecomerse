@@ -171,12 +171,35 @@ Leer una tabla de tienda directamente cuesta 16 µs por fila propia y 29 µs por
 | Escalón | Tamaño               | Productos | Estado                                      |
 | ------- | -------------------- | --------- | ------------------------------------------- |
 | A       | 1 tienda × 10,000    | 10,000    | Aprobado [VERIFICADO]                       |
-| B       | 10 tiendas × 10,000  | 100,000   | Pendiente; cabe en esta máquina             |
+| B       | 10 tiendas × 10,000  | 100,000   | Aprobado [VERIFICADO] (ver abajo)           |
 | C       | 10 tiendas × 50,000  | 500,000   | Pendiente; cabe en esta máquina             |
 | D       | 50 tiendas × 10,000  | 500,000   | Pendiente; cabe en esta máquina             |
 | E       | 100 tiendas × 10,000 | 1,000,000 | Requiere propuesta técnica y de presupuesto |
 | F       | 250 tiendas × 10,000 | 2,500,000 | Requiere propuesta técnica y de presupuesto |
 | G       | 500 tiendas × 10,000 | 5,000,000 | Requiere propuesta técnica y de presupuesto |
+
+### Escalón B — 10 tiendas × 10,000 (100,000 productos) [VERIFICADO]
+
+Generación: 446 s (45 s por tienda, con 2,000 pedidos cada una). Base: 642 MB. Las mismas 48 consultas de T03, sobre la tienda 1 y la tienda 10 (mediana en ms; la base ya no cabe en los 128 MB de memoria de PostgreSQL local, así que parte de la diferencia es lectura de disco).
+
+| Consulta                         | 1 tienda | Tienda 1 de 10 | Tienda 10 de 10 |
+| -------------------------------- | -------- | -------------- | --------------- |
+| Tienda: lista                    | 51       | 70             | 75              |
+| Tienda: orden por precio         | 55       | 83             | 193             |
+| Tienda: «solo disponibles»       | 153      | 187            | 268             |
+| Tienda: buscar (palabra / frase) | 36 / 41  | 42 / 64        | 38 / 47         |
+| Tienda: sugerencias              | 26       | 27             | 29              |
+| Tienda: relacionados             | 32       | 33             | 32              |
+| Tienda: portada                  | 47       | 88             | 152             |
+| Panel: listas y filtros          | 1–11     | 1–12           | 1–11            |
+| Panel: «agotados»                | 61       | 111            | 120             |
+| Panel: «sin foto»                | 9        | 39             | 51              |
+| Panel: buscar                    | 48–62    | 83–115         | 73–120          |
+| Panel: inventario                | 19–59    | 20–41          | 18–51           |
+| Panel: calidad del catálogo      | 839      | 909            | 869             |
+| Panel: 100 precios en bloque     | 179      | 140            | 154             |
+
+Lectura: con 10 veces más productos en la plataforma, lo que hace cada tienda cuesta entre lo mismo y el doble; nada crece 10 veces. Lo que más sube es lo que recorre todos los productos de la tienda (búsqueda del panel CAP-08, «agotados», orden por precio, portada). Ningún defecto nuevo de severidad S0–S2.
 
 ### Límites locales [ESTIMADO]
 
