@@ -43,10 +43,12 @@ export function createImportHandlers(deps: ImportDeps): Array<[string, JobHandle
       const result = await deps.db.begin(async (tx) => {
         await tx`select set_config('statement_timeout', ${String(budget - SAFETY_MS)}, true)`;
         // Las tablas crecen dentro de esta misma transacción: con estadísticas viejas
-        // (tienda o plataforma nuevas) los planes en caché recorrerían tablas enteras
-        // en cada fila (cuadrático). Índices y planes por ejecución, solo aquí.
-        await tx`select set_config('enable_seqscan', 'off', true),
-                        set_config('plan_cache_mode', 'force_custom_plan', true)`;
+        // (tienda o plataforma nuevas) un plan en caché que recorra la tabla entera
+        // en cada fila sería cuadrático. Solo índices, solo aquí. No se fuerza un
+        // plan nuevo por sentencia: medido (Orden 06, CAP-03), replanificar las ~50
+        // sentencias de cada fila costaba un tercio del tiempo (5 000 filas: 43 s →
+        // 28 s) y con índices el crecimiento sigue siendo lineal.
+        await tx`select set_config('enable_seqscan', 'off', true)`;
         const [row] = await tx<{ result: CommitResult }[]>`
           select system.import_commit(${importJobId}) as result
         `;

@@ -70,7 +70,7 @@ select ok(not has_function_privilege('authenticated', 'app.theme_personality_val
           and not has_function_privilege('anon', 'app.theme_personality_valid(jsonb)', 'execute')
           and not has_function_privilege('storefront_gateway', 'app.theme_personality_valid(jsonb)', 'execute'),
           'el validador nuevo no se concede a nadie');
-select is(public.app_schema_version(), '20261110000300', 'versión de la base');
+select is(public.app_schema_version(), '20261111000200', 'versión de la base');
 
 select * from finish();
 rollback;

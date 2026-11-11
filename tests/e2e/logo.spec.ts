@@ -48,7 +48,11 @@ test("logo: subir → procesar → usar en el borrador → visible en la tienda 
   await page
     .getByLabel("Subir logo")
     .setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
-  await expect(page.getByText("Procesando el logo…")).toBeVisible();
+  // Desde D-MEJ-26 la subida arranca la cola: el aviso «Procesando…» puede durar
+  // un instante o no alcanzar a verse. Vale cualquiera de los dos estados.
+  await expect(
+    page.getByText("Procesando el logo…").or(page.getByRole("button", { name: "Usar este logo" })),
+  ).toBeVisible({ timeout: 15_000 });
   await runJobs();
   await page.getByRole("button", { name: "Usar este logo" }).click({ timeout: 15_000 });
   await expect(
