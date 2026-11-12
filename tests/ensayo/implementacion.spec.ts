@@ -401,12 +401,24 @@ for (const giro of GIROS) {
         if ((await all.count()) === 0 || (await filas.count()) === 0) break;
         await all.check();
         await owner.locator("#bulk-action").selectOption("publish");
+        const antes = await filas.count();
         await owner.getByRole("button", { name: "Aplicar" }).click();
-        const res = owner.getByText(/productos? publicados?|no se pud|ficha|no se public/i).first();
-        await expect(res).toBeVisible({ timeout: 30_000 });
-        const txt = (await res.textContent())?.trim() ?? "";
-        notas.push(`Publicar en bloque (vuelta ${vuelta + 1}): ${txt}`);
-        if (!/publicad/.test(txt)) break;
+        await owner.waitForTimeout(1500);
+        const aviso = (await owner.getByRole("alert").allInnerTexts()).join(" ").trim();
+        // El aviso puede desaparecer al refrescarse la lista filtrada: se espera
+        // a que esas filas salgan de «borrador».
+        try {
+          await expect(async () => {
+            await owner.reload();
+            expect(await filas.count()).toBeLessThan(antes);
+          }).toPass({ timeout: 30_000 });
+        } catch {
+          hallazgos.push(`Publicar en bloque no publicó nada${aviso ? `: «${aviso}»` : ""}.`);
+          break;
+        }
+        const despues = await filas.count();
+        notas.push(`Publicar en bloque (vuelta ${vuelta + 1}): ${antes - despues} publicados.`);
+        if (despues === antes) break;
       }
       // Inicio: alertas.
       await owner.goto(base);
