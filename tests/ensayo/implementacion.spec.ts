@@ -480,10 +480,13 @@ for (const giro of GIROS) {
       await shop.getByLabel("Código postal").fill("72000");
       // Primer clic: el servidor elige el envío y pide confirmar con el total a la vista.
       const confirmar = shop.getByRole("button", { name: /Confirmar pedido/ });
-      const gracias = shop.getByText("Transferencia bancaria").first();
       await confirmar.click();
       const elegido = shop.getByRole("alert").filter({ hasText: /Elegimos/ });
-      await expect(elegido.or(gracias).first()).toBeVisible({ timeout: 30_000 });
+      // «Transferencia bancaria» también aparece en el checkout (opción de pago):
+      // se espera el aviso del envío o la página del pedido.
+      await expect(async () => {
+        expect((await elegido.isVisible()) || /\/pedido\//.test(shop.url())).toBe(true);
+      }).toPass({ timeout: 30_000 });
       if (await elegido.isVisible()) {
         notas.push(`Pago: ${(await elegido.innerText()).trim()}`);
         await confirmar.click();
