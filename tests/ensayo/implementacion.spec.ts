@@ -76,6 +76,14 @@ for (const giro of GIROS) {
       const t0 = Date.now();
       await test.step(nombre, () => fn(notas));
       fases.push({ fase: nombre, ms: Date.now() - t0, notas });
+      guardar();
+    };
+    const guardar = () => {
+      mkdirSync(OUT, { recursive: true });
+      writeFileSync(
+        join(OUT, `ensayo-${giro}.json`),
+        JSON.stringify({ giro, tienda: cat.tienda, handle, fases, hallazgos }, null, 2),
+      );
     };
 
     // Precondiciones de la plataforma (no se cronometran): la persona que
@@ -285,9 +293,11 @@ for (const giro of GIROS) {
       await expect(subir).toBeVisible({ timeout: 60_000 });
       const tUp = Date.now();
       await subir.click();
-      await expect(owner.getByRole("button", { name: /^(Subir|Reintentar)/ })).toHaveCount(0, {
-        timeout: 600_000,
-      });
+      // Termina cuando la página confirma todas las subidas (no basta con que
+      // el botón desaparezca: mientras sube tampoco se muestra).
+      await expect(
+        owner.getByRole("status").filter({ hasText: new RegExp(`${files.length} fotos subidas`) }),
+      ).toBeVisible({ timeout: 600_000 });
       notas.push(`${files.length} fotos subidas en ${Math.round((Date.now() - tUp) / 1000)} s.`);
       const tProc = Date.now();
       await waitJobs(owner, async () => {
@@ -356,7 +366,7 @@ for (const giro of GIROS) {
         "Envíos",
       ];
       for (const nombre of politicas) {
-        const link = owner.getByRole("link", { name: nombre, exact: true });
+        const link = owner.getByRole("main").getByRole("link", { name: nombre, exact: true });
         if ((await link.count()) === 0) {
           notas.push(`No se encontró la página «${nombre}».`);
           continue;
@@ -453,11 +463,7 @@ for (const giro of GIROS) {
       notas.push("El pedido aparece en el panel.");
     });
 
-    mkdirSync(OUT, { recursive: true });
-    writeFileSync(
-      join(OUT, `ensayo-${giro}.json`),
-      JSON.stringify({ giro, tienda: cat.tienda, handle, fases, hallazgos }, null, 2),
-    );
+    guardar();
     await owner.context().close();
   });
 }

@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     locale: "es-MX",
+    // Sin tope por acción, un paso que no encuentra su campo esperaría hasta el final.
+    actionTimeout: 30_000,
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
