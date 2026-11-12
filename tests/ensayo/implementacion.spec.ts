@@ -396,7 +396,9 @@ for (const giro of GIROS) {
       for (let vuelta = 0; vuelta < 30; vuelta++) {
         await owner.goto(`${base}/productos?estado=draft`);
         const all = owner.getByLabel("Seleccionar todos");
-        if ((await all.count()) === 0) break;
+        // Sin filas de producto no queda nada en borrador (el «todos» sigue visible).
+        const filas = owner.getByRole("checkbox", { name: /^Seleccionar (?!todos)/ });
+        if ((await all.count()) === 0 || (await filas.count()) === 0) break;
         await all.check();
         await owner.locator("#bulk-action").selectOption("publish");
         await owner.getByRole("button", { name: "Aplicar" }).click();
