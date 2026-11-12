@@ -410,3 +410,121 @@ describe("hoja simple en español (Excel o Google Sheets, sin nombre corto)", ()
     expect(planned!.normalized!.product.title).toBe("Taza azul");
   });
 });
+
+describe("hoja simple con tallas, colores o sabores (Orden 09)", () => {
+  const headers = ["Producto", "Talla", "Color", "Precio", "Existencias", "SKU"];
+  const rows = [
+    ["Playera básica", "CH", "Negro", "199", "5", "PB-CH-N"],
+    ["Playera básica", "M", "Negro", "199", "8", "PB-M-N"],
+    ["Playera básica", "M", "Blanco", "209", "0", "PB-M-B"],
+    ["Gorra lisa", "", "", "149", "3", "GOR-1"],
+    ["Tenis urbano", "26", "", "899", "2", "TU-26"],
+    ["Tenis urbano", "27", "", "899", "1", "TU-27"],
+  ];
+
+  it("las filas del mismo producto son sus presentaciones; sin talla ni color es un producto solo", () => {
+    const t = translatePlatformCsv(headers, rows, [2, 3, 4, 5, 6, 7]);
+    expect(t.platform).toBe("hoja");
+    expect(t.ignored).toEqual([]);
+    expect(t.headers).toEqual([
+      "handle",
+      "title",
+      "price",
+      "inventory_quantity",
+      "sku",
+      "option1_name",
+      "option1_value",
+      "option2_name",
+      "option2_value",
+    ]);
+    expect(t.rows.map((r) => r[0])).toEqual([
+      "playera-basica",
+      "playera-basica",
+      "playera-basica",
+      "gorra-lisa",
+      "tenis-urbano",
+      "tenis-urbano",
+    ]);
+    // Playera: Talla y Color; Gorra: sin opciones; Tenis: solo Talla (en el primer lugar).
+    expect(t.rows[0]!.slice(5)).toEqual(["Talla", "CH", "Color", "Negro"]);
+    expect(t.rows[3]!.slice(5)).toEqual(["", "", "", ""]);
+    expect(t.rows[4]!.slice(5)).toEqual(["Talla", "26", "", ""]);
+  });
+
+  it("el plan sale sin errores, con una presentación por fila", () => {
+    const t = translatePlatformCsv(headers, rows, [2, 3, 4, 5, 6, 7]);
+    const planned = planProductImport(t.headers, t.rows, t.rowNumbers);
+    expect(planned.flatMap((p) => p.errors)).toEqual([]);
+    const playera = planned.find((p) => p.normalized?.handle === "playera-basica")!.normalized!;
+    expect(playera.option_names).toEqual(["Talla", "Color"]);
+    expect(playera.variants.map((v) => v.options)).toEqual([
+      { Talla: "CH", Color: "Negro" },
+      { Talla: "M", Color: "Negro" },
+      { Talla: "M", Color: "Blanco" },
+    ]);
+    expect(playera.variants.map((v) => v.sku)).toEqual(["PB-CH-N", "PB-M-N", "PB-M-B"]);
+    const gorra = planned.find((p) => p.normalized?.handle === "gorra-lisa")!.normalized!;
+    expect(gorra.option_names).toEqual([]);
+    expect(gorra.variants).toHaveLength(1);
+    const tenis = planned.find((p) => p.normalized?.handle === "tenis-urbano")!.normalized!;
+    expect(tenis.option_names).toEqual(["Talla"]);
+    expect(tenis.variants.map((v) => v.options)).toEqual([{ Talla: "26" }, { Talla: "27" }]);
+  });
+
+  it("una presentación repetida o sin su talla es un error de esa fila, no un producto nuevo", () => {
+    const t = translatePlatformCsv(
+      ["Producto", "Talla", "Precio"],
+      [
+        ["Playera", "M", "199"],
+        ["Playera", "M", "199"],
+        ["Playera", "", "199"],
+      ],
+      [2, 3, 4],
+    );
+    const planned = planProductImport(t.headers, t.rows, t.rowNumbers);
+    expect(planned[1]!.errors.join(" ")).toMatch(/la misma combinación ya está en la fila 2/);
+    expect(planned[2]!.errors.join(" ")).toMatch(/falta el valor de Talla/);
+  });
+
+  it("sabor y tamaño (suplementos) y presentación (abarrotes) también son variantes", () => {
+    const t = translatePlatformCsv(
+      ["Nombre", "Sabor", "Tamaño", "Presentación", "Precio"],
+      [
+        ["Proteína", "Vainilla", "1 kg", "", "899"],
+        ["Proteína", "Chocolate", "1 kg", "", "899"],
+        ["Arroz", "", "", "1 kg", "32"],
+        ["Arroz", "", "", "5 kg", "150"],
+      ],
+      [2, 3, 4, 5],
+    );
+    const planned = planProductImport(t.headers, t.rows, t.rowNumbers);
+    expect(planned.flatMap((p) => p.errors)).toEqual([]);
+    expect(planned[0]!.normalized!.option_names).toEqual(["Sabor", "Tamaño"]);
+    expect(planned.find((p) => p.normalized?.handle === "arroz")!.normalized!.option_names).toEqual(
+      ["Presentación"],
+    );
+  });
+
+  it("más de 3 columnas de variante: usa las 3 primeras y avisa de las demás", () => {
+    const t = translatePlatformCsv(
+      ["Producto", "Talla", "Color", "Material", "Modelo", "Precio"],
+      [["Bota", "26", "Café", "Piel", "Clásico", "1200"]],
+      [2],
+    );
+    expect(t.ignored).toEqual(["Modelo"]);
+    expect(t.rows[0]!.slice(-6)).toEqual(["Talla", "26", "Color", "Café", "Material", "Piel"]);
+  });
+
+  it("sin columnas de variante todo sigue igual: nombres repetidos son productos distintos", () => {
+    const t = translatePlatformCsv(
+      ["Producto", "Precio"],
+      [
+        ["Taza", "50"],
+        ["Taza", "60"],
+      ],
+      [2, 3],
+    );
+    expect(t.headers).toEqual(["handle", "title", "price"]);
+    expect(t.rows.map((r) => r[0])).toEqual(["taza", "taza-2"]);
+  });
+});

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { SHEET_TEMPLATES } from "@/lib/imports/sheet-templates";
 import { resumeQueue } from "@/server/jobs/run-now";
 import { ALL_IMPORT_HEADERS } from "@/server/imports/products";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -116,6 +117,32 @@ export default async function ImportPage({ params, searchParams }: Props) {
       </section>
 
       <PasteSheet action={`${base}/subir`} />
+
+      <section
+        aria-labelledby="hojas-por-giro"
+        className="space-y-2 rounded-md border border-border p-4 text-sm"
+      >
+        <h2 id="hojas-por-giro" className="font-semibold">
+          ¿Empiezas de cero? Descarga la hoja de tu giro
+        </h2>
+        <p className="text-fg-muted">
+          Trae solo los títulos de las columnas que te sirven, en español. Llénala en Excel o Google
+          Sheets y pégala arriba o súbela en el paso 3.
+        </p>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {SHEET_TEMPLATES.map((template) => (
+            <li key={template.key} className="space-y-1">
+              <a
+                href={`${base}/plantilla?giro=${template.key}`}
+                className={`${linkButton} md:h-11 border border-control`}
+              >
+                {template.label}
+              </a>
+              <p className="text-[13px] text-fg-muted">{template.hint}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <p className="text-sm text-fg-muted">
         ¿Prefieres un archivo? Sigue estos tres pasos con la plantilla, o sube directamente tu hoja

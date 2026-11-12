@@ -18,6 +18,7 @@ type Summary =
       state: "ok";
       csv: string;
       products: number;
+      rows: number;
       used: string[];
       ignored: string[];
       sheet: boolean;
@@ -41,11 +42,16 @@ function summarize(text: string): Summary {
       return { state: "error", message: "Son más de 5 000 filas. Pega por partes." };
     }
     const t = translatePlatformCsv(parsed.headers, parsed.rows, parsed.rowNumbers);
+    const handleAt = t.headers.indexOf("handle");
     return {
       state: "ok",
       csv,
-      products: t.rows.length,
-      used: t.headers.filter((h) => h !== "handle").map((h) => COLUMN_LABELS[h] ?? h),
+      // Con tallas o colores, varias filas son un solo producto (mismo nombre corto).
+      products: handleAt < 0 ? t.rows.length : new Set(t.rows.map((r) => r[handleAt])).size,
+      rows: t.rows.length,
+      used: t.headers
+        .filter((h) => h !== "handle" && !/^option\d_name$/.test(h))
+        .map((h) => COLUMN_LABELS[h] ?? h),
       ignored: t.ignored,
       sheet: t.platform === "hoja",
     };
@@ -102,7 +108,10 @@ export function PasteSheet({ action }: { action: string }) {
         <code>Precio</code>, <code>Precio anterior</code>, <code>Existencias</code>,{" "}
         <code>Categoría</code>, <code>Marca</code>, <code>Fotos</code> (enlaces https),{" "}
         <code>SKU</code>, <code>Descripción</code> y <code>Peso (kg)</code>. No necesitas inventar
-        un nombre corto: lo creamos con el nombre de cada producto.
+        un nombre corto: lo creamos con el nombre de cada producto. ¿Vendes por talla, color, sabor
+        o presentación? Agrega esas columnas (<code>Talla</code>, <code>Color</code>,{" "}
+        <code>Sabor</code>, <code>Tamaño</code>, <code>Presentación</code>) y repite el nombre del
+        producto en una fila por cada una.
       </p>
       <form
         ref={form}
@@ -136,6 +145,7 @@ export function PasteSheet({ action }: { action: string }) {
                 <strong>
                   {summary.products === 1 ? "1 producto" : `${summary.products} productos`}
                 </strong>
+                {summary.rows > summary.products ? ` (${summary.rows} presentaciones)` : null}
                 {summary.used.length > 0 ? (
                   <> con estas columnas: {summary.used.join(", ")}.</>
                 ) : (

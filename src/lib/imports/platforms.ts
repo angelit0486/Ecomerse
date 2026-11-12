@@ -402,6 +402,24 @@ const SHEET_COLUMNS: readonly SheetColumn[] = [
   },
 ];
 
+/**
+ * Columnas de variante de la hoja (Orden 09): ropa y calzado traen «Talla» y
+ * «Color»; suplementos, «Sabor» y «Tamaño»; abarrotes, «Presentación». Con
+ * alguna de ellas, las filas con el mismo nombre de producto son presentaciones
+ * de un solo producto. Hasta 3 por hoja (el límite del catálogo).
+ */
+const SHEET_OPTIONS: readonly { name: string; from: readonly string[] }[] = [
+  { name: "Talla", from: ["talla", "tallas"] },
+  { name: "Color", from: ["color", "colores"] },
+  { name: "Sabor", from: ["sabor", "sabores"] },
+  { name: "Tamaño", from: ["tamano"] },
+  { name: "Presentación", from: ["presentacion"] },
+  { name: "Modelo", from: ["modelo"] },
+  { name: "Medida", from: ["medida"] },
+  { name: "Material", from: ["material"] },
+];
+const MAX_SHEET_OPTIONS = 3;
+
 /** «Taza de barro azul» → «taza-de-barro-azul» (minúsculas, sin acentos ni signos). */
 function slugify(text: string): string {
   return normalizeHeader(text)
@@ -437,6 +455,31 @@ function translateSheet(
   };
 
   const titleAt = used.find((u) => u.spec.column === "title")?.at;
+  const titleOf = (row: readonly string[]) =>
+    titleAt === undefined ? "" : (row[titleAt] ?? "").trim();
+
+  // Columnas de variante presentes, en el orden de la hoja (máximo 3).
+  const optionColumns = SHEET_OPTIONS.flatMap((o) => {
+    const header = o.from.find((h) => position.has(h));
+    return header ? [{ name: o.name, header, at: position.get(header)! }] : [];
+  })
+    .sort((a, b) => a.at - b.at)
+    .slice(0, MAX_SHEET_OPTIONS);
+  // Por producto (mismo nombre), las columnas de variante que alguna fila llena.
+  const slotsByProduct = new Map<string, typeof optionColumns>();
+  if (optionColumns.length > 0) {
+    const rowsByProduct = new Map<string, (readonly string[])[]>();
+    for (const row of rows) {
+      const key = slugify(titleOf(row));
+      if (key) rowsByProduct.set(key, [...(rowsByProduct.get(key) ?? []), row]);
+    }
+    for (const [key, group] of rowsByProduct) {
+      const slots = optionColumns.filter((o) => group.some((row) => (row[o.at] ?? "").trim()));
+      if (slots.length > 0) slotsByProduct.set(key, slots);
+    }
+  }
+  const sharedHandle = new Map<string, string>();
+
   const translated: string[][] = [];
   const numbers: number[] = [];
   let withImages = 0;
@@ -446,17 +489,39 @@ function translateSheet(
       const raw = (row[at] ?? "").trim();
       return spec.convert ? spec.convert(raw, header) : raw;
     });
-    const title = titleAt === undefined ? "" : (row[titleAt] ?? "").trim();
+    const title = titleOf(row);
     const imageIndex = used.findIndex((u) => u.spec.column === "image_urls");
     if (imageIndex >= 0 && cells[imageIndex]) withImages += 1;
-    translated.push([handleFor(title, rowNumber), ...cells]);
+    // Con tallas, colores o sabores, las filas del mismo producto comparten el
+    // nombre corto: son sus presentaciones. Sin ellos, cada fila es un producto.
+    const key = slugify(title);
+    const slots = slotsByProduct.get(key) ?? [];
+    let handle: string;
+    if (slots.length > 0) {
+      handle = sharedHandle.get(key) ?? handleFor(title, rowNumber);
+      sharedHandle.set(key, handle);
+    } else {
+      handle = handleFor(title, rowNumber);
+    }
+    const optionCells = optionColumns.flatMap((_, n) => {
+      const slot = slots[n];
+      return slot ? [slot.name, (row[slot.at] ?? "").trim()] : ["", ""];
+    });
+    translated.push([handle, ...cells, ...optionCells]);
     numbers.push(rowNumber);
   });
 
-  const known = new Set(SHEET_COLUMNS.flatMap((c) => c.from));
+  const known = new Set([
+    ...SHEET_COLUMNS.flatMap((c) => c.from),
+    ...optionColumns.map((o) => o.header),
+  ]);
   return {
     platform: "hoja",
-    headers: ["handle", ...used.map((u) => u.spec.column)],
+    headers: [
+      "handle",
+      ...used.map((u) => u.spec.column),
+      ...optionColumns.flatMap((_, n) => [`option${n + 1}_name`, `option${n + 1}_value`]),
+    ],
     rows: translated,
     rowNumbers: numbers,
     ignored: [...new Set(headers.filter((h) => h.trim() && !known.has(normalizeHeader(h))))],
