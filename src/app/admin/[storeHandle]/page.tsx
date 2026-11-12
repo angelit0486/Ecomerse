@@ -2,12 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formatMoney } from "@/lib/money/format";
+import {
+  buildStoreAlerts,
+  LEVEL_LABEL,
+  storeAlertsSchema,
+  type StoreAlert,
+} from "@/lib/store-alerts/alerts";
 import { hasPermission } from "@/server/auth/context";
 import { resumeQueue } from "@/server/jobs/run-now";
 import { configIssues } from "@/server/system/health";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
+import { log } from "@/server/observability/logger";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+
+import { panelFlagEnabled } from "./_shared/panel-flags";
 
 type Props = {
   params: Promise<{ storeHandle: string }>;
@@ -140,6 +149,25 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
     if (waiting.imports > 0 || (photosCanRun && waiting.photos > 0)) resumeQueue("home");
   }
 
+  // Alertas accionables (Orden 10, O10-02): con «Salud de tu tienda» encendida.
+  // Si la consulta falla, Inicio sigue funcionando sin ellas.
+  let alerts: StoreAlert[] | null = null;
+  if (hasPermission(ctx, "products.read")) {
+    const supabase = await createSupabaseServerClient();
+    if (await panelFlagEnabled(supabase, ctx.store.id, "store_health")) {
+      try {
+        const counts = storeAlertsSchema.parse(
+          await callRpc<unknown>(supabase, "store_alerts", { p_store_id: ctx.store.id }),
+        );
+        alerts = buildStoreAlerts(counts, base);
+      } catch (error) {
+        log.warn("home.store_alerts_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
   // Tienda sin publicar: cuántos pendientes le faltan (misión panel, F3).
   let launchPending: number | null = null;
   if (ctx.store.status === "draft" && canManage) {
@@ -245,6 +273,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             </Link>
           </div>
         ) : null}
+        {alerts ? <StoreAlertsPanel alerts={alerts} /> : null}
         {quickActions.length > 0 ? (
           <nav aria-label="Acciones rápidas" className="flex flex-wrap gap-2">
             {quickActions.map((a) => (
@@ -474,6 +503,53 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         </>
       ) : null}
       {systemState && healthy ? systemState : null}
+    </section>
+  );
+}
+
+const LEVEL_STYLE: Record<StoreAlert["level"], string> = {
+  alta: "border-danger",
+  media: "border-warning",
+  baja: "border-border",
+};
+
+/** «Qué atender hoy»: cada alerta con su conteo, su urgencia y la lista para resolverla. */
+function StoreAlertsPanel({ alerts }: { alerts: StoreAlert[] }) {
+  return (
+    <section aria-labelledby="alertas" className="space-y-2">
+      <h2 id="alertas" className="font-semibold">
+        Qué atender hoy
+      </h2>
+      {alerts.length === 0 ? (
+        <p className="text-sm text-success">
+          Todo en orden: tus productos publicados tienen foto, categoría y existencias.
+        </p>
+      ) : (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {alerts.map((alert) => (
+            <li
+              key={alert.key}
+              className={`space-y-1 rounded-md border p-3 text-sm ${LEVEL_STYLE[alert.level]}`}
+            >
+              <p className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-medium">
+                  {alert.title}:{" "}
+                  <span className="tabular-nums">{alert.count.toLocaleString("es-MX")}</span>
+                </span>
+                <span className="text-[13px] text-fg-muted">{LEVEL_LABEL[alert.level]}</span>
+              </p>
+              <p className="text-fg-muted">{alert.description}</p>
+              <p>{alert.action}</p>
+              <Link
+                href={alert.href}
+                className="inline-flex min-h-11 items-center font-medium underline"
+              >
+                Ver {alert.count === 1 ? "el producto" : "los productos"}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

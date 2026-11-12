@@ -43,7 +43,9 @@ select is((select count(*)::int from public.media where product_id = tests.fx('c
 select lives_ok('set constraints all immediate', 'las validaciones diferidas de las variantes pasan');
 select tests.logout();
 
-select is((select string_agg(v.option_signature || '=' || v.net_content || '/' || v.servings_per_container, ',' order by v.position)
+-- Mismo orden que el panel (posición y luego firma): las dos tienen posición 0 y
+-- sin desempate el orden dependía de dónde quedaron las filas (Orden 10).
+select is((select string_agg(v.option_signature || '=' || v.net_content || '/' || v.servings_per_container, ',' order by v.position, v.option_signature)
              from public.product_variants v where v.product_id = tests.fx('copy')),
           'Tamaño=1 kg=1 kg/33,Tamaño=2 kg=2 kg/66', 'contenido y porciones de cada presentación');
 select is((select count(*)::int from public.product_variants v where v.product_id = tests.fx('copy') and v.sku is not null),

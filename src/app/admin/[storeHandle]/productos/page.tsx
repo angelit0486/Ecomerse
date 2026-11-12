@@ -44,6 +44,7 @@ const ISSUES = [
   { key: "agotados", label: "Con presentaciones agotadas" },
   { key: "sin_foto", label: "Sin foto" },
   { key: "pocas_existencias", label: "Con pocas existencias" },
+  { key: "sin_categoria", label: "Sin categoría" },
 ] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
@@ -91,7 +92,8 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   // Los filtros de existencias exigen inventory.read (la base también lo exige).
   const canSeeStock = hasPermission(ctx, "inventory.read");
   const issue = ISSUES.find(
-    (i) => i.key === issueParam && (canSeeStock || i.key === "sin_foto"),
+    (i) =>
+      i.key === issueParam && (canSeeStock || i.key === "sin_foto" || i.key === "sin_categoria"),
   )?.key;
   const sortParam = one(sp.orden);
   const sort = PRODUCT_SORTS.find((o) => o === sortParam) ?? "recientes";
@@ -299,7 +301,9 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             className={nativeControl}
           >
             <option value="">Ninguno</option>
-            {ISSUES.filter((i) => canSeeStock || i.key === "sin_foto").map((i) => (
+            {ISSUES.filter(
+              (i) => canSeeStock || i.key === "sin_foto" || i.key === "sin_categoria",
+            ).map((i) => (
               <option key={i.key} value={i.key}>
                 {i.label}
               </option>
