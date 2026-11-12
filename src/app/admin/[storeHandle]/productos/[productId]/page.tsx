@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { productShareText } from "@/lib/share/share";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { getProductAttributeValues, listAttributes } from "@/server/catalog/attributes";
@@ -13,6 +14,7 @@ import { imageProcessingBlocked } from "@/server/system/health";
 import { storeOrigin } from "@/server/storefront/seo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { ShareTools } from "../../_shared/share-tools";
 import { ProductAttributesForm } from "../attribute-forms";
 import { toEditorProduct } from "../editor-model";
 import { publishIssueMessage, STATUS_LABELS } from "../messages";
@@ -195,6 +197,23 @@ export default async function ProductPage({ params, searchParams }: Props) {
           </p>
         ) : null}
       </header>
+
+      {publicUrl ? (
+        <details className="rounded-md border border-border text-sm [&[open]>summary]:border-b [&[open]>summary]:border-border">
+          <summary className="flex min-h-11 cursor-pointer items-center px-4 font-medium">
+            Compartir este producto
+          </summary>
+          <ShareTools
+            id="compartir-producto"
+            title="Enlace directo y código QR"
+            description="Comparte la ficha por WhatsApp o pega el QR junto al producto en tu local. Se abre sin iniciar sesión."
+            url={publicUrl}
+            shareText={productShareText(product.title, publicUrl)}
+            fileBase={product.slug}
+            framed={false}
+          />
+        </details>
+      ) : null}
 
       <ProductStatusPanel
         storeHandle={ctx.store.handle}

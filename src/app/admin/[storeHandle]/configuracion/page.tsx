@@ -7,11 +7,14 @@ import { STORE_TEMPLATES } from "@/lib/templates/store-templates";
 import { ThemeSettingsV2, type ThemeSettings } from "@/lib/theme/schema";
 import { hasPermission } from "@/server/auth/context";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
+import { storeShareText } from "@/lib/share/share";
 import { previewUrl } from "@/server/storefront/preview-url";
+import { canonicalUrl } from "@/server/storefront/seo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { publicMediaUrl } from "@/server/catalog/queries";
 
+import { ShareTools } from "../_shared/share-tools";
 import { loadSiblingStores } from "../_shared/sibling-stores";
 import { TIMEZONES } from "../_shared/timezones";
 import { BrandForm } from "../apariencia/forms";
@@ -74,7 +77,7 @@ export default async function OnboardingPage({ params }: Props) {
         .maybeSingle(),
       supabase
         .from("store_domains")
-        .select("hostname, type")
+        .select("hostname, type, status")
         .eq("store_id", ctx.store.id)
         .eq("is_primary", true)
         .maybeSingle(),
@@ -448,6 +451,21 @@ export default async function OnboardingPage({ params }: Props) {
           </a>
         ) : null}
       </section>
+
+      {/* O10-03: solo con la tienda publicada y su dominio activo (enlace público real). */}
+      {launched && domain?.hostname && domain.status === "active" ? (
+        <ShareTools
+          id="compartir-tienda"
+          title="Comparte tu tienda"
+          description="Envía el enlace por WhatsApp o imprime el código QR para tu mostrador, empaques o volantes. Abre tu tienda sin iniciar sesión."
+          url={canonicalUrl({ primary_hostname: domain.hostname, handle: ctx.store.handle }, "/")}
+          shareText={storeShareText(
+            store?.name ?? ctx.store.name,
+            canonicalUrl({ primary_hostname: domain.hostname, handle: ctx.store.handle }, "/"),
+          )}
+          fileBase={store?.name ?? ctx.store.handle}
+        />
+      ) : null}
     </section>
   );
 }
