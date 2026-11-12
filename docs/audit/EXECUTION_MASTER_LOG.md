@@ -168,15 +168,15 @@ Leer una tabla de tienda directamente cuesta 16 µs por fila propia y 29 µs por
 
 ## Escalones de capacidad
 
-| Escalón | Tamaño               | Productos | Estado                                                 |
-| ------- | -------------------- | --------- | ------------------------------------------------------ |
-| A       | 1 tienda × 10,000    | 10,000    | Aprobado [VERIFICADO]                                  |
-| B       | 10 tiendas × 10,000  | 100,000   | Aprobado [VERIFICADO] (ver abajo)                      |
-| C       | 10 tiendas × 50,000  | 500,000   | En curso: el primer intento destapó CAP-11 (corregido) |
-| D       | 50 tiendas × 10,000  | 500,000   | Aprobado tras corregir CAP-08 [VERIFICADO] (ver abajo) |
-| E       | 100 tiendas × 10,000 | 1,000,000 | Requiere propuesta técnica y de presupuesto            |
-| F       | 250 tiendas × 10,000 | 2,500,000 | Requiere propuesta técnica y de presupuesto            |
-| G       | 500 tiendas × 10,000 | 5,000,000 | Requiere propuesta técnica y de presupuesto            |
+| Escalón | Tamaño                       | Productos | Estado                                                                     |
+| ------- | ---------------------------- | --------- | -------------------------------------------------------------------------- |
+| A       | 1 tienda × 10,000            | 10,000    | Aprobado [VERIFICADO]                                                      |
+| B       | 10 tiendas × 10,000          | 100,000   | Aprobado [VERIFICADO] (ver abajo)                                          |
+| C       | 5 tiendas × 50,000 (parcial) | 250,000   | Medido: funciona, pero 50,000 por tienda ya es lento (CAP-12) [VERIFICADO] |
+| D       | 50 tiendas × 10,000          | 500,000   | Aprobado tras corregir CAP-08 [VERIFICADO] (ver abajo)                     |
+| E       | 100 tiendas × 10,000         | 1,000,000 | Requiere propuesta técnica y de presupuesto                                |
+| F       | 250 tiendas × 10,000         | 2,500,000 | Requiere propuesta técnica y de presupuesto                                |
+| G       | 500 tiendas × 10,000         | 5,000,000 | Requiere propuesta técnica y de presupuesto                                |
 
 ### Escalón B — 10 tiendas × 10,000 (100,000 productos) [VERIFICADO]
 
@@ -239,6 +239,33 @@ Generar una tienda de 50,000 productos en una sola transacción falló con «out
 - [ESTIMADO] En staging una sola importación de 5,000 productos ya rebasa el tamaño nominal (3,840). No lo probé allí (no está autorizado).
 - Corrección (`20261111000400_variant_limit_row_lock.sql`, solo la función): el mismo efecto bloqueando la fila del producto, que no ocupa la tabla compartida. Cuatro importaciones de 5,000 a la vez: las cuatro terminan; candados de aviso en uso: 0.
 - Regresión: pgTAP `142_variant_limit_row_lock` (40 productos en una transacción sin candado por producto; el límite se sigue respetando) e integración `variant-limit-concurrency` (dos sesiones sobre el mismo producto: la segunda espera y, con el límite lleno, se rechaza).
+
+### Escalón C — tiendas de 50,000 productos [VERIFICADO, parcial]
+
+Ya con CAP-11 corregido, generar una tienda de 50,000 productos en una transacción funciona. El contenedor de la sesión se reinició a media generación: quedaron completas 5 de las 10 tiendas (250,000 productos, 1.6 GB) y medí sobre ellas, porque lo nuevo de este escalón es el tamaño **por tienda** (el tamaño total de 500,000 ya lo cubrió el escalón D). Tiendas 1 y 5, mediana en ms:
+
+| Consulta                         | Tienda de 10,000 | Tienda de 50,000 |
+| -------------------------------- | ---------------- | ---------------- |
+| Tienda: lista                    | 51–78            | 345–414          |
+| Tienda: orden por precio         | 55–83            | 428–697          |
+| Tienda: «solo disponibles»       | 153–250          | 1,004–1,340      |
+| Tienda: buscar una palabra       | 35–43            | 146–168          |
+| Tienda: sugerencias              | 26–42            | 121–138          |
+| Tienda: relacionados             | 30–42            | 226–358          |
+| Tienda: portada                  | 47–88            | 399–686          |
+| Tienda: ficha de producto        | 3–9              | 3–4              |
+| Panel: lista (recientes)         | 8–12             | 110–116          |
+| Panel: buscar                    | 55–83            | 474–586          |
+| Panel: «agotados»                | 61–203           | 787–860          |
+| Panel: inventario                | 18–59            | 62–170           |
+| Panel: calidad del catálogo      | 839–999          | 2,683–2,798      |
+| Panel: detalle, estado, publicar | 0.5–9            | 0.5–8            |
+
+Sin errores ni resultados incorrectos. Lectura honesta:
+
+- **CAP-12 (S2 para tiendas de más de ~10,000 productos, abierto).** Las listas y la búsqueda leen todos los productos de la tienda, los ordenan y luego toman la página. Con 10,000 eso cuesta decenas de milisegundos; con 50,000, de 0.35 a 1.3 s por consulta. El tiempo crece con el tamaño de la tienda (5 veces más productos → 5 a 10 veces más tiempo).
+- La meta del programa (500 tiendas × 10,000) queda dentro de lo medido como cómodo. Una tienda de 50,000 **no** es cómoda hoy.
+- [PROPUESTA] Para admitir tiendas de 50,000: paginar siguiendo un índice por cada orden (sin ordenar todo), y guardar la disponibilidad del producto en una columna mantenida por el inventario. Es un cambio de diseño de `storefront.list_products` y `catalog_search_products`; no lo hice porque la meta actual no lo exige y cambia funciones centrales.
 
 ### Límites locales [ESTIMADO]
 
