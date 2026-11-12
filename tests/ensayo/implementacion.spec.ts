@@ -478,12 +478,17 @@ for (const giro of GIROS) {
       await shop.getByLabel("Colonia").fill("Centro");
       await shop.getByLabel("Ciudad o municipio").fill("Puebla");
       await shop.getByLabel("Código postal").fill("72000");
-      await shop.getByRole("button", { name: /Confirmar pedido/ }).click();
-      const again = shop.getByRole("button", { name: /Confirmar pedido/ });
-      if (await again.isVisible().catch(() => false)) await again.click().catch(() => {});
-      await expect(shop.getByRole("heading", { name: /Gracias|pedido/i }).first()).toBeVisible({
-        timeout: 30_000,
-      });
+      // Primer clic: el servidor elige el envío y pide confirmar con el total a la vista.
+      const confirmar = shop.getByRole("button", { name: /Confirmar pedido/ });
+      const gracias = shop.getByRole("heading", { name: /Gracias/i });
+      await confirmar.click();
+      const elegido = shop.getByRole("alert").filter({ hasText: /Elegimos/ });
+      await expect(elegido.or(gracias).first()).toBeVisible({ timeout: 30_000 });
+      if (await elegido.isVisible()) {
+        notas.push(`Pago: ${(await elegido.innerText()).trim()}`);
+        await confirmar.click();
+      }
+      await expect(gracias).toBeVisible({ timeout: 30_000 });
       notas.push(
         `Compra de prueba (transferencia) en ${Math.round((Date.now() - tShop) / 1000)} s.`,
       );
