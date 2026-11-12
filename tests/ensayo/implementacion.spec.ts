@@ -398,33 +398,30 @@ for (const giro of GIROS) {
 
     // ---------------- Día 5: pruebas y entrega ----------------
     await fase("Día 5 · Revisión, publicación y compra de prueba", async (notas) => {
-      // Publicar productos que quedaron en borrador (página por página).
-      for (let vuelta = 0; vuelta < 30; vuelta++) {
-        await owner.goto(`${base}/productos?estado=draft`);
-        const all = owner.getByLabel("Seleccionar todos");
-        // Sin filas de producto no queda nada en borrador (el «todos» sigue visible).
-        const filas = owner.getByRole("checkbox", { name: /^Seleccionar (?!todos)/ });
-        if ((await all.count()) === 0 || (await filas.count()) === 0) break;
-        await all.check();
+      // Publicar los borradores: 100 por página (el máximo de una acción en bloque).
+      const borradores = async () => {
+        const [r] = await admin<{ n: number }[]>`
+          select count(*)::int as n from public.products p join public.stores s on s.id = p.store_id
+           where s.handle = ${handle} and p.deleted_at is null and p.status = 'draft'`;
+        return r!.n;
+      };
+      for (let vuelta = 0; vuelta < 120; vuelta++) {
+        const antes = await borradores();
+        if (antes === 0) break;
+        await owner.goto(`${base}/productos?estado=draft&por=100`);
+        await owner.getByLabel("Seleccionar todos").check();
         await owner.locator("#bulk-action").selectOption("publish");
-        const antes = await filas.count();
         await owner.getByRole("button", { name: "Aplicar" }).click();
-        await owner.waitForTimeout(1500);
-        const aviso = (await owner.getByRole("alert").allInnerTexts()).join(" ").trim();
-        // El aviso puede desaparecer al refrescarse la lista filtrada: se espera
-        // a que esas filas salgan de «borrador».
         try {
-          await expect(async () => {
-            await owner.reload();
-            expect(await filas.count()).toBeLessThan(antes);
-          }).toPass({ timeout: 30_000 });
+          await expect.poll(borradores, { timeout: 30_000 }).toBeLessThan(antes);
         } catch {
-          hallazgos.push(`Publicar en bloque no publicó nada${aviso ? `: «${aviso}»` : ""}.`);
+          const aviso = (await owner.getByRole("alert").allInnerTexts()).join(" ").trim();
+          hallazgos.push(`Publicar en bloque no avanzó${aviso ? `: «${aviso}»` : ""}.`);
           break;
         }
-        const despues = await filas.count();
-        notas.push(`Publicar en bloque (vuelta ${vuelta + 1}): ${antes - despues} publicados.`);
-        if (despues === antes) break;
+        notas.push(
+          `Publicar en bloque (vuelta ${vuelta + 1}): ${antes - (await borradores())} publicados.`,
+        );
       }
       const [pub] = await admin<{ active: number; draft: number }[]>`
         select count(*) filter (where p.status = 'active')::int as active,
