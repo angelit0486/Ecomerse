@@ -462,7 +462,7 @@ for (const giro of GIROS) {
         select p.slug from public.products p join public.stores s on s.id = p.store_id
          where s.handle = ${handle} and p.status = 'active' and p.deleted_at is null
            and exists (select 1 from public.product_variants v where v.product_id = p.id and v.store_id = p.store_id
-                        and (not v.track_inventory or v.inventory_quantity > 0))
+                        and (not v.track_inventory or exists (select 1 from public.inventory_levels l where l.store_id = v.store_id and l.variant_id = v.id and l.available > 0)))
          order by p.created_at limit 1`;
       await shop.goto(`${origin}/productos/${prod!.slug}`);
       await shop.getByRole("button", { name: "Agregar al carrito" }).click();
