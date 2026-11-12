@@ -62,6 +62,24 @@ describe("parseServerEnv", () => {
     }
   });
 
+  it("el origen local de fotos de prueba solo vale fuera de preview y producción (O10-04)", () => {
+    expect(
+      parseServerEnv({ ...valid, REMOTE_FETCH_TEST_ORIGIN: "http://127.0.0.1:4620" })
+        .REMOTE_FETCH_TEST_ORIGIN,
+    ).toBe("http://127.0.0.1:4620");
+    expect(() =>
+      parseServerEnv({ ...valid, REMOTE_FETCH_TEST_ORIGIN: "http://10.0.0.5:80" }),
+    ).toThrow(/REMOTE_FETCH_TEST_ORIGIN: valor inválido/);
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        APP_ENV: "preview",
+        APP_URL: "https://demo.x.test",
+        REMOTE_FETCH_TEST_ORIGIN: "http://127.0.0.1:4620",
+      }),
+    ).toThrow(/REMOTE_FETCH_TEST_ORIGIN: prohibida en preview y producción/);
+  });
+
   it("producción exige Resend con clave y enlaces https (config inválida nunca llega a producción)", () => {
     const prod = { ...valid, APP_ENV: "production" };
     expect(() => parseServerEnv(prod)).toThrow(/EMAIL_PROVIDER: resend obligatorio/);

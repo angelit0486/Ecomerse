@@ -116,6 +116,15 @@ export const serverEnvSchema = z.object({
     .string()
     .regex(/^team_[A-Za-z0-9]{10,64}$/)
     .optional(),
+  /**
+   * Solo desarrollo y pruebas (Orden 10, O10-04): servidor local de fotos que el
+   * descargador acepta aunque sea http y de loopback. Prohibido en preview y
+   * producción (abajo).
+   */
+  REMOTE_FETCH_TEST_ORIGIN: z
+    .string()
+    .regex(/^http:\/\/(127\.0\.0\.1|localhost):\d{2,5}$/)
+    .optional(),
   /** Solo pruebas: API de Vercel simulada. */
   VERCEL_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /** Registros que el panel indica (los da Vercel al agregar el dominio al proyecto). */
@@ -214,6 +223,13 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
       code: "custom",
       path: ["VERCEL_PROJECT_ID"],
       message: "requerida con VERCEL_DOMAINS_TOKEN",
+    });
+  }
+  if (deployed && env.REMOTE_FETCH_TEST_ORIGIN) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["REMOTE_FETCH_TEST_ORIGIN"],
+      message: "prohibida en preview y producción",
     });
   }
   if (deployed && !env.APP_URL.startsWith("https://")) {

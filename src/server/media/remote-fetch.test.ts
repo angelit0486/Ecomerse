@@ -181,6 +181,17 @@ describe("fetchRemoteImage · respuestas (servidor local de pruebas)", () => {
     expect(await run("/big-chunked")).toMatchObject({ ok: false, reason: "fetch_too_large" });
   });
 
+  it("con peekBytes lee solo el principio y no rechaza por el tamaño real (O10-04)", async () => {
+    const peek = await run("/ok.png", { peekBytes: 8 });
+    expect(peek).toMatchObject({ ok: true, partial: true });
+    expect(peek.ok && peek.data.length).toBe(8);
+    // El tamaño declarado sigue mandando.
+    expect(await run("/big", { peekBytes: 8 })).toMatchObject({
+      ok: false,
+      reason: "fetch_too_large",
+    });
+  });
+
   it("corta por tiempo y deja reintentar", async () => {
     const result = await run("/slow", { timeoutMs: 300 });
     expect(result).toMatchObject({ ok: false, reason: "fetch_failed", retryable: true });

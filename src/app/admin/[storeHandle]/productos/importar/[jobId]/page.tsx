@@ -22,6 +22,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { commitImport } from "../actions";
 import { AutoRefresh } from "../auto-refresh";
 import { CommitButton } from "../commit-button";
+import { PhotoCheck } from "../photo-check";
 import { publishIssueMessage } from "../../messages";
 import { COLUMN_LABELS, friendlyRowError, importErrorText, JOB_STATUS, MODE } from "../labels";
 
@@ -102,7 +103,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   const { data: job } = await supabase
     .from("import_jobs")
     .select(
-      "id, file_name, mode, status, totals, error, ignored_columns, created_at, committed_at, rows_purged_at",
+      "id, file_name, mode, status, totals, error, columns, ignored_columns, created_at, committed_at, rows_purged_at",
     )
     .eq("store_id", ctx.store.id)
     .eq("id", jobId)
@@ -320,6 +321,11 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       </dl>
 
       {changes ? <ChangesSummary changes={changes} currency={ctx.store.currency} /> : null}
+      {job.status === "validated" &&
+      ((job.columns as string[] | null) ?? []).includes("image_urls") &&
+      hasPermission(ctx, "products.update") ? (
+        <PhotoCheck storeHandle={ctx.store.handle} jobId={job.id} />
+      ) : null}
 
       {twin?.status === "committing" ? (
         <p role="status" className="rounded-md border border-warning p-3 text-sm">

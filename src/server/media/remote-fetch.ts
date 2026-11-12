@@ -30,7 +30,13 @@ export type RemoteFetchFailure =
   | "fetch_failed";
 
 export type RemoteFetchResult =
-  | { ok: true; data: Buffer; contentType: string | null }
+  | {
+      ok: true;
+      data: Buffer;
+      contentType: string | null;
+      /** true si se cortó al llegar a `peekBytes` (solo se leyó el principio). */
+      partial?: boolean;
+    }
   | { ok: false; reason: RemoteFetchFailure; retryable: boolean; detail?: string };
 
 export interface RemoteFetchOptions {
@@ -41,12 +47,19 @@ export interface RemoteFetchOptions {
   resolve?: (hostname: string) => Promise<{ address: string; family: 4 | 6 }[]>;
   /**
    * Solo desarrollo y pruebas: un origen exacto (p. ej. `http://127.0.0.1:4599`)
-   * que se acepta aunque sea http o local. El entorno lo prohíbe en preview y
-   * producción (src/config/env.ts).
+   * que se acepta aunque sea http o local. Viene de `REMOTE_FETCH_TEST_ORIGIN`,
+   * que el entorno rechaza en preview y producción (src/config/env.ts).
    */
   testOrigin?: string;
   /** Certificados de confianza adicionales (solo pruebas con TLS local). */
   ca?: string | Buffer;
+  /**
+   * Revisar sin descargar (Orden 10, O10-04): se corta al leer estos bytes y se
+   * devuelve lo leído con `partial: true`. Con ellos basta para saber el tipo
+   * real. El tamaño declarado (`content-length`) se sigue comparando con
+   * `maxBytes`; sin él, el tamaño no se puede saber sin descargar todo.
+   */
+  peekBytes?: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -275,6 +288,20 @@ function requestOnce(t: Target, options: RemoteFetchOptions, signal: AbortSignal
         let size = 0;
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
+          if (options.peekBytes !== undefined && size >= options.peekBytes) {
+            chunks.push(chunk);
+            res.destroy();
+            resolve({
+              kind: "done",
+              result: {
+                ok: true,
+                data: Buffer.concat(chunks).subarray(0, options.peekBytes),
+                contentType: (res.headers["content-type"] as string | undefined) ?? null,
+                partial: true,
+              },
+            });
+            return;
+          }
           if (size > options.maxBytes) {
             res.destroy();
             resolve({ kind: "done", result: fail("fetch_too_large") });
