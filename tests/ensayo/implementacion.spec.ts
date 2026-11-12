@@ -426,6 +426,15 @@ for (const giro of GIROS) {
         notas.push(`Publicar en bloque (vuelta ${vuelta + 1}): ${antes - despues} publicados.`);
         if (despues === antes) break;
       }
+      const [pub] = await admin<{ active: number; draft: number }[]>`
+        select count(*) filter (where p.status = 'active')::int as active,
+               count(*) filter (where p.status = 'draft')::int as draft
+          from public.products p join public.stores s on s.id = p.store_id
+         where s.handle = ${handle} and p.deleted_at is null`;
+      notas.push(`Tras publicar en bloque: ${pub!.active} publicados, ${pub!.draft} en borrador.`);
+      if (pub!.draft > 0) {
+        hallazgos.push(`${pub!.draft} productos no se pudieron publicar en bloque.`);
+      }
       // Inicio: alertas.
       await owner.goto(base);
       const alertas = owner.getByRole("region", { name: "Qué atender hoy" });
