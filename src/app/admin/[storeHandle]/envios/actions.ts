@@ -85,6 +85,10 @@ export async function saveRate(
     "est_days_min",
     "est_days_max",
   ]);
+  // La casilla va después de su campo oculto «0»: `get` devolvía siempre el
+  // «0» y toda tarifa del panel quedaba inactiva (hallazgo del ensayo O10-01).
+  const isActive = formData.getAll("is_active").includes("1");
+  values.is_active = isActive ? "1" : "0";
   const price = values.type === "pickup" ? 0 : parseMoneyToCents(values.price ?? "");
   const freeOver =
     values.type === "free_over" ? parseMoneyToCents(values.free_over_subtotal ?? "") : null;
@@ -110,7 +114,7 @@ export async function saveRate(
         free_over_subtotal: freeOver,
         est_days_min: days[0],
         est_days_max: days[1],
-        is_active: formData.get("is_active") !== "0",
+        is_active: isActive,
       },
     });
     invalidateStore(storeId);
