@@ -168,15 +168,15 @@ Leer una tabla de tienda directamente cuesta 16 µs por fila propia y 29 µs por
 
 ## Escalones de capacidad
 
-| Escalón | Tamaño               | Productos | Estado                                      |
-| ------- | -------------------- | --------- | ------------------------------------------- |
-| A       | 1 tienda × 10,000    | 10,000    | Aprobado [VERIFICADO]                       |
-| B       | 10 tiendas × 10,000  | 100,000   | Aprobado [VERIFICADO] (ver abajo)           |
-| C       | 10 tiendas × 50,000  | 500,000   | Pendiente; cabe en esta máquina             |
-| D       | 50 tiendas × 10,000  | 500,000   | Pendiente; cabe en esta máquina             |
-| E       | 100 tiendas × 10,000 | 1,000,000 | Requiere propuesta técnica y de presupuesto |
-| F       | 250 tiendas × 10,000 | 2,500,000 | Requiere propuesta técnica y de presupuesto |
-| G       | 500 tiendas × 10,000 | 5,000,000 | Requiere propuesta técnica y de presupuesto |
+| Escalón | Tamaño               | Productos | Estado                                                 |
+| ------- | -------------------- | --------- | ------------------------------------------------------ |
+| A       | 1 tienda × 10,000    | 10,000    | Aprobado [VERIFICADO]                                  |
+| B       | 10 tiendas × 10,000  | 100,000   | Aprobado [VERIFICADO] (ver abajo)                      |
+| C       | 10 tiendas × 50,000  | 500,000   | Pendiente; cabe en esta máquina                        |
+| D       | 50 tiendas × 10,000  | 500,000   | Aprobado tras corregir CAP-08 [VERIFICADO] (ver abajo) |
+| E       | 100 tiendas × 10,000 | 1,000,000 | Requiere propuesta técnica y de presupuesto            |
+| F       | 250 tiendas × 10,000 | 2,500,000 | Requiere propuesta técnica y de presupuesto            |
+| G       | 500 tiendas × 10,000 | 5,000,000 | Requiere propuesta técnica y de presupuesto            |
 
 ### Escalón B — 10 tiendas × 10,000 (100,000 productos) [VERIFICADO]
 
@@ -201,11 +201,39 @@ Generación: 446 s (45 s por tienda, con 2,000 pedidos cada una). Base: 642 MB. 
 
 Lectura: con 10 veces más productos en la plataforma, lo que hace cada tienda cuesta entre lo mismo y el doble; nada crece 10 veces. Lo que más sube es lo que recorre todos los productos de la tienda (búsqueda del panel CAP-08, «agotados», orden por precio, portada). Ningún defecto nuevo de severidad S0–S2.
 
+### Escalón D — 50 tiendas × 10,000 (500,000 productos) [VERIFICADO]
+
+Generación de las 40 tiendas adicionales: 2,094 s (52 s por tienda). Base: 2,731 MB (≈54 MB por tienda de 10,000 con 2,000 pedidos). Mismas consultas sobre las tiendas 1, 25 y 50 (mediana en ms).
+
+| Consulta                        | 1 tienda | 10 tiendas | 50 tiendas (1 / 25 / 50) |
+| ------------------------------- | -------- | ---------- | ------------------------ |
+| Tienda: lista                   | 51       | 70         | 68 / 78 / 73             |
+| Tienda: «solo disponibles»      | 153      | 187        | 226 / 250 / 204          |
+| Tienda: buscar una palabra      | 36       | 42         | 43 / 38 / 35             |
+| Tienda: sugerencias             | 26       | 27         | 33 / 42 / 30             |
+| Tienda: relacionados            | 32       | 33         | 38 / 42 / 30             |
+| Tienda: portada                 | 47       | 88         | 77 / 82 / 65             |
+| Panel: listas y filtros         | 1–11     | 1–12       | 1–13                     |
+| Panel: buscar (antes de CAP-08) | 48–62    | 83–115     | 105–185                  |
+| Panel: buscar (con CAP-08)      | —        | —          | 60–83                    |
+| Panel: «agotados»               | 61       | 111        | 187–203                  |
+| Panel: calidad del catálogo     | 839      | 909        | 902–999                  |
+
+Lectura: lo que ve el comprador no cambia entre 100,000 y 500,000 productos. La búsqueda del panel sí crecía con el número de tiendas (CAP-08) y quedó corregida.
+
+#### CAP-08 (S2, corregido) — La búsqueda del panel recorría toda la plataforma
+
+- Causa (plan de ejecución): las subconsultas de `catalog_search_products` que buscan el SKU exacto no decían de qué tienda eran; PostgreSQL recorría las variantes de **todas** las tiendas, dos veces por búsqueda (35,000 páginas leídas con 500,000 productos). Lo mismo, en pequeño, con las ubicaciones de inventario. Con una sola tienda no se notaba: por eso apareció hasta este escalón.
+- Corrección (`20261111000300_panel_search_store_scope.sql`, solo la función): las subconsultas llevan `store_id`. Mismos resultados (pgTAP 141, incluido el mismo SKU en dos tiendas).
+- Resultado con 500,000 productos: 105–185 ms → 60–83 ms.
+- De paso, el texto de búsqueda guardado se arma con orden fijo (categorías, atributos y opciones): sin eso, el mismo producto podía guardar «vainilla chocolate» o «chocolate vainilla» y una prueba fallaba de forma intermitente.
+- Suites completas con esta corrección: verify (1,280 unitarias), 2,978 pgTAP, 437 de integración y 149 de 149 E2E.
+- «Agotados» (187–203 ms) no era esto: revisa las existencias de los 10,000 productos de la tienda antes de ordenar. Depende del tamaño de la tienda, no de la plataforma. Queda anotado como CAP-10 (S3).
+
 ### Límites locales [ESTIMADO]
 
-- Una tienda de 10,000 productos ocupa ~103 MB (123 MB la base menos 20 MB vacía) y tarda ~70 s en generarse.
-- 500,000 productos (C o D): ~5 GB y ~1 hora de generación. Cabe en los 26 GB libres.
-- 5,000,000 (G): ~52 GB y ~10 horas. **No cabe en esta máquina.** Necesita un entorno aislado con al menos 100 GB de disco y más memoria; eso es gasto de infraestructura y no está autorizado.
+- [VERIFICADO] 500,000 productos en 50 tiendas ocupan 2.7 GB y se generan en ~42 minutos.
+- 5,000,000 (G): ~27 GB y ~7 horas de generación, más espacio de trabajo para índices y pruebas. **No cabe en esta máquina.** Necesita un entorno aislado con al menos 100 GB de disco y más memoria; eso es gasto de infraestructura y no está autorizado.
 
 ### Evaluación honesta de la meta de 5 millones
 

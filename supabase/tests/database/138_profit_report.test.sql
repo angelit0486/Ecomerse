@@ -148,7 +148,7 @@ select is(pg_temp.err(format('select public.profit_report(%L, %L, %L)', tests.fx
           'forbidden', 'aislamiento: la dueña de B no ve la rentabilidad de A');
 select is((select count(*)::int from public.order_item_costs), 1, 'y solo ve las fotos de su tienda');
 select tests.logout();
-select is(public.app_schema_version(), '20261111000200', 'versión de la base');
+select is(public.app_schema_version(), '20261111000300', 'versión de la base');
 
 select * from finish();
 rollback;

@@ -17,7 +17,7 @@ Todo se midió en bases locales desechables (`pruva_cap*`); nada tocó staging n
 | E-A | Escalón A: 1 tienda × 10,000                       | VERIFIED | P0        | T03        | Bitácora §T03                                      | `2aa04c4` | Aprobado tras las correcciones                                                                 | Escalón B                                        |
 | E-B | Escalón B: 10 tiendas × 10,000 (100,000 productos) | VERIFIED | P1        | E-A        | Bitácora §Escalón B                                | (este)    | Nada crece 10 veces; lo más caro sube al doble (búsqueda del panel, «agotados»)                | Escalón D                                        |
 | E-C | Escalón C: 10 tiendas × 50,000 (500,000 productos) | PENDING  | P1        | E-B        | —                                                  | —         | —                                                                                              | Cabe en el disco local (estimado ~6 GB)          |
-| E-D | Escalón D: 50 tiendas × 10,000 (500,000 productos) | PENDING  | P1        | E-B        | —                                                  | —         | —                                                                                              | Igual que C                                      |
+| E-D | Escalón D: 50 tiendas × 10,000 (500,000 productos) | VERIFIED | P1        | E-B        | Bitácora §Escalón D                                | (este)    | El comprador no nota el crecimiento; encontrado y corregido CAP-08                             | Escalón C                                        |
 | E-E | Escalones E–G: 1 a 5 millones de productos         | BLOCKED  | P2        | E-C, E-D   | Bitácora §Límites                                  | —         | Superan 500,000 productos: requieren propuesta técnica y de presupuesto y autorización expresa | Presentar propuesta tras C y D                   |
 
 ## Defectos (por causa raíz)
@@ -31,7 +31,8 @@ Todo se midió en bases locales desechables (`pruva_cap*`); nada tocó staging n
 | CAP-05 | S2        | El permiso por fila cuesta 16–29 µs por fila: una consulta sin filtro de tienda crece con la plataforma | Mitigado (guardia)    | `tests/unit/tenant-queries.test.ts`                              |
 | CAP-06 | S3        | Si la conexión se corta a media escritura, el controlador `postgres` lanza un `TypeError` suelto        | Abierto (observación) | —                                                                |
 | CAP-07 | S3        | El reporte de calidad del catálogo revisa producto por producto (0.7–0.8 s con 10,000)                  | Abierto               | Medido en T03                                                    |
-| CAP-08 | S3        | La búsqueda del panel no usa el índice de parecido (~50 ms con 10,000)                                  | Abierto               | Medido en T03                                                    |
+| CAP-08 | S2        | La búsqueda del panel recorría las variantes de toda la plataforma (105–185 ms con 500,000 productos)   | Corregido             | pgTAP `141_panel_search_store_scope`                             |
+| CAP-10 | S3        | «Agotados» revisa las existencias de todos los productos de la tienda (~190 ms con 10,000)              | Abierto               | Medido en el escalón D                                           |
 | CAP-09 | S3        | Ningún plan permite 10,000 productos (máximo actual: 1,000)                                             | Abierto (negocio)     | —                                                                |
 | T01-F1 | S3        | La prueba E2E del logo esperaba un aviso que ya puede no verse (desde D-MEJ-26)                         | Corregido             | `tests/e2e/logo.spec.ts`                                         |
 
@@ -40,11 +41,11 @@ Sin S0 abiertos. Los dos S1 encontrados están corregidos y con prueba.
 ## Punto de reanudación
 
 - Último commit: el de esta documentación (el siguiente a `b8c9b06`), en `audit/hardening-capacity-2026-11` (subido).
-- Última tarea terminada: T01–T06 y escalones A y B.
-- Siguiente tarea: escalón D (50 tiendas × 10,000) y después C (10 × 50,000).
-- Pruebas pendientes: escalones C y D; pruebas extremas en un entorno aislado (no en esta máquina compartida de 4 núcleos).
+- Última tarea terminada: T01–T06 y escalones A, B y D.
+- Siguiente tarea: escalón C (10 tiendas × 50,000).
+- Pruebas pendientes: escalón C; pruebas extremas en un entorno aislado (no en esta máquina compartida de 4 núcleos).
 - Bloqueos: escalones E–G (autorización y presupuesto); CAP-04 y CAP-09 (decisiones de producto).
-- Las dos migraciones nuevas (`20261111000100`, `20261111000200`) NO están aplicadas en staging: requieren aprobación del propietario.
+- Las tres migraciones nuevas (`20261111000100`, `20261111000200`, `20261111000300`) NO están aplicadas en staging: requieren aprobación del propietario.
 - Comandos:
   - `bash scripts/capacity/t03.sh 10000` (una tienda; `CAP_UNTIL=20261110000300` mide «antes»)
   - `bash scripts/capacity/t04.sh` (importación de 10,000)
