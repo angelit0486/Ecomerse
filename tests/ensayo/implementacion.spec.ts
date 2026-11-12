@@ -466,6 +466,10 @@ for (const giro of GIROS) {
          order by p.created_at limit 1`;
       await shop.goto(`${origin}/productos/${prod!.slug}`);
       await shop.getByRole("button", { name: "Agregar al carrito" }).click();
+      await expect(
+        shop.getByRole("status").filter({ hasText: "Agregado al carrito." }),
+      ).toBeVisible();
+      await shop.getByRole("link", { name: /^Ver carrito/ }).click();
       await shop.getByRole("link", { name: "Continuar al pago" }).click();
       await shop.getByRole("textbox", { name: "Email" }).fill("comprador@example.test");
       await shop.getByLabel("Nombre completo").fill("Comprador Ensayo");
