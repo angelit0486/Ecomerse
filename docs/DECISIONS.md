@@ -1697,3 +1697,47 @@ Detalle y plan en `docs/plan/AUDITORIA-GLOBAL-2026-11-05.md`.
   - Probado con Node 24.21.0 (el mismo binario del stack local, verificado por sha256): verify 1129, pgTAP 2742, integración 404 y E2E 135/135, con la app corriendo en Node 24.
   - Node 22 deja de recibir parches el 2027-04-30; Node 24 los recibe hasta el 2028-04-30.
   - Sin cambios de dependencias.
+
+## 36. Productización (Orden 09, 2026-11-12)
+
+Rama `producto/orden-09`. Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. Bitácora: `docs/audit/PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`.
+
+- **D-PROD-01. Fotos: medición y vista «Fotos en proceso».** Sin migración ni cambio de contrato.
+  - **Medido en local** (`tests/capacity/media-throughput.test.ts`, cola real, almacenamiento en memoria): 0.25 s por foto de catálogo de 1200 px, 1.0 s por foto de celular de 4000×3000 y 0.4 s por PNG de 1600 px. Una pasada de 45 s procesa unas 178, 44 y 111 fotos. Con 4 pasadas a la vez baja a 0.07 s y 0.27 s por foto.
+  - **Conclusión:** el cuello no es procesar la foto sino cada cuánto corre la cola. Con cron cada minuto, 10,000 fotos de catálogo son cerca de 1 hora de cola; con el cron diario, días.
+  - **Vista nueva** `Productos → Importar → Fotos en proceso`: avance, fotos rechazadas con su motivo y el producto, y la cola avanza mientras la página esté abierta (reutiliza `resumeQueue`). Solo lectura con RLS; permiso `products.read`. El enlace del archivo se muestra sin su consulta, que puede llevar una firma.
+  - Sin interruptor: es una vista de datos que la tienda ya puede leer, como D-MEJ-20.
+- **D-PROD-02. Hoja simple con tallas, colores, sabores y presentaciones.** Sin migración ni cambio de contrato: la hoja se traduce a las columnas `option1..3` que el importador ya valida.
+  - Con alguna columna `Talla`, `Color`, `Sabor`, `Tamaño`, `Presentación`, `Modelo`, `Medida` o `Material` (máximo 3), las filas con el mismo nombre de producto son presentaciones de un solo producto. Un producto sin valores en esas columnas sigue siendo un producto solo.
+  - Sin esas columnas, nada cambia: nombres repetidos siguen siendo productos distintos (`taza`, `taza-2`).
+  - El resumen al pegar cuenta productos y presentaciones.
+- **D-PROD-03. Hoja de inicio por giro.** `…/importar/plantilla?giro=ropa|hogar|abarrotes|suplementos` descarga solo los títulos, en español, de las columnas útiles para ese giro. Sin productos de ejemplo (regla del propietario: nunca inventar productos). Una prueba comprueba que la tienda entiende todas las columnas de cada hoja.
+- **D-PROD-04. Lo que NO se reconstruyó.** El «revisor de archivo» que la Orden 08 anotó como pendiente (RM-12) ya existía en su mayor parte: vista previa con errores por columna y por fila, CSV de errores, «importar solo lo que está bien» y resubir el archivo corregido. Se corrige el inventario: F-39 pasa a implementado; lo que falta de verdad es comprobar los enlaces de las fotos antes de importar (hoy se sabe después, en «Fotos en proceso»).
+
+### ADR-064 — Importar más de 5,000 filas · **PROPUESTO, espera decisión del propietario**
+
+**Contexto.**
+
+- Un archivo admite 5,000 filas y cada talla o color es una fila. 10,000 productos de ropa pueden ser 18,000 filas: 4 archivos partidos a mano, sin separar las filas de un mismo producto.
+- GATE0 §26.1: cada importación se aplica todo o nada. El límite de 5,000 existe porque el lote debe caber en una ejecución del worker (55 s; medido: 23 a 30 s por 5,000 filas).
+- La subida tiene además un tope de 4 MB por archivo (Vercel corta los cuerpos de más de 4.5 MB).
+
+**Opciones.**
+
+- **A (recomendada). Partir en el navegador, una importación por parte.** La pantalla parte el archivo en partes de hasta 5,000 filas sin separar un producto, sube cada parte y muestra el lote con el estado de cada una. Cada parte se valida y se confirma como hoy, todo o nada. No cambia el contrato: equivale a que la tienda suba N archivos. Riesgo: si la parte 3 falla, las partes 1 y 2 ya están aplicadas; la pantalla lo dice y permite corregir solo esa parte.
+- **B. Un solo botón «Confirmar todo».** Igual que A, pero confirma las partes en orden y se detiene en la primera que falle. Más cómodo; el catálogo puede quedar a medias de forma visible. Cambia la promesa «si algo falla, no se cambia nada» a nivel de archivo: requiere aceptar ese cambio.
+- **C. Subir el tope por archivo.** No se recomienda: 10,000 filas no caben en una ejecución del worker con margen, y agranda la transacción.
+
+**Qué decidir:** A o B. Con A no hace falta tocar GATE0; con B se anota la excepción en §26.1.
+
+### ADR-065 — Crear las categorías que falten al importar · **PROPUESTO, espera decisión del propietario**
+
+**Contexto.** Hoy una fila con una categoría que no existe es un error («categories: no existe la categoría…»). Quien implementa debe crear el árbol antes de importar.
+
+**Opciones.**
+
+- **A (recomendada). Casilla «Crear las categorías que falten»**, apagada por defecto, en la vista previa. La vista previa lista las que se crearían antes de confirmar. Evita crear categorías por un error de dedo sin que nadie lo vea.
+- **B. Crear siempre.** Más rápido, pero un «Rpoa» crea una categoría basura.
+- **C. Dejarlo como está** y usar las categorías de la plantilla del giro.
+
+**Qué decidir:** A, B o C. A y B cambian el comportamiento del importador (migración aditiva en `app.import_resolve_base` y relacionadas).
