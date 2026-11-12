@@ -172,7 +172,7 @@ Leer una tabla de tienda directamente cuesta 16 µs por fila propia y 29 µs por
 | ------- | -------------------- | --------- | ------------------------------------------------------ |
 | A       | 1 tienda × 10,000    | 10,000    | Aprobado [VERIFICADO]                                  |
 | B       | 10 tiendas × 10,000  | 100,000   | Aprobado [VERIFICADO] (ver abajo)                      |
-| C       | 10 tiendas × 50,000  | 500,000   | Pendiente; cabe en esta máquina                        |
+| C       | 10 tiendas × 50,000  | 500,000   | En curso: el primer intento destapó CAP-11 (corregido) |
 | D       | 50 tiendas × 10,000  | 500,000   | Aprobado tras corregir CAP-08 [VERIFICADO] (ver abajo) |
 | E       | 100 tiendas × 10,000 | 1,000,000 | Requiere propuesta técnica y de presupuesto            |
 | F       | 250 tiendas × 10,000 | 2,500,000 | Requiere propuesta técnica y de presupuesto            |
@@ -229,6 +229,16 @@ Lectura: lo que ve el comprador no cambia entre 100,000 y 500,000 productos. La 
 - De paso, el texto de búsqueda guardado se arma con orden fijo (categorías, atributos y opciones): sin eso, el mismo producto podía guardar «vainilla chocolate» o «chocolate vainilla» y una prueba fallaba de forma intermitente.
 - Suites completas con esta corrección: verify (1,280 unitarias), 2,978 pgTAP, 437 de integración y 149 de 149 E2E.
 - «Agotados» (187–203 ms) no era esto: revisa las existencias de los 10,000 productos de la tienda antes de ordenar. Depende del tamaño de la tienda, no de la plataforma. Queda anotado como CAP-10 (S3).
+
+### Escalón C, primer intento — CAP-11 (S1, corregido) [VERIFICADO]
+
+Generar una tienda de 50,000 productos en una sola transacción falló con «out of shared memory». No era un problema del generador: destapó un defecto real.
+
+- Causa: al crear cada variante, `app.enforce_variant_limit` tomaba un candado de aviso por producto y lo conservaba hasta el final de la transacción. Esos candados viven en una tabla de PostgreSQL de tamaño fijo, **compartida por todas las conexiones** (`max_locks_per_transaction` × `max_connections`: 64 × 100 = 6,400 en local; 64 × 60 = 3,840 en el staging actual, leído de su configuración).
+- Medido en local: una importación de 5,000 productos retiene 5,001 candados. Tres importaciones de 5,000 a la vez, en tiendas distintas → una falla («Fila 4114: no se pudo aplicar este producto»). Mientras la tabla está llena, cualquier otra operación de cualquier tienda puede fallar igual.
+- [ESTIMADO] En staging una sola importación de 5,000 productos ya rebasa el tamaño nominal (3,840). No lo probé allí (no está autorizado).
+- Corrección (`20261111000400_variant_limit_row_lock.sql`, solo la función): el mismo efecto bloqueando la fila del producto, que no ocupa la tabla compartida. Cuatro importaciones de 5,000 a la vez: las cuatro terminan; candados de aviso en uso: 0.
+- Regresión: pgTAP `142_variant_limit_row_lock` (40 productos en una transacción sin candado por producto; el límite se sigue respetando) e integración `variant-limit-concurrency` (dos sesiones sobre el mismo producto: la segunda espera y, con el límite lleno, se rechaza).
 
 ### Límites locales [ESTIMADO]
 
