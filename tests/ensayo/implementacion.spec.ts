@@ -74,9 +74,15 @@ for (const giro of GIROS) {
     const fase = async (nombre: string, fn: (notas: string[]) => Promise<void>) => {
       const notas: string[] = [];
       const t0 = Date.now();
-      await test.step(nombre, () => fn(notas));
-      fases.push({ fase: nombre, ms: Date.now() - t0, notas });
-      guardar();
+      try {
+        await test.step(nombre, () => fn(notas));
+      } catch (error) {
+        notas.push(`FALLÓ: ${String(error).split("\n")[0]}`);
+        throw error;
+      } finally {
+        fases.push({ fase: nombre, ms: Date.now() - t0, notas });
+        guardar();
+      }
     };
     const guardar = () => {
       mkdirSync(OUT, { recursive: true });
@@ -434,6 +440,7 @@ for (const giro of GIROS) {
         const items = await pendientes.getByRole("listitem").allTextContents();
         notas.push(`Pendientes para publicar: ${items.join(" | ")}`);
         hallazgos.push(`Antes de publicar faltaba: ${items.join(" | ")}`);
+        guardar();
       }
       await owner.getByRole("button", { name: "Publicar tienda" }).click();
       await expect(owner.getByText("Tu tienda está publicada")).toBeVisible();
