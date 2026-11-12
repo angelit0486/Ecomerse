@@ -235,7 +235,11 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
               {totals.remote_images === 1
                 ? "Estamos descargando 1 foto desde su enlace"
                 : `Estamos descargando ${totals.remote_images} fotos desde sus enlaces`}
-              ; aparecen en cada producto en unos minutos.{" "}
+              ; aparecen en cada producto conforme terminan.{" "}
+              <Link href={`${base}/fotos`} className="font-medium underline">
+                Ver el avance de las fotos
+              </Link>
+              {" · "}
             </>
           ) : null}
           <Link href={`/admin/${ctx.store.handle}/productos`} className="underline">

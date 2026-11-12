@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [{ "path": "/api/jobs/run", "schedule": "0 12 * * *" }],
-  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in audit/*) exit 0 ;; *) exit 1 ;; esac"
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in audit/*|producto/*) exit 0 ;; *) exit 1 ;; esac"
 }

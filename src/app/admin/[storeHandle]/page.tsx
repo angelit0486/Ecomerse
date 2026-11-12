@@ -191,12 +191,16 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             ))}
             {waiting.photos > 0 ? (
               <li className="rounded-md border border-border p-3">
-                {waiting.photos === 1
-                  ? "1 foto en proceso."
-                  : `${waiting.photos} fotos en proceso.`}
+                <Link href={`${base}/productos/importar/fotos`} className="underline">
+                  {waiting.photos === 1
+                    ? "1 foto en proceso"
+                    : `${waiting.photos.toLocaleString("es-MX")} fotos en proceso`}
+                </Link>
                 {issues.some((i) => i.key === "image_processing")
-                  ? " Esperan a que se configure la optimización de imágenes."
-                  : " Se terminan en unos segundos."}
+                  ? ". Esperan a que se configure la optimización de imágenes."
+                  : waiting.photos > 20
+                    ? ". Abre el avance para que sigan sin esperar."
+                    : ". Se terminan en unos segundos."}
               </li>
             ) : null}
             {waiting.imports > 0 ? (
