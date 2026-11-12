@@ -447,7 +447,12 @@ for (const giro of GIROS) {
       // Compra de prueba anónima con transferencia.
       const buyer = await browser.newContext({ locale: "es-MX" });
       const shop = await buyer.newPage();
-      const origin = `http://${handle}.localhost:3000`;
+      // El dominio que la plataforma le asignó (p. ej. {handle}.tiendas.localhost).
+      const [dom] = await admin<{ hostname: string }[]>`
+        select d.hostname from public.store_domains d join public.stores s on s.id = d.store_id
+         where s.handle = ${handle} and d.is_primary`;
+      const origin = `http://${dom!.hostname}:3000`;
+      notas.push(`Tienda pública en ${origin}/ (dominio de la plataforma).`);
       const tShop = Date.now();
       expect((await shop.goto(`${origin}/`))?.status()).toBe(200);
       await shop.goto(
