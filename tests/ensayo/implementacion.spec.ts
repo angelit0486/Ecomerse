@@ -265,7 +265,7 @@ for (const giro of GIROS) {
       }).toPass({ timeout: 300_000 });
       const [counts] = await admin<{ total: number; active: number; variants: number }[]>`
         select count(*)::int as total, count(*) filter (where p.status = 'active')::int as active,
-               (select count(*)::int from public.product_variants v where v.store_id = s.id) as variants
+               (select count(*)::int from public.product_variants v join public.products pp on pp.id = v.product_id and pp.store_id = v.store_id where v.store_id = s.id and pp.deleted_at is null) as variants
           from public.stores s join public.products p on p.store_id = s.id
          where s.handle = ${handle} and p.deleted_at is null group by s.id`;
       notas.push(
@@ -366,7 +366,7 @@ for (const giro of GIROS) {
         "Envíos",
       ];
       for (const nombre of politicas) {
-        const link = owner.getByRole("main").getByRole("link", { name: nombre, exact: true });
+        const link = owner.getByRole("table").getByRole("link", { name: nombre, exact: true });
         if ((await link.count()) === 0) {
           notas.push(`No se encontró la página «${nombre}».`);
           continue;
