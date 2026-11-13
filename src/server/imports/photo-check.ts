@@ -14,7 +14,14 @@ import { fetchRemoteImage, type RemoteFetchResult } from "@/server/media/remote-
  * no alcanza a revisarse se informa como «sin revisar», nunca como correcto.
  */
 export type PhotoCheckStatus =
-  "ok" | "blocked" | "not_found" | "too_large" | "failed" | "not_image" | "not_checked";
+  | "ok"
+  | "blocked"
+  | "not_found"
+  | "no_domain"
+  | "too_large"
+  | "failed"
+  | "not_image"
+  | "not_checked";
 
 export interface PhotoLink {
   url: string;
@@ -77,7 +84,8 @@ function statusOf(result: RemoteFetchResult): PhotoCheckStatus {
       case "fetch_too_large":
         return "too_large";
       default:
-        return "failed";
+        // D5: un dominio que no existe no es «no respondió a tiempo».
+        return result.detail === "dns_not_found" ? "no_domain" : "failed";
     }
   }
   return sniffImageMime(result.data) ? "ok" : "not_image";
@@ -119,6 +127,7 @@ export async function checkPhotoLinks(
     ok: 0,
     blocked: 0,
     not_found: 0,
+    no_domain: 0,
     too_large: 0,
     failed: 0,
     not_image: 0,
@@ -138,8 +147,10 @@ export const PHOTO_CHECK_LABELS: Record<Exclude<PhotoCheckStatus, "ok">, string>
   blocked:
     "No descargamos fotos de esa dirección (solo enlaces públicos https; nada de direcciones internas).",
   not_found: "El enlace no existe o no lleva a una foto.",
+  no_domain: "Ese dominio no existe: revisa que el enlace esté bien escrito.",
   too_large: "La foto pesa más de 10 MB.",
-  failed: "El servidor de la foto no respondió a tiempo. Puede funcionar al importar; revísalo.",
+  failed:
+    "No pudimos abrir el enlace: el servidor no respondió a tiempo o falló. Puede funcionar al importar; revísalo.",
   not_image: "El enlace abre, pero no es una foto JPG, PNG, WebP ni AVIF.",
   not_checked: "No alcanzó a revisarse (hay demasiados enlaces o tardaron mucho).",
 };

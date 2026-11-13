@@ -6,7 +6,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(18);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_tenant('a', 'owner');
@@ -60,6 +60,18 @@ select public.catalog_publish_product(tests.fx('store_b'), (public.catalog_upser
   '{"title":"Ajeno","slug":"ajeno","variants":[{"price":100,"sku":"AJE-1"}]}') ->> 'id')::uuid);
 select tests.logout();
 
+-- ------------------------------------------------- 0. Interruptor (D6, Orden 10 M4)
+-- Apagado (como nace toda tienda): la función responde not_found también por la API.
+select tests.login('owner');
+select is(pg_temp.err(format('select public.store_alerts(%L)', tests.fx('store_a'))), 'not_found',
+          'con «Salud de tu tienda» apagada no hay alertas, ni llamando a la API');
+select tests.logout();
+insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
+values ('store_health', 'store', tests.fx('store_a'), true, 'pgTAP alertas'),
+       ('store_health', 'store', tests.fx('store_b'), true, 'pgTAP alertas');
+
+select ok(app.flag_enabled('store_health', tests.fx('store_a')), 'el interruptor queda encendido para la tienda');
+
 -- ------------------------------------------------- 1. Conteos
 select tests.login('owner');
 select is(pg_temp.alerts(tests.fx('store_a')),
@@ -110,7 +122,7 @@ select tests.logout();
 select ok(not has_function_privilege('anon', 'public.store_alerts(uuid)', 'execute')
           and not has_function_privilege('storefront_gateway', 'public.store_alerts(uuid)', 'execute'),
           'ni anon ni la tienda pública ejecutan la función');
-select is(public.app_schema_version(), '20261112000100', 'versión de la base');
+select is(public.app_schema_version(), '20261113000100', 'versión de la base');
 
 select * from finish();
 rollback;

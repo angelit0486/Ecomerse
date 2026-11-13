@@ -122,6 +122,22 @@ describe("checkPhotoLinks: seguridad del descargador", () => {
     expect(result.problems[0]!.status).toBe("blocked");
   });
 
+  it("un dominio que no existe dice eso, no «no respondió a tiempo» (D5)", async () => {
+    const fetch = (url: string, options: Parameters<typeof fetchRemoteImage>[1]) =>
+      fetchRemoteImage(url, {
+        ...options,
+        resolve: async () => {
+          throw Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" });
+        },
+      });
+    const result = await checkPhotoLinks(
+      [{ url: "https://fotos.invalid/jarra.jpg", row: 4, handle: "jarra" }],
+      { fetch },
+    );
+    expect(result.problems[0]!.status).toBe("no_domain");
+    expect(PHOTO_CHECK_LABELS.no_domain).toContain("dominio no existe");
+  });
+
   it("un nombre que resuelve a una IP interna (o a una mezcla) se bloquea", async () => {
     const fetch = (url: string, options: Parameters<typeof fetchRemoteImage>[1]) =>
       fetchRemoteImage(url, {
@@ -191,7 +207,15 @@ describe("checkPhotoLinks: límites", () => {
     );
     expect(displayLink("no es url")).toBe("enlace no válido");
     expect(Object.keys(PHOTO_CHECK_LABELS).sort()).toEqual(
-      ["blocked", "failed", "not_checked", "not_found", "not_image", "too_large"].sort(),
+      [
+        "blocked",
+        "failed",
+        "no_domain",
+        "not_checked",
+        "not_found",
+        "not_image",
+        "too_large",
+      ].sort(),
     );
   });
 });

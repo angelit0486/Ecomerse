@@ -28,6 +28,11 @@ import { COLUMN_LABELS, friendlyRowError, importErrorText, JOB_STATUS, MODE } fr
 
 export const metadata: Metadata = { title: "Vista previa de la importación" };
 
+// D8 (auditoría): las acciones de esta página (revisar los enlaces de las fotos,
+// hasta 25 s) corren con el límite de esta ruta. 60 s es el mismo tope que ya
+// usa /api/jobs/run en los despliegues de staging.
+export const maxDuration = 60;
+
 type Props = {
   params: Promise<{ storeHandle: string; jobId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;

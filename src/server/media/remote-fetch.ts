@@ -221,8 +221,14 @@ async function target(
   let addresses: { address: string; family: 4 | 6 }[];
   try {
     addresses = await (options.resolve ?? defaultResolve)(hostname);
-  } catch {
-    return fail("fetch_failed", "dns");
+  } catch (error) {
+    // Dominio inexistente (NXDOMAIN) aparte del resto (D5): el mensaje a la tienda
+    // es otro. Sigue siendo reintentable: un DNS recién cambiado tarda en verse.
+    const code = (error as { code?: unknown } | null)?.code;
+    return fail(
+      "fetch_failed",
+      code === "ENOTFOUND" || code === "ENODATA" ? "dns_not_found" : "dns",
+    );
   }
   if (addresses.length === 0) return fail("fetch_failed", "dns");
   // Si una sola dirección es interna, no se usa ninguna (DNS con mezcla).

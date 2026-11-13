@@ -50,10 +50,27 @@ test("la vista previa revisa los enlaces y dice cuáles fallan y por qué", asyn
   await expect(problems.nth(0)).toContainText("Fila 2 · taza-interna");
   await expect(problems.nth(0)).toContainText("nada de direcciones internas");
   await expect(problems.nth(1)).toContainText("nada de direcciones internas");
-  await expect(problems.nth(2)).toContainText("no respondió a tiempo");
+  // D5: «.invalid» no existe; antes se decía «no respondió a tiempo».
+  await expect(problems.nth(2)).toContainText("Ese dominio no existe");
   // El enlace se muestra sin su consulta.
   await expect(section.getByText("token=secreto")).toHaveCount(0);
   await expectNoSeriousA11yViolations(page);
+
+  // D3: pedirla otra vez enseguida reutiliza el resultado guardado (no sale a
+  // internet) y dice cuándo se podrá revisar de nuevo.
+  await section.getByRole("button", { name: "Revisar otra vez" }).click();
+  await expect(status).toContainText(
+    "Resultado guardado de la revisión de hace menos de un minuto",
+  );
+  await expect(status).toContainText("Podrás revisar otra vez en 10 min");
+  await expect(problems).toHaveCount(3);
+  const checks = await admin<{ status: string; result: string }[]>`
+    select status, result::text as result from public.import_photo_checks
+     where store_id = ${tenant.storeId}`;
+  expect(checks).toHaveLength(1);
+  expect(checks[0]!.status).toBe("done");
+  // Lo guardado tampoco lleva la consulta del enlace (puede ser una firma).
+  expect(checks[0]!.result).not.toContain("secreto");
 
   // Revisar no importa nada: la tienda sigue sin productos.
   const [row] = await admin<{ n: number }[]>`

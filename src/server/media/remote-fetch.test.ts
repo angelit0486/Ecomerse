@@ -99,6 +99,28 @@ describe("fetchRemoteImage · validación antes de conectar", () => {
     });
     expect(result).toMatchObject({ ok: false, reason: "fetch_failed", retryable: true });
   });
+
+  it("un dominio que no existe se distingue de un DNS caído (D5)", async () => {
+    const nx = Object.assign(new Error("getaddrinfo ENOTFOUND fotos.invalid"), {
+      code: "ENOTFOUND",
+    });
+    const result = await fetchRemoteImage("https://fotos.invalid/a.jpg", {
+      ...opts,
+      resolve: async () => {
+        throw nx;
+      },
+    });
+    expect(result).toMatchObject({ ok: false, reason: "fetch_failed", detail: "dns_not_found" });
+    const down = Object.assign(new Error("getaddrinfo EAI_AGAIN"), { code: "EAI_AGAIN" });
+    expect(
+      await fetchRemoteImage("https://cdn.example.com/a.jpg", {
+        ...opts,
+        resolve: async () => {
+          throw down;
+        },
+      }),
+    ).toMatchObject({ ok: false, reason: "fetch_failed", detail: "dns" });
+  });
 });
 
 describe("fetchRemoteImage · respuestas (servidor local de pruebas)", () => {
@@ -174,6 +196,48 @@ describe("fetchRemoteImage · respuestas (servidor local de pruebas)", () => {
       reason: "fetch_blocked",
       detail: "too_many_redirects",
     });
+  });
+
+  // D4 (auditoría): prueba directa de DNS rebinding. El nombre «rebind.test» no
+  // existe en ningún DNS: si el cliente HTTP volviera a resolverlo al conectar,
+  // la descarga fallaría. Que funcione y que el resolvedor se llame una sola vez
+  // prueba que la conexión va a la IP que se validó, aunque el DNS cambie después.
+  it("DNS rebinding: se conecta a la IP validada aunque el DNS responda otra cosa después", async () => {
+    const testOrigin = origin.replace("127.0.0.1", "rebind.test");
+    let calls = 0;
+    const resolve = async () => {
+      calls += 1;
+      // Primera respuesta: la que se valida. Después, una dirección interna.
+      return [{ address: calls === 1 ? "127.0.0.1" : "10.66.66.66", family: 4 as const }];
+    };
+    const result = await fetchRemoteImage(`${testOrigin}/ok.png`, {
+      maxBytes: 1024,
+      testOrigin,
+      resolve,
+    });
+    expect(result).toMatchObject({ ok: true, contentType: "image/png" });
+    expect(calls).toBe(1);
+  });
+
+  it("cada redirección vuelve a resolver y validar su destino (sin reutilizar la IP anterior)", async () => {
+    const testOrigin = origin.replace("127.0.0.1", "rebind.test");
+    const seen: string[] = [];
+    const resolve = async (host: string) => {
+      seen.push(host);
+      return [{ address: "127.0.0.1", family: 4 as const }];
+    };
+    expect(
+      await fetchRemoteImage(`${testOrigin}/same-host`, { maxBytes: 1024, testOrigin, resolve }),
+    ).toMatchObject({ ok: true });
+    expect(seen).toEqual(["rebind.test", "rebind.test"]);
+    // Fuera del origen de pruebas, un salto que resuelve a una IP interna se bloquea
+    // antes de conectar (la validación es la misma en cada salto).
+    expect(
+      await fetchRemoteImage("https://cdn.example.com/a.jpg", {
+        maxBytes: 1024,
+        resolve: async () => [{ address: "10.66.66.66", family: 4 }],
+      }),
+    ).toMatchObject({ ok: false, reason: "fetch_blocked", detail: "address" });
   });
 
   it("corta por tamaño declarado y por tamaño real", async () => {
