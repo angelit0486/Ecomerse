@@ -2,7 +2,7 @@
 
 Guion para quien implementa. Cubre los giros iniciales: ropa, calzado y accesorios; hogar, belleza y regalos; abarrotes; suplementos.
 
-**Estado del guion (2026-11-12):** ensayado solo en local con datos de prueba. Todavía no se ha seguido con un comercio real: los tiempos de persona son [ESTIMADO] y se corrigen con el primer piloto. Los tiempos de máquina son [MEDIDO] en local.
+**Estado del guion (2026-11-13):** ensayado de punta a punta en local con cuatro tiendas **sintéticas** (Orden 10, O10-01; resultados al final). Ninguna es una entrega comercial y todavía no se ha seguido con un comercio real: los tiempos de persona son [ESTIMADO] y se corrigen con el primer piloto. Los tiempos de máquina son [MEDIDO] en local.
 
 **No prometer el plazo sin la lista del día 0 completa.** Los cinco días empiezan cuando el comercio entregó todo lo de esa lista.
 
@@ -44,17 +44,19 @@ Todas llevan: Producto, Precio, Precio anterior, Existencias, SKU, Código de ba
 
 1. Consola de plataforma → crear la organización y la tienda con el plan contratado.
 2. Dar acceso a la dueña (contraseña y verificación en dos pasos).
-3. Configuración → elegir la **plantilla del giro**. Trae categorías, páginas y menús de inicio.
+3. Configuración → elegir la **plantilla del giro**. Trae categorías, páginas y menús de inicio, y **4 o 5 productos de ejemplo**: quitarlos con «Quitar los N productos de ejemplo» antes de importar.
 4. Subir el logo; ajustar colores y portada en Apariencia.
 5. Ajustes → Funciones: encender Ayuda, Devoluciones, Salud de tu tienda y Notas de empaque.
+6. **Suplementos:** Ajustes → Cumplimiento → declarar «Suplemento alimenticio». Sin esa declaración la tienda deja publicar productos sin ficha sanitaria (el ensayo lo confirmó); con ella, cada producto la exige.
 
 ## Día 2 — Catálogo (2 a 6 horas, según el orden del archivo)
 
-1. Revisar las categorías: **la importación no crea categorías**. Las que use la hoja deben existir (Productos → Categorías).
+1. Revisar las categorías: **la importación no crea categorías** (ADR-065, sin resolver). Las que use la hoja deben existir (Productos → Categorías). En el ensayo **ninguna plantilla cubrió todo su giro**: faltaron Calzado (ropa), Belleza y Regalos (hogar), Lácteos y Cuidado personal (abarrotes), Aminoácidos (suplementos). Comparar la columna Categoría de la hoja con las de la plantilla antes de subir.
 2. Productos → Importar → pegar las filas o subir el archivo.
 3. Leer la vista previa: errores por columna y por fila. Descargar el CSV de errores, corregir y volver a subir. Si urge, «Importar solo los productos sin errores».
 4. Confirmar. 5,000 filas tardan menos de un minuto.
-5. Más de 5,000 filas (cada talla o color es una fila): partir el archivo sin separar las filas de un mismo producto y subir cada parte. Hay un tope de 30 importaciones por hora.
+5. **Los productos entran en borrador.** Para publicarlos: Productos → filtro «Borrador» → 100 por página → «Seleccionar todos» → «Publicar» → Aplicar, y repetir (una acción en bloque toma hasta 100). 160 productos = 2 vueltas; 10,000 = unas 100. [PROPUESTA] Agregar la columna «Publicado» (sí/no) a las hojas por giro: la importación ya la entiende y quitaría este paso.
+6. Más de 5,000 filas (cada talla o color es una fila): partir el archivo sin separar las filas de un mismo producto y subir cada parte. Hay un tope de 30 importaciones por hora.
 
 Errores frecuentes y su arreglo:
 
@@ -85,9 +87,9 @@ En producción será más lento por la red y por el tamaño del servidor. Con el
 
 ## Día 4 — Envíos, cobro y textos (2 a 3 horas)
 
-1. Envíos → zonas y tarifas.
+1. Envíos → zonas y tarifas. Comprobar que la tarifa diga **Activa**: hasta el commit `65ee7a0` (Orden 10) toda tarifa guardada desde el panel quedaba inactiva y la tienda no se podía publicar. Staging conserva ese error hasta el próximo despliegue autorizado.
 2. Ajustes → Pagos → conectar Mercado Pago (lo hace el comercio con su cuenta) o capturar los datos de transferencia.
-3. Contenido → Páginas: completar privacidad, términos, devoluciones y envíos con los datos del comercio.
+3. Contenido → Páginas: completar privacidad, términos, devoluciones y envíos con los datos del comercio. **Sin texto propio en privacidad, términos y devoluciones la tienda no se publica** (el checklist lo exige): pedir esos textos en el día 0.
 4. Dominio propio, si aplica: Ajustes → Dominio (verificación TXT).
 5. Suplementos: llenar la ficha de cada producto; sin ella no se publican.
 
@@ -117,3 +119,36 @@ Anotar para mejorar el guion y calcular costos:
 - fotos totales, rechazadas y tiempo hasta 0 en proceso;
 - días desde la lista del día 0 completa hasta el lanzamiento;
 - preguntas de soporte en los primeros 30 días.
+
+## Ensayo sintético de la Orden 10 (O10-01, 2026-11-12/13)
+
+Cuatro tiendas **inventadas** recorrieron el guion completo por la interfaz, en local, con un navegador automático: alta en la consola de plataforma, invitación y verificación en dos pasos de la dueña, plantilla, logo, colores, funciones, hoja del giro con errores de captura puestos a propósito, corrección, importación, fotos en lote por SKU, envíos, cobro por transferencia, políticas, publicación en bloque, publicación de la tienda y una compra de prueba que aparece en el panel. Ninguna es una entrega comercial. Se repite con:
+
+```bash
+ENSAYO_GIROS=ropa,hogar,abarrotes,suplementos pnpm exec playwright test -c playwright.ensayo.config.ts
+```
+
+Tiempos de máquina [MEDIDO], en segundos (local, sin red real; el navegador sigue el guion sin dudar, así que **no son tiempos de persona**):
+
+| Giro        | Productos / filas | Día 1 alta | Día 1 diseño | Día 2 catálogo | Día 3 fotos | Día 4 | Día 5 | Total |
+| ----------- | ----------------- | ---------- | ------------ | -------------- | ----------- | ----- | ----- | ----- |
+| Ropa        | 30 / 162          | 5.3        | 8.0          | 8.9            | 11.1 (30)   | 15.0  | 7.0   | 55    |
+| Hogar       | 70 / 100          | 5.5        | 8.5          | 9.5            | 23.6 (70)   | 15.0  | 7.7   | 70    |
+| Abarrotes   | 160 / 214         | 5.4        | 8.3          | 10.3           | 52.0 (160)  | 15.4  | 10.3  | 102   |
+| Suplementos | 40 / 136          | 5.1        | 8.9          | 8.9            | 14.3 (40)   | 15.3  | 6.9   | 60    |
+
+Las cuatro terminaron con todos sus productos publicados, 0 fotos rechazadas y la compra de prueba registrada. La capacitación no se puede medir con tiendas sintéticas.
+
+Qué encontró el ensayo y qué cambió:
+
+| Hallazgo                                                                                                     | Tipo              | Qué se hizo                                           |
+| ------------------------------------------------------------------------------------------------------------ | ----------------- | ----------------------------------------------------- |
+| Toda tarifa guardada desde el panel quedaba inactiva; la tienda no se podía publicar                         | Error (corregido) | `65ee7a0` + prueba `tests/e2e/shipping-rates.spec.ts` |
+| Ninguna plantilla de giro trae todas las categorías de su giro                                               | Paso manual       | Día 2, paso 1                                         |
+| La importación deja todo en borrador; publicar en bloque va de 100 en 100                                    | Paso no escrito   | Día 2, paso 5 (+ propuesta de columna «Publicado»)    |
+| Las plantillas traen productos de ejemplo                                                                    | Paso no escrito   | Día 1, paso 3                                         |
+| Sin declarar suplementos en Cumplimiento se publican sin ficha                                               | Riesgo            | Día 1, paso 6                                         |
+| Sin políticas propias no se publica                                                                          | Requisito         | Día 4, paso 3 (pedirlas en el día 0)                  |
+| Los errores de captura (precio con texto, existencias con letras, SKU repetido, sabor vacío, costo negativo) | Funciona bien     | Cada uno con su mensaje por columna y fila            |
+
+Pendiente: repetir con un comercio real (piloto) para medir horas de persona y preguntas de soporte.
