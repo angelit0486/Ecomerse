@@ -104,3 +104,64 @@ Suites completas al cierre (local, 2026-11-13), contra la línea base `b6cd725`:
 | Ensayo de implementación (4 tiendas sintéticas)        | —         | 4/4                             |
 
 Aislamiento entre tiendas: `00_schema_security` (metatests de RLS forzado, grants y funciones) y `143_store_alerts` (otra tienda: `forbidden`) dentro de pgTAP; `photo-progress`, `share-qr` y los E2E de importación con dos tiendas.
+
+## Orden 10, mensaje 4 (2026-11-13)
+
+Autorizado por el propietario:
+
+- ADR-064 A y ADR-065 A, con aceptación expresa de lotes aplicados a medias;
+- las correcciones D2 y D3;
+- las categorías de las plantillas;
+- la publicación masiva por candidatos.
+
+Solo desarrollo, pruebas, documentación y commits en `producto/orden-10`. Nada desplegado; staging y producción sin tocar.
+
+| Tarea              | Resultado                                                                                                                   | Commits     | Hora (commit, UTC) |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------ |
+| Plantillas         | Categorías completas por giro; la de suplementos recuerda Cumplimiento sin prometer cumplimiento sanitario                  | `ed19e7e`   | 05:05              |
+| D2                 | E2E de la tarifa del panel hasta el pedido, más regresión de tarifas existentes                                             | `07e5984`   | 05:05              |
+| D3 a D6 y D8       | Límites persistentes en «Revisar enlaces»; rebinding, dominio inexistente, interruptor de alertas en la base, `maxDuration` | `1a5dc04`   | 05:22              |
+| ADR-065 A          | Crear las categorías que falten: casilla, vista previa, confirmación y permiso                                              | `cd2a42d`   | 05:34              |
+| Publicación masiva | «Publicado: sí» como candidato; publica en segundo plano con las reglas vigentes y resume los pendientes                    | `a730989`   | 05:50              |
+| ADR-064 A          | Importación por partes: lote, partes, corrección de una sola parte, recuperación tras caídas                                | `07ba916`   | 13:49              |
+| D7 y cierre        | Runbook y ensayo de las 10 migraciones, ensayo de las 4 tiendas, documentos                                                 | este commit | —                  |
+
+Entre `a730989` y `07ba916` el worker de la sesión se reinició dos veces (base y stack caídos); se levantaron otra vez y se repitieron las pruebas afectadas.
+
+Errores de la plataforma que se encontraron al construir el bloque, ya corregidos y con su prueba:
+
+1. `system.fail_stuck_imports` marcaba fallida una parte atascada, pero su lote seguía «aplicando» para siempre (pgTAP `147`; falla con la definición anterior).
+2. Una corrida de publicación cuyo trabajo muere se quedaba «publicando» para siempre. Ahora se retoma sola hasta 3 veces y después falla con el motivo (pgTAP `147`).
+
+Ensayos del cierre:
+
+- **Migraciones** (`migration-rehearsal.sh`, 38 s): las 10 en orden con su sha256; 27/27 verificaciones; esquema idéntico al de una base desde cero (24,084 líneas); 307/307 pgTAP.
+- **Implementación** (4 tiendas sintéticas):
+  - 4/4 sin hallazgos;
+  - sin categorías creadas a mano;
+  - 30, 70, 160 y 40 productos publicados al importar;
+  - la primera corrida, justo tras reiniciar el stack, falló en 2 tiendas por arranque en frío (Auth y almacenamiento) y destapó D-O10-15.
+- **Importación de 18,000 filas** (integración, local):
+  - validar cada parte: 1.2 a 1.9 s;
+  - aplicar las partes 1 y 2, fallar la 3.ª y publicar: 76 s;
+  - recuperar la caída del worker y aplicar las partes 3 y 4 con publicación: 47 s;
+  - por la interfaz (E2E), 2.8 min de punta a punta.
+
+Suites al cierre (local, 2026-11-13), contra el cierre del bloque 1 (`dad8be5`):
+
+| Suite                             | Bloque 1               | Mensaje 4                                     |
+| --------------------------------- | ---------------------- | --------------------------------------------- |
+| Unit (lint, formato, tipos, unit) | 1,334                  | 1,366                                         |
+| Compilación                       | verde                  | verde                                         |
+| pgTAP                             | 2,999 (145 archivos)   | 3,157 (149 archivos)                          |
+| Integración                       | 438                    | 447 (38 archivos)                             |
+| E2E                               | 157/157                | en curso al cerrar este registro              |
+| `pnpm audit --prod`               | sin vulnerabilidades   | sin vulnerabilidades; sin dependencias nuevas |
+| Ensayo de migraciones             | 6 migraciones, 109/109 | 10 migraciones, 307/307                       |
+| Ensayo de implementación          | 4/4                    | 4/4, sin hallazgos                            |
+
+Aislamiento entre tiendas en este bloque:
+
+- pgTAP `144` a `147` (otra tienda: `forbidden` o `not_found`; RLS de las tablas nuevas) y `00_schema_security`;
+- integración de 18,000 filas (otra tienda no ve el lote ni sus partes y no puede aplicarlo, cancelarlo ni subirle partes);
+- concurrencia de categorías.

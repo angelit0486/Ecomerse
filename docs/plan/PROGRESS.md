@@ -162,6 +162,28 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 - Productización (Orden 09, 2026-11-12, rama `producto/orden-09`, D-PROD-01 a 04): fotos medidas (0.25 s por foto de catálogo, 1.0 s de celular) y vista «Fotos en proceso»; hoja simple con tallas, colores, sabores y presentaciones; hoja de inicio por giro; guion de implementación de 5 días (`docs/runbooks/implementacion-de-tienda.md`); costos y propuesta de planes (`docs/venta/05-modelo-comercial-y-costos.md`). ADR-064 (más de 5,000 filas) y ADR-065 (categorías al importar) esperan decisión. Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. Sin migraciones; sin desplegar.
 
 - Productización, bloque 1 (Orden 10, 2026-11-12/13, rama `producto/orden-10`, D-O10-01 a 07): paquete de despliegue de las **6** migraciones pendientes ensayado en local (`docs/runbooks/despliegue-migraciones-2026-11.md`); alertas «Qué atender hoy» en Inicio detrás de «Salud de tu tienda» (migración local `20261112000100`, no aplicada); compartir tienda y productos por WhatsApp y con código QR (codificador propio, sin dependencia); revisar los enlaces de fotos antes de importar (descargador seguro); ensayo del guion con 4 tiendas sintéticas, que encontró y corrigió que las tarifas del panel quedaban inactivas (`65ee7a0`; staging lo conserva). Suites: unit 1,334, pgTAP 2,999, integración 438, E2E 157/157, audit sin vulnerabilidades. Sin desplegar; ADR-064 y ADR-065 siguen propuestos.
+- Productización, bloque 2 (Orden 10, mensaje 4, 2026-11-13, rama `producto/orden-10`, D-O10-08 a 15), autorizado por el propietario:
+  - categorías completas en las plantillas por giro;
+  - D2 (E2E de la tarifa del panel hasta el pedido);
+  - D3 (límites persistentes en «Revisar enlaces») y D4 a D8;
+  - ADR-065 A (crear categorías al importar);
+  - publicación masiva por candidatos («Publicado: sí», con recuperación si su trabajo muere);
+  - ADR-064 A: importación por partes de hasta 50,000 filas, cada parte todo o nada y el lote detenido a la vista en la que falla.
+
+  Evidencia: 18,000 filas en 4 partes con falla en la 3.ª; corrección solo de esa parte; caída del worker recuperada; sin duplicados; 5,988 publicados y 12 pendientes por precio.
+
+  Errores encontrados y corregidos:
+  - una parte atascada dejaba su lote «aplicando»;
+  - una publicación sin trabajo se quedaba «publicando»;
+  - invalidar la caché tumbaba trabajos terminados (D-O10-15).
+
+  Ensayos:
+  - las 10 migraciones pendientes (307/307 pgTAP, esquema idéntico);
+  - 4 tiendas sintéticas, 4/4 sin hallazgos.
+
+  Suites: unit 1,366, pgTAP 3,157, integración 447, audit sin vulnerabilidades; E2E completa en curso al cerrar este registro (resultado en `PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`).
+
+  Sin desplegar: **10 migraciones** pendientes en staging (migrar y desplegar en la misma ventana) y D1 (tarifas de `demo`) pendiente.
 
 ## Bloqueos (requieren al propietario)
 

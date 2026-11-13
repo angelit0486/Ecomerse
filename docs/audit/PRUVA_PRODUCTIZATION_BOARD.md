@@ -1,6 +1,6 @@
 # PRUVA — Tablero de productización (Órdenes 09 y 10)
 
-Actualizado: 2026-11-13 (Orden 10, bloque 1). Rama de trabajo: `producto/orden-10` (parte de `producto/orden-09`, `b6cd725`). Decisiones: `docs/DECISIONS.md` §37.
+Actualizado: 2026-11-13 (Orden 10, mensaje 4). Rama de trabajo: `producto/orden-10` (parte de `producto/orden-09`, `b6cd725`). Decisiones: `docs/DECISIONS.md` §37 y §38.
 
 Estados: BACKLOG, READY, IN PROGRESS, BLOCKED, IN REVIEW, TESTING, DONE.
 
@@ -21,16 +21,16 @@ Línea base: los siete documentos `docs/audit/PRUVA_*.md` de la Orden 08. Los ID
 
 ## Fase B — Productización
 
-| ID    | Descripción                                                             | Objetivo comercial                            | Prioridad | Responsable | Estado            | Depende de          | Archivos                                                               | Pruebas                                                | Evidencia                                 | Criterio de aceptación                                                 | Bloqueos                                                     |
-| ----- | ----------------------------------------------------------------------- | --------------------------------------------- | --------- | ----------- | ----------------- | ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
-| PB-05 | Medir el procesamiento de fotos (RM-10)                                 | Saber si 10,000 fotos caben en 5 días         | P0        | Agente      | DONE              | —                   | `tests/capacity/media-throughput.test.ts`, `scripts/capacity/media.sh` | 1,280 fotos procesadas, 4 de 4 casos                   | D-PROD-01                                 | Tiempo por foto y por pasada medidos                                   | Falta medir con el almacenamiento real (necesita producción) |
-| PB-06 | Vista «Fotos en proceso»: avance, rechazadas con motivo, cola avanzando | Que quien implementa vea y resuelva las fotos | P0        | Agente      | DONE              | PB-05               | `importar/fotos/page.tsx`, `src/lib/media/progress.ts`                 | `progress.test.ts` (5), `photo-progress.spec.ts` (3)   | D-PROD-01                                 | Avance visible, motivo por foto rechazada, otra tienda no ve nada      | —                                                            |
-| PB-07 | Revisor de archivo antes de importar (RM-12)                            | Corregir el archivo en una vuelta             | P0        | Agente      | DONE (ya existía) | —                   | `importar/[jobId]/page.tsx`                                            | `imports.spec.ts`, `paste-products.spec.ts`            | D-PROD-04                                 | Errores por columna y por fila, CSV de errores, importar solo lo bueno | —                                                            |
-| PB-08 | Importar más de 5,000 filas (RM-11)                                     | 10,000 productos con tallas en una subida     | P1        | Agente      | BLOCKED           | ADR-064             | `importar/*`                                                           | —                                                      | ADR-064 redactado                         | 18,000 filas en una sola operación de la tienda                        | **Decisión del propietario: opción A o B**                   |
-| PB-09 | Crear las categorías que falten al importar (RM-13)                     | Menos preparación previa                      | P1        | Agente      | BLOCKED           | ADR-065             | `app.import_resolve_base`                                              | —                                                      | ADR-065 redactado                         | Categorías nuevas creadas con vista previa                             | **Decisión del propietario: A, B o C**                       |
-| PB-10 | Comprobar los enlaces de fotos antes de importar                        | Saber antes qué fotos fallarán                | P2        | Agente      | DONE              | —                   | `photo-check.ts`, `photo-check-actions.ts`, `remote-fetch.ts`          | `photo-check.test.ts` (20), `photo-link-check.spec.ts` | D-O10-04                                  | La vista previa marca los enlaces que no abren                         | —                                                            |
-| PB-11 | Importar archivos de Excel (.xlsx) directamente                         | Menos pasos para el comercio                  | P2        | Agente      | BACKLOG           | —                   | —                                                                      | —                                                      | Hoy: pegar desde Excel o guardar como CSV | Subir un .xlsx sin convertirlo                                         | Dependencia nueva (regla 16): justificar                     |
-| PB-12 | Asistente «Llena tu tienda»                                             | Guiar la primera carga                        | P2        | Agente      | BACKLOG           | PB-01, PB-02, PB-06 | —                                                                      | —                                                      | —                                         | —                                                                      | —                                                            |
+| ID    | Descripción                                                             | Objetivo comercial                            | Prioridad | Responsable | Estado                      | Depende de          | Archivos                                                               | Pruebas                                                | Evidencia                                 | Criterio de aceptación                                                 | Bloqueos                                                     |
+| ----- | ----------------------------------------------------------------------- | --------------------------------------------- | --------- | ----------- | --------------------------- | ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| PB-05 | Medir el procesamiento de fotos (RM-10)                                 | Saber si 10,000 fotos caben en 5 días         | P0        | Agente      | DONE                        | —                   | `tests/capacity/media-throughput.test.ts`, `scripts/capacity/media.sh` | 1,280 fotos procesadas, 4 de 4 casos                   | D-PROD-01                                 | Tiempo por foto y por pasada medidos                                   | Falta medir con el almacenamiento real (necesita producción) |
+| PB-06 | Vista «Fotos en proceso»: avance, rechazadas con motivo, cola avanzando | Que quien implementa vea y resuelva las fotos | P0        | Agente      | DONE                        | PB-05               | `importar/fotos/page.tsx`, `src/lib/media/progress.ts`                 | `progress.test.ts` (5), `photo-progress.spec.ts` (3)   | D-PROD-01                                 | Avance visible, motivo por foto rechazada, otra tienda no ve nada      | —                                                            |
+| PB-07 | Revisor de archivo antes de importar (RM-12)                            | Corregir el archivo en una vuelta             | P0        | Agente      | DONE (ya existía)           | —                   | `importar/[jobId]/page.tsx`                                            | `imports.spec.ts`, `paste-products.spec.ts`            | D-PROD-04                                 | Errores por columna y por fila, CSV de errores, importar solo lo bueno | —                                                            |
+| PB-08 | Importar más de 5,000 filas (RM-11)                                     | 10,000 productos con tallas en una subida     | P1        | Agente      | DONE (ADR-064 A, `07ba916`) | ADR-064             | `importar/*`                                                           | —                                                      | ADR-064 redactado                         | 18,000 filas en una sola operación de la tienda                        | **Decisión del propietario: opción A o B**                   |
+| PB-09 | Crear las categorías que falten al importar (RM-13)                     | Menos preparación previa                      | P1        | Agente      | DONE (ADR-065 A, `cd2a42d`) | ADR-065             | `app.import_resolve_base`                                              | —                                                      | ADR-065 redactado                         | Categorías nuevas creadas con vista previa                             | **Decisión del propietario: A, B o C**                       |
+| PB-10 | Comprobar los enlaces de fotos antes de importar                        | Saber antes qué fotos fallarán                | P2        | Agente      | DONE                        | —                   | `photo-check.ts`, `photo-check-actions.ts`, `remote-fetch.ts`          | `photo-check.test.ts` (20), `photo-link-check.spec.ts` | D-O10-04                                  | La vista previa marca los enlaces que no abren                         | —                                                            |
+| PB-11 | Importar archivos de Excel (.xlsx) directamente                         | Menos pasos para el comercio                  | P2        | Agente      | BACKLOG                     | —                   | —                                                                      | —                                                      | Hoy: pegar desde Excel o guardar como CSV | Subir un .xlsx sin convertirlo                                         | Dependencia nueva (regla 16): justificar                     |
+| PB-12 | Asistente «Llena tu tienda»                                             | Guiar la primera carga                        | P2        | Agente      | BACKLOG                     | PB-01, PB-02, PB-06 | —                                                                      | —                                                      | —                                         | —                                                                      | —                                                            |
 
 ## Fase C — Diferenciación
 
@@ -56,18 +56,18 @@ Cada línea lleva problema, usuario, beneficio, costo, riesgo y medida. Ninguna 
 
 Tablero de bloqueos de la Orden 08. Nada de esto lo puede cerrar el agente sin autorización.
 
-| ID    | Tema                                         | Estado  | Qué falta                                       | Quién       |
-| ----- | -------------------------------------------- | ------- | ----------------------------------------------- | ----------- |
-| PB-21 | Respaldo de staging (RM-01)                  | BLOCKED | Correr `scripts/ops/backup-export.sh`           | Propietario |
-| PB-22 | Migraciones en staging (RM-02): 6 pendientes | BLOCKED | Autorización                                    | Propietario |
-| PB-23 | Desplegar el código corregido (RM-03)        | BLOCKED | Autorización, después de PB-22                  | Propietario |
-| PB-24 | Cola cada minuto (RM-05)                     | BLOCKED | Vercel Pro (20 USD al mes) y `CRON_SECRET`      | Propietario |
-| PB-25 | Correo real (RM-06)                          | BLOCKED | Resend y dominio con SPF, DKIM y DMARC          | Propietario |
-| PB-26 | Mercado Pago real (RM-07)                    | BLOCKED | Credenciales de prueba como secreto del entorno | Propietario |
-| PB-27 | Producción separada con respaldos (RM-08)    | BLOCKED | Supabase Pro (25 USD; PITR 100 USD), dominio    | Propietario |
-| PB-28 | Textos legales (RM-09)                       | BLOCKED | Abogado                                         | Propietario |
-| PB-29 | Monitoreo (RM-17)                            | BLOCKED | DSN de Sentry                                   | Propietario |
-| PB-30 | Restauración probada en un proyecto aparte   | BLOCKED | PB-27                                           | Propietario |
+| ID    | Tema                                          | Estado  | Qué falta                                       | Quién       |
+| ----- | --------------------------------------------- | ------- | ----------------------------------------------- | ----------- |
+| PB-21 | Respaldo de staging (RM-01)                   | BLOCKED | Correr `scripts/ops/backup-export.sh`           | Propietario |
+| PB-22 | Migraciones en staging (RM-02): 10 pendientes | BLOCKED | Autorización (runbook y ensayo listos)          | Propietario |
+| PB-23 | Desplegar el código corregido (RM-03)         | BLOCKED | Autorización, después de PB-22                  | Propietario |
+| PB-24 | Cola cada minuto (RM-05)                      | BLOCKED | Vercel Pro (20 USD al mes) y `CRON_SECRET`      | Propietario |
+| PB-25 | Correo real (RM-06)                           | BLOCKED | Resend y dominio con SPF, DKIM y DMARC          | Propietario |
+| PB-26 | Mercado Pago real (RM-07)                     | BLOCKED | Credenciales de prueba como secreto del entorno | Propietario |
+| PB-27 | Producción separada con respaldos (RM-08)     | BLOCKED | Supabase Pro (25 USD; PITR 100 USD), dominio    | Propietario |
+| PB-28 | Textos legales (RM-09)                        | BLOCKED | Abogado                                         | Propietario |
+| PB-29 | Monitoreo (RM-17)                             | BLOCKED | DSN de Sentry                                   | Propietario |
+| PB-30 | Restauración probada en un proyecto aparte    | BLOCKED | PB-27                                           | Propietario |
 
 ## Fase F — Piloto
 
@@ -84,21 +84,36 @@ Tablero de bloqueos de la Orden 08. Nada de esto lo puede cerrar el agente sin a
 
 ## Métricas
 
-| Métrica                                         | Hoy                                    | Fuente     |
-| ----------------------------------------------- | -------------------------------------- | ---------- |
-| Tiempo de importación de 5,000 filas            | 23–30 s (local)                        | T04        |
-| Tiempo por foto                                 | 0.25 s catálogo, 1.0 s celular (local) | PB-05      |
-| Fugas entre tiendas                             | 0 de 11,220 intentos                   | T06        |
-| Tiempo de inicio a entrega                      | Sin datos                              | Piloto     |
-| Importaciones exitosas, errores por importación | Sin datos reales                       | Piloto     |
-| Pedidos, conversión, incidencias por tienda     | Sin datos                              | Producción |
-| Costo de infraestructura por tienda             | 86 MXN con 50 tiendas [ESTIMADO]       | PB-18      |
+| Métrica                                         | Hoy                                                                                                                               | Fuente                     |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Tiempo de importación de 5,000 filas            | 23–30 s (local)                                                                                                                   | T04                        |
+| Importación por partes de 18,000 filas (4)      | Validar 1.2–1.9 s por parte; aplicar 2 partes y fallar la 3.ª: 76 s; recuperar y aplicar 3.ª y 4.ª: 47 s (local, con publicación) | `import-batch-18k.test.ts` |
+| Tiempo por foto                                 | 0.25 s catálogo, 1.0 s celular (local)                                                                                            | PB-05                      |
+| Fugas entre tiendas                             | 0 de 11,220 intentos                                                                                                              | T06                        |
+| Tiempo de inicio a entrega                      | Sin datos                                                                                                                         | Piloto                     |
+| Importaciones exitosas, errores por importación | Sin datos reales                                                                                                                  | Piloto                     |
+| Pedidos, conversión, incidencias por tienda     | Sin datos                                                                                                                         | Producción                 |
+| Costo de infraestructura por tienda             | 86 MXN con 50 tiendas [ESTIMADO]                                                                                                  | PB-18                      |
 
 ## Orden 10, bloque 1 — nuevos
 
-| ID    | Descripción                                                              | Estado              | Evidencia                                     | Siguiente paso                                  |
-| ----- | ------------------------------------------------------------------------ | ------------------- | --------------------------------------------- | ----------------------------------------------- |
-| PB-34 | Paquete de despliegue de las 6 migraciones pendientes                    | DONE (preparado)    | D-O10-01, `despliegue-migraciones-2026-11.md` | **Autorización del propietario para aplicarlo** |
-| PB-35 | Error: la tarifa de envío del panel quedaba inactiva                     | DONE (local)        | D-O10-06, `65ee7a0`, `shipping-rates.spec.ts` | Desplegar (staging lo conserva)                 |
-| PB-36 | Columna «Publicado» en las hojas por giro (quita publicar de 100 en 100) | BACKLOG (propuesta) | D-O10-07, ensayo O10-01                       | Decisión del propietario                        |
-| PB-37 | Completar las categorías de las plantillas de giro                       | BACKLOG (propuesta) | D-O10-07, ensayo O10-01                       | Decisión del propietario (o resolver ADR-065)   |
+| ID    | Descripción                                                              | Estado           | Evidencia                                     | Siguiente paso                                  |
+| ----- | ------------------------------------------------------------------------ | ---------------- | --------------------------------------------- | ----------------------------------------------- |
+| PB-34 | Paquete de despliegue de las 6 migraciones pendientes                    | DONE (preparado) | D-O10-01, `despliegue-migraciones-2026-11.md` | **Autorización del propietario para aplicarlo** |
+| PB-35 | Error: la tarifa de envío del panel quedaba inactiva                     | DONE (local)     | D-O10-06, `65ee7a0`, `shipping-rates.spec.ts` | Desplegar (staging lo conserva)                 |
+| PB-36 | Columna «Publicado» en las hojas por giro (quita publicar de 100 en 100) | DONE (mensaje 4) | D-O10-12, `a730989`                           | Desplegar con las 10 migraciones                |
+| PB-37 | Completar las categorías de las plantillas de giro                       | DONE (mensaje 4) | D-O10-08, `ed19e7e`                           | Desplegar                                       |
+
+## Orden 10, mensaje 4 — nuevos
+
+Autorizado por el propietario el 2026-11-13. Todo en local; nada desplegado.
+
+| ID    | Descripción                                                                                 | Estado                        | Evidencia                                                       | Siguiente paso                                             |
+| ----- | ------------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------- |
+| PB-38 | D2: E2E de la tarifa creada en el panel hasta el pedido, más regresión                      | DONE                          | D-O10-09, `07e5984`, `shipping-rates.spec.ts`                   | —                                                          |
+| PB-39 | D3: límites persistentes por tienda y por importación en «Revisar enlaces»                  | DONE                          | D-O10-10, `1a5dc04`, pgTAP `144`                                | Desplegar con las 10 migraciones                           |
+| PB-40 | D4 a D8: rebinding, dominio inexistente, interruptor de alertas, runbook, límites de Vercel | DONE                          | D-O10-10, D-O10-14, runbook de despliegue (anexo B)             | —                                                          |
+| PB-41 | Publicación masiva por candidatos, con recuperación si su trabajo muere                     | DONE                          | D-O10-12, `a730989`, `07ba916`, pgTAP `146` y `147`             | Desplegar en la misma ventana que las migraciones          |
+| PB-42 | Importación por partes (ADR-064 A): lote, partes, corregir solo la que falla                | DONE                          | D-O10-13, `07ba916`, prueba de 18,000 filas, E2E `import-batch` | Desplegar con las 10 migraciones                           |
+| PB-43 | Error: una parte atascada dejaba su lote «aplicando» para siempre                           | DONE (encontrado y corregido) | D-O10-13, pgTAP `147` (falla antes, pasa después)               | —                                                          |
+| PB-44 | D1: las 2 tarifas de la tienda `demo` en staging siguen inactivas                           | BLOCKED                       | Auditoría independiente (mensaje 3)                             | **Autorización para desplegar**; luego volver a guardarlas |

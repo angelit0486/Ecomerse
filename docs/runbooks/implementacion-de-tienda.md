@@ -51,23 +51,33 @@ Todas llevan: Producto, Precio, Precio anterior, Existencias, SKU, Código de ba
 
 ## Día 2 — Catálogo (2 a 6 horas, según el orden del archivo)
 
-1. Revisar las categorías: **la importación no crea categorías** (ADR-065, sin resolver). Las que use la hoja deben existir (Productos → Categorías). En el ensayo **ninguna plantilla cubrió todo su giro**: faltaron Calzado (ropa), Belleza y Regalos (hogar), Lácteos y Cuidado personal (abarrotes), Aminoácidos (suplementos). Comparar la columna Categoría de la hoja con las de la plantilla antes de subir.
+1. Revisar las categorías. Desde la Orden 10, mensaje 4, las 4 plantillas traen las categorías de su giro (Calzado; Belleza y Regalos; Lácteos y Cuidado personal; Aminoácidos).
+   - Si la hoja usa una que no existe, la vista previa la lista con cuántos productos la usan. Se puede marcar «Crear las categorías que falten», elegir cuáles y confirmar (ADR-065). Se crean al aplicar la importación; si la importación falla, no se crea ninguna.
+   - Revisar los nombres: una categoría mal escrita se crearía tal cual. Las que se parecen a una existente salen con aviso.
 2. Productos → Importar → pegar las filas o subir el archivo.
 3. Leer la vista previa: errores por columna y por fila. Descargar el CSV de errores, corregir y volver a subir. Si urge, «Importar solo los productos sin errores».
 4. Confirmar. 5,000 filas tardan menos de un minuto.
-5. **Los productos entran en borrador.** Para publicarlos: Productos → filtro «Borrador» → 100 por página → «Seleccionar todos» → «Publicar» → Aplicar, y repetir (una acción en bloque toma hasta 100). 160 productos = 2 vueltas; 10,000 = unas 100. [PROPUESTA] Agregar la columna «Publicado» (sí/no) a las hojas por giro: la importación ya la entiende y quitaría este paso.
-6. Más de 5,000 filas (cada talla o color es una fila): partir el archivo sin separar las filas de un mismo producto y subir cada parte. Hay un tope de 30 importaciones por hora.
+5. **Publicar.** Escribir «sí» en la columna «Publicado» de la hoja (ya viene en las hojas por giro).
+   - Al terminar la importación, el sistema publica los que cumplen las reglas y muestra cuántos se publicaron y por qué quedaron pendientes los demás: ficha de cumplimiento, precio, presentación.
+   - Los pendientes siguen en borrador. Se corrigen y se publican desde Productos (en bloque, 100 por acción).
+   - Nada se publica saltándose las reglas.
+6. **Más de 5,000 filas** (cada talla o color es una fila; hasta 50,000): subir el archivo completo en el paso 3. La pantalla lo parte sola en partes de hasta 5,000 filas, sin separar un producto, y abre la página del lote.
+   - Ahí se ve cada parte, se eligen las categorías nuevas una sola vez y se pulsa «Aplicar el lote».
+   - Si una parte falla, las anteriores ya quedaron y la pantalla lo dice. Se corrige el archivo, se vuelve a elegir en la misma página (solo sube la parte que cambió) y se pulsa «Continuar».
+   - Si se corta la subida, volver a elegir el mismo archivo la retoma.
+   - Cada parte cuenta en el tope de 30 importaciones por hora.
+   - Con la página del lote abierta, el lote avanza solo. Cerrada, espera a la siguiente pasada de la cola (en staging, una vez al día).
 
 Errores frecuentes y su arreglo:
 
-| Mensaje                                    | Arreglo                                                     |
-| ------------------------------------------ | ----------------------------------------------------------- |
-| «no existe la categoría…»                  | Crear la categoría o corregir el nombre                     |
-| «sku: repetido»                            | Cada talla o color lleva su propio SKU                      |
-| «la misma combinación ya está en la fila…» | Talla y color repetidos en el mismo producto                |
-| «falta el valor de Talla»                  | Una fila del producto no tiene talla y las demás sí         |
-| «escribe un importe como 199.50»           | Precio con texto o símbolos                                 |
-| «ya existe un producto con ese handle»     | Usar el modo «Crear los nuevos y actualizar los existentes» |
+| Mensaje                                    | Arreglo                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| «no existe la categoría…»                  | Corregir el nombre, o marcar «Crear las categorías que falten» en la vista previa |
+| «sku: repetido»                            | Cada talla o color lleva su propio SKU                                            |
+| «la misma combinación ya está en la fila…» | Talla y color repetidos en el mismo producto                                      |
+| «falta el valor de Talla»                  | Una fila del producto no tiene talla y las demás sí                               |
+| «escribe un importe como 199.50»           | Precio con texto o símbolos                                                       |
+| «ya existe un producto con ese handle»     | Usar el modo «Crear los nuevos y actualizar los existentes»                       |
 
 ## Día 3 — Fotos (1 a 4 horas de persona; la máquina trabaja sola)
 
@@ -141,14 +151,32 @@ Las cuatro terminaron con todos sus productos publicados, 0 fotos rechazadas y l
 
 Qué encontró el ensayo y qué cambió:
 
-| Hallazgo                                                                                                     | Tipo              | Qué se hizo                                           |
-| ------------------------------------------------------------------------------------------------------------ | ----------------- | ----------------------------------------------------- |
-| Toda tarifa guardada desde el panel quedaba inactiva; la tienda no se podía publicar                         | Error (corregido) | `65ee7a0` + prueba `tests/e2e/shipping-rates.spec.ts` |
-| Ninguna plantilla de giro trae todas las categorías de su giro                                               | Paso manual       | Día 2, paso 1                                         |
-| La importación deja todo en borrador; publicar en bloque va de 100 en 100                                    | Paso no escrito   | Día 2, paso 5 (+ propuesta de columna «Publicado»)    |
-| Las plantillas traen productos de ejemplo                                                                    | Paso no escrito   | Día 1, paso 3                                         |
-| Sin declarar suplementos en Cumplimiento se publican sin ficha                                               | Riesgo            | Día 1, paso 6                                         |
-| Sin políticas propias no se publica                                                                          | Requisito         | Día 4, paso 3 (pedirlas en el día 0)                  |
-| Los errores de captura (precio con texto, existencias con letras, SKU repetido, sabor vacío, costo negativo) | Funciona bien     | Cada uno con su mensaje por columna y fila            |
+| Hallazgo                                                                                                     | Tipo              | Qué se hizo                                                  |
+| ------------------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------ |
+| Toda tarifa guardada desde el panel quedaba inactiva; la tienda no se podía publicar                         | Error (corregido) | `65ee7a0` + prueba `tests/e2e/shipping-rates.spec.ts`        |
+| Ninguna plantilla de giro trae todas las categorías de su giro                                               | Paso manual       | **Resuelto** en el mensaje 4 (D-O10-08 y ADR-065)            |
+| La importación deja todo en borrador; publicar en bloque va de 100 en 100                                    | Paso no escrito   | **Resuelto** en el mensaje 4: columna «Publicado» (D-O10-12) |
+| Las plantillas traen productos de ejemplo                                                                    | Paso no escrito   | Día 1, paso 3                                                |
+| Sin declarar suplementos en Cumplimiento se publican sin ficha                                               | Riesgo            | Día 1, paso 6                                                |
+| Sin políticas propias no se publica                                                                          | Requisito         | Día 4, paso 3 (pedirlas en el día 0)                         |
+| Los errores de captura (precio con texto, existencias con letras, SKU repetido, sabor vacío, costo negativo) | Funciona bien     | Cada uno con su mensaje por columna y fila                   |
+
+### Repetición tras el mensaje 4 de la Orden 10 (2026-11-13)
+
+Mismas 4 tiendas sintéticas y mismo comando. Las hojas ya traen «Publicado: sí» y las plantillas, sus categorías.
+
+| Giro        | Día 1 alta | Día 1 diseño | Día 2 catálogo | Día 3 fotos | Día 4 | Día 5 | Total | Publicados al importar |
+| ----------- | ---------- | ------------ | -------------- | ----------- | ----- | ----- | ----- | ---------------------- |
+| Ropa        | 7.3        | 8.9          | 10.1           | 12.7        | 15.5  | 6.0   | 60    | 30 de 30               |
+| Hogar       | 6.0        | 9.0          | 7.9            | 26.5        | 16.0  | 4.4   | 70    | 70 de 70               |
+| Abarrotes   | 6.0        | 8.2          | 7.8            | 57.1        | 15.3  | 4.4   | 99    | 160 de 160             |
+| Suplementos | 6.5        | 8.7          | 7.5            | 14.9        | 15.2  | 4.3   | 57    | 40 de 40               |
+
+- 4 de 4, **sin hallazgos**.
+- No hubo que crear categorías a mano.
+- Al terminar cada importación ya estaban publicados todos los productos: el Día 5 ya no publica en bloque (0 borradores).
+- **Arranque en frío:** la primera corrida, justo después de reiniciar el stack local, falló en 2 tiendas. Ropa falló en la verificación en dos pasos (Auth en frío). En Hogar, la primera subida del logo no llegó al almacenamiento en frío.
+- **Error real encontrado y corregido (D-O10-15):** el trabajo del logo de otra tienda se marcó fallido por la invalidación de la caché y se repitió 1 minuto después.
+- Resultado guardado en `test-results/ensayo/` (o en `ENSAYO_OUT`).
 
 Pendiente: repetir con un comercio real (piloto) para medir horas de persona y preguntas de soporte.

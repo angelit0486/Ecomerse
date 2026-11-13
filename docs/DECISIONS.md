@@ -1714,7 +1714,7 @@ Rama `producto/orden-09`. Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. B
 - **D-PROD-03. Hoja de inicio por giro.** `…/importar/plantilla?giro=ropa|hogar|abarrotes|suplementos` descarga solo los títulos, en español, de las columnas útiles para ese giro. Sin productos de ejemplo (regla del propietario: nunca inventar productos). Una prueba comprueba que la tienda entiende todas las columnas de cada hoja.
 - **D-PROD-04. Lo que NO se reconstruyó.** El «revisor de archivo» que la Orden 08 anotó como pendiente (RM-12) ya existía en su mayor parte: vista previa con errores por columna y por fila, CSV de errores, «importar solo lo que está bien» y resubir el archivo corregido. Se corrige el inventario: F-39 pasa a implementado; lo que falta de verdad es comprobar los enlaces de las fotos antes de importar (hoy se sabe después, en «Fotos en proceso»).
 
-### ADR-064 — Importar más de 5,000 filas · **PROPUESTO, espera decisión del propietario**
+### ADR-064 — Importar más de 5,000 filas · **APROBADO opción A por el propietario el 2026-11-13 (Orden 10, mensaje 4), con aceptación expresa de lotes aplicados a medias y estado por parte; implementado (D-O10-13)**
 
 **Contexto.**
 
@@ -1730,7 +1730,7 @@ Rama `producto/orden-09`. Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. B
 
 **Qué decidir:** A o B. Con A no hace falta tocar GATE0; con B se anota la excepción en §26.1.
 
-### ADR-065 — Crear las categorías que falten al importar · **PROPUESTO, espera decisión del propietario**
+### ADR-065 — Crear las categorías que falten al importar · **APROBADO opción A por el propietario el 2026-11-13 (Orden 10, mensaje 4); implementado (D-O10-11)**
 
 **Contexto.** Hoy una fila con una categoría que no existe es un error («categories: no existe la categoría…»). Quien implementa debe crear el árbol antes de importar.
 
@@ -1761,4 +1761,111 @@ Rama `producto/orden-10` (desde `producto/orden-09` @ `b6cd725`). Tablero: `docs
 - **D-O10-07. Propuestas que salen del ensayo (no implementadas, esperan decisión).**
   - Columna «Publicado» (sí/no) en las hojas por giro: la importación ya la entiende y quitaría publicar en bloque de 100 en 100.
   - Completar las categorías de cada plantilla de giro (faltaron Calzado; Belleza y Regalos; Lácteos y Cuidado personal; Aminoácidos), o resolver ADR-065.
-  - ADR-064 y ADR-065 siguen **PROPUESTOS**: esta orden no los resuelve.
+  - ADR-064 y ADR-065 siguen **PROPUESTOS**: esta orden no los resuelve. _(Resueltos en el mensaje 4: ver §38.)_
+
+## 38. Productización, bloque 2 (Orden 10, mensaje 4, 2026-11-13)
+
+Rama `producto/orden-10`. El propietario autorizó:
+
+- ADR-064 opción A y ADR-065 opción A;
+- la aceptación expresa de lotes aplicados a medias, con estado por parte;
+- las correcciones D2 y D3 de la auditoría independiente;
+- completar las categorías de las 4 plantillas;
+- la publicación masiva por candidatos en segundo plano.
+
+Solo desarrollo, pruebas, documentación y commits: nada se desplegó ni se aplicó fuera de local; staging y producción no se tocaron.
+
+- **D-O10-08. Plantillas por giro con sus categorías completas (`ed19e7e`).**
+  - Categorías que faltaban: Ropa, Calzado; Hogar, Belleza y Regalos; Abarrotes, Lácteos y Cuidado personal; Suplementos, Aminoácidos.
+  - La plantilla de suplementos recuerda declarar «Suplemento alimenticio» en Ajustes → Cumplimiento y dice que la plantilla sola no basta para cumplir las reglas sanitarias. Ninguna plantilla promete cumplimiento sanitario; una prueba lo vigila.
+- **D-O10-09. D2: la tarifa creada en el panel, de punta a punta hasta el pedido (`07e5984`).**
+  - Recorrido probado: crear → guardar → persiste en centavos → activa → aparece en el checkout junto a las demás → se elige → el pedido guarda su id, precio y nombre.
+  - Regresión: una tarifa existente editada en el panel sigue activa.
+- **D-O10-10. D3 a D8: revisión de los enlaces de fotos con límites persistentes (`1a5dc04`).**
+  - **D3.** Se quitó el freno en memoria. Ahora cada revisión es un registro en la base (`import_photo_checks`, RLS por tienda) con estos límites:
+    - una revisión a la vez por tienda y 8 en toda la plataforma;
+    - 10 por hora por tienda;
+    - el resultado se reutiliza 24 h y solo se repite pasados 10 min;
+    - hasta 500 enlaces por archivo;
+    - una revisión de más de 2 min se da por vencida;
+    - se guarda 7 días y lo borra la limpieza de retención;
+    - solo quien la empezó la cierra, con un resultado de forma validada (≤ 128 KB).
+
+    Las protecciones SSRF no cambiaron: el mismo descargador del worker.
+
+  - **D4.** Prueba directa de DNS rebinding: la segunda resolución apunta a una IP privada y la conexión sigue fijada a la IP validada. Si se quita esa fijación, la prueba falla (comprobado).
+  - **D5.** Un dominio que no existe se explica como tal; un servidor que no responde, aparte.
+  - **D6.** `store_alerts` respeta el interruptor `store_health` también en la base, no solo en la página.
+  - **D8.** `maxDuration = 60` en la vista previa de la importación, en la ruta de cada parte y en la página del lote.
+- **D-O10-11. ADR-065 A: crear las categorías que falten (`cd2a42d`, migración `20261113000200`).**
+  - **En la vista previa:** casilla apagada por defecto y lista de las que faltan con cuántos productos usan cada una. También aparecen las que no se pueden crear y por qué: más de 3 niveles, nombre inválido, dirección ocupada o borrada, o escrita distinto en otras filas.
+  - **Parecidas:** las que se parecen a una existente se avisan, nunca se juntan solas.
+  - **Confirmación y permiso:** confirmación explícita y el permiso `categories.manage`.
+  - **Creación:** se crean dentro de la transacción de la importación; si la importación falla, no queda ninguna. Dos importaciones simultáneas que crean la misma categoría dejan una sola.
+  - **Pruebas:** pgTAP `145` (31), integración de concurrencia y E2E.
+- **D-O10-12. Publicación masiva por candidatos (`a730989`, migración `20261113000300`).**
+  - «Publicado: sí» (o `status = active`) en el archivo es una **solicitud**, nunca un atajo. El producto entra en borrador y queda como candidato (`publish_runs`, `publish_run_items`).
+  - El trabajo `catalog.publish_run` publica por tandas de 200 con las reglas vigentes: las mismas validaciones del panel y de cumplimiento. Antes de publicar vuelve a comprobar el permiso `products.publish` de quien importó (CF-10).
+  - Los que no cumplen quedan en borrador con su motivo, agrupado: ficha de cumplimiento, precio, presentación, permiso u otro.
+  - La importación muestra el resumen («N publicados. M pendientes: …») y la lista de pendientes.
+  - Garantías:
+    - idempotente: un producto ya activo cuenta como «ya estaba»;
+    - reanudable: si se acaba el tiempo, sigue después;
+    - aislado por tienda;
+    - auditado con `catalog.publish_run`.
+  - Un producto inválido ya no tumba toda la importación. Un producto que incumple cumplimiento nunca se publica solo.
+  - **Recuperación (agregada con ADR-064, migración `0400`):** si el trabajo de una corrida muere, la limpieza de mantenimiento la retoma sola, hasta 3 veces, con una llave nueva. Puede morir por dos causas:
+    - agotó sus intentos;
+    - un worker con el código anterior lo descartó durante un despliegue.
+
+    Después queda fallida con el motivo, y los productos que faltaban siguen en borrador. Antes, la corrida se quedaba «publicando» para siempre. pgTAP `147`.
+- **D-O10-13. ADR-064 A: importar más de 5,000 filas por partes (migración `20261113000400`).**
+  - **Navegador:** lee hasta 40 MB con el mismo lector CSV y la misma traducción que el servidor (Shopify, Tiendanube, hoja en español). Agrupa por nombre corto (`handleKey`, compartido con el servidor) y arma partes de hasta 5,000 filas y 3.5 MB sin separar un producto. Calcula el SHA-256 de cada parte y del archivo. Un archivo de hasta 4 MB y 5,000 filas sigue el camino de siempre.
+  - **Servidor:** ruta `POST …/importar/lote/[batchId]/parte/[n]`. Exige mismo origen, `Content-Length` y ≤ 3.5 MB, y verifica sesión, tienda y `imports.run` antes de leer el cuerpo. Lee la parte con los mismos validadores (encabezados y plan); la huella es el SHA-256 de los bytes recibidos.
+  - **Base:**
+    - `import_batches` tiene RLS forzado, `prevent_tenant_change` y FK compuesta desde `import_jobs`.
+    - Cada parte es una importación normal y se aplica en **una sola transacción**.
+    - Hay una sola importación viva por parte (índice único parcial).
+    - Mismo archivo y modo retoman el lote (7 días) y dicen qué partes ya subieron.
+    - La misma parte subida dos veces es la misma importación. Una parte corregida reemplaza a la que no se aplicó; una parte aplicada no se vuelve a subir.
+    - Un producto repartido entre partes se rechaza.
+    - Las partes se aplican en orden; el worker avanza el lote en la misma transacción en que termina cada parte.
+    - Se cancela solo si nada se está aplicando; lo aplicado se queda y se dice.
+    - Las categorías de ADR-065 se eligen una vez para todo el lote.
+    - `imports_commit` e `imports_accept_categories` rechazan partes sueltas.
+  - **Desviación de GATE0 §26.1 (pasos 5 y 6), aprobada con este ADR.**
+    - El contrato preveía, para más de 5,000 filas, lotes de 1,000 filas idempotentes con estado parcial visible.
+    - Se implementó en partes de hasta 5,000 filas: cada parte en **una sola transacción**, todo o nada, y el estado de cada parte a la vista.
+    - El archivo completo puede quedar aplicado a medias: lo aceptó en forma expresa el propietario.
+    - El rollback automático es por parte; «deshacer importación» sigue en P2.
+    - §26.1 no está entre los contratos críticos (§43). GATE0 no se edita: la desviación se anota aquí, como las demás.
+  - **Estados por parte:** Pendiente, Procesando, Aplicada, Error y Cancelada.
+  - **Panel:**
+    - página del lote con aviso explícito de «aplicado a medias»;
+    - aplicar o continuar, volver a elegir el archivo para retomar o corregir, y cancelar con confirmación;
+    - categorías y resumen de publicación;
+    - aviso en cada parte y lista de lotes sin terminar en Importar.
+  - **Error encontrado y corregido:** `system.fail_stuck_imports` marcaba fallida una parte atascada (worker caído sin reintentos), pero su lote se quedaba «aplicando» para siempre. Ahora también detiene el lote con el motivo. La prueba falla antes y pasa después.
+  - **Reversa:** escrita en el encabezado de la migración y ensayada en local; el esquema queda idéntico (`pg_dump -s`) al de las migraciones hasta `0300`.
+  - **Pruebas:**
+    - pgTAP `147` (70);
+    - unitarias del partidor y del lector de partes (17);
+    - integración de 18,000 filas (7 casos);
+    - E2E por la interfaz (2).
+
+    Implementado en `07ba916`.
+- **D-O10-15. Error encontrado por el ensayo: invalidar la caché tumbaba trabajos ya terminados.**
+  - La cola corre también después de responder una acción del panel o al mirar una página (`after()`, D-MEJ-26). En ese momento Next 16 puede negarse a invalidar la caché («`revalidateTag` can't be called during render»).
+  - Los trabajos que avisan a la tienda pública al terminar (fotos, importaciones, publicación) quedaban marcados como fallidos aunque ya habían hecho su parte, y se repetían 1 minuto después. Visto con el logo de una tienda del ensayo.
+  - **Corrección:** invalidar es de mejor esfuerzo. Si Next no lo permite, se registra el aviso `storefront.cache_invalidation_skipped` y el trabajo sigue; el TTL de 60 s de la caché pública sigue siendo la red de seguridad (GATE0 §21.4).
+  - **Prueba:** `src/server/storefront/cache.test.ts` falla antes y pasa después. En acciones y rutas el comportamiento no cambia.
+- **D-O10-14. Límites que quedan (no se ocultan).**
+  - El cron de staging corre una vez al día. Cada pasada del runner aplica una parte de 5,000 filas (25 a 40 s). Con la página del lote abierta, el panel retoma la cola (una vez cada 10 s por instancia); cerrada, el lote espera al cron.
+  - En un lote no existe «importar solo lo que está bien» (ADR-040): cada parte debe quedar sin errores.
+  - Pegar desde Excel sigue limitado a 5,000 filas; el aviso manda a subir el archivo.
+  - Un archivo corregido debe dejar los mismos productos en cada parte. Si cambia la partición, el panel pide empezar un lote nuevo.
+  - Tope de 30 importaciones por hora por tienda: cada parte y cada corrección cuentan.
+    - Al crear el lote, la comprobación del tope no es atómica.
+    - El tope se cumple en cada parte, incluso con dos subidas simultáneas (probado).
+  - **Entre migrar y desplegar:** el código desplegado hoy (`88edc6d`) no conoce el trabajo `catalog.publish_run` y lo descarta. Una importación con «Publicado: sí» hecha en esa ventana deja sus productos en borrador. La corrida se retoma sola hasta 3 veces (cada 15 min) y, si el código nuevo aún no está, termina fallida con el motivo. Por eso el runbook pide migrar y desplegar en la misma ventana, sin importaciones de por medio.
+  - Medido en este contenedor con PostgreSQL 16 local y el stack local (Auth y PostgREST), no en Supabase alojado ni en hardware de producción.

@@ -1,8 +1,34 @@
-# PRUVA — Contexto para el siguiente superprompt (autosuficiente, 2026-11-12)
+# PRUVA — Contexto para el siguiente superprompt (autosuficiente, actualizado 2026-11-13)
 
 > Este archivo se puede leer solo. Resume, con evidencia, todo lo que un agente nuevo necesita para continuar sin repetir trabajo.
-> Al 2026-11-12 cada afirmación está verificada en el repositorio (`cc7a855`) o en staging, con consultas de solo lectura.
-> El detalle está en los otros seis archivos `docs/audit/PRUVA_*.md`.
+> Base: verificación del 2026-11-12 en el repositorio (`cc7a855`) y en staging, con consultas de solo lectura.
+> **Actualización del 2026-11-13 (Orden 10, mensajes 1 a 4):**
+>
+> - el trabajo más reciente está en `producto/orden-10`;
+> - la sección 0 resume lo nuevo;
+> - las secciones 6 a 9 y 12 están al día.
+>
+> El detalle está en los otros archivos `docs/audit/PRUVA_*.md` y en `docs/DECISIONS.md` §36 a §38.
+
+## 0. Lo nuevo de la Orden 10 (2026-11-12/13) [VERIFICADO en local]
+
+- **Bloque 1** (D-O10-01 a 07):
+  - paquete de despliegue de migraciones con ensayo local;
+  - alertas «Qué atender hoy»;
+  - compartir por WhatsApp y QR;
+  - revisar los enlaces de fotos;
+  - ensayo del guion con 4 tiendas sintéticas, que encontró que las tarifas guardadas en el panel quedaban inactivas (corregido en `65ee7a0`).
+- **Auditoría independiente** (mensaje 3): «aprobado con observaciones». D1: la tienda `demo` de staging está publicada con sus 2 tarifas inactivas. Sigue pendiente porque arreglarlo exige desplegar.
+- **Mensaje 4** (D-O10-08 a 14), todo autorizado por el propietario:
+  - categorías completas en las 4 plantillas;
+  - D2: E2E de la tarifa hasta el pedido;
+  - D3: límites persistentes en la revisión de enlaces;
+  - D4 a D8;
+  - ADR-065 A: crear categorías al importar, con vista previa y confirmación;
+  - publicación masiva por candidatos («Publicado: sí» pide publicar; el worker publica solo lo que cumple);
+  - ADR-064 A: más de 5,000 filas por partes, hasta 50,000. Cada parte es todo o nada; el lote se detiene en la que falla, a la vista, y se corrige solo esa.
+- **Migraciones nuevas, solo locales:** `20261113000100` a `20261113000400`. Con las 6 anteriores son **10 pendientes en staging** (`docs/runbooks/despliegue-migraciones-2026-11.md`, ensayo `scripts/ops/migration-rehearsal.sh`).
+- **Nada desplegado; staging y producción sin tocar.** PRUVA **no** está declarado apto para producción.
 
 ## 1. Qué es PRUVA
 
@@ -116,7 +142,7 @@ Todas están en `docs/DECISIONS.md`.
 
 ## 6. Qué funciona de verdad
 
-**Pruebas.** Última corrida completa, en local, sobre el commit `87622f2` (2026-11-12): 1,280 unitarias, 2,983 pgTAP, 438 de integración y 149 de 149 E2E. Hay 0 pruebas omitidas.
+**Pruebas.** Última corrida completa, en local, sobre `producto/orden-10` (2026-11-13): 1,364 unitarias, 3,157 pgTAP y 447 de integración. Incluye la de 18,000 filas en 4 partes con falla en la 3.ª, corrección, caída del worker, publicación y aislamiento. El resultado de E2E está en `PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`. Hay 0 pruebas omitidas.
 
 **Capacidad.** Orden 06, medida en local con 4 núcleos (`docs/audit/EXECUTION_MASTER_LOG.md`):
 
@@ -163,35 +189,47 @@ Todas están en `docs/DECISIONS.md`.
 
 **Sin desplegar**
 
-- Las migraciones `20261110000300` (rentabilidad) y `20261111000100` a `20261111000400` (Orden 06: búsqueda, disponibilidad, búsqueda del panel y candados de la importación).
-- El código desde `88edc6d` hasta `cc7a855`.
+- 10 migraciones:
+  - `20261110000300` (rentabilidad);
+  - `20261111000100` a `20261111000400` (Orden 06);
+  - `20261112000100` (alertas);
+  - `20261113000100` a `20261113000400` (Orden 10, mensaje 4).
+- El código desde `88edc6d` hasta la punta de `producto/orden-10`.
+- Migrar y desplegar van en la **misma ventana**: el código desplegado no conoce el trabajo de publicación por candidatos (runbook, sección 3).
 
-**Brechas de producto para la carga eficiente**
+**Brechas de producto para la carga eficiente** (estado al 2026-11-13)
 
-- Tope de 5,000 filas por archivo (CAP-04).
-- La importación no crea categorías nuevas.
-- Sin revisor del archivo previo a la subida.
-- Sin plantilla de importación por giro.
-- Rendimiento de 10,000 fotos sin medir: la cola procesa un trabajo a la vez, en pasadas de unos 45 s.
-- Sin guion de implementación.
+- Resueltas en local:
+  - más de 5,000 filas (ADR-064 A);
+  - crear categorías (ADR-065 A);
+  - revisor del archivo (ya existía);
+  - hojas por giro y guion de 5 días;
+  - fotos medidas (D-PROD-01);
+  - «Publicado» en las hojas.
+- Siguen: importar `.xlsx` directo (PB-11), el asistente «Llena tu tienda» (PB-12) y, en un lote, «importar solo lo que está bien».
+- Con el cron diario de staging, un lote avanza una parte por pasada del runner, o mientras su página esté abierta. Vercel Pro con cron por minuto lo quitaría (RM-05).
 
 ## 8. Ramas
 
 | Rama                                         | Commit    | Uso                                                                               |
 | -------------------------------------------- | --------- | --------------------------------------------------------------------------------- |
-| `audit/hardening-capacity-2026-11`           | `cc7a855` | Trabajo más reciente. Base recomendada para seguir                                |
+| `producto/orden-10`                          | punta     | **Trabajo más reciente** (Orden 10, mensajes 1 a 4). Base recomendada para seguir |
+| `producto/orden-09`                          | `b6cd725` | Orden 09; base de la Orden 10                                                     |
+| `audit/hardening-capacity-2026-11`           | `cc7a855` | Orden 06 y 08                                                                     |
 | `claude/ecommerce-regulated-platform-41vu1e` | `88edc6d` | **La que despliega Vercel**. Avanza solo con aprobación y sin reescribir historia |
 | `mejoras/2026-11`                            | `532ac6e` | Ancestro de la de auditoría                                                       |
 | `respaldo/pre-mejoras`                       | `255fa7f` | Respaldo                                                                          |
 | `main`                                       | `ea0176f` | Antigua, 254 commits atrás. No usar                                               |
 
-`vercel.json` tiene un `ignoreCommand` para que las ramas `audit/*` no generen vista previa.
+`vercel.json` tiene un `ignoreCommand` para que las ramas `audit/*` y `producto/*` no generen vista previa.
 
 Remoto: `https://github.com/angelit0486/ecomerse`. El repositorio `angelii33/pruva` responde 403.
 
 ## 9. Siguiente trabajo y criterios de aceptación
 
-**A. Ejecutable sin nuevas autorizaciones** (local, en una rama `audit/*` o nueva, sin tocar staging)
+> Al 2026-11-13, RM-10, RM-11, RM-12, RM-13, RM-14 y RM-15 están **hechos en local** (Órdenes 09 y 10). Lo que sigue depende sobre todo de autorizaciones (C y D). La lista A de abajo queda como historia.
+
+**A. Ejecutable sin nuevas autorizaciones** (historia; hecho) (local, en una rama `audit/*` o nueva, sin tocar staging)
 
 | ID    | Tarea                                                                                                                                                                                                                                                           | Criterio de aceptación                                                                                       |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -212,8 +250,8 @@ RM-01 (correr el respaldo), RM-05, RM-06, RM-07, RM-09 y RM-16 a RM-21.
 
 **D. Requiere autorización de migración, despliegue o gasto**
 
-- RM-02: 5 migraciones en staging, con el método sha256 de `docs/runbooks/database-roles.md` §7.
-- RM-03: despliegue de `cc7a855`.
+- RM-02: **10** migraciones en staging, con el runbook `docs/runbooks/despliegue-migraciones-2026-11.md` (sha256, verificación previa y posterior, ensayo local en verde).
+- RM-03: despliegue de la punta de `producto/orden-10` en la misma ventana; luego volver a guardar las tarifas de `demo` (D1).
 - RM-08: producción.
 
 ## 10. Archivos y pruebas que hay que consultar
@@ -249,6 +287,10 @@ Para arrancar la app, compilar y levantarla igual que el paso «Compilar y arran
 
 ## 12. Resultado esperado del siguiente bloque
 
-1. RM-10, RM-12, RM-14 y RM-15 hechos en una rama, con pruebas y suites en verde, subidos y anotados en `PROGRESS.md` y `DECISIONS.md`.
-2. El ADR de RM-11 redactado para que lo apruebe el propietario.
-3. Un mensaje corto al propietario con las autorizaciones pendientes de C y D, en orden.
+1. Auditoría independiente del mensaje 4 de la Orden 10 (el agente se detuvo para esperarla).
+2. Con autorización:
+   - respaldo;
+   - las 10 migraciones en staging;
+   - despliegue en la misma ventana;
+   - volver a guardar las tarifas de `demo`.
+3. Después, el piloto con un comercio real (PB-31) para medir horas de persona.

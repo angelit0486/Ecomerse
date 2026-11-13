@@ -239,7 +239,7 @@ for (const giro of GIROS) {
       ];
       if (faltantes.length > 0) {
         hallazgos.push(
-          `La plantilla del giro no trae las categorías ${faltantes.join(", ")}; hubo que crearlas antes de importar (la importación no crea categorías, ADR-065 pendiente).`,
+          `La plantilla del giro no trae las categorías ${faltantes.join(", ")}; hubo que crearlas antes de importar.`,
         );
         const cats = owner.context().newPage();
         const p = await cats;
@@ -269,6 +269,15 @@ for (const giro of GIROS) {
         await runJobs();
         await expect(owner.getByText("Importación terminada.")).toBeVisible({ timeout: 5_000 });
       }).toPass({ timeout: 300_000 });
+      // Orden 10, mensaje 4: con «Publicado: sí», el worker publica después los
+      // que cumplen las reglas y la página resume el resultado.
+      const publicacion = owner.getByRole("region", { name: "Publicación" }).getByRole("status");
+      await expect(async () => {
+        await runJobs();
+        await owner.reload();
+        await expect(publicacion).toContainText(/publicados?\./, { timeout: 5_000 });
+      }).toPass({ timeout: 300_000 });
+      notas.push(`Publicación tras importar: «${(await publicacion.innerText()).trim()}»`);
       const [counts] = await admin<{ total: number; active: number; variants: number }[]>`
         select count(*)::int as total, count(*) filter (where p.status = 'active')::int as active,
                (select count(*)::int from public.product_variants v join public.products pp on pp.id = v.product_id and pp.store_id = v.store_id where v.store_id = s.id and pp.deleted_at is null) as variants
@@ -279,7 +288,7 @@ for (const giro of GIROS) {
       );
       if (counts!.active < counts!.total) {
         hallazgos.push(
-          `La importación deja ${counts!.total - counts!.active} productos en borrador: hay que publicarlos en bloque.`,
+          `Tras la publicación por candidatos quedan ${counts!.total - counts!.active} productos en borrador.`,
         );
       }
     });
