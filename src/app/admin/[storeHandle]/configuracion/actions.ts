@@ -295,7 +295,10 @@ export async function applyStoreTemplate(
     return { error: failed.error };
   }
   revalidatePath(`/admin/${storeHandle}`, "layout");
-  return { ok: true, message: templateAppliedMessage(template.name, result.products) };
+  return {
+    ok: true,
+    message: templateAppliedMessage(template.name, result.products, template.notice),
+  };
 }
 
 /**

@@ -10,6 +10,8 @@ export interface TemplateOption {
   key: string;
   name: string;
   description: string;
+  /** Recordatorio de la plantilla (p. ej. Cumplimiento en suplementos). */
+  notice?: string;
   colors: { primary: string; accent: string; background: string; foreground: string };
 }
 
@@ -56,6 +58,7 @@ export function TemplateForm({
                   </svg>
                 </span>
                 <span className="block text-fg-muted">{t.description}</span>
+                {t.notice ? <span className="mt-1 block text-[13px]">{t.notice}</span> : null}
               </span>
             </label>
           ))}

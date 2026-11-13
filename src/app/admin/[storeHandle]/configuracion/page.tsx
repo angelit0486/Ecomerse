@@ -273,10 +273,11 @@ export default async function OnboardingPage({ params }: Props) {
             <TemplateForm
               storeHandle={ctx.store.handle}
               revision={theme?.draft_revision ?? 0}
-              templates={STORE_TEMPLATES.map(({ key, name, description, colors }) => ({
+              templates={STORE_TEMPLATES.map(({ key, name, description, notice, colors }) => ({
                 key,
                 name,
                 description,
+                notice,
                 colors: {
                   primary: colors.primary!,
                   accent: colors.accent!,

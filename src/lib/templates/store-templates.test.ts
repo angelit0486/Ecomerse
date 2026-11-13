@@ -90,6 +90,30 @@ describe("plantillas de tienda", () => {
     );
   });
 
+  it("las plantillas comerciales traen las categorías que necesitó el ensayo (Orden 10)", () => {
+    const names = (key: string) =>
+      STORE_TEMPLATES.find((t) => t.key === key)!.categories.map((c) => c.name);
+    expect(names("ropa")).toContain("Calzado");
+    expect(names("hogar")).toEqual(expect.arrayContaining(["Belleza", "Regalos"]));
+    expect(names("abarrotes")).toEqual(expect.arrayContaining(["Lácteos", "Cuidado personal"]));
+    expect(names("suplementos")).toContain("Aminoácidos");
+    // La base acepta hasta 12 categorías por plantilla, con direcciones únicas.
+    for (const t of STORE_TEMPLATES) {
+      expect(t.categories.length).toBeLessThanOrEqual(12);
+      expect(new Set(t.categories.map((c) => c.slug)).size).toBe(t.categories.length);
+    }
+  });
+
+  it("suplementos recuerda Cumplimiento sin prometer cumplimiento sanitario", () => {
+    const notice = STORE_TEMPLATES.find((t) => t.key === "suplementos")!.notice!;
+    expect(notice).toContain("Ajustes → Cumplimiento");
+    expect(notice).toContain("Suplemento alimenticio");
+    expect(notice).toMatch(/no basta/);
+    expect(templateAppliedMessage("Suplementos", 4, notice)).toBe(
+      `Plantilla «Suplementos» aplicada al borrador con 4 productos de ejemplo. Revísala en la vista previa. ${notice}`,
+    );
+  });
+
   it("cada giro tiene su propia personalidad (tema v5): ninguna se repite", () => {
     const withPersonality = STORE_TEMPLATES.filter((t) => !["generica", "blanco"].includes(t.key));
     for (const t of withPersonality) {

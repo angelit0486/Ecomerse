@@ -55,6 +55,11 @@ export interface StoreTemplate {
   home_sections: HomeSection[];
   categories: { name: string; slug: string; description?: string }[];
   products: TemplateProduct[];
+  /**
+   * Recordatorio que se muestra al elegir y al aplicar la plantilla (Orden 10):
+   * algo que la plantilla no puede dejar listo por sí sola.
+   */
+  notice?: string;
 }
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -114,6 +119,8 @@ const SUPLEMENTOS: StoreTemplate = {
   key: "suplementos",
   name: "Suplementos",
   description: "Proteínas, creatinas y vitaminas con precio por porción y ficha del producto.",
+  notice:
+    "Recuerda declarar «Suplemento alimenticio» en Ajustes → Cumplimiento: así cada producto exige su ficha sanitaria antes de publicarse. La plantilla por sí sola no basta para cumplir las reglas sanitarias.",
   colors: {
     primary: "#0b5d4b",
     accent: "#b4500c",
@@ -169,6 +176,8 @@ const SUPLEMENTOS: StoreTemplate = {
     { name: "Creatinas", slug: "creatinas" },
     { name: "Vitaminas", slug: "vitaminas" },
     { name: "Preentrenos", slug: "preentrenos" },
+    // Orden 10: el ensayo de implementación la necesitó en su catálogo.
+    { name: "Aminoácidos", slug: "aminoacidos" },
   ],
   products: [
     {
@@ -277,6 +286,8 @@ const ROPA: StoreTemplate = {
     { name: "Pantalones", slug: "pantalones" },
     { name: "Sudaderas", slug: "sudaderas" },
     { name: "Accesorios", slug: "accesorios" },
+    // Orden 10: el giro es ropa, calzado y accesorios.
+    { name: "Calzado", slug: "calzado" },
   ],
   products: [
     {
@@ -458,6 +469,9 @@ const ABARROTES: StoreTemplate = {
     { name: "Bebidas", slug: "bebidas" },
     { name: "Limpieza", slug: "limpieza" },
     { name: "Botanas", slug: "botanas" },
+    // Orden 10: categorías que el ensayo de implementación tuvo que crear a mano.
+    { name: "Lácteos", slug: "lacteos" },
+    { name: "Cuidado personal", slug: "cuidado-personal" },
   ],
   products: [
     {
@@ -546,6 +560,9 @@ const HOGAR: StoreTemplate = {
     { name: "Velas y aromas", slug: "velas-y-aromas" },
     { name: "Textiles", slug: "textiles" },
     { name: "Plantas y macetas", slug: "plantas-y-macetas" },
+    // Orden 10: el giro comercial es hogar, belleza y regalos.
+    { name: "Belleza", slug: "belleza" },
+    { name: "Regalos", slug: "regalos" },
   ],
   products: [
     {
@@ -1436,10 +1453,10 @@ export function templatePayload(t: StoreTemplate) {
 }
 
 /** Aviso tras aplicar una plantilla; sin ejemplos no los menciona («En blanco»). */
-export function templateAppliedMessage(name: string, products: number): string {
+export function templateAppliedMessage(name: string, products: number, notice?: string): string {
   const samples =
     products === 0
       ? ""
       : ` con ${products === 1 ? "1 producto de ejemplo" : `${products} productos de ejemplo`}`;
-  return `Plantilla «${name}» aplicada al borrador${samples}. Revísala en la vista previa.`;
+  return `Plantilla «${name}» aplicada al borrador${samples}. Revísala en la vista previa.${notice ? ` ${notice}` : ""}`;
 }
