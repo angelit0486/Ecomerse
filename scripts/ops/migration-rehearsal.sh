@@ -9,7 +9,7 @@
 #   3. Verificación posterior de cada una (consultas del runbook).
 #   4. El esquema resultante debe ser idéntico al de una base creada desde cero.
 #   5. Un archivo alterado se rechaza por sha256 antes de ejecutarse.
-#   6. pgTAP de seguridad y de las 5 migraciones sobre la base actualizada.
+#   6. pgTAP de seguridad y de las 6 migraciones sobre la base actualizada.
 #
 # Uso: bash scripts/ops/migration-rehearsal.sh
 # Manifiesto: docs/runbooks/despliegue-migraciones-2026-11.md (sección 2).
@@ -26,6 +26,8 @@ MANIFEST=(
   "20261111000200_listing_availability.sql 07c70986eea1420348d87af089f3d4a77ab081a32a8322428c174345a24ba13d"
   "20261111000300_panel_search_store_scope.sql 541a7f095da3b4cc2fe8896d4ea1c0e709ceba23ef50f1e70506ca11d6defcc8"
   "20261111000400_variant_limit_row_lock.sql 589873e8dde7de00846bd0709a221de5e2e012a0b735759ba2d712ebddd2ae19"
+  # 6.ª (O10-02, alertas de Inicio): agregada en la Orden 10.
+  "20261112000100_store_alerts.sql 87eef6f0cc9a7112c3e028e1df55e15fd3c615028bee5f14281a375f063a373a"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -64,7 +66,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261111000400"
+check "versión final" "select public.app_schema_version()" "20261112000100"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -73,6 +75,8 @@ check "0100: índice de trigramas" "select count(*) from pg_indexes where indexn
 check "0200: product_states no expuesta" "select has_function_privilege('authenticated', 'app.product_states(uuid, uuid[])', 'execute') or has_function_privilege('anon', 'app.product_states(uuid, uuid[])', 'execute')" "f"
 check "0300: búsqueda del panel acotada a la tienda" "select prosrc ~ 'where pv\.product_id = p\.id' from pg_proc where oid = 'public.catalog_search_products(uuid,text,text,uuid,boolean,jsonb,integer,uuid,text,text)'::regprocedure" "f"
 check "0400: sin candado de aviso por producto" "select prosrc ~ 'pg_advisory_xact_lock' from pg_proc where oid = 'app.enforce_variant_limit'::regproc" "f"
+check "0100 (alertas): store_alerts solo para authenticated" "select has_function_privilege('authenticated', 'public.store_alerts(uuid)', 'execute') and not has_function_privilege('anon', 'public.store_alerts(uuid)', 'execute')" "t"
+check "0100 (alertas): store_alerts con search_path vacío" "select proconfig::text from pg_proc where oid = 'public.store_alerts(uuid)'::regprocedure" '{"search_path=\"\""}'
 check "tablas de public con RLS forzado" "select count(*) filter (where not (relrowsecurity and relforcerowsecurity)) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition" "0"
 check "anon sin permisos de tabla" "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p', 'v') and has_table_privilege('anon', c.oid, 'select')" "0"
 
@@ -96,7 +100,8 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/00_schema_security.test.sql supabase/tests/database/138_profit_report.test.sql \
   supabase/tests/database/139_search_lexicon.test.sql supabase/tests/database/140_listing_availability.test.sql \
   supabase/tests/database/141_panel_search_store_scope.test.sql \
-  supabase/tests/database/142_variant_limit_row_lock.test.sql 2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
+  supabase/tests/database/142_variant_limit_row_lock.test.sql \
+  supabase/tests/database/143_store_alerts.test.sql 2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"
 echo "✓ Ensayo completo. Base actualizada: $UP"
