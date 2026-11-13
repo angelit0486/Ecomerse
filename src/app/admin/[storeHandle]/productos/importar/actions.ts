@@ -54,3 +54,35 @@ export async function commitImport(
   revalidatePath(path);
   redirect(`${path}${notice}`);
 }
+
+/**
+ * ADR-065: acepta (o deja de aceptar) las categorías que se crearán al confirmar.
+ * La base comprueba el permiso categories.manage, que cada ruta falte y se pueda
+ * crear, y recalcula los errores de la vista previa. Nada se crea aquí.
+ */
+export async function acceptImportCategories(
+  storeHandle: string,
+  jobId: string,
+  formData: FormData,
+): Promise<void> {
+  if (!uuid.safeParse(jobId).success) redirect(`/admin/${storeHandle}/productos/importar`);
+  const path = `/admin/${storeHandle}/productos/importar/${jobId}`;
+  const paths =
+    formData.get("intent") === "clear"
+      ? []
+      : [...new Set(formData.getAll("paths").map(String))].filter((p) => p.trim()).slice(0, 200);
+  let notice = "";
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    await callRpc(supabase, "imports_accept_categories", {
+      p_store_id: storeId,
+      p_job_id: jobId,
+      p_paths: paths,
+    });
+  } catch (error) {
+    const e = reportActionError("imports.categories", error);
+    notice = e.code === "forbidden" ? "?aviso=categorias-permiso" : "?aviso=categorias";
+  }
+  revalidatePath(path);
+  redirect(`${path}${notice}`);
+}

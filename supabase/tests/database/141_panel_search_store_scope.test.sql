@@ -44,7 +44,7 @@ select ok((select p.prosrc !~ 'where pv\.product_id = p\.id' and p.prosrc !~ 'wh
                   and p.prosrc !~ 'on loc\.id = l\.location_id'
              from pg_proc p where p.oid = 'public.catalog_search_products(uuid,text,text,uuid,boolean,jsonb,integer,uuid,text,text)'::regprocedure),
           'las subconsultas dicen de qué tienda son');
-select is(public.app_schema_version(), '20261113000100', 'versión de la base');
+select is(public.app_schema_version(), '20261113000200', 'versión de la base');
 
 select * from finish();
 rollback;

@@ -19,9 +19,10 @@ import { resumeQueue } from "@/server/jobs/run-now";
 import { log } from "@/server/observability/logger";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { commitImport } from "../actions";
+import { acceptImportCategories, commitImport } from "../actions";
 import { AutoRefresh } from "../auto-refresh";
 import { CommitButton } from "../commit-button";
+import { NewCategories, type MissingCategory } from "../new-categories";
 import { PhotoCheck } from "../photo-check";
 import { publishIssueMessage } from "../../messages";
 import { COLUMN_LABELS, friendlyRowError, importErrorText, JOB_STATUS, MODE } from "../labels";
@@ -44,7 +45,28 @@ const NOTICES: Record<string, string> = {
     "Todos los productos del archivo tienen algún error: no hay nada que importar todavía.",
   permiso:
     "Tu rol no permite aplicar este archivo (crear, editar o publicar productos, o ajustar existencias).",
+  categorias:
+    "No pudimos usar esas categorías: revisa que sigan faltando y que se puedan crear, y vuelve a intentarlo.",
+  "categorias-permiso": "Tu rol no puede crear categorías.",
 };
+
+// ADR-065: lo que devuelve imports_new_categories.
+const newCategoriesSchema = z.object({
+  can_create: z.boolean(),
+  accepted: z.array(z.string()),
+  missing: z.array(
+    z.object({
+      path: z.string(),
+      key: z.string(),
+      products: z.number().int(),
+      creatable: z.boolean(),
+      reason: z.string().nullable(),
+      hint: z.string().nullable(),
+      similar: z.array(z.string()),
+      accepted: z.boolean(),
+    }),
+  ),
+});
 const SHOWN_ROWS = 200;
 
 interface Totals {
@@ -59,6 +81,8 @@ interface Totals {
   skipped?: number;
   /** ADR-033: fotos reservadas para descargar desde sus enlaces. */
   remote_images?: number;
+  /** ADR-065: categorías nuevas creadas al aplicar. */
+  categories_created?: number;
 }
 
 /** Fecha de hace `h` horas para filtrar (fuera del render: la consulta es por petición). */
@@ -165,6 +189,22 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       changes = null;
     }
   }
+  // ADR-065: categorías que faltan (si la consulta falla, la vista previa sigue).
+  let newCategories: z.infer<typeof newCategoriesSchema> | null = null;
+  if (job.status === "validated") {
+    try {
+      newCategories = newCategoriesSchema.parse(
+        await callRpc<unknown>(supabase, "imports_new_categories", {
+          p_store_id: ctx.store.id,
+          p_job_id: job.id,
+        }),
+      );
+    } catch (error) {
+      log.warn("imports.new_categories_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
   const ignored = (job.ignored_columns as string[] | null) ?? [];
   const byColumn = rows && rows.length > 0 ? errorsByColumn(rows) : [];
   const handleTaken =
@@ -207,7 +247,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
               Leímos tu hoja: creamos el nombre corto de cada producto con su nombre y pasamos lo
               demás al formato de tu tienda. Un producto con el mismo nombre que uno de tu catálogo
               se toma como ese producto: revisa abajo cuáles se van a actualizar. Las categorías que
-              escribiste deben existir; si alguna no existe, la fila lo dice abajo.
+              escribiste deben existir; si alguna no existe, abajo puedes crearla al confirmar.
             </p>
           ) : (
             <p>
@@ -229,6 +269,13 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {done ? (
         <p role="status" className="rounded-md border border-success p-3 text-sm">
           Importación terminada.{" "}
+          {totals.categories_created ? (
+            <>
+              {totals.categories_created === 1
+                ? "Se creó 1 categoría nueva. "
+                : `Se crearon ${totals.categories_created} categorías nuevas. `}
+            </>
+          ) : null}
           {totals.skipped ? (
             <>
               Se saltaron{" "}
@@ -326,6 +373,14 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       </dl>
 
       {changes ? <ChangesSummary changes={changes} currency={ctx.store.currency} /> : null}
+      {newCategories ? (
+        <NewCategories
+          missing={newCategories.missing as MissingCategory[]}
+          accepted={newCategories.accepted}
+          canCreate={newCategories.can_create}
+          action={acceptImportCategories.bind(null, ctx.store.handle, job.id)}
+        />
+      ) : null}
       {job.status === "validated" &&
       ((job.columns as string[] | null) ?? []).includes("image_urls") &&
       hasPermission(ctx, "products.update") ? (
