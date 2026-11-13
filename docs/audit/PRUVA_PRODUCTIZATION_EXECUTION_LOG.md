@@ -75,3 +75,32 @@ Siguiente bloque sin autorizaciones nuevas:
 2. PB-14, alertas accionables en Inicio con los datos que ya existen.
 3. PB-15, catálogo compartible y código QR.
 4. PB-08 en cuanto haya decisión sobre el ADR-064.
+
+## Orden 10, bloque 1 (2026-11-12/13)
+
+Rama `producto/orden-10`, creada desde `producto/orden-09` @ `b6cd725`. Nada desplegado, nada aplicado en staging, ADR-064 y ADR-065 sin resolver.
+
+| Tarea  | Resultado                                                                                                 | Commits                                     | Hora de cierre (commit)  |
+| ------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------ |
+| O10-05 | Paquete de despliegue y ensayo local; luego ampliado a 6 migraciones                                      | `c8e5977`, `8185770`                        | 11-12 21:35; 11-13 00:09 |
+| O10-02 | Alertas «Qué atender hoy» detrás de «Salud de tu tienda»; migración local `20261112000100`                | `ddb7ef2`                                   | 11-12 21:48              |
+| O10-04 | Revisar los enlaces de fotos con el descargador seguro                                                    | `966e79a`                                   | 11-12 21:55              |
+| O10-03 | Compartir por WhatsApp y QR, sin dependencia nueva                                                        | `18caef6`                                   | 11-12 22:08              |
+| O10-01 | Ensayo con 4 tiendas sintéticas; encontró el error de tarifas (corregido en `65ee7a0`); guion actualizado | `87a0524` … `18e3ef1`, `65ee7a0`, `159f18c` | 11-13 00:06              |
+| O10-06 | Documentos, suites completas, evidencia                                                                   | este commit                                 | —                        |
+
+Las horas son las de los commits; el inicio de O10-05 no quedó registrado. Los 14 commits `test(ensayo)` corrigen el arnés del ensayo, no la plataforma: cada uno dice qué suposición del arnés estaba mal (por ejemplo, que el aviso de «publicados» seguía visible tras refrescar la lista).
+
+Suites completas al cierre (local, 2026-11-13), contra la línea base `b6cd725`:
+
+| Suite                                                  | `b6cd725` | `producto/orden-10`             |
+| ------------------------------------------------------ | --------- | ------------------------------- |
+| Unit (verify: lint, formato, tipos, unit, build)       | 1,296     | 1,334                           |
+| pgTAP                                                  | 2,983     | 2,999 (145 archivos)            |
+| Integración                                            | 438       | 438                             |
+| E2E                                                    | 152/152   | 157/157                         |
+| `pnpm audit --prod`                                    | —         | sin vulnerabilidades            |
+| Ensayo de las 6 migraciones (`migration-rehearsal.sh`) | —         | 109/109 pgTAP; esquema idéntico |
+| Ensayo de implementación (4 tiendas sintéticas)        | —         | 4/4                             |
+
+Aislamiento entre tiendas: `00_schema_security` (metatests de RLS forzado, grants y funciones) y `143_store_alerts` (otra tienda: `forbidden`) dentro de pgTAP; `photo-progress`, `share-qr` y los E2E de importación con dos tiendas.

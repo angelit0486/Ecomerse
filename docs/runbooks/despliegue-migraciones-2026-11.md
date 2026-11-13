@@ -1,5 +1,7 @@
 # Paquete de despliegue: 5 migraciones pendientes en staging (Orden 10, O10-05)
 
+> **Actualización (2026-11-13): son 6 migraciones.** La 6.ª, `20261112000100_store_alerts.sql` (alertas de Inicio, O10-02), está en el anexo A y en el ensayo. Se aplica después de las 5 de la tabla.
+>
 > **Estado: PREPARADO, NO APLICADO.** Nada de esto se ha ejecutado en staging ni en producción. Aplicarlo requiere la autorización expresa del propietario (Orden 10 lo prohíbe en este bloque).
 >
 > Ensayo local reproducible: `bash scripts/ops/migration-rehearsal.sh` (32 s). Último resultado: 2026-11-12, rama `producto/orden-10`, todo en verde (sección 7).
@@ -136,3 +138,15 @@ Cada corrección hacia adelante se escribe y se prueba igual que cualquier migra
 1. Correr el respaldo (sección 4).
 2. Aplicar las 5 migraciones en staging (sección 5).
 3. Desplegar el código (sección 5, paso 5), en una autorización aparte.
+
+## Anexo A. 6.ª migración: alertas de Inicio (agregada el 2026-11-13)
+
+| #   | Archivo                           | sha256                                                             | Bytes  | Qué hace                                                                                                                                                                                                                            | Depende de |
+| --- | --------------------------------- | ------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 6   | `20261112000100_store_alerts.sql` | `87eef6f0cc9a7112c3e028e1df55e15fd3c615028bee5f14281a375f063a373a` | 11,270 | Función `public.store_alerts` (conteos de Inicio; `security definer`, `search_path = ''`, solo `authenticated` con `products.read`) y filtro «Sin categoría» en `catalog_search_products` (misma firma). Versión → `20261112000100` | 4 y 5      |
+
+- **Con el código:** el código de `producto/orden-10` espera `20261112000100`; migrar primero, desplegar después (sección 3). El código desplegado hoy sigue funcionando con la base en esa versión: solo se agrega una función y se reemplaza otra con la misma firma.
+- **Verificación posterior:** `select public.app_schema_version()` → `20261112000100`; `select has_function_privilege('anon', 'public.store_alerts(uuid)', 'execute')` → `f`.
+- **Riesgo:** bajo; no toca tablas ni datos. Las alertas solo se ven en tiendas con «Salud de tu tienda» encendida (apagado por defecto).
+- **Recuperación:** volver a crear `catalog_search_products` como en `20261111000300_panel_search_store_scope.sql` y `drop function public.store_alerts(uuid)` en una migración correctiva. No hay datos que perder.
+- **Ensayo (2026-11-13, local):** las 6 en orden sobre 2,000 productos y 400 pedidos; la 6.ª en 41 ms; esquema idéntico al de una base desde cero (22,860 líneas); 109 de 109 pruebas pgTAP (`bash scripts/ops/migration-rehearsal.sh`).
