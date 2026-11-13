@@ -2,6 +2,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createImportHandlers } from "@/server/imports/handlers";
+import { createPublishHandlers } from "@/server/imports/publish-handlers";
 import { runJobs } from "@/server/jobs/runner";
 import { createPostgresJobStore } from "@/server/jobs/store";
 import { createLogger } from "@/server/observability/logger";
@@ -49,8 +50,12 @@ async function tenant() {
   return { storeId: s!.id, otherStoreId: other!.id, ownerId: u!.id };
 }
 
-/** Un job confirmado de `ROWS` productos (una variante con existencias); `failAt` no se puede publicar. */
-async function confirmedJob(prefix: string, failAt?: number, rows = ROWS) {
+/**
+ * Un job confirmado de `ROWS` productos (una variante con existencias) que piden
+ * publicarse. `failAt` repite el SKU de la fila 1: falla al APLICARSE. `zeroAt`
+ * tiene precio 0: se importa, pero no se puede publicar (Orden 10, mensaje 4).
+ */
+async function confirmedJob(prefix: string, failAt?: number, rows = ROWS, zeroAt?: number) {
   const [job] = await admin<{ id: string }[]>`
     insert into public.import_jobs (store_id, type, mode, status, file_name, requested_by, commit_requested_by,
                                     commit_requested_at, columns, needs, totals)
@@ -65,8 +70,9 @@ async function confirmedJob(prefix: string, failAt?: number, rows = ROWS) {
            jsonb_build_object('handle', ${prefix} || '-' || g, 'status', 'active', 'option_names', null,
              'product', jsonb_build_object('title', 'Producto ' || g),
              'variants', jsonb_build_array(jsonb_build_object(
-               'row_number', g + 1, 'sku', upper(${prefix}) || '-' || g, 'quantity', 3,
-               'price', case when g = ${failAt ?? -1} then 0 else 19900 end))),
+               'row_number', g + 1,
+               'sku', upper(${prefix}) || '-' || case when g = ${failAt ?? -1} then 1 else g end, 'quantity', 3,
+               'price', case when g = ${zeroAt ?? -1} then 0 else 19900 end))),
            '[]'::jsonb, 'create'
       from generate_series(1, ${rows}) g`;
   await admin`select app.enqueue_job('import.commit', ${admin.json({ import_job_id: job!.id })}, ${storeId},
@@ -77,12 +83,23 @@ async function confirmedJob(prefix: string, failAt?: number, rows = ROWS) {
 async function run() {
   return runJobs({
     store,
-    registry: new Map(createImportHandlers({ db: worker })),
+    registry: new Map([
+      ...createImportHandlers({ db: worker }),
+      ...createPublishHandlers({ db: worker }),
+    ]),
     workerId: "test-5k",
     log,
     deadlineMs: 150_000,
     hardDeadlineMs: 170_000,
   });
+}
+
+/** Corre la cola hasta que no quede nada (importación y publicación por tandas). */
+async function drain() {
+  for (let i = 0; i < 20; i++) {
+    const r = await run();
+    if (r.succeeded + r.retried + r.deferred === 0) return;
+  }
 }
 
 beforeAll(async () => {
@@ -100,13 +117,15 @@ describe("import.commit con 5 000 filas", () => {
     // Referencia de 1 000 filas para comprobar que el costo crece linealmente.
     await confirmedJob("ref", undefined, 1000);
     let started = Date.now();
-    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect((await run()).succeeded).toBeGreaterThanOrEqual(1);
     const reference = Date.now() - started;
 
     const jobId = await confirmedJob("ok");
     started = Date.now();
-    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect((await run()).succeeded).toBeGreaterThanOrEqual(1);
     const elapsed = Date.now() - started;
+    // La publicación de los candidatos corre después (otro job, por tandas).
+    await drain();
     const [job] = await admin<{ status: string; totals: { created: number } }[]>`
       select status, totals from public.import_jobs where id = ${jobId}`;
     expect(job).toMatchObject({ status: "completed", totals: { created: ROWS } });
@@ -128,15 +147,31 @@ describe("import.commit con 5 000 filas", () => {
     expect(await run()).toMatchObject({ succeeded: 1 });
     const [job] = await admin<{ status: string; error: string }[]>`
       select status, error from public.import_jobs where id = ${jobId}`;
-    expect(job).toEqual({
-      status: "failed",
-      error: `Fila ${ROWS + 1}: no se puede publicar (price_zero)`,
-    });
+    expect(job!.status).toBe("failed");
+    expect(job!.error).toMatch(new RegExp(`^Fila ${ROWS + 1}: `));
     const [counts] = await admin<{ products: number; movements: number; audits: number }[]>`
       select (select count(*)::int from public.products where store_id = ${storeId} and slug like 'mal-%') as products,
              (select count(*)::int from public.inventory_movements where reference_id = ${jobId}) as movements,
              (select count(*)::int from audit.audit_logs where action = 'import.failed' and entity_id = ${jobId}) as audits`;
     expect(counts).toEqual({ products: 0, movements: 0, audits: 1 });
+  }, 300_000);
+
+  it("precio 0 ya no tumba la importación: se importa todo y ese producto queda pendiente (Orden 10 M4)", async () => {
+    const jobId = await confirmedJob("cero", undefined, 1000, 1000);
+    await drain();
+    const [job] = await admin<
+      { status: string }[]
+    >`select status from public.import_jobs where id = ${jobId}`;
+    expect(job!.status).toBe("completed");
+    const [runRow] = await admin<{ status: string; totals: Record<string, unknown> }[]>`
+      select status, totals from public.publish_runs where import_job_id = ${jobId}`;
+    expect(runRow).toMatchObject({
+      status: "completed",
+      totals: { candidates: 1000, published: 999, blocked: 1, pending: 0, groups: { price: 1 } },
+    });
+    const [zero] = await admin<{ status: string }[]>`
+      select status from public.products where store_id = ${storeId} and slug = 'cero-1000'`;
+    expect(zero!.status).toBe("draft");
   }, 300_000);
 
   it("mientras importa, el panel de otra tienda de la organización sigue creando productos (G-M4)", async () => {
@@ -166,7 +201,7 @@ describe("import.commit con 5 000 filas", () => {
       { status: string }[]
     >`select status from public.import_jobs where id = ${jobId}`;
     expect(during!.status).toBe("committing"); // la importación seguía en curso
-    expect(await running).toMatchObject({ succeeded: 1 });
+    expect((await running).succeeded).toBeGreaterThanOrEqual(1);
     const [job] = await admin<
       { status: string }[]
     >`select status from public.import_jobs where id = ${jobId}`;
@@ -219,7 +254,7 @@ describe("import.commit con 5 000 filas", () => {
                        commit_requested_at = now() where id = ${job!.id}`;
     await admin`select app.enqueue_job('import.commit', ${admin.json({ import_job_id: job!.id })}, ${storeId},
                                        ${`import.commit:${job!.id}`}, now(), 3)`;
-    expect(await run()).toMatchObject({ succeeded: 1 });
+    expect((await run()).succeeded).toBeGreaterThanOrEqual(1);
     // Lo que la vista previa anunció es exactamente lo que se aplicó: ya no queda nada por cambiar.
     expect(await preview()).toMatchObject({ price_changes: 0, stock_changes: 0 });
   }, 300_000);

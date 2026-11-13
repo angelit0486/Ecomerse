@@ -41,7 +41,7 @@ select is(pg_temp.err(format($f$select public.catalog_upsert_product(%L, '{"titl
 select is(pg_temp.err(format($f$select public.catalog_upsert_product(%L, '{"title":"Tres tallas","options":[{"name":"Talla","values":["CH","M","G"]}],"variants":[{"options":{"Talla":"CH"},"price":100},{"options":{"Talla":"M"},"price":100},{"options":{"Talla":"G"},"price":100}]}')$f$,
                              tests.fx('store_a'))), 'limit_reached', 'tres variantes con límite 2: se rechaza');
 select tests.logout();
-select is(public.app_schema_version(), '20261113000200', 'versión de la base');
+select is(public.app_schema_version(), '20261113000300', 'versión de la base');
 
 select * from finish();
 rollback;

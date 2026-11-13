@@ -296,7 +296,28 @@ function suplementos(): Catalogo {
   };
 }
 
-export const CATALOGOS: Record<Giro, () => Catalogo> = { ropa, hogar, abarrotes, suplementos };
+/**
+ * Orden 10, mensaje 4: las hojas por giro traen «Publicado». El ensayo la llena
+ * con «sí» en todas las filas: la importación deja candidatos y el worker publica
+ * los que cumplen (ya no hace falta publicar en bloque de 100 en 100).
+ */
+function withPublished(build: () => Catalogo): () => Catalogo {
+  return () => {
+    const c = build();
+    return {
+      ...c,
+      encabezados: [...c.encabezados, "Publicado"],
+      filas: c.filas.map((f) => [...f, "sí"]),
+    };
+  };
+}
+
+export const CATALOGOS: Record<Giro, () => Catalogo> = {
+  ropa: withPublished(ropa),
+  hogar: withPublished(hogar),
+  abarrotes: withPublished(abarrotes),
+  suplementos: withPublished(suplementos),
+};
 
 function csvCell(v: string): string {
   return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;

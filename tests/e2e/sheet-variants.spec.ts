@@ -28,7 +28,7 @@ test("la hoja de ropa trae Talla y Color; pegada con filas por talla crea un pro
   expect(response.headers()["content-disposition"]).toContain("hoja-ropa.csv");
   const header = (await response.text()).replace(/^﻿/, "").trim();
   expect(header).toBe(
-    "Producto,Talla,Color,Precio,Precio anterior,Existencias,SKU,Código de barras,Marca,Categoría,Descripción,Fotos",
+    "Producto,Talla,Color,Precio,Precio anterior,Existencias,SKU,Código de barras,Marca,Categoría,Descripción,Fotos,Publicado",
   );
 
   await page

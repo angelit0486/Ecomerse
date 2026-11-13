@@ -127,7 +127,8 @@ export default async function ImportPage({ params, searchParams }: Props) {
         </h2>
         <p className="text-fg-muted">
           Trae solo los títulos de las columnas que te sirven, en español. Llénala en Excel o Google
-          Sheets y pégala arriba o súbela en el paso 3.
+          Sheets y pégala arriba o súbela en el paso 3. Escribe «sí» en «Publicado» para publicar
+          cada producto al importar (solo se publica si cumple las reglas).
         </p>
         <ul className="grid gap-2 sm:grid-cols-2">
           {SHEET_TEMPLATES.map((template) => (
@@ -276,11 +277,14 @@ export default async function ImportPage({ params, searchParams }: Props) {
           </li>
           <li>
             Categorías por nombre separadas con <code>|</code>; subcategorías con{" "}
-            <code>Ropa &gt; Camisas</code>. Deben existir antes de importar.
+            <code>Ropa &gt; Camisas</code>. Si alguna no existe, en la vista previa puedes elegir
+            crearla al confirmar.
           </li>
           <li>
-            <code>status</code>: <code>active</code> publica (si el producto pasa la validación),{" "}
-            <code>draft</code> lo deja en borrador y <code>archived</code> lo archiva.
+            <code>status</code> (o <code>Publicado</code> en las hojas por giro):{" "}
+            <code>active</code> pide publicarlo: después de importar se publica si cumple las reglas
+            de publicación y, si no, queda en borrador con el motivo a la vista. <code>draft</code>{" "}
+            lo deja en borrador y <code>archived</code> lo archiva.
           </li>
           <li>
             Ficha sanitaria (opcional): <code>regulatory_category</code> con{" "}

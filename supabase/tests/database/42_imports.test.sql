@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(38);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('viewer', 'viewer@a.io');
@@ -40,6 +40,16 @@ declare v jsonb;
 begin
   perform tests.as_role('system_worker');
   v := system.import_commit(p_job);
+  perform tests.logout();
+  return v;
+end $$;
+-- Orden 10 M4: «status active» deja candidatos; el worker los publica después
+-- (system.publish_run_step) con las reglas de publicación.
+create function pg_temp.publish(p_job uuid) returns jsonb language plpgsql as $$
+declare v jsonb; v_run uuid := (select r.id from public.publish_runs r where r.import_job_id = p_job);
+begin
+  perform tests.as_role('system_worker');
+  v := system.publish_run_step(v_run, 200);
   perform tests.logout();
   return v;
 end $$;
@@ -86,6 +96,7 @@ select is((select count(*)::int from system.jobs where type = 'import.commit'
             and dedupe_key = 'import.commit:' || tests.fx('job1')), 1, 'job import.commit en la cola');
 
 select is(pg_temp.work(tests.fx('job1')) ->> 'status', 'completed', 'el worker aplica la importación');
+select is(pg_temp.publish(tests.fx('job1')) ->> 'status', 'completed', 'el worker publica los candidatos');
 select is((select status from public.products where store_id = tests.fx('store_a') and slug = 'taza'), 'active',
   'status active: publicado');
 select is((select b.name from public.products p join public.brands b on b.id = p.brand_id
@@ -139,19 +150,23 @@ select is(pg_temp.work(tests.fx('job4')) ->> 'updated', '1', 'actualizado');
 select is((select price from public.product_variants where id = tests.fx('var_gorra') and deleted_at is null), 12900::bigint,
   'misma variante (por SKU), precio nuevo');
 
--- Todo o nada: la fila 3 falla al aplicarse y la 2 no queda escrita.
+-- Todo o nada: la fila 3 falla al aplicarse y la 2 no queda escrita. (Orden 10 M4:
+-- publicar ya no tumba la importación; el fallo al aplicar es un SKU que otro
+-- producto tomó entre la vista previa y la confirmación.)
 select tests.login('owner');
 select tests.set_fx('job5', public.imports_create(tests.fx('store_a'), 'upsert', 'e.csv', pg_temp.cols(), '{}',
   jsonb_build_array(
   pg_temp.prow(2, 'jarra', 'JAR-1', 30000),
-  pg_temp.prow(3, 'vaso', 'VAS-1', 0, '{"status":"active"}'))));
+  pg_temp.prow(3, 'vaso', 'VAS-1', 9000))));
+select public.catalog_upsert_product(tests.fx('store_a'),
+  '{"title":"Otro vaso","slug":"otro-vaso","variants":[{"price":100,"sku":"VAS-1"}]}');
 select public.imports_commit(tests.fx('store_a'), tests.fx('job5'));
 select tests.logout();
 select is(pg_temp.work(tests.fx('job5')) ->> 'status', 'failed', 'falla en la fila 3');
 select is((select count(*)::int from public.products where store_id = tests.fx('store_a') and slug in ('jarra', 'vaso')), 0,
   'nada escrito: todo o nada');
-select is((select error from public.import_jobs where id = tests.fx('job5')),
-  'Fila 3: no se puede publicar (price_zero)', 'el error dice la fila y el motivo en español');
+select matches((select error from public.import_jobs where id = tests.fx('job5')),
+  '^Fila 3: sku', 'el error dice la fila y el motivo en español');
 select ok(exists (select 1 from audit.audit_logs where action = 'import.failed' and entity_id = tests.fx('job5')
                                                  and actor_user_id = tests.fx('owner')),
   'import.failed auditado con quien confirmó');

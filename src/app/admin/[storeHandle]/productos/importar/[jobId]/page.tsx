@@ -23,6 +23,7 @@ import { acceptImportCategories, commitImport } from "../actions";
 import { AutoRefresh } from "../auto-refresh";
 import { CommitButton } from "../commit-button";
 import { NewCategories, type MissingCategory } from "../new-categories";
+import { PublishSummary, type BlockedProduct, type PublishTotals } from "../publish-summary";
 import { PhotoCheck } from "../photo-check";
 import { publishIssueMessage } from "../../messages";
 import { COLUMN_LABELS, friendlyRowError, importErrorText, JOB_STATUS, MODE } from "../labels";
@@ -189,6 +190,44 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       changes = null;
     }
   }
+  // Publicación de los productos marcados para publicar (Orden 10, mensaje 4).
+  const { data: publishRun } = done
+    ? await supabase
+        .from("publish_runs")
+        .select("id, status, totals, error")
+        .eq("store_id", ctx.store.id)
+        .eq("import_job_id", job.id)
+        .maybeSingle()
+    : { data: null };
+  if (publishRun && (publishRun.status === "queued" || publishRun.status === "running")) {
+    resumeQueue("imports.publish");
+  }
+  let blocked: BlockedProduct[] = [];
+  if (publishRun && publishRun.status !== "queued") {
+    const { data: items } = await supabase
+      .from("publish_run_items")
+      .select("product_id, reasons")
+      .eq("store_id", ctx.store.id)
+      .eq("run_id", publishRun.id)
+      .eq("status", "blocked")
+      .order("id")
+      .limit(50);
+    const ids = (items ?? []).map((i) => i.product_id as string);
+    const { data: products } = ids.length
+      ? await supabase
+          .from("products")
+          .select("id, title")
+          .eq("store_id", ctx.store.id)
+          .in("id", ids)
+      : { data: [] };
+    const titles = new Map((products ?? []).map((p) => [p.id as string, p.title as string]));
+    blocked = (items ?? []).map((i) => ({
+      id: i.product_id as string,
+      title: titles.get(i.product_id as string) ?? "Producto",
+      reasons: (i.reasons as string[]) ?? [],
+    }));
+  }
+
   // ADR-065: categorías que faltan (si la consulta falla, la vista previa sigue).
   let newCategories: z.infer<typeof newCategoriesSchema> | null = null;
   if (job.status === "validated") {
@@ -307,6 +346,15 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
             </>
           ) : null}
         </p>
+      ) : null}
+      {publishRun ? (
+        <PublishSummary
+          status={publishRun.status as string}
+          totals={publishRun.totals as PublishTotals}
+          error={(publishRun.error as string | null) ?? null}
+          blocked={blocked}
+          productsBase={`/admin/${ctx.store.handle}/productos`}
+        />
       ) : null}
       {job.status === "failed" ? (
         <div role="alert" className="space-y-1 rounded-md border border-danger p-3 text-sm">

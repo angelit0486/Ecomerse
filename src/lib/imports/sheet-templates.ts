@@ -12,7 +12,10 @@ export interface SheetTemplate {
   headers: readonly string[];
 }
 
-const COMMON_END = ["Marca", "Categoría", "Descripción", "Fotos"] as const;
+// «Publicado» (sí/no) pide publicar el producto al importar (Orden 10, mensaje 4):
+// se publica después, solo si cumple las reglas de publicación; si no, queda en
+// borrador con su motivo. Vacía, no cambia nada.
+const COMMON_END = ["Marca", "Categoría", "Descripción", "Fotos", "Publicado"] as const;
 
 export const SHEET_TEMPLATES: readonly SheetTemplate[] = [
   {

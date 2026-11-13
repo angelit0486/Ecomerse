@@ -11,6 +11,7 @@ import { serverEnv } from "@/server/env";
 import { log } from "@/server/observability/logger";
 import { createMediaHandlers } from "@/server/media/handlers";
 import { createImportHandlers } from "@/server/imports/handlers";
+import { createPublishHandlers } from "@/server/imports/publish-handlers";
 import { createCartRecoveryHandlers } from "@/server/notifications/cart-recovery";
 import { createWeeklySummaryHandlers } from "@/server/notifications/weekly-summary";
 import { emailChannel } from "@/server/notifications/channel";
@@ -97,6 +98,8 @@ const refunds = () =>
     mercadopago: mercadoPagoProvider,
   });
 const imports = () => createImportHandlers({ db: workerDb(), onCommitted: invalidateStore });
+// Orden 10 M4: publicación de los candidatos de una importación, por tandas.
+const publishRuns = () => createPublishHandlers({ db: workerDb(), onPublished: invalidateStore });
 const catalog = () => createCatalogHandlers({ db: workerDb(), onPublished: invalidateStore });
 const compliance = () =>
   createComplianceHandlers({ db: workerDb(), onUnpublished: invalidateStore });
@@ -186,6 +189,7 @@ const handlers: Array<[string, JobHandler]> = [
   // ADR-062: enlace nuevo del pedido de invitado.
   ["order.link_renewed", lazy("order.link_renewed", orderNotifications)],
   ["import.commit", lazy("import.commit", imports)],
+  ["catalog.publish_run", lazy("catalog.publish_run", publishRuns)],
   ["compliance.recheck", lazy("compliance.recheck", compliance)],
   ["catalog.publish_scheduled", lazy("catalog.publish_scheduled", catalog)],
   ["catalog.apply_sales", lazy("catalog.apply_sales", catalog)],

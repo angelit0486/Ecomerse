@@ -33,4 +33,19 @@ describe("hojas de inicio por giro", () => {
     const [planned] = planProductImport(t.headers, t.rows, t.rowNumbers);
     expect(planned!.errors).toEqual([]);
   });
+
+  it.each(SHEET_TEMPLATES)(
+    "$key: «Publicado: sí» pide publicar; vacía no cambia nada",
+    (template) => {
+      expect(template.headers).toContain("Publicado");
+      const at = template.headers.indexOf("Publicado");
+      const row = (published: string) =>
+        template.headers.map((h, i) =>
+          i === at ? published : h === "Producto" ? "Artículo" : h === "Precio" ? "100" : "",
+        );
+      const t = translatePlatformCsv(template.headers, [row("sí"), row("no"), row("")], [2, 3, 4]);
+      const status = t.headers.indexOf("status");
+      expect(t.rows.map((r) => r[status])).toEqual(["active", "draft", ""]);
+    },
+  );
 });
