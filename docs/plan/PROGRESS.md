@@ -181,7 +181,7 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - las 10 migraciones pendientes (307/307 pgTAP, esquema idéntico);
   - 4 tiendas sintéticas, 4/4 sin hallazgos.
 
-  Suites: unit 1,366, pgTAP 3,157, integración 447, audit sin vulnerabilidades; E2E completa en curso al cerrar este registro (resultado en `PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`).
+  Suites: unit 1,366 (verify completo con compilación), pgTAP 3,157, integración 447, E2E 162/162 (24.7 min), audit sin vulnerabilidades.
 
   Sin desplegar: **10 migraciones** pendientes en staging (migrar y desplegar en la misma ventana) y D1 (tarifas de `demo`) pendiente.
 

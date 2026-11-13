@@ -142,7 +142,7 @@ Todas están en `docs/DECISIONS.md`.
 
 ## 6. Qué funciona de verdad
 
-**Pruebas.** Última corrida completa, en local, sobre `producto/orden-10` (2026-11-13): 1,364 unitarias, 3,157 pgTAP y 447 de integración. Incluye la de 18,000 filas en 4 partes con falla en la 3.ª, corrección, caída del worker, publicación y aislamiento. El resultado de E2E está en `PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`. Hay 0 pruebas omitidas.
+**Pruebas.** Última corrida completa, en local, sobre `producto/orden-10` (2026-11-13): 1,366 unitarias, 3,157 pgTAP y 447 de integración. Incluye la de 18,000 filas en 4 partes con falla en la 3.ª, corrección, caída del worker, publicación y aislamiento. E2E 162 de 162. Hay 0 pruebas omitidas.
 
 **Capacidad.** Orden 06, medida en local con 4 núcleos (`docs/audit/EXECUTION_MASTER_LOG.md`):
 

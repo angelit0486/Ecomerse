@@ -155,7 +155,7 @@ Suites al cierre (local, 2026-11-13), contra el cierre del bloque 1 (`dad8be5`):
 | Compilación                       | verde                  | verde                                         |
 | pgTAP                             | 2,999 (145 archivos)   | 3,157 (149 archivos)                          |
 | Integración                       | 438                    | 447 (38 archivos)                             |
-| E2E                               | 157/157                | en curso al cerrar este registro              |
+| E2E                               | 157/157                | 162/162 (24.7 min)                            |
 | `pnpm audit --prod`               | sin vulnerabilidades   | sin vulnerabilidades; sin dependencias nuevas |
 | Ensayo de migraciones             | 6 migraciones, 109/109 | 10 migraciones, 307/307                       |
 | Ensayo de implementación          | 4/4                    | 4/4, sin hallazgos                            |
