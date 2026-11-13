@@ -122,7 +122,7 @@ select tests.logout();
 select ok(not has_function_privilege('anon', 'public.store_alerts(uuid)', 'execute')
           and not has_function_privilege('storefront_gateway', 'public.store_alerts(uuid)', 'execute'),
           'ni anon ni la tienda pública ejecutan la función');
-select is(public.app_schema_version(), '20261113000300', 'versión de la base');
+select is(public.app_schema_version(), '20261113000400', 'versión de la base');
 
 select * from finish();
 rollback;

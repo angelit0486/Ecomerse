@@ -39,7 +39,11 @@ function summarize(text: string): Summary {
       };
     }
     if (parsed.rows.length > MAX_ROWS) {
-      return { state: "error", message: "Son más de 5 000 filas. Pega por partes." };
+      return {
+        state: "error",
+        message:
+          "Son más de 5 000 filas: guárdalas como CSV y súbelo en el paso 3 (se importa por partes).",
+      };
     }
     const t = translatePlatformCsv(parsed.headers, parsed.rows, parsed.rowNumbers);
     const handleAt = t.headers.indexOf("handle");

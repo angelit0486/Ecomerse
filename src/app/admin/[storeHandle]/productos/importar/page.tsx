@@ -9,7 +9,8 @@ import { resumeQueue } from "@/server/jobs/run-now";
 import { ALL_IMPORT_HEADERS } from "@/server/imports/products";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-import { linkButton, nativeControl } from "../styles";
+import { linkButton } from "../styles";
+import { ImportFileForm } from "./import-file-form";
 import { JOB_STATUS } from "./labels";
 import { PasteSheet } from "./paste-sheet";
 
@@ -21,8 +22,10 @@ type Props = {
 };
 
 const ERRORS: Record<string, string> = {
-  grande: "El archivo pesa más de 4 MB. Divídelo en varios archivos.",
-  filas: "El archivo tiene más de 5 000 filas. Divídelo en varios archivos.",
+  grande:
+    "El archivo pesa más de 4 MB. Vuelve a elegirlo con esta página abierta: se sube por partes.",
+  filas:
+    "El archivo tiene más de 5 000 filas. Vuelve a elegirlo con esta página abierta: se sube por partes.",
   archivo: "Elige un archivo CSV.",
   vacio: "El archivo no tiene filas debajo del encabezado.",
   modo: "Elige qué hacer con los productos.",
@@ -31,6 +34,13 @@ const ERRORS: Record<string, string> = {
   formato: "No pudimos leer el CSV",
   columnas: "Revisa los encabezados del archivo",
   permiso: "No pudimos validar el archivo. Revisa que tu rol permita importar productos.",
+};
+
+const BATCH_LABEL: Record<string, string> = {
+  uploading: "Faltan partes por subir",
+  ready: "Listo para aplicar",
+  running: "Aplicando",
+  stopped: "Detenido: revísalo",
 };
 
 const FORMAT: Record<string, string> = {
@@ -76,6 +86,14 @@ export default async function ImportPage({ params, searchParams }: Props) {
     .limit(10);
   // Importaciones confirmadas que esperan en la cola: se retoman al mirar la lista (D-LOTE-05).
   if (jobs?.some((j) => j.status === "committing")) resumeQueue("imports.list");
+  // ADR-064: lotes por partes que no han terminado (se retoman desde su página).
+  const { data: openBatches } = await supabase
+    .from("import_batches")
+    .select("id, file_name, status, parts_count, total_rows, created_at")
+    .eq("store_id", ctx.store.id)
+    .in("status", ["uploading", "ready", "running", "stopped"])
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   return (
     <section className="space-y-6">
@@ -115,6 +133,30 @@ export default async function ImportPage({ params, searchParams }: Props) {
           todas de una vez con una carpeta por producto.
         </p>
       </section>
+
+      {openBatches && openBatches.length > 0 ? (
+        <section
+          aria-labelledby="lotes-abiertos"
+          className="space-y-2 rounded-md border border-warning p-4 text-sm"
+        >
+          <h2 id="lotes-abiertos" className="font-semibold">
+            Importaciones por partes sin terminar
+          </h2>
+          <ul className="divide-y divide-border">
+            {openBatches.map((b) => (
+              <li key={b.id} className="flex flex-wrap justify-between gap-3 py-2">
+                <Link href={`${base}/lote/${b.id}`} className="underline">
+                  {b.file_name}
+                </Link>
+                <span className="text-fg-muted">
+                  {BATCH_LABEL[b.status as string] ?? b.status} ·{" "}
+                  {(b.total_rows as number).toLocaleString("es-MX")} filas en {b.parts_count} partes
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <PasteSheet action={`${base}/subir`} />
 
@@ -198,55 +240,7 @@ export default async function ImportPage({ params, searchParams }: Props) {
               {detail ? ` (${detail})` : ""}.
             </p>
           ) : null}
-          <form
-            method="post"
-            action={`${base}/subir`}
-            encType="multipart/form-data"
-            className="space-y-4"
-          >
-            <div className="space-y-1">
-              <label htmlFor="file" className="text-sm font-medium">
-                Archivo CSV de esta plataforma, Shopify, Tiendanube o una hoja simple (hasta 4 MB y
-                5 000 filas)
-              </label>
-              <input
-                id="file"
-                name="file"
-                type="file"
-                accept=".csv,text/csv"
-                required
-                className="block w-full max-w-full min-h-11 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="mode" className="text-sm font-medium">
-                Qué hacer
-              </label>
-              <select
-                id="mode"
-                name="mode"
-                defaultValue="upsert"
-                className={`${nativeControl} block md:h-11 w-full sm:w-auto`}
-              >
-                <option value="upsert">Crear los nuevos y actualizar los existentes</option>
-                <option value="create_only">Solo crear productos nuevos</option>
-                <option value="update_existing">Solo actualizar productos existentes</option>
-              </select>
-              <p className="text-[13px] text-fg-muted">
-                Un producto existente se reconoce por su nombre corto y cada presentación por su SKU
-                o sus opciones. Importar nunca borra productos.
-              </p>
-            </div>
-            <button
-              type="submit"
-              className={`${linkButton} md:h-11 bg-accent text-accent-fg hover:bg-accent-hover`}
-            >
-              Validar archivo
-            </button>
-            <p className="text-[13px] text-fg-muted">
-              Verás los errores por fila antes de que cambie nada en tu catálogo.
-            </p>
-          </form>
+          <ImportFileForm action={`${base}/subir`} storeHandle={ctx.store.handle} />
         </li>
       </ol>
 

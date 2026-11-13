@@ -133,7 +133,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   const { data: job } = await supabase
     .from("import_jobs")
     .select(
-      "id, file_name, mode, status, totals, error, columns, ignored_columns, created_at, committed_at, rows_purged_at",
+      "id, file_name, mode, status, totals, error, columns, ignored_columns, created_at, committed_at, rows_purged_at, batch_id, part_number",
     )
     .eq("store_id", ctx.store.id)
     .eq("id", jobId)
@@ -141,6 +141,16 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   if (!job) notFound();
   const totals = job.totals as Totals;
   const errors = totals.errors ?? 0;
+  // ADR-064: una parte de un lote se aplica (y se corrige) desde su lote, en orden.
+  const { data: batch } = job.batch_id
+    ? await supabase
+        .from("import_batches")
+        .select("id, file_name, parts_count")
+        .eq("store_id", ctx.store.id)
+        .eq("id", job.batch_id)
+        .maybeSingle()
+    : { data: null };
+  const isPart = Boolean(job.batch_id);
   const { data: rows } = errors
     ? await supabase
         .from("import_job_rows")
@@ -156,7 +166,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
   // El mismo archivo ya se importa o se importó hace poco: se avisa antes de
   // confirmar (antes, confirmar dos veces fallaba con «ya existe ese handle»).
   const { data: twins } =
-    job.status === "validated"
+    job.status === "validated" && !isPart
       ? await supabase
           .from("import_jobs")
           .select("status, committed_at, created_at")
@@ -169,7 +179,8 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
           .limit(1)
       : { data: [] };
   const twin = twins?.[0] as { status: string; committed_at: string | null } | undefined;
-  const ready = job.status === "validated" && errors === 0 && twin?.status !== "committing";
+  const ready =
+    !isPart && job.status === "validated" && errors === 0 && twin?.status !== "committing";
   const done = job.status === "completed";
   const base = `/admin/${ctx.store.handle}/productos/importar`;
   // Qué cambia en los productos que ya existen (misión vendible F3). Si la consulta
@@ -230,7 +241,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
 
   // ADR-065: categorías que faltan (si la consulta falla, la vista previa sigue).
   let newCategories: z.infer<typeof newCategoriesSchema> | null = null;
-  if (job.status === "validated") {
+  if (job.status === "validated" && !isPart) {
     try {
       newCategories = newCategoriesSchema.parse(
         await callRpc<unknown>(supabase, "imports_new_categories", {
@@ -269,6 +280,20 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       {notice ? (
         <p role="alert" className="rounded-md border border-danger p-3 text-sm">
           {notice}
+        </p>
+      ) : null}
+
+      {isPart ? (
+        <p role="note" className="rounded-md border border-accent p-3 text-sm">
+          Esta es la parte {job.part_number as number}
+          {batch
+            ? ` de ${batch.parts_count as number} del archivo «${batch.file_name as string}»`
+            : ""}
+          . Las partes se aplican en orden desde su lote, y ahí mismo se corrigen y se eligen las
+          categorías nuevas.{" "}
+          <Link href={`${base}/lote/${job.batch_id as string}`} className="font-medium underline">
+            Ir al lote
+          </Link>
         </p>
       ) : null}
 
@@ -466,6 +491,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       ) : null}
 
       {errors > 0 &&
+      !isPart &&
       job.status === "validated" &&
       twin?.status !== "committing" &&
       (totals.create ?? 0) + (totals.update ?? 0) > 0 ? (
@@ -483,7 +509,7 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         </form>
       ) : null}
 
-      {(errors > 0 && job.status === "validated") || job.status === "failed" ? (
+      {!isPart && ((errors > 0 && job.status === "validated") || job.status === "failed") ? (
         <form
           method="post"
           action={`${base}/subir`}

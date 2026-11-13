@@ -59,6 +59,9 @@ export function createImportHandlers(deps: ImportDeps): Array<[string, JobHandle
           // Misión Portada/Marcas: descripción y logo (por enlace) de las marcas.
           await tx`select system.import_apply_brand_profiles(${importJobId})`;
         }
+        // ADR-064: una parte de lote, aplicada o no, avanza el lote en esta misma
+        // transacción (la siguiente parte empieza o el lote se detiene con el motivo).
+        await tx`select system.import_batch_after_part(${importJobId})`;
         return row!.result;
       });
       log.info("Importación procesada", {
@@ -73,7 +76,10 @@ export function createImportHandlers(deps: ImportDeps): Array<[string, JobHandle
       // Tiempo agotado o conexión perdida: la transacción se revirtió entera. Se
       // reintenta; en el último intento la importación queda fallida.
       if (job.attempts < job.maxAttempts) throw error;
-      await deps.db`select system.import_commit_failed(${importJobId}, ${IMPORT_FAILED_MESSAGE})`;
+      await deps.db.begin(async (tx) => {
+        await tx`select system.import_commit_failed(${importJobId}, ${IMPORT_FAILED_MESSAGE})`;
+        await tx`select system.import_batch_after_part(${importJobId})`;
+      });
       log.warn("Importación fallida tras agotar los intentos", {
         import_job_id: importJobId,
         error,

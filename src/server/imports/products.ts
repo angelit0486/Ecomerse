@@ -1,4 +1,5 @@
 import { parseAttributes, parseNutrition } from "@/lib/catalog/compact";
+import { handleKey } from "@/lib/imports/split";
 import { parseMoneyToCents } from "@/lib/money/format";
 import { productInputSchema } from "@/server/catalog/product-input";
 import { normalizeSupplementSheet, REGULATED_CATEGORIES } from "@/server/catalog/regulatory";
@@ -366,7 +367,8 @@ export function planProductImport(
 
   const groups = new Map<string, PlannedRow[]>();
   for (const row of planned) {
-    const handle = clean(row.raw.handle).toLowerCase();
+    // La misma agrupación con que el navegador parte un archivo grande (ADR-064).
+    const handle = handleKey(row.raw.handle);
     if (!handle) {
       row.errors.push("handle: es obligatorio");
       continue;
