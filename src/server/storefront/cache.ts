@@ -2,6 +2,8 @@ import "server-only";
 
 import { revalidateTag, unstable_cache } from "next/cache";
 
+import { log } from "@/server/observability/logger";
+
 /**
  * Caché de las lecturas públicas por tags (GATE0 §21.4, D-F5-04). Las páginas
  * del storefront siguen siendo dinámicas (nonce de CSP por request); lo que se
@@ -28,14 +30,32 @@ export function cachedRead<A extends [string, ...unknown[]], R>(
     })(...args);
 }
 
+/**
+ * Invalidar es de mejor esfuerzo. La cola también corre después de responder
+ * una acción o al mirar una página (`after()`), y ahí Next puede negarse
+ * («can't be called during render»). Un trabajo que ya terminó su parte no debe
+ * fallar ni repetirse por eso (hallazgo del ensayo, Orden 10, mensaje 4): el TTL
+ * de 60 s sigue siendo la red de seguridad.
+ */
+function revalidate(tag: string): void {
+  try {
+    revalidateTag(tag, { expire: 0 });
+  } catch (error) {
+    log.warn("storefront.cache_invalidation_skipped", {
+      tag,
+      error: error instanceof Error ? error.message.slice(0, 200) : String(error),
+    });
+  }
+}
+
 /** Invalida todo lo cacheado de una tienda (catálogo, contenido, tema, inventario). */
 export function invalidateStore(storeId: string): void {
-  revalidateTag(storeTag(storeId), { expire: 0 });
+  revalidate(storeTag(storeId));
 }
 
 /** Las leyendas salen de las reglas de la plataforma: un cambio llega a todas las tiendas. */
 export const COMPLIANCE_TAG = "storefront:compliance";
 
 export function invalidateCompliance(): void {
-  revalidateTag(COMPLIANCE_TAG, { expire: 0 });
+  revalidate(COMPLIANCE_TAG);
 }
