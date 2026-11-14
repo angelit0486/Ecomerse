@@ -16,6 +16,10 @@ import { savePageBlocks } from "../../actions";
 import { PAGE_TYPE_LABELS } from "../../labels";
 import { PageBlocksBar, PageEditorForm, PageStatusForm } from "../../page-forms";
 
+// H3 (Orden 10, M7): finalizeBannerUpload (vía finalizePanelUpload) arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = { title: "Página" };
 
 type Props = {

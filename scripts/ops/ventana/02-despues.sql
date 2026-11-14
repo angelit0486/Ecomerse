@@ -1,8 +1,14 @@
 -- =============================================================================
 -- Ventana única (Orden 10, mensaje 5, A2) — PASO 9: comprobación DESPUÉS de
 -- desplegar el código nuevo. Solo lectura. Se repite a los 5 y a los 15 minutos.
--- REGLA: si alguna fila trae ok = false a los 15 minutos, se sigue §5.3
--- (contingencia); no se abre la tienda a importaciones.
+-- REGLA (runbook §11.1): cada fila trae su categoría. A los 15 minutos del
+-- despliegue, una fila en falso de categoría
+--   «detener»               → no se sigue con la ventana; contingencia (§11.4);
+--   «requiere_autorizacion» → solo se acepta con la autorización escrita del
+--                             propietario en la bitácora (p. ej. cron diario);
+--   «impide_reabrir»        → la ventana puede cerrarse, pero no se reabren las
+--                             importaciones hasta resolverla.
+-- Nada se salta en silencio: cada fila en falso se anota con su decisión.
 -- =============================================================================
 with tipos_nuevos(tipo) as (
   select unnest(array[
@@ -20,7 +26,8 @@ with tipos_nuevos(tipo) as (
   ]::text[])
 )
 select 'versión del esquema' as comprobacion, public.app_schema_version() as valor,
-       '20261113000400' as esperado, public.app_schema_version() = '20261113000400' as ok
+       '20261113000400' as esperado, public.app_schema_version() = '20261113000400' as ok,
+       'detener' as categoria
 union all
 select 'tablas nuevas con RLS forzado',
        (select count(*)::text from pg_class
@@ -30,25 +37,25 @@ select 'tablas nuevas con RLS forzado',
        (select count(*) from pg_class
          where oid in ('public.import_photo_checks'::regclass, 'public.publish_runs'::regclass,
                        'public.publish_run_items'::regclass, 'public.import_batches'::regclass)
-           and relrowsecurity and relforcerowsecurity) = 4
+           and relrowsecurity and relforcerowsecurity) = 4, 'detener'
 union all
 select 'trabajos descartados por tipo desconocido (últimos 15 min)',
        (select count(*)::text from system.jobs
          where last_error = 'unknown_job_type' and finished_at > now() - interval '15 minutes'), '0',
        not exists (select 1 from system.jobs
-                    where last_error = 'unknown_job_type' and finished_at > now() - interval '15 minutes')
+                    where last_error = 'unknown_job_type' and finished_at > now() - interval '15 minutes'), 'detener'
 union all
 select 'trabajos en cola que el código nuevo no conoce',
        coalesce((select string_agg(distinct j.type, ',') from system.jobs j
                   where j.status in ('queued', 'running') and j.type not in (select tipo from tipos_nuevos)), ''),
        '(vacío)',
        not exists (select 1 from system.jobs j
-                    where j.status in ('queued', 'running') and j.type not in (select tipo from tipos_nuevos))
+                    where j.status in ('queued', 'running') and j.type not in (select tipo from tipos_nuevos)), 'detener'
 union all
 select 'trabajos listos sin tomar hace más de 10 min',
        (select count(*)::text from system.jobs where status = 'queued' and run_after < now() - interval '10 minutes'),
-       '0',
-       not exists (select 1 from system.jobs where status = 'queued' and run_after < now() - interval '10 minutes')
+       '0 (con cron diario: solo con autorización escrita)',
+       not exists (select 1 from system.jobs where status = 'queued' and run_after < now() - interval '10 minutes'), 'requiere_autorizacion'
 union all
 select 'publicaciones abiertas sin trabajo vivo',
        (select count(*)::text from public.publish_runs r
@@ -58,10 +65,10 @@ select 'publicaciones abiertas sin trabajo vivo',
        not exists (select 1 from public.publish_runs r
                     where r.status in ('queued', 'running')
                       and not exists (select 1 from system.jobs q where q.type = 'catalog.publish_run'
-                                       and q.status in ('queued', 'running') and q.payload ->> 'run_id' = r.id::text))
+                                       and q.status in ('queued', 'running') and q.payload ->> 'run_id' = r.id::text)), 'impide_reabrir'
 union all
 select 'importaciones aplicándose hace más de 30 min',
        (select count(*)::text from public.import_jobs
          where status = 'committing' and commit_requested_at < now() - interval '30 minutes'), '0',
        not exists (select 1 from public.import_jobs
-                    where status = 'committing' and commit_requested_at < now() - interval '30 minutes');
+                    where status = 'committing' and commit_requested_at < now() - interval '30 minutes'), 'impide_reabrir';

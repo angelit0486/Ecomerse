@@ -152,6 +152,58 @@ Las migraciones son **solo hacia adelante** (regla 17). No hay una reversa autom
 
 Cada corrección hacia adelante se escribe y se prueba igual que cualquier migración: pgTAP, ensayo local y autorización.
 
+### 9.1 Cuatro cosas distintas (H2)
+
+| Concepto                     | Qué es                                                                                | ¿Lo resuelve la reversa de la 10?                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Reversa del esquema**      | Dejar las tablas y funciones como en `20261113000300`                                 | Sí. Comprobado: esquema idéntico (`comprobar-0400.sh`)              |
+| **Compatibilidad de la app** | Que el código desplegado funcione con ese esquema                                     | **No.** Hay que desplegar antes otro código (§9.2)                  |
+| **Pérdida de metadatos**     | Lo que la reversa borra: lotes, qué importación era qué parte, `publish_runs.resumes` | La **provoca**. No se puede reconstruir                             |
+| **Recuperación de datos**    | Volver a tener lo borrado                                                             | **No.** Solo el respaldo del paso 2, con lo escrito después perdido |
+
+La reversa **no es una recuperación de datos**.
+
+### 9.2 La app actual no funciona con el esquema 0300
+
+- **Por qué.** El código de `main` espera `20261113000400` (`EXPECTED_SCHEMA_VERSION`). Su trabajo `import.commit` llama a `system.import_batch_after_part` en **cada** importación, suelta o de lote, dentro de la misma transacción.
+- **Qué pasaría.** Tras la reversa esa función no existe: la transacción se revierte, se reintenta 3 veces y **toda** importación queda fallida sin cambios. Además, el panel y la consola mostrarían «mantenimiento» (base 0300 < 0400). El runner `/api/jobs/run` no revisa la versión, así que seguiría tomando trabajos y fallándolos.
+- **App compatible:** `a730989` (mensaje 4, antes de ADR-064). Espera `20261113000300` y no usa ninguno de los 13 objetos de la 10. Como `current >= expected`, también funciona con la base en 0400, así que puede desplegarse **antes** de la reversa.
+- **Comprobado** (`comprobar-0400.sh`, con git y sin red): `a730989` espera 0300 y no nombra ningún objeto de la 10; la app actual sí; sobre 0300, la sentencia que ejecuta la app actual falla con «no existe».
+
+### 9.3 Orden seguro
+
+1. **Drenar con la app 0400 todavía desplegada.** Ningún lote aplicándose, ninguna parte validándose o aplicándose, ninguna publicación en curso. Avisar al propietario que nadie importe (no hay bloqueo técnico, §11.3).
+2. **Desplegar `a730989`** (u otro commit que espere `20261113000300` y pase `comprobar-0400.sh`). Con la base aún en 0400 funciona.
+3. **Correr la reversa con su candado:** `psql -X -1 -v ON_ERROR_STOP=1 -f scripts/ops/reversa/20261113000400_import_batches.reversa.sql`.
+4. **Verificar:** `app_schema_version()` = `20261113000300`; una importación suelta de prueba en `pruva-ventana-a` se aplica.
+
+**El candado** (paso G del guion) rechaza la reversa **sin cambiar nada** si:
+
+- hay un lote aplicándose (`running`);
+- hay una parte validándose o aplicándose;
+- hay trabajos `import.commit` de partes, publicaciones en curso o trabajos `catalog.publish_run` en la cola;
+- la base no está exactamente en `20261113000400` (por ejemplo, si ya se revirtió).
+
+### 9.4 Si el candado rechaza: detener y conciliar
+
+**No forzar.** No se edita el guion para saltarse el candado.
+
+| Motivo del rechazo                                                     | Qué hacer                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Partes validándose o aplicándose; `import.commit` de partes en la cola | Esperar a que el trabajo termine (3 intentos como máximo) o a que el mantenimiento la marque fallida (30 min sin trabajo vivo). Volver a correr                                                                                   |
+| Publicación en curso o `catalog.publish_run` en la cola                | Esperar a que termine. Si se quedó sin trabajo, el mantenimiento de la app 0400 la retoma o la marca fallida (§11.2)                                                                                                              |
+| **Lote «aplicándose» sin ninguna parte aplicándose**                   | Pasa si la app vieja aplicó una parte: `a730989` no avanza lotes. Conciliar con la función del propio sistema: `select app.import_batch_advance('<id del lote>');` Si queda otra parte, esto la empieza: volver al primer renglón |
+| Versión distinta de 0400                                               | Nada que revertir, o hay una migración más nueva: **detenerse** y escalar                                                                                                                                                         |
+
+- La conciliación del lote está probada en `comprobar-0400.sh` (un lote de 1 parte aplicada por la app vieja queda `completed`).
+- Si el lote tiene más partes, la siguiente se aplica con el código que esté desplegado. Con `a730989` el lote no avanza solo: hay que volver a conciliar parte por parte. Si eso no es aceptable, **volver a desplegar la app 0400**, dejar que el lote termine y empezar el orden seguro otra vez.
+
+### 9.5 Qué pasa con las partes «aplicándose»
+
+- **Con el candado**, la reversa no corre mientras exista una. Antes del candado (mensaje 5), el guion solo cancelaba las partes subidas o validadas; una parte «aplicándose» se quedaba así y, sin la función del lote, su trabajo fallaba con la app actual.
+- **Las partes ya aplicadas** se quedan aplicadas: sus productos no cambian y la importación queda como suelta, `completed`.
+- **Las partes subidas o validadas sin aplicar** se cancelan (paso 0 del guion), para que nadie las confirme sueltas.
+
 ## 10. Autorizaciones que hacen falta
 
 1. Correr el respaldo (sección 4).
@@ -159,60 +211,125 @@ Cada corrección hacia adelante se escribe y se prueba igual que cualquier migra
 3. Desplegar el código (sección 5, paso 5) en la misma ventana (sección 3), aunque se autorice aparte. El orden y los criterios están en §11.
 4. Después, corregir en staging las tarifas inactivas de la tienda `demo` (hallazgo D1): volver a guardarlas desde el panel ya desplegado.
 
-## 11. Ventana única: migrar y desplegar juntos (Orden 10, mensaje 5, A2)
+## 11. Ventana única: migrar y desplegar juntos (Orden 10, mensajes 5 y 7)
 
 **Por qué una sola ventana.** Con las 10 migraciones aplicadas, el código desplegado hoy (`88edc6d`) sigue funcionando: su E2E de importar, pegar, catálogo, tienda, dos tiendas, checkout, envíos y fotos pasó **17 de 17** contra la base con las 10 [MEDIDO, local, 2026-11-14]. Pero **no conoce el trabajo `catalog.publish_run`**:
 
 - una importación con «Publicado: sí» hecha entre migrar y desplegar deja sus productos en borrador;
-- su corrida se retoma sola 3 veces, cada 15 min, y si el código nuevo no ha llegado termina fallida con el motivo;
+- el mantenimiento retoma su corrida 3 veces, cada 15 min o más; si el código nuevo no ha llegado, queda fallida con el motivo (§11.2);
 - con el código nuevo, `scripts/ops/ventana/03-retomar-publicaciones.sql` la recupera.
 
-Todo eso está probado en `tests/integration/window-publish-contingency.test.ts`. La ventana debe durar menos de 15 minutos y nadie importa durante ella.
+Todo eso está probado en `tests/integration/window-publish-contingency.test.ts`.
 
 **Quién y con qué.**
 
-- Una persona técnica con acceso de dueño al editor SQL de Supabase (`pruva-staging`) y permiso de push a la rama que despliega Vercel (`claude/ecommerce-regulated-platform-41vu1e`).
-- Cada paso necesita la autorización del propietario: respaldo, migraciones y despliegue.
-- Anotar la hora UTC de cada paso.
+- Una persona técnica con acceso de dueño al editor SQL de Supabase (`pruva-staging`), con `psql` hacia la misma base (para el paso 9b) y con permiso de push a la rama que despliega Vercel (`claude/ecommerce-regulated-platform-41vu1e`).
+- Cada paso necesita la autorización del propietario: respaldo, migraciones, despliegue, la comprobación de aislamiento (escribe y revierte) y, si hace falta, la contingencia.
+- Anotar la hora UTC de cada paso y la decisión de cada fila en falso.
 
-| Paso | Qué se hace                 | Cómo                                                                                                                                             | Resultado esperado                                                                                                                                                                              | Si no                                                                                  |
-| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 1    | Fijar el commit             | `git ls-remote origin refs/heads/producto/orden-10`; debe ser el commit que aprobó la segunda auditoría. Anotar su hash completo                 | El hash anotado; `git merge-base --is-ancestor origin/claude/ecommerce-regulated-platform-41vu1e <hash>` responde 0 (avance rápido)                                                             | **Detenerse**                                                                          |
-| 2    | Respaldo y restauración     | `docs/runbooks/respaldos.md`: `scripts/ops/backup-export.sh` contra staging y `scripts/ops/restore-check.sh` en local                            | Restauración sin errores; metatests de seguridad en verde sobre la copia                                                                                                                        | **Detenerse**                                                                          |
-| 3    | Aviso y comprobación previa | Avisar al propietario que nadie use el panel. Correr `scripts/ops/ventana/01-antes.sql` en el editor SQL                                         | Las 6 filas con `ok = true`: versión `20261110000200`, ninguna de las 10 aplicada, 0 importaciones aplicándose o validándose, 0 trabajos corriendo, 0 tipos de trabajo desconocidos, 0 candados | **Detenerse.** Si hay trabajos corriendo, esperar 5 min y repetir                      |
-| 4    | Sumas de los 10 archivos    | Descargar del commit del paso 1 con `net.http_get` y comparar con la tabla 2 y los anexos A y B (sección 5, paso 1)                              | Las 10 sumas coinciden                                                                                                                                                                          | **Detenerse.** No se aplica ninguna                                                    |
-| 5    | Inicio de la ventana        | Anotar la hora UTC: es `:INICIO_VENTANA`                                                                                                         | —                                                                                                                                                                                               | —                                                                                      |
-| 6    | Aplicar las 10 en orden     | Sección 5, paso 2: un bloque, archivo por archivo, registro en `supabase_migrations.schema_migrations`; luego `notify pgrst, 'reload schema'`    | `select public.app_schema_version()` = `20261113000400`                                                                                                                                         | El bloque se revierte solo: la base queda como estaba. **Detenerse** y anotar el error |
-| 7    | Desplegar enseguida         | `git push origin <hash>:claude/ecommerce-regulated-platform-41vu1e` (avance rápido, sin forzar). Esperar a que Vercel marque el despliegue READY | READY en menos de 10 minutos desde el paso 6                                                                                                                                                    | Ver «Contingencia»                                                                     |
-| 8    | Salud                       | `/api/health` y Consola → Salud                                                                                                                  | `ok`; el panel abre sin «Faltan migraciones»                                                                                                                                                    | Ver «Contingencia»                                                                     |
-| 9    | Comprobación posterior      | `scripts/ops/ventana/02-despues.sql` a los 5 y a los 15 min del paso 7                                                                           | Las 7 filas con `ok = true` a los 15 min                                                                                                                                                        | Ver «Contingencia»                                                                     |
-| 10   | Prueba funcional            | En una tienda de pruebas, importar una hoja de 3 filas con «Publicado: sí» (una con precio 0). Abrir la importación                              | Resumen «2 publicados. 1 pendiente: 1 con precio inválido.» en menos de 2 min                                                                                                                   | Ver «Contingencia»                                                                     |
-| 11   | La cola sigue               | `02-despues.sql` otra vez; Consola → Trabajos                                                                                                    | Sin trabajos listos de más de 10 min ni muertos por tipo desconocido después del paso 7                                                                                                         | Ver «Contingencia»                                                                     |
-| 12   | Cierre                      | Avisar al propietario; anotar horas, hash y resultados en la bitácora. Luego volver a guardar las tarifas de `demo` (D1)                         | —                                                                                                                                                                                               | —                                                                                      |
+### 11.1 Categorías de los criterios (H4-A)
 
-**Contingencia.**
+Cada comprobación tiene **una** categoría. `01-antes.sql`, `02-despues.sql` y `04-aislamiento.sql` la traen en su columna `categoria`; los pasos sin guion la tienen en la tabla de §11.6.
 
-- **El despliegue falla o no llega a READY:** el código anterior sigue sirviendo con la base nueva (17/17 E2E). No se toca la base.
-  - Se corrige el despliegue y se repite el paso 7.
-  - Mientras tanto, nadie importa con «Publicado: sí».
-  - Si pasaron más de 45 min, después del paso 9 en verde se corre `03-retomar-publicaciones.sql` con `:INICIO_VENTANA` (escribe; necesita autorización).
-- **`02-despues.sql` falla a los 15 min:**
-  - **Tipos desconocidos:** sigue el código anterior; revisar qué despliegue sirve Vercel.
-  - **Trabajos listos de más de 10 min:** el disparador de la cola no corre. Ver `operacion-de-colas.md` §8; con el cron diario esta fila falla, y se acepta solo si se documenta que la cola cada minuto aún no está activa.
-  - **Publicaciones sin trabajo vivo:** correr `03-retomar-publicaciones.sql`.
-- **La prueba funcional falla:** no se abre la tienda a importaciones; se reúnen los logs del runner y la corrida (`publish_runs`) para un diagnóstico.
+| Categoría                                           | Cuándo                         | Qué pasa si sale en falso                                                                                                                                                    |
+| --------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bloqueante** (`bloqueante`)                       | Antes de empezar (pasos 1 a 4) | La ventana no empieza. No se aplica nada                                                                                                                                     |
+| **Detener la ventana** (`detener`)                  | Del paso 6 en adelante         | No se avanza al paso siguiente. Se sigue la contingencia (§11.4). La ventana no se da por buena                                                                              |
+| **Solo con autorización** (`requiere_autorizacion`) | Paso 9                         | Se acepta únicamente si el propietario lo autoriza por escrito en la bitácora, con el motivo. Hoy aplica a «trabajos listos sin tomar hace más de 10 min» con el cron diario |
+| **Impide reabrir** (`impide_reabrir`)               | Pasos 9 a 11                   | La ventana puede cerrarse, pero las importaciones no se reabren a los comercios hasta resolverla                                                                             |
+
+**Nada se salta en silencio.** Cada fila en falso se anota con su categoría y la decisión tomada. Una fila sin categoría cuenta como «detener».
+
+**Con el cron diario** (configuración versionada hoy, `operacion-de-colas.md` §1): un trabajo encolado después del cron de las 12:00 UTC espera hasta el día siguiente si nadie abre el panel. La fila «trabajos listos sin tomar hace más de 10 min» saldrá en falso casi siempre: es la categoría «solo con autorización». **No** se cambia el criterio para que pase.
+
+### 11.2 Tiempos: objetivo, límite y qué pasa al pasarlo (H4-D)
+
+Todas las horas se cuentan desde el paso indicado. Sustituyen a las cifras sueltas de la versión anterior (15, 45 y 10 min).
+
+| Tramo                                            | Objetivo                                                | Límite       | Al pasar el límite                                                                                                               |
+| ------------------------------------------------ | ------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Paso 3: esperar a que no haya trabajos corriendo | 0 min                                                   | 30 min       | **Bloqueante:** no empezar; reprogramar                                                                                          |
+| Paso 6: aplicar las 10                           | 1 min [MEDIDO local: 2.6 s las 10, con 2,000 productos] | Un error     | Se revierte sola. **Detener**                                                                                                    |
+| Paso 6 → despliegue READY (paso 7)               | 5 min                                                   | 10 min       | **Detener:** se cierra la ventana con el código anterior sirviendo (funciona con la base nueva) y se reprograma el despliegue    |
+| Paso 7 → `02-despues.sql` en verde (paso 9)      | a los 5 min                                             | a los 15 min | Según la categoría de cada fila (§11.1)                                                                                          |
+| Paso 10: prueba funcional, con la página abierta | 2 min                                                   | 10 min       | **Impide reabrir**                                                                                                               |
+| Ventana completa (paso 5 → paso 12)              | 30 min                                                  | 45 min       | Revisar `publish_runs` de la ventana: si alguna quedó fallida, correr `03-retomar-publicaciones.sql` (escribe; con autorización) |
+
+- **Por qué 45 min.** Una publicación pedida entre migrar y desplegar se retoma a los ≥ 15, ≥ 30 y ≥ 45 min y queda fallida a partir de ≥ 60 min. Cerrar antes de 45 min deja margen.
+- **«≥» porque depende del disparador.** El mantenimiento que la retoma corre con el runner. Con el cron diario y la página cerrada, los 15 min pueden ser horas [ESTIMADO a partir de §1 de `operacion-de-colas.md`].
+
+### 11.3 Pausa: avisar no es impedir (H4-C)
+
+**No existe un modo de mantenimiento.** El panel muestra «mantenimiento» solo cuando la base va **detrás** del código. Durante la ventana la base va **delante**, así que el panel sigue abierto. Por eso la pausa no está garantizada técnicamente.
+
+| Acción                     | Qué existe hoy                                                                                                                             | ¿Garantizado?                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| Avisar al propietario      | Un mensaje del técnico antes del paso 3 y al cerrar                                                                                        | Solo la comunicación                       |
+| Impedir operaciones nuevas | Nada. Cualquier persona con acceso al panel puede importar durante la ventana                                                              | **No**                                     |
+| Detener trabajos en curso  | No se pueden detener. Se espera a que terminen: `01-antes.sql` exige 0 trabajos corriendo y 0 importaciones a medias                       | Comprobado **antes** de migrar, no durante |
+| Drenar trabajos pendientes | No se drenan. Siguen en la cola y los toma el código que esté desplegado. `01-antes.sql` exige que el código nuevo conozca todos sus tipos | Comprobado antes de migrar                 |
+
+- **Mitigación hoy:** staging solo tiene tiendas de prueba y la tienda `demo`; la ventana es corta (§11.2). Si alguien importa con «Publicado: sí» en la ventana, la contingencia lo recupera (03).
+- **Requisito antes de operar con comercios reales:** un mecanismo de mantenimiento que cierre las importaciones y las acciones que encolan trabajos. [PROPUESTA: un interruptor en `feature_flags` revisado por el layout del panel y por esas acciones; necesita su ADR y su migración. No se hizo en este mensaje.]
+
+### 11.4 Contingencia
+
+- **El despliegue falla o no llega a READY en 10 min:** el código anterior sigue sirviendo con la base nueva (17/17 E2E). **No se toca la base.**
+  - Se corrige el despliegue y se repite el paso 7 en otra ventana.
+  - Mientras tanto, nadie importa con «Publicado: sí» (aviso; no hay bloqueo técnico, §11.3).
+  - Después del paso 9 en verde: si hay corridas fallidas de la ventana, `03-retomar-publicaciones.sql` con `:INICIO_VENTANA` (escribe; con autorización).
+- **Fila en falso de `02-despues.sql` a los 15 min:**
+  - _Tipos desconocidos_ (`detener`): sigue sirviendo el código anterior. Revisar qué despliegue sirve Vercel.
+  - _Trabajos listos de más de 10 min_ (`requiere_autorizacion`): el disparador de la cola no corre a tiempo. Con el cron diario es lo esperado: se acepta solo con autorización escrita. Si `pg_cron` ya estuviera activo, diagnosticar con `operacion-de-colas.md` §9.
+  - _Publicaciones sin trabajo vivo_ (`impide_reabrir`): `03-retomar-publicaciones.sql`.
+  - _Importaciones aplicándose hace más de 30 min_ (`impide_reabrir`): esperar al mantenimiento, que las marca fallidas sin cambios; revisar los logs del runner.
+- **Fila en falso de `04-aislamiento.sql`** (`detener`): **no se reabre nada.** Es una posible fuga entre tiendas: guardar la salida y escalar al propietario. Su transacción ya se revirtió.
+- **La prueba funcional falla** (`impide_reabrir`): no se reabren las importaciones. Se reúnen los logs del runner y la corrida (`publish_runs`) para un diagnóstico.
 - **Daño mayor en datos:** restaurar el respaldo del paso 2 (`respaldos.md`). Se pierde lo escrito desde entonces.
-- **No hay reversa automática.** La reversa de la 10 pierde datos (§9).
+- **No hay reversa automática.** La reversa de la 10 pierde datos y exige otro código desplegado antes (§9.1 a §9.4).
 
-**Criterios para detenerse y no continuar.**
+### 11.5 Tiendas de prueba (H4-E)
 
-- Cualquier fila en `ok = false` en el paso 3.
-- Una suma distinta en el paso 4.
-- Un error en el paso 6.
-- Más de 10 minutos sin despliegue READY en el paso 7: la ventana se cierra con el código anterior sirviendo y se reprograma.
-- Cualquier fila en `ok = false` en el paso 9 que no tenga una explicación de la contingencia.
+- **Cuáles:** dos tiendas con handle **`pruva-ventana-a`** y **`pruva-ventana-b`**, cada una en **su propia organización** y cada una con un dueño (`org_owner`).
+- **Quién y cuándo:** el técnico las crea **antes** de la ventana desde la Consola de plataforma (Organizaciones → Nueva y Tienda nueva), con cuentas de correo de pruebas que él controle.
+- **Cómo se identifican:** solo por su handle. Ningún guion lleva ids escritos.
+- **Comprobación:** `01-antes.sql` tiene la fila bloqueante «tiendas de prueba…» (deben ser 2 organizaciones con dueño). Si faltan, `04-aislamiento.sql` también se detiene con `ventana_sin_tiendas_de_prueba`.
+- **Uso:** la prueba funcional (paso 10) se hace **solo** en `pruva-ventana-a`. No se usa la tienda `demo` ni ninguna otra.
 
-Ninguno de estos criterios se salta para «terminar la ventana».
+### 11.6 Pasos
+
+| Paso | Qué se hace                                    | Cómo                                                                                                                                          | Resultado esperado                                                                                                  | Categoría si falla |
+| ---- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| 1    | Fijar el commit                                | `git ls-remote origin refs/heads/producto/orden-10`; el commit aprobado. Anotar el hash completo                                              | `git merge-base --is-ancestor origin/claude/ecommerce-regulated-platform-41vu1e <hash>` responde 0 (avance rápido)  | Bloqueante         |
+| 2    | Respaldo y restauración                        | `docs/runbooks/respaldos.md`: `scripts/ops/backup-export.sh` contra staging y `scripts/ops/restore-check.sh` en local                         | Restauración sin errores; metatests de seguridad en verde sobre la copia                                            | Bloqueante         |
+| 3    | Aviso y comprobación previa                    | Avisar al propietario (§11.3). Correr `scripts/ops/ventana/01-antes.sql` en el editor SQL                                                     | Las 7 filas con `ok = true` (incluye las tiendas de prueba). Si hay trabajos corriendo, repetir cada 5 min hasta 30 | Bloqueante         |
+| 4    | Sumas de los 10 archivos                       | Descargar del commit del paso 1 con `net.http_get` y comparar con la tabla 2 y los anexos A y B (sección 5, paso 1)                           | Las 10 sumas coinciden                                                                                              | Bloqueante         |
+| 5    | Inicio de la ventana                           | Anotar la hora UTC: es `:INICIO_VENTANA`                                                                                                      | —                                                                                                                   | —                  |
+| 6    | Aplicar las 10 en orden                        | Sección 5, paso 2: un bloque, archivo por archivo, registro en `supabase_migrations.schema_migrations`; luego `notify pgrst, 'reload schema'` | `select public.app_schema_version()` = `20261113000400`                                                             | Detener            |
+| 7    | Desplegar enseguida                            | `git push origin <hash>:claude/ecommerce-regulated-platform-41vu1e` (avance rápido, sin forzar). Esperar READY en Vercel                      | READY dentro del límite de §11.2                                                                                    | Detener            |
+| 8    | Salud                                          | `/api/health` y Consola → Salud                                                                                                               | `ok`; el panel abre sin «Faltan migraciones»                                                                        | Detener            |
+| 9    | Comprobación posterior                         | `scripts/ops/ventana/02-despues.sql` a los 5 y a los 15 min del paso 7                                                                        | Las 7 filas en verde a los 15 min, o cada fila en falso resuelta según su categoría                                 | La de cada fila    |
+| 9b   | Aislamiento entre tiendas (escribe y revierte) | `psql -X -v ON_ERROR_STOP=1 -At -F '\|' -f scripts/ops/ventana/04-aislamiento.sql`                                                            | Las 36 filas con `ok = true`; después, ninguna fila nueva en las tiendas de prueba                                  | Detener            |
+| 10   | Prueba funcional                               | En `pruva-ventana-a`, importar una hoja de 3 filas con «Publicado: sí» (una con precio 0). Abrir la importación                               | «2 publicados. 1 pendiente: 1 con precio inválido.» dentro de los tiempos de §11.2                                  | Impide reabrir     |
+| 11   | La cola sigue                                  | `02-despues.sql` otra vez; Consola → Trabajos                                                                                                 | Sin muertos por tipo desconocido después del paso 7                                                                 | La de cada fila    |
+| 12   | Cierre                                         | Avisar al propietario; anotar horas, hash, cada fila en falso con su decisión. Luego volver a guardar las tarifas de `demo` (D1)              | —                                                                                                                   | —                  |
+
+**Qué comprueba el paso 9b.** No basta con «RLS activado». Como el dueño de cada tienda, en los dos sentidos, crea datos de prueba y comprueba:
+
+- que ve sus lotes, importaciones, publicaciones, partidas, revisiones de fotos y productos;
+- que no ve ninguno de los de la otra (0 filas);
+- que no puede cancelar el lote, aplicar la importación ni publicar los productos de la otra, ni editar sus productos, ni correr una publicación (rechazo `42501`);
+- que sin sesión (`anon`) no lee lotes ni publicaciones.
+
+Termina con `ROLLBACK`. Probado en `tests/integration/window-isolation.test.ts`, incluida una fuga a propósito (una política `using (true)`, dentro de la misma transacción) que el guion sí detecta. También corre en el ensayo (`migration-rehearsal.sh`).
+
+### 11.7 Repositorio público (H4-F, riesgo R-08)
+
+- **Hecho:** la segunda auditoría reportó que el repositorio es público [NO VERIFICADO hoy; no se consultó GitHub en este mensaje].
+- **Riesgo:** todo lo que se suba queda expuesto: código, runbooks, nombres de proyectos y rutas de staging. Un secreto subido por error quedaría público al instante.
+- **Hoy:** ningún archivo versionado contiene secretos (las plantillas leen del Vault o del entorno). El paso 4 de esta ventana **depende** de que sea público (`net.http_get` de los archivos).
+- **Requisito:** resolverlo **antes** de operar con credenciales de producción, datos de comercios reales o datos personales. Al volverlo privado, el paso 4 cambia: subir los 10 archivos por otro canal y comparar las mismas sumas (sección 8).
+- **Decide el propietario.** No se cambió nada en GitHub.
 
 ## Anexo A. 6.ª migración: alertas de Inicio (agregada el 2026-11-13)
 
@@ -257,6 +374,6 @@ Ninguno de estos criterios se salta para «terminar la ventana».
     - **Reversa completa:** `scripts/ops/reversa/20261113000400_import_batches.reversa.sql`. Solo con autorización, con un respaldo verificado tomado justo antes, y si la recuperación hacia adelante no alcanza.
     - **Se pierde para siempre:** la tabla `import_batches` (archivo, partes, huellas, estado, motivo y categorías aceptadas de cada lote), qué importación era qué parte (`batch_id`, `part_number`, `part_fingerprint`) y `publish_runs.resumes`.
     - **Se conserva:** productos, variantes, existencias, categorías y movimientos aplicados; cada importación como importación suelta, con sus filas; las corridas de publicación.
-    - **Antes de la reversa:** el guion cancela las partes sin aplicar, para que no se puedan confirmar sueltas.
-    - **Qué demuestra el verificador:** `bash scripts/ops/reversa/comprobar-0400.sh` (solo local) comprueba que el **esquema** queda idéntico al de `20261113000300`. Lo reprodujo el 2026-11-14: 24,576 líneas con permisos. Eso prueba el esquema; no recupera los datos de arriba.
+    - **Antes de la reversa (mensaje 7, H2):** desplegar una app compatible con 0300 y pasar el candado. Orden, candado y conciliación en §9.2 a §9.5. El guion cancela las partes sin aplicar, para que no se puedan confirmar sueltas.
+    - **Qué demuestra el verificador:** `bash scripts/ops/reversa/comprobar-0400.sh` (solo local) comprueba la app compatible, el candado (3 rechazos que cubren sus 6 motivos), la conciliación y que el **esquema** queda idéntico al de `20261113000300` (24,576 líneas con permisos, 2026-11-14). Eso prueba el esquema y las condiciones; no recupera los datos de arriba.
     - **Corrección:** el informe del mensaje 4 decía «ensayada»; ese ensayo usó un guion que no estaba en el repositorio. El encabezado de la migración describe la reversa sin la advertencia de pérdida: manda este runbook.

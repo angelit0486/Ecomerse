@@ -7,6 +7,10 @@ import { getStorefront } from "@/server/storefront/context";
 
 import { SimulateForm } from "./simulate-form";
 
+// H3 (Orden 10, M7): la acción simulatePayment arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Pago de prueba",
   robots: { index: false, follow: false },

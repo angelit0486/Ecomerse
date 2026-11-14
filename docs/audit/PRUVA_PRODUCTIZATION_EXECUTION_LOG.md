@@ -193,3 +193,28 @@ Suites al cierre del mensaje 5 (local, 2026-11-14, sobre `5597a61` + documentos)
 | Reversa de la 0400 (`comprobar-0400.sh`)   | esquema idéntico al de `0300`                                             |
 | E2E de `88edc6d` contra la base con las 10 | 17/17                                                                     |
 | `pnpm audit --prod`                        | sin vulnerabilidades                                                      |
+
+## Orden 10, mensaje 7 (2026-11-14): corrección final de H2, H3, H4 y H5
+
+Partida: `48a2931`, segunda auditoría «APROBADO CON OBSERVACIONES». Solo local, en `producto/orden-10`.
+
+| Hallazgo                 | Estado                                              | Qué se hizo                                                                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H2 (MEDIO) reversa 0400  | Corregido y probado en local                        | Candado al inicio del guion; orden seguro (drenar → desplegar `a730989` → reversa → verificar); conciliación con `app.import_batch_advance`; `comprobar-0400.sh` prueba compatibilidad, candado y conciliación |
+| H3 (MEDIO) `maxDuration` | Corregido y probado en local                        | Detector por función (página → componente → acción → helper); 26 entradas, 16 nuevas con 60 s; caso negativo; falla sin el cambio (16 pruebas)                                                                 |
+| H4 (MEDIO) ventana       | Corregido en documentación y guiones; probado local | 4 categorías; `04-aislamiento.sql` (36 filas, detecta una fuga a propósito); pausa sin promesas; tiempos únicos; tiendas de prueba por handle; R-08                                                            |
+| H5 (MEDIO) pg_cron       | Corregido en documentación; pendiente remoto        | Diagnóstico por etapas, solo lectura y sin secretos; 10 escenarios probados con tablas equivalentes                                                                                                            |
+| H1, H6                   | Sin cambio                                          | Requieren autorización e infraestructura                                                                                                                                                                       |
+
+Suites al cierre del mensaje 7 (local, 2026-11-14):
+
+| Suite                                      | Resultado                                                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| verify (lint, formato, tipos, unit, build) | 1,405                                                                                                              |
+| pgTAP                                      | 3,157 (149 archivos)                                                                                               |
+| Integración                                | 468 (43 archivos, 2 nuevos)                                                                                        |
+| E2E                                        | 162/162 (28.8 min)                                                                                                 |
+| Ensayo de las 10 migraciones               | 307/307; `01-antes` 7, `02-despues` 7 y `04-aislamiento` 36 en verde; esquema idéntico                             |
+| Reversa de la 0400 (`comprobar-0400.sh`)   | 8 de 8: app compatible, candado (3 rechazos, 6 motivos), conciliación, esquema idéntico, segunda corrida rechazada |
+| `pnpm audit --prod`                        | sin vulnerabilidades                                                                                               |
+| 10 migraciones                             | sha256 sin cambios; ninguna nueva; `vercel.json` diario                                                            |

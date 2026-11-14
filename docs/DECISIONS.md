@@ -1917,3 +1917,38 @@ Dictamen de partida: auditoría independiente del bloque 2, «APROBADO CON OBSER
   - B1: dos lotes del mismo archivo creados a la vez. No duplica productos (llaves únicas) y no rompe el aislamiento.
   - B2: la comprobación del tope por hora al crear el lote no es atómica. El tope efectivo se cumple por parte, y está probado con concurrencia.
   - No comprometen integridad, aislamiento ni el límite efectivo: esperan al piloto.
+
+## 40. Corrección final de H2, H3, H4 y H5 (Orden 10, mensaje 7, 2026-11-14)
+
+Partida: segunda auditoría del bloque 2 sobre `48a2931`, «APROBADO CON OBSERVACIONES» (H1 a H6). Solo cambios locales en `producto/orden-10`. Nada se aplicó ni se desplegó fuera de local. No se cambió nada en Vercel, en Supabase ni en GitHub, y no se activó ningún cron cada minuto. **Ninguna migración nueva; las 10 pendientes conservan su sha256.**
+
+- **D-O10-21. H2: la reversa de la 0400 exige otra app y tiene un candado.**
+  - **Hallazgo confirmado:** el código actual llama a `system.import_batch_after_part` en **cada** importación (suelta o de lote) y espera `20261113000400`. Sobre el esquema 0300 todas las importaciones fallarían y el panel mostraría «mantenimiento». El runner no revisa la versión.
+  - **App compatible:** `a730989` espera `20261113000300` y no nombra ninguno de los 13 objetos de la 10; también funciona con la base en 0400, así que se despliega **antes** de la reversa.
+  - **Orden seguro:** drenar con la app 0400 → desplegar `a730989` → reversa con `psql -1` → verificar (runbook de despliegue §9.3).
+  - **Candado** al inicio del guion: rechaza sin cambiar nada si hay un lote `running`, partes validándose o aplicándose, `import.commit` de partes o publicaciones en curso, o si la base no está exactamente en 0400.
+  - **Detener y conciliar** (§9.4): no forzar. Un lote que la app vieja dejó «aplicándose» se concilia con `app.import_batch_advance`, la función del propio sistema. No se inventa ninguna recuperación de datos.
+  - **Conceptos separados** (§9.1): reversa del esquema, compatibilidad de la app, pérdida de metadatos y recuperación de datos. La reversa no recupera datos.
+  - **Pruebas** (`comprobar-0400.sh`): compatibilidad con git; el candado con 3 rechazos que cubren sus 6 motivos (ninguno cambia datos ni versión); la conciliación; la reversa drenada (esquema idéntico, 24,576 líneas); la segunda corrida rechazada; y la sentencia de la app actual falla sobre 0300. Con el guion anterior la prueba falla («la reversa corrió»). `ventana-sql.test.ts` exige que el candado vaya antes de cualquier cambio.
+  - **Estado:** corregido y probado en local. Ejecutarla en staging requiere autorización.
+- **D-O10-22. H3: inventario por función de todo lo que arranca la cola.**
+  - `tests/unit/queue-entry-graph.ts` sigue página → componente → acción → helper → `processQueueSoon`/`resumeQueue`/`runQueuedJobs`, con layouts (solo para páginas) e `import()` dinámico. Es por función, para no marcar páginas que usan otra acción del mismo módulo.
+  - **26 entradas** arrancan la cola. **16 no tenían límite** y ahora declaran `maxDuration = 60` con su motivo: configuración (logo), apariencia, editor de páginas, fotos en lote, producto nuevo, categorías, marcas, detalle de pedido, devolución, dominio, nueva tienda, consola (organización nueva, tienda nueva, trabajos), checkout y pago simulado.
+  - **Prueba:** falla si una entrada que arranca la cola no tiene límite (16 fallos sin el cambio) y si una entrada tiene 60 s sin arrancar la cola ni razón escrita. Caso negativo con un árbol de prueba y controles contra falsos positivos (carrito, ficha, rutas de la tienda).
+  - **Depende del plan de Vercel** [NO VERIFICADO]: 60 s es lo que pide el código, no lo que garantiza la plataforma.
+  - Inventario: `operacion-de-colas.md` §2.1.
+  - **Estado:** corregido y probado en local.
+- **D-O10-23. H4: ventana con categorías, aislamiento, pausa honesta y tiempos únicos.**
+  - **A. Categorías:** bloqueante, detener, solo con autorización y impide reabrir. `01` y `02` las traen por fila. Con el cron diario, «trabajos listos de más de 10 min» es «solo con autorización»: no se cambió el criterio para que pase.
+  - **B. Aislamiento:** `scripts/ops/ventana/04-aislamiento.sql`. Escribe datos de prueba y revierte. Como el dueño de cada tienda, en los dos sentidos: ve lo suyo, no ve nada de la otra en 6 tablas, no puede actuar sobre ella en 5 operaciones (rechazo `42501`), y `anon` no lee. Son 36 filas. `window-isolation.test.ts` prueba también que una política `using (true)` se detecta y que sin tiendas de prueba se detiene. Corre en el ensayo.
+  - **C. Pausa:** no existe un modo de mantenimiento. Avisar, impedir, detener y drenar quedan separados, y se dice qué no está garantizado. Un mecanismo de mantenimiento es requisito antes de operar con comercios reales [PROPUESTA con ADR; no se hizo].
+  - **D. Tiempos:** una sola tabla de objetivo, límite y consecuencia (§11.2). Reemplaza las cifras sueltas de 15, 45 y 10 min. La retoma de publicaciones es «≥ 15 min», porque depende del disparador.
+  - **E. Tiendas de prueba:** `pruva-ventana-a` y `pruva-ventana-b`, en organizaciones distintas y con dueño; se buscan por handle, sin ids. Es una fila bloqueante en `01`.
+  - **F. Repositorio público (R-08):** documentado; debe resolverse antes de operar con credenciales o datos sensibles. No se cambió nada en GitHub.
+  - **Estado:** corregido en documentación y en guiones, probado en local. Ejecutarlo en staging requiere autorización.
+- **D-O10-24. H5: diagnóstico de pg_cron + pg_net por etapas.**
+  - `scripts/ops/cola/diagnostico-pg_cron.sql`, solo lectura, sin encabezados ni secretos. Separa 5 etapas: pg_cron corrió, pg_net envió, llegó respuesta, el runner se ejecutó y la cola avanzó.
+  - Distingue 401 de la app (firma), 401/403 sin JSON (protección de Vercel o firewall), 5xx, tiempo agotado, sin respuesta (red) y éxito sin avance. `operacion-de-colas.md` §9 da qué hacer en cada caso (A a L).
+  - Probado contra tablas equivalentes en una base desechable, en 10 escenarios (`pg-cron-diagnostics.test.ts`). Las columnas reales de Supabase están [NO VERIFICADO]. No se corrió nada de pg_cron ni pg_net en remoto.
+  - **Estado:** corregido en documentación, probado en local. Pendiente de integración remota.
+- **D-O10-25. H1 y H6 sin cambio.** H1 (cron diario) requiere autorizar Vercel Pro o pg_cron (PB-45). H6 (rendimiento alojado) requiere staging. La prueba de `maxDuration` ahora también exige que `vercel.json` siga en `0 12 * * *`: activar «cada minuto» queda como un cambio deliberado.

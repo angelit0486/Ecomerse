@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Runner de la cola de jobs (GATE0 §28.4). Invocado cada minuto por Vercel Cron
+ * Runner de la cola de jobs (GATE0 §28.4). Invocado por Vercel Cron según vercel.json (hoy, una vez al día)
  * (GET + Bearer) o por pg_cron + pg_net (POST firmado con HMAC).
  */
 async function handle(request: Request): Promise<Response> {

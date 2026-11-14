@@ -19,10 +19,72 @@
 --   - Las partes «validadas» que no se aplicaron se pueden confirmar sueltas
 --     (imports_commit ya no las rechaza): hay que cancelarlas antes (paso 0).
 --
--- Comprobado con scripts/ops/reversa/comprobar-0400.sh: tras esta reversa, el
--- esquema es idéntico (pg_dump -s) al de una base con las migraciones hasta
--- 20261113000300. Eso prueba el ESQUEMA, no recupera los datos de arriba.
+-- ANTES DE CORRER ESTO (Orden 10, mensaje 7, H2). El código que hoy está en
+-- main (EXPECTED_SCHEMA_VERSION 20261113000400) NO funciona con el esquema 0300:
+-- su trabajo import.commit llama a system.import_batch_after_part en CADA
+-- importación, suelta o de lote; esa función ya no existe tras la reversa, la
+-- transacción se revierte y TODAS las importaciones fallan. Y el panel muestra
+-- «mantenimiento» (versión de la base menor que la esperada). Orden obligatorio:
+--   1. Drenar con la app 0400 todavía desplegada: ningún lote aplicándose,
+--      ninguna parte validándose o aplicándose, ninguna publicación en curso.
+--   2. Desplegar una app compatible con 0300 (a730989: espera 20261113000300 y
+--      no usa nada de 0400; comprobar-0400.sh lo verifica con git).
+--   3. Correr este archivo con: psql -X -1 -v ON_ERROR_STOP=1 -f <archivo>
+--      El candado (paso G) lo rechaza sin cambiar nada si el paso 1 no se cumple.
+--   4. Comprobar: app_schema_version() = 20261113000300 y una importación suelta.
+-- Si el candado rechaza: NO forzar. Procedimiento de detener y conciliar en
+-- docs/runbooks/despliegue-migraciones-2026-11.md, §9.4.
+--
+-- Comprobado con scripts/ops/reversa/comprobar-0400.sh: el candado (3 rechazos, 6 motivos),
+-- la conciliación de un lote detenido y que, tras esta reversa, el esquema es
+-- idéntico (pg_dump -s) al de una base con las migraciones hasta 20261113000300.
+-- Eso prueba el ESQUEMA, no recupera los datos de arriba.
 -- =============================================================================
+
+-- G. Candado: con trabajo de lotes o de publicación en curso, o sobre una base
+-- que no está exactamente en 0400, la reversa no corre y no cambia nada.
+do $$
+declare
+  v_motivos text[] := '{}';
+  v_n       integer;
+begin
+  if to_regclass('public.import_batches') is null
+     or coalesce(public.app_schema_version(), '') <> '20261113000400' then
+    raise exception using errcode = 'P0001', message = 'reversa_bloqueada',
+      detail = format('La base está en %s; esta reversa solo aplica a 20261113000400.',
+                      coalesce(public.app_schema_version(), 'desconocida'));
+  end if;
+  select count(*) into v_n from public.import_batches where status = 'running';
+  if v_n > 0 then
+    v_motivos := v_motivos || format('%s lote(s) aplicándose', v_n);
+  end if;
+  select count(*) into v_n from public.import_jobs
+   where batch_id is not null and status in ('validating', 'committing');
+  if v_n > 0 then
+    v_motivos := v_motivos || format('%s parte(s) de lote validándose o aplicándose', v_n);
+  end if;
+  select count(*) into v_n from system.jobs q
+   where q.type = 'import.commit' and q.status in ('queued', 'running')
+     and exists (select 1 from public.import_jobs j
+                  where j.id::text = q.payload ->> 'import_job_id' and j.batch_id is not null);
+  if v_n > 0 then
+    v_motivos := v_motivos || format('%s trabajo(s) import.commit de partes en la cola', v_n);
+  end if;
+  select count(*) into v_n from public.publish_runs where status in ('queued', 'running');
+  if v_n > 0 then
+    v_motivos := v_motivos || format('%s publicación(es) en curso', v_n);
+  end if;
+  select count(*) into v_n from system.jobs where type = 'catalog.publish_run' and status in ('queued', 'running');
+  if v_n > 0 then
+    v_motivos := v_motivos || format('%s trabajo(s) catalog.publish_run en la cola', v_n);
+  end if;
+  if cardinality(v_motivos) > 0 then
+    raise exception using errcode = 'P0001', message = 'reversa_bloqueada',
+      detail = array_to_string(v_motivos, '; '),
+      hint = 'No forzar. Drenar o conciliar (runbook de despliegue, §9.4) y volver a correr.';
+  end if;
+end
+$$;
 
 -- 0. Que ninguna parte sin aplicar quede como importación suelta confirmable.
 update public.import_jobs set status = 'cancelled', error = 'Lote retirado (reversa de ADR-064).'

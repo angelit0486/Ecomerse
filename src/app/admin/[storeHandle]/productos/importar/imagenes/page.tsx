@@ -10,6 +10,10 @@ import { imageProcessingBlocked } from "@/server/system/health";
 
 import { BulkImages } from "./bulk-images";
 
+// H3 (Orden 10, M7): finalizeProductImageUpload (vía finalizePanelUpload) arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = { title: "Subir imágenes en lote" };
 
 type Props = { params: Promise<{ storeHandle: string }> };

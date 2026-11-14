@@ -27,6 +27,10 @@ import { PersonalityForm } from "./personality-form";
 import { linkAccess, loadHomeOptions, loadNavPicks } from "./home-options";
 import { loadSiblingStores } from "../_shared/sibling-stores";
 
+// H3 (Orden 10, M7): finalizeBannerUpload (vía finalizePanelUpload) arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = { title: "Apariencia" };
 
 type Props = {

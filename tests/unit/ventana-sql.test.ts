@@ -45,4 +45,39 @@ describe("guiones de la ventana única", () => {
     );
     expect(contingency).toMatch(/\*\*\* ESCRIBE \*\*\*/);
   });
+
+  it("cada fila de 01 y 02 trae su categoría (H4-A); la cola atrasada pide autorización", () => {
+    const read = (f: string) => readFileSync(join(root, "scripts/ops/ventana", f), "utf8");
+    const rows = (sql: string) => sql.split(/\nunion all\n/).length;
+    const before = read("01-antes.sql");
+    expect(before.match(/'bloqueante'/g)).toHaveLength(rows(before));
+    const after = read("02-despues.sql");
+    expect(
+      after.match(/'(detener|requiere_autorizacion|impide_reabrir)'(?: as categoria)?\s*(?:\n|;)/g),
+    ).toHaveLength(rows(after));
+    expect(after).toMatch(
+      /'trabajos listos sin tomar hace más de 10 min'[\s\S]+?'requiere_autorizacion'\nunion all/,
+    );
+  });
+
+  it("04-aislamiento escribe, lo dice y siempre revierte (H4-B)", () => {
+    const sql = readFileSync(join(root, "scripts/ops/ventana/04-aislamiento.sql"), "utf8");
+    expect(sql).toMatch(/\*\*\* ESCRIBE Y REVIERTE \*\*\*/);
+    expect(sql).toMatch(/^begin;$/m);
+    expect(sql.trimEnd().endsWith("rollback;")).toBe(true);
+    expect(sql).not.toMatch(/^\s*commit\b/im);
+    // Sin ids escritos: las tiendas se buscan por handle.
+    expect(sql).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  });
+
+  it("la reversa de 0400 empieza con su candado, antes de cualquier cambio (H2)", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261113000400_import_batches.reversa.sql"),
+      "utf8",
+    ).replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+  });
 });

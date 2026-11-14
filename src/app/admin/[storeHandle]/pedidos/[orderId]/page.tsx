@@ -31,6 +31,10 @@ import {
 import { SupplierOrderCard } from "../despachos/supplier-order-card";
 import { panelFlagEnabled } from "../../_shared/panel-flags";
 
+// H3 (Orden 10, M7): las acciones de pedidos arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = { title: "Pedido" };
 
 type Props = {

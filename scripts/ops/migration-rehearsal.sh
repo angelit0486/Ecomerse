@@ -50,6 +50,29 @@ CAP_UNTIL=$BASE_VERSION bash scripts/capacity/build.sh "$UP" > /dev/null
 [ "$(q -c 'select public.app_schema_version()')" = "$BASE_VERSION" ] || fail "versión inicial"
 q -c "select capgen.store(1, 2000)" -c "select capgen.orders(1, 400)" > /dev/null
 ok "versión $BASE_VERSION, $(q -c 'select count(*) from public.products') productos, $(q -c 'select count(*) from public.orders') pedidos"
+# Las dos tiendas de prueba de la ventana (runbook §11.5), como se crearían desde la Consola.
+q > /dev/null <<'SQL'
+insert into public.plans (key, name) values ('ventana_qa', 'ventana_qa') on conflict (key) do nothing;
+insert into public.plan_entitlements (plan_id, key, value_int)
+  select id, k, 10 from public.plans, unnest(array['max_stores', 'max_staff', 'max_products']) k where key = 'ventana_qa'
+  on conflict (plan_id, key) do nothing;
+insert into public.organizations (name, slug, country)
+values ('Ventana QA a', 'org-pruva-ventana-a', 'MX'), ('Ventana QA b', 'org-pruva-ventana-b', 'MX');
+insert into public.subscriptions (organization_id, plan_id, status)
+select o.id, p.id, 'active' from public.organizations o, public.plans p
+ where o.slug like 'org-pruva-ventana-%' and p.key = 'ventana_qa';
+insert into public.stores (organization_id, name, handle, currency, country, timezone)
+select o.id, 'Ventana QA', replace(o.slug, 'org-', ''), 'MXN', 'MX', 'America/Mexico_City'
+  from public.organizations o where o.slug like 'org-pruva-ventana-%';
+insert into auth.users (id, email)
+select gen_random_uuid(), replace(o.slug, 'org-', '') || '@ventana.test'
+  from public.organizations o where o.slug like 'org-pruva-ventana-%';
+insert into public.organization_members (organization_id, user_id, role)
+select o.id, u.id, 'org_owner' from public.organizations o
+  join auth.users u on u.email = replace(o.slug, 'org-', '') || '@ventana.test'
+ where o.slug like 'org-pruva-ventana-%';
+SQL
+ok "tiendas de prueba pruva-ventana-a y pruva-ventana-b"
 
 echo "▸ 2. Verificación previa"
 for entry in "${MANIFEST[@]}"; do
@@ -107,6 +130,9 @@ check "0400 (ADR-064): una parte atascada detiene su lote" "select prosrc ~ 'imp
 check "0400: publicación sin trabajo se retoma" "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'publish_runs' and column_name = 'resumes'" "1"
 check "0400: importaciones existentes intactas (ninguna queda en un lote)" "select count(*) from public.import_jobs where batch_id is not null" "0"
 ventana 02-despues.sql
+# H4-B (mensaje 7): aislamiento entre las dos tiendas de prueba; escribe y revierte.
+ventana 04-aislamiento.sql
+check "04-aislamiento no dejó datos" "select count(*) from public.import_batches b join public.stores s on s.id = b.store_id where s.handle like 'pruva-ventana-%'" "0"
 check "tablas de public con RLS forzado" "select count(*) filter (where not (relrowsecurity and relforcerowsecurity)) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition" "0"
 check "anon sin permisos de tabla" "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p', 'v') and has_table_privilege('anon', c.oid, 'select')" "0"
 

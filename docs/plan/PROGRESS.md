@@ -194,6 +194,14 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - Suites: verify 1,381 (con compilación), pgTAP 3,157, integración 454, E2E 162/162 (23.5 min), ensayo de las 10 migraciones 307/307 con la ventana 6+7 en verde, reversa de la 0400 reproducida, audit sin vulnerabilidades.
   - Sin cambios remotos.
 
+- Corrección final de H2 a H5 (Orden 10, mensaje 7, 2026-11-14, D-O10-21 a 25):
+  - **H2 (reversa de la 0400):** candado que la rechaza sin cambios con trabajo en curso; orden seguro con `a730989` desplegada antes; conciliación de lotes; cuatro conceptos separados. Corregido y probado en local.
+  - **H3 (`maxDuration`):** detector por función de todo lo que arranca la cola (26 entradas); 16 páginas más con 60 s; caso negativo y controles de falsos positivos. Corregido y probado en local.
+  - **H4 (ventana):** categorías por fila, aislamiento entre dos tiendas de prueba (36 comprobaciones; escribe y revierte), pausa sin promesas, una sola tabla de tiempos, tiendas `pruva-ventana-a`/`-b`, riesgo del repositorio público. Corregido en documentación y guiones, probado en local y en el ensayo.
+  - **H5 (pg_cron/pg_net):** diagnóstico por etapas, de solo lectura, probado en 10 escenarios con tablas equivalentes. Pendiente de integración remota.
+  - Suites: verify 1,405 (con compilación), pgTAP 3,157, integración 468, E2E 162/162 (28.8 min), ensayo de las 10 migraciones 307/307 con la ventana 7+7+36 en verde, reversa de la 0400 con candado, audit sin vulnerabilidades. 10 migraciones sin cambios; sin migraciones nuevas; cron diario.
+  - Sin cambios remotos.
+
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                       | Efecto                                                      |

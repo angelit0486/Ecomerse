@@ -14,6 +14,10 @@ import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
 import { CheckoutForm } from "./checkout-form";
 
+// H3 (Orden 10, M7): la acción checkout arranca la cola (processQueueSoon) y la
+// pasada corre en esta función hasta 55 s. Ver docs/runbooks/operacion-de-colas.md §2.
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Finalizar compra",
   robots: { index: false, follow: false },
