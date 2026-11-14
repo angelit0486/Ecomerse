@@ -1846,7 +1846,7 @@ Solo desarrollo, pruebas, documentación y commits: nada se desplegó ni se apli
     - categorías y resumen de publicación;
     - aviso en cada parte y lista de lotes sin terminar en Importar.
   - **Error encontrado y corregido:** `system.fail_stuck_imports` marcaba fallida una parte atascada (worker caído sin reintentos), pero su lote se quedaba «aplicando» para siempre. Ahora también detiene el lote con el motivo. La prueba falla antes y pasa después.
-  - **Reversa:** escrita en el encabezado de la migración y ensayada en local; el esquema queda idéntico (`pg_dump -s`) al de las migraciones hasta `0300`.
+  - **Reversa:** escrita en el encabezado de la migración y ensayada en local; el esquema queda idéntico (`pg_dump -s`) al de las migraciones hasta `0300`. _(Corregido en el mensaje 5, M1: ese ensayo usó un guion que no estaba en el repositorio y la reversa **pierde datos**; ver D-O10-18.)_
   - **Pruebas:**
     - pgTAP `147` (70);
     - unitarias del partidor y del lector de partes (17);
@@ -1869,3 +1869,51 @@ Solo desarrollo, pruebas, documentación y commits: nada se desplegó ni se apli
     - El tope se cumple en cada parte, incluso con dos subidas simultáneas (probado).
   - **Entre migrar y desplegar:** el código desplegado hoy (`88edc6d`) no conoce el trabajo `catalog.publish_run` y lo descarta. Una importación con «Publicado: sí» hecha en esa ventana deja sus productos en borrador. La corrida se retoma sola hasta 3 veces (cada 15 min) y, si el código nuevo aún no está, termina fallida con el motivo. Por eso el runbook pide migrar y desplegar en la misma ventana, sin importaciones de por medio.
   - Medido en este contenedor con PostgreSQL 16 local y el stack local (Auth y PostgREST), no en Supabase alojado ni en hardware de producción.
+
+## 39. Cierre de observaciones obligatorias antes de staging (Orden 10, mensaje 5, 2026-11-14)
+
+Dictamen de partida: auditoría independiente del bloque 2, «APROBADO CON OBSERVACIONES» sobre `4c5c332`. Solo cambios locales en `producto/orden-10`: nada se desplegó ni se aplicó fuera de local, y no se cambió nada en Vercel ni en Supabase.
+
+- **D-O10-16. A1: la cola cada minuto, preparada y probada; no activa.**
+  - **Plan de Vercel:** no se pudo leer [NO VERIFICADO]; los indicios apuntan a Hobby (cron diario, PB-24). En Hobby un cron más frecuente hace **fallar el despliegue**, así que `vercel.json` sigue diario. El cambio de una línea para Pro está en `operacion-de-colas.md` §3.
+  - **Opción que no depende del plan:** `pg_cron` + `pg_net` de Supabase con la firma HMAC que el runner ya aceptaba. Plantilla versionada y no aplicada: `scripts/ops/cola/runner-cada-minuto.pg_cron.sql`. Su firma se prueba contra la del servidor (`runner-pg-cron-signature.test.ts`).
+  - **Seguridad de ejecutar seguido:** el diseño ya lo soporta, sin cambios.
+    - `system.claim_jobs` con `SKIP LOCKED`;
+    - candados por lote y por corrida;
+    - deduplicación por llave;
+    - pasadas de 45 s con tope de 55 s en funciones de 60 s.
+  - **Probado con los límites de producción** (`queue-cadence.test.ts`, dos runners por «minuto», sin página abierta):
+    - un lote de 6,000 filas en 2 partes termina solo en 2 minutos (la parte de 4,998 filas tardó 30.9 s);
+    - cada parte se aplica con un trabajo y un intento, sin duplicados;
+    - un trabajo que esperó 24 h se toma en la siguiente pasada y no se da por atascado;
+    - el orden de llegada se respeta entre tiendas.
+  - **Hallazgo de la revisión:** `system.release_job` (versión de `20261015000800`) **no** cambia la hora de un trabajo aplazado. El trabajo conserva su lugar y se retoma primero, así que la espera de otra tienda queda acotada a lo que dura **un** trabajo (≤ 5,000 filas o productos). No es indefinida. **No se crea una migración:** no es imprescindible. El reparto por tienda queda como propuesta para el piloto.
+  - **Corrección a la auditoría:** sí hay alertas de cola (`queue_stalled`, `jobs_stuck`, `jobs_dead` en Consola → Salud), pero sus correos dependen de Resend, que no está configurado.
+  - **Estado:** pendiente de infraestructura. Requiere autorizar una de las dos opciones; hasta entonces, con la página cerrada, un lote avanza una parte al día.
+- **D-O10-17. A2: ventana única, verificable.**
+  - Runbook de despliegue §11: 12 pasos con resultado esperado, contingencia y criterios para detenerse.
+  - Guiones `scripts/ops/ventana/01-antes.sql` y `02-despues.sql`, de solo lectura, con `ok` por fila y la lista de tipos de trabajo sincronizada con el registro (`ventana-sql.test.ts`).
+  - Guion `03-retomar-publicaciones.sql` (escribe; con autorización).
+  - El ensayo de migraciones corre 01 y 02 antes y después.
+  - **Probado:**
+    - el código anterior con la base nueva pasa su E2E (17/17);
+    - el código anterior descarta la publicación y la corrida termina fallida con el motivo, sin publicar nada;
+    - la contingencia la recupera sin duplicar el trabajo, y el código nuevo publica solo lo que cumple (`window-publish-contingency.test.ts`).
+  - **Estado:** corregido en el procedimiento. La ejecución en staging requiere autorización.
+- **D-O10-18. M1: la reversa de la 0400 pierde datos.**
+  - Se versionan el guion (`scripts/ops/reversa/20261113000400_import_batches.reversa.sql`) y su verificador de esquema (`scripts/ops/reversa/comprobar-0400.sh`, reproducido: esquema idéntico al de `0300`, 24,576 líneas).
+  - Se documenta qué se pierde y qué se conserva, y cuándo es aceptable: con autorización, respaldo previo y solo si la recuperación hacia adelante no alcanza.
+  - La recuperación preferida es hacia adelante.
+  - El encabezado de la migración no se toca, para no cambiar su sha256; manda el runbook.
+  - **Estado:** corregido.
+- **D-O10-19. M2: límite de 60 s en todo lo que arranca la cola.**
+  - `maxDuration = 60` en las 5 páginas señaladas: Importar, Fotos en proceso, ficha de producto, Inicio y Pedidos.
+  - También en los 2 webhooks de pago (Mercado Pago y Stripe), que la prueba nueva encontró con el mismo defecto.
+  - `tests/unit/max-duration.test.ts` falla si una página o ruta que arranca la cola no lo declara; se comprobó quitándolo de Pedidos.
+  - 60 s no supera el máximo de ningún plan de Vercel según su documentación. El límite real del proyecto (con o sin Fluid Compute) no se pudo leer [NO VERIFICADO].
+  - **Pendiente fuera de alcance:** las acciones de servidor que arrancan la cola corren con el límite de la página que las llama.
+  - **Estado:** corregido en código.
+- **D-O10-20. B1 y B2 no se tocan.**
+  - B1: dos lotes del mismo archivo creados a la vez. No duplica productos (llaves únicas) y no rompe el aislamiento.
+  - B2: la comprobación del tope por hora al crear el lote no es atómica. El tope efectivo se cumple por parte, y está probado con concurrencia.
+  - No comprometen integridad, aislamiento ni el límite efectivo: esperan al piloto.

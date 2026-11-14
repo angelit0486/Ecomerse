@@ -165,3 +165,18 @@ Aislamiento entre tiendas en este bloque:
 - pgTAP `144` a `147` (otra tienda: `forbidden` o `not_found`; RLS de las tablas nuevas) y `00_schema_security`;
 - integración de 18,000 filas (otra tienda no ve el lote ni sus partes y no puede aplicarlo, cancelarlo ni subirle partes);
 - concurrencia de categorías.
+
+## Orden 10, mensaje 5 (2026-11-14): cierre de observaciones antes de staging
+
+Partida: `4c5c332`, dictamen «APROBADO CON OBSERVACIONES».
+
+| Hallazgo                   | Estado                        | Qué se hizo                                                                                                                                                                                           |
+| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1 (ALTO) cron             | Preparado, no activo          | Plan de Vercel no verificable. `vercel.json` sigue diario, porque en Hobby uno más frecuente rompe el despliegue. Plantilla `pg_cron` con firma probada. Prueba de cadencia con límites de producción |
+| A2 (ALTO) ventana          | Corregido en el procedimiento | Runbook §11 con 12 pasos y criterios para detenerse; guiones `ventana/` probados en el ensayo; E2E del código anterior con la base nueva 17/17; contingencia probada                                  |
+| M1 (MEDIO) reversa 0400    | Corregido                     | Guion y verificador versionados; pérdida de datos documentada                                                                                                                                         |
+| M2 (MEDIO) D8              | Corregido en código           | 5 páginas y 2 webhooks con `maxDuration = 60`; prueba que lo vigila                                                                                                                                   |
+| M3 (MEDIO) evidencia local | No verificable aquí           | Requiere staging                                                                                                                                                                                      |
+| B1–B6, I1–I2               | Sin cambio                    | B1 y B2 esperan al piloto (D-O10-20)                                                                                                                                                                  |
+
+Corrección a la auditoría: las alertas de cola sí existen (Consola → Salud). Lo que falta es el correo (Resend).

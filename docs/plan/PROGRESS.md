@@ -185,6 +185,15 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
 
   Sin desplegar: **10 migraciones** pendientes en staging (migrar y desplegar en la misma ventana) y D1 (tarifas de `demo`) pendiente.
 
+- Cierre de observaciones de la auditoría del bloque 2 (Orden 10, mensaje 5, 2026-11-14, D-O10-16 a 20):
+  - **A1 (cola cada minuto):** preparada, no activa. El plan de Vercel no se pudo verificar; `vercel.json` sigue diario. Plantilla de `pg_cron` versionada y prueba de cadencia con los límites de producción.
+  - **A2 (ventana única):** procedimiento de 12 pasos con guiones de comprobación y contingencia probada; el código desplegado pasa su E2E con la base nueva (17/17).
+  - **M1 (reversa de la 0400):** guion y verificador versionados, con la pérdida de datos documentada.
+  - **M2:** `maxDuration = 60` en 5 páginas y 2 webhooks.
+  - Runbook nuevo `docs/runbooks/operacion-de-colas.md`.
+  - Suites: verify 1,381 unitarias (con compilación); pgTAP, integración, E2E y ensayos en curso al cerrar este registro (resultado en la bitácora).
+  - Sin cambios remotos.
+
 ## Bloqueos (requieren al propietario)
 
 | ID  | Bloqueo                                                                       | Efecto                                                      |

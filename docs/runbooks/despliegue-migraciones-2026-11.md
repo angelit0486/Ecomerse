@@ -1,5 +1,7 @@
 # Paquete de despliegue: 10 migraciones pendientes en staging (Orden 10, O10-05; actualizado en el mensaje 4)
 
+> **Procedimiento vigente: §11, ventana única (Orden 10, mensaje 5).** Las secciones 4 a 6 explican cada comprobación; §11 dice en qué orden se hacen, con qué guiones y cuándo detenerse.
+>
 > **Actualización (2026-11-13, Orden 10, mensaje 4, corrección D7): son 10 migraciones.**
 >
 > - Las 5 de la tabla 2.
@@ -154,8 +156,63 @@ Cada corrección hacia adelante se escribe y se prueba igual que cualquier migra
 
 1. Correr el respaldo (sección 4).
 2. Aplicar las 10 migraciones en staging (sección 5).
-3. Desplegar el código (sección 5, paso 5) en la misma ventana (sección 3), aunque se autorice aparte.
+3. Desplegar el código (sección 5, paso 5) en la misma ventana (sección 3), aunque se autorice aparte. El orden y los criterios están en §11.
 4. Después, corregir en staging las tarifas inactivas de la tienda `demo` (hallazgo D1): volver a guardarlas desde el panel ya desplegado.
+
+## 11. Ventana única: migrar y desplegar juntos (Orden 10, mensaje 5, A2)
+
+**Por qué una sola ventana.** Con las 10 migraciones aplicadas, el código desplegado hoy (`88edc6d`) sigue funcionando: su E2E de importar, pegar, catálogo, tienda, dos tiendas, checkout, envíos y fotos pasó **17 de 17** contra la base con las 10 [MEDIDO, local, 2026-11-14]. Pero **no conoce el trabajo `catalog.publish_run`**:
+
+- una importación con «Publicado: sí» hecha entre migrar y desplegar deja sus productos en borrador;
+- su corrida se retoma sola 3 veces, cada 15 min, y si el código nuevo no ha llegado termina fallida con el motivo;
+- con el código nuevo, `scripts/ops/ventana/03-retomar-publicaciones.sql` la recupera.
+
+Todo eso está probado en `tests/integration/window-publish-contingency.test.ts`. La ventana debe durar menos de 15 minutos y nadie importa durante ella.
+
+**Quién y con qué.**
+
+- Una persona técnica con acceso de dueño al editor SQL de Supabase (`pruva-staging`) y permiso de push a la rama que despliega Vercel (`claude/ecommerce-regulated-platform-41vu1e`).
+- Cada paso necesita la autorización del propietario: respaldo, migraciones y despliegue.
+- Anotar la hora UTC de cada paso.
+
+| Paso | Qué se hace                 | Cómo                                                                                                                                             | Resultado esperado                                                                                                                                                                              | Si no                                                                                  |
+| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1    | Fijar el commit             | `git ls-remote origin refs/heads/producto/orden-10`; debe ser el commit que aprobó la segunda auditoría. Anotar su hash completo                 | El hash anotado; `git merge-base --is-ancestor origin/claude/ecommerce-regulated-platform-41vu1e <hash>` responde 0 (avance rápido)                                                             | **Detenerse**                                                                          |
+| 2    | Respaldo y restauración     | `docs/runbooks/respaldos.md`: `scripts/ops/backup-export.sh` contra staging y `scripts/ops/restore-check.sh` en local                            | Restauración sin errores; metatests de seguridad en verde sobre la copia                                                                                                                        | **Detenerse**                                                                          |
+| 3    | Aviso y comprobación previa | Avisar al propietario que nadie use el panel. Correr `scripts/ops/ventana/01-antes.sql` en el editor SQL                                         | Las 6 filas con `ok = true`: versión `20261110000200`, ninguna de las 10 aplicada, 0 importaciones aplicándose o validándose, 0 trabajos corriendo, 0 tipos de trabajo desconocidos, 0 candados | **Detenerse.** Si hay trabajos corriendo, esperar 5 min y repetir                      |
+| 4    | Sumas de los 10 archivos    | Descargar del commit del paso 1 con `net.http_get` y comparar con la tabla 2 y los anexos A y B (sección 5, paso 1)                              | Las 10 sumas coinciden                                                                                                                                                                          | **Detenerse.** No se aplica ninguna                                                    |
+| 5    | Inicio de la ventana        | Anotar la hora UTC: es `:INICIO_VENTANA`                                                                                                         | —                                                                                                                                                                                               | —                                                                                      |
+| 6    | Aplicar las 10 en orden     | Sección 5, paso 2: un bloque, archivo por archivo, registro en `supabase_migrations.schema_migrations`; luego `notify pgrst, 'reload schema'`    | `select public.app_schema_version()` = `20261113000400`                                                                                                                                         | El bloque se revierte solo: la base queda como estaba. **Detenerse** y anotar el error |
+| 7    | Desplegar enseguida         | `git push origin <hash>:claude/ecommerce-regulated-platform-41vu1e` (avance rápido, sin forzar). Esperar a que Vercel marque el despliegue READY | READY en menos de 10 minutos desde el paso 6                                                                                                                                                    | Ver «Contingencia»                                                                     |
+| 8    | Salud                       | `/api/health` y Consola → Salud                                                                                                                  | `ok`; el panel abre sin «Faltan migraciones»                                                                                                                                                    | Ver «Contingencia»                                                                     |
+| 9    | Comprobación posterior      | `scripts/ops/ventana/02-despues.sql` a los 5 y a los 15 min del paso 7                                                                           | Las 7 filas con `ok = true` a los 15 min                                                                                                                                                        | Ver «Contingencia»                                                                     |
+| 10   | Prueba funcional            | En una tienda de pruebas, importar una hoja de 3 filas con «Publicado: sí» (una con precio 0). Abrir la importación                              | Resumen «2 publicados. 1 pendiente: 1 con precio inválido.» en menos de 2 min                                                                                                                   | Ver «Contingencia»                                                                     |
+| 11   | La cola sigue               | `02-despues.sql` otra vez; Consola → Trabajos                                                                                                    | Sin trabajos listos de más de 10 min ni muertos por tipo desconocido después del paso 7                                                                                                         | Ver «Contingencia»                                                                     |
+| 12   | Cierre                      | Avisar al propietario; anotar horas, hash y resultados en la bitácora. Luego volver a guardar las tarifas de `demo` (D1)                         | —                                                                                                                                                                                               | —                                                                                      |
+
+**Contingencia.**
+
+- **El despliegue falla o no llega a READY:** el código anterior sigue sirviendo con la base nueva (17/17 E2E). No se toca la base.
+  - Se corrige el despliegue y se repite el paso 7.
+  - Mientras tanto, nadie importa con «Publicado: sí».
+  - Si pasaron más de 45 min, después del paso 9 en verde se corre `03-retomar-publicaciones.sql` con `:INICIO_VENTANA` (escribe; necesita autorización).
+- **`02-despues.sql` falla a los 15 min:**
+  - **Tipos desconocidos:** sigue el código anterior; revisar qué despliegue sirve Vercel.
+  - **Trabajos listos de más de 10 min:** el disparador de la cola no corre. Ver `operacion-de-colas.md` §8; con el cron diario esta fila falla, y se acepta solo si se documenta que la cola cada minuto aún no está activa.
+  - **Publicaciones sin trabajo vivo:** correr `03-retomar-publicaciones.sql`.
+- **La prueba funcional falla:** no se abre la tienda a importaciones; se reúnen los logs del runner y la corrida (`publish_runs`) para un diagnóstico.
+- **Daño mayor en datos:** restaurar el respaldo del paso 2 (`respaldos.md`). Se pierde lo escrito desde entonces.
+- **No hay reversa automática.** La reversa de la 10 pierde datos (§9).
+
+**Criterios para detenerse y no continuar.**
+
+- Cualquier fila en `ok = false` en el paso 3.
+- Una suma distinta en el paso 4.
+- Un error en el paso 6.
+- Más de 10 minutos sin despliegue READY en el paso 7: la ventana se cierra con el código anterior sirviendo y se reprograma.
+- Cualquier fila en `ok = false` en el paso 9 que no tenga una explicación de la contingencia.
+
+Ninguno de estos criterios se salta para «terminar la ventana».
 
 ## Anexo A. 6.ª migración: alertas de Inicio (agregada el 2026-11-13)
 
@@ -195,4 +252,11 @@ Cada corrección hacia adelante se escribe y se prueba igual que cualquier migra
   - **7:** volver a crear `public.store_alerts` como en `20261112000100_store_alerts.sql`; borrar el envoltorio `system.purge_retention`, renombrar `purge_retention_base` a `purge_retention` (definida en `20261105000500_data_retention.sql`) y devolverle el permiso de `system_worker`. La tabla `import_photo_checks` puede quedarse: solo guarda resultados de 7 días.
   - **8:** volver a crear `system.import_commit` como en `20261027000200_import_skip_errors.sql`; la columna `new_categories` puede quedarse sin uso.
   - **9:** volver a crear los ganchos de publicación de `20261113000200`, que publicaban dentro de la importación. **No borrar** `publish_runs` si ya tiene filas.
-  - **10:** volver a crear `imports_commit`, `imports_accept_categories` y `fail_stuck_imports` como en sus migraciones anteriores (lo dice su encabezado). La reversa completa de la 10 se ensayó en local y deja el esquema idéntico al de la 9.
+  - **10 (corrección M1, Orden 10, mensaje 5):** la 10 **no es reversible sin pérdida**.
+    - **Recuperación preferida (hacia adelante, sin pérdida):** una migración correctiva que vuelva a crear `imports_commit`, `imports_accept_categories` y `fail_stuck_imports` como estaban, y que haga que las funciones `imports_batch_*` e `imports_create_part` respondan «no disponible». Los lotes y su historia se quedan.
+    - **Reversa completa:** `scripts/ops/reversa/20261113000400_import_batches.reversa.sql`. Solo con autorización, con un respaldo verificado tomado justo antes, y si la recuperación hacia adelante no alcanza.
+    - **Se pierde para siempre:** la tabla `import_batches` (archivo, partes, huellas, estado, motivo y categorías aceptadas de cada lote), qué importación era qué parte (`batch_id`, `part_number`, `part_fingerprint`) y `publish_runs.resumes`.
+    - **Se conserva:** productos, variantes, existencias, categorías y movimientos aplicados; cada importación como importación suelta, con sus filas; las corridas de publicación.
+    - **Antes de la reversa:** el guion cancela las partes sin aplicar, para que no se puedan confirmar sueltas.
+    - **Qué demuestra el verificador:** `bash scripts/ops/reversa/comprobar-0400.sh` (solo local) comprueba que el **esquema** queda idéntico al de `20261113000300`. Lo reprodujo el 2026-11-14: 24,576 líneas con permisos. Eso prueba el esquema; no recupera los datos de arriba.
+    - **Corrección:** el informe del mensaje 4 decía «ensayada»; ese ensayo usó un guion que no estaba en el repositorio. El encabezado de la migración describe la reversa sin la advertencia de pérdida: manda este runbook.
