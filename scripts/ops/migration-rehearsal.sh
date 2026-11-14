@@ -59,6 +59,13 @@ for entry in "${MANIFEST[@]}"; do
 done
 ok "ninguna de las ${#MANIFEST[@]} está aplicada"
 [ "$(q -c "select count(*) from pg_locks where locktype = 'advisory'")" = 0 ] && ok "sin candados de aviso retenidos"
+# Orden 10, mensaje 5 (A2): las mismas comprobaciones que se correrán en staging.
+ventana() {
+  local out; out=$(psql -X -q -At -F '|' -v ON_ERROR_STOP=1 -d "$UP" -f "scripts/ops/ventana/$1")
+  if echo "$out" | awk -F'|' '$4 != "t"' | grep -q .; then echo "$out" | awk -F'|' '$4 != "t"' >&2; fail "$1 con filas en falso"; fi
+  ok "$1: $(echo "$out" | wc -l) comprobaciones en verde"
+}
+ventana 01-antes.sql
 
 echo "▸ 3. Aplicar en orden, con sha256"
 for entry in "${MANIFEST[@]}"; do
@@ -99,6 +106,7 @@ check "0400 (ADR-064): una parte no se aplica suelta" "select prosrc ~ 'batch_pa
 check "0400 (ADR-064): una parte atascada detiene su lote" "select prosrc ~ 'import_batch_after_part' from pg_proc where oid = 'system.fail_stuck_imports()'::regprocedure" "t"
 check "0400: publicación sin trabajo se retoma" "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'publish_runs' and column_name = 'resumes'" "1"
 check "0400: importaciones existentes intactas (ninguna queda en un lote)" "select count(*) from public.import_jobs where batch_id is not null" "0"
+ventana 02-despues.sql
 check "tablas de public con RLS forzado" "select count(*) filter (where not (relrowsecurity and relforcerowsecurity)) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition" "0"
 check "anon sin permisos de tabla" "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r', 'p', 'v') and has_table_privilege('anon', c.oid, 'select')" "0"
 

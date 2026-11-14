@@ -9,6 +9,8 @@ import { mercadoPagoProvider } from "@/server/payments/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// D8 / M2: tras un aviso válido arranca la cola (`processQueueSoon`, hasta 55 s).
+export const maxDuration = 60;
 
 const MAX_BODY_BYTES = 262_144;
 

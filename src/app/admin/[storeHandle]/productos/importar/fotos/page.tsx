@@ -14,6 +14,11 @@ import { AutoRefresh } from "../auto-refresh";
 
 export const metadata: Metadata = { title: "Fotos en proceso" };
 
+// D8 / M2 (Orden 10, mensaje 5): esta página retoma la cola al dibujarse
+// (`resumeQueue` → `after()`, una pasada del runner de hasta 55 s). 60 s, igual
+// que /api/jobs/run; no pasa del máximo de ningún plan de Vercel.
+export const maxDuration = 60;
+
 type Props = { params: Promise<{ storeHandle: string }> };
 
 const SHOWN_REJECTED = 100;
