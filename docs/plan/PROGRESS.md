@@ -191,7 +191,7 @@ Detalle archivado en `docs/plan/archive/PROGRESS-2026-10-28-a-29.md`. Informes: 
   - **M1 (reversa de la 0400):** guion y verificador versionados, con la pérdida de datos documentada.
   - **M2:** `maxDuration = 60` en 5 páginas y 2 webhooks.
   - Runbook nuevo `docs/runbooks/operacion-de-colas.md`.
-  - Suites: verify 1,381 unitarias (con compilación); pgTAP, integración, E2E y ensayos en curso al cerrar este registro (resultado en la bitácora).
+  - Suites: verify 1,381 (con compilación), pgTAP 3,157, integración 454, E2E 162/162 (23.5 min), ensayo de las 10 migraciones 307/307 con la ventana 6+7 en verde, reversa de la 0400 reproducida, audit sin vulnerabilidades.
   - Sin cambios remotos.
 
 ## Bloqueos (requieren al propietario)

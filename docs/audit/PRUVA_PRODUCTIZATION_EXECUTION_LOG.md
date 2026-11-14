@@ -180,3 +180,16 @@ Partida: `4c5c332`, dictamen «APROBADO CON OBSERVACIONES».
 | B1–B6, I1–I2               | Sin cambio                    | B1 y B2 esperan al piloto (D-O10-20)                                                                                                                                                                  |
 
 Corrección a la auditoría: las alertas de cola sí existen (Consola → Salud). Lo que falta es el correo (Resend).
+
+Suites al cierre del mensaje 5 (local, 2026-11-14, sobre `5597a61` + documentos):
+
+| Suite                                      | Resultado                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| verify (lint, formato, tipos, unit, build) | 1,381                                                                     |
+| pgTAP                                      | 3,157 (149 archivos)                                                      |
+| Integración                                | 454 (41 archivos, 3 nuevos)                                               |
+| E2E                                        | 162/162 (23.5 min)                                                        |
+| Ensayo de las 10 migraciones               | 307/307; ventana `01-antes` 6 y `02-despues` 7 en verde; esquema idéntico |
+| Reversa de la 0400 (`comprobar-0400.sh`)   | esquema idéntico al de `0300`                                             |
+| E2E de `88edc6d` contra la base con las 10 | 17/17                                                                     |
+| `pnpm audit --prod`                        | sin vulnerabilidades                                                      |
