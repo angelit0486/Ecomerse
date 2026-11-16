@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  coveredPctLabel,
   marginLabel,
   minusDays,
+  missingCostNote,
+  orderCostLabel,
+  profitCoverage,
   profitNotes,
   profitReportSchema,
   revenueWithCost,
@@ -81,6 +85,59 @@ describe("reporte de rentabilidad", () => {
     });
     expect(parsed.products[0]!.profit).toBeNull();
     expect(profitReportSchema.safeParse({ ...base, profit: 10.5 }).success).toBe(false);
+  });
+
+  it("cobertura completa: toda la venta tiene costo", () => {
+    expect(profitCoverage({ ...base, revenue_without_cost: 0 })).toEqual({
+      state: "full",
+      coveredPct: 100,
+    });
+  });
+
+  it("cobertura nula: hay venta pero ninguna con costo", () => {
+    expect(
+      profitCoverage({ ...base, revenue: 61000, revenue_without_cost: 61000, cost: 0 }),
+    ).toEqual({ state: "none", coveredPct: 0 });
+  });
+
+  it("cobertura parcial: porcentaje entero redondeado hacia abajo", () => {
+    // 56000 / 61000 = 91.8 % → 91
+    expect(profitCoverage(base)).toEqual({ state: "partial", coveredPct: 91 });
+    // 62 / 100 exacto
+    expect(profitCoverage({ ...base, revenue: 10000, revenue_without_cost: 3800 })).toEqual({
+      state: "partial",
+      coveredPct: 62,
+    });
+    // 99.99 % no se redondea a 100: sigue siendo parcial
+    expect(profitCoverage({ ...base, revenue: 10000, revenue_without_cost: 1 })).toEqual({
+      state: "partial",
+      coveredPct: 99,
+    });
+    // menos del 1 % queda en 0, y la etiqueta no dice «0 %»
+    const tiny = profitCoverage({ ...base, revenue: 10000, revenue_without_cost: 9999 });
+    expect(tiny).toEqual({ state: "partial", coveredPct: 0 });
+    expect(coveredPctLabel(tiny.coveredPct)).toBe("menos del 1 %");
+    expect(coveredPctLabel(62)).toBe("62 %");
+  });
+
+  it("venta en cero: sin división entre cero", () => {
+    expect(
+      profitCoverage({ ...base, orders: 0, revenue: 0, revenue_without_cost: 0, cost: 0 }),
+    ).toEqual({ state: "full", coveredPct: 100 });
+  });
+
+  it("columna Costo por pedido: sin costo, incompleto o el monto", () => {
+    expect(orderCostLabel({ cost: 0, profit: null })).toBe("Sin costo");
+    expect(orderCostLabel({ cost: 1200, profit: null })).toBe("Incompleto");
+    expect(orderCostLabel({ cost: 0, profit: 5000 })).toBeNull();
+    expect(orderCostLabel({ cost: 1200, profit: 3800 })).toBeNull();
+  });
+
+  it("el aviso de unidades sin costo se puede sacar de la lista", () => {
+    const r = { ...base, units_without_cost: 3 };
+    expect(missingCostNote(r)).toContain("3 unidades vendidas no tienen costo");
+    expect(missingCostNote(base)).toBeNull();
+    expect(profitNotes(r, { includeMissingCost: false })).toEqual(profitNotes(base));
   });
 
   it("resta días de calendario", () => {

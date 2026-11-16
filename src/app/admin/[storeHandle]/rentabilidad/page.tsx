@@ -4,9 +4,13 @@ import { notFound } from "next/navigation";
 
 import { formatMoney } from "@/lib/money/format";
 import {
+  coveredPctLabel,
   marginLabel,
   minusDays,
+  missingCostNote,
+  orderCostLabel,
   PROFIT_RANGES,
+  profitCoverage,
   profitNotes,
   profitReportSchema,
   revenueWithCost,
@@ -66,6 +70,17 @@ export default async function ProfitPage({
   const base = `/admin/${ctx.store.handle}`;
   const withCost = revenueWithCost(report);
   const canOrders = hasPermission(ctx, "orders.read");
+  const canEditProducts =
+    hasPermission(ctx, "products.read") && hasPermission(ctx, "products.update");
+  const coverage = profitCoverage(report);
+  const missingNote = missingCostNote(report);
+  // Sin costo completo, el aviso va arriba de las tarjetas y no en la lista gris del final.
+  const notes = profitNotes(report, { includeMissingCost: coverage.state === "full" });
+  const productsLink = canEditProducts ? (
+    <Link href={`${base}/productos`} className="font-medium underline">
+      Ir a tus productos para capturar el costo
+    </Link>
+  ) : null;
 
   return (
     <section className="space-y-6">
@@ -96,51 +111,94 @@ export default async function ProfitPage({
         </p>
       ) : (
         <>
+          {coverage.state === "none" ? (
+            <div role="status" className="space-y-2 rounded-md border border-fg p-4 text-sm">
+              <p className="font-semibold">Todavía no se puede calcular tu utilidad.</p>
+              <p>
+                Ningún producto vendido en este periodo tiene su costo capturado. Cuando captures
+                cuánto te cuesta cada producto, aquí verás cuánto ganas.
+              </p>
+              {productsLink && <p>{productsLink}</p>}
+            </div>
+          ) : coverage.state === "partial" && missingNote ? (
+            <div role="status" className="space-y-2 rounded-md border border-fg p-4 text-sm">
+              <p>{missingNote}</p>
+              {productsLink && <p>{productsLink}</p>}
+            </div>
+          ) : null}
+
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div className="rounded-md border border-fg p-4">
-              <dt className="text-[13px] text-fg-muted">Utilidad</dt>
-              <dd className="mt-1 text-xl font-semibold tabular-nums">{m(report.profit)}</dd>
-            </div>
-            <div className="rounded-md border border-border p-4">
-              <dt className="text-[13px] text-fg-muted">Margen</dt>
-              <dd className="mt-1 text-xl font-semibold tabular-nums">
-                {marginLabel(report.profit, withCost)}
-              </dd>
-            </div>
+            {coverage.state !== "none" && (
+              <>
+                <div className="rounded-md border border-fg p-4">
+                  <dt className="text-[13px] text-fg-muted">Utilidad</dt>
+                  <dd className="mt-1 text-xl font-semibold tabular-nums">{m(report.profit)}</dd>
+                  {coverage.state === "partial" && (
+                    <dd className="mt-1 text-[13px] text-fg-muted">
+                      Calculada sobre el {coveredPctLabel(coverage.coveredPct)} de tus ventas; el
+                      resto no tiene costo.
+                    </dd>
+                  )}
+                </div>
+                <div className="rounded-md border border-border p-4">
+                  <dt className="text-[13px] text-fg-muted">Margen</dt>
+                  <dd className="mt-1 text-xl font-semibold tabular-nums">
+                    {marginLabel(report.profit, withCost)}
+                  </dd>
+                  {coverage.state === "partial" && (
+                    <dd className="mt-1 text-[13px] text-fg-muted">Sobre la venta con costo.</dd>
+                  )}
+                </div>
+              </>
+            )}
             <div className="rounded-md border border-border p-4">
               <dt className="text-[13px] text-fg-muted">Venta de productos</dt>
               <dd className="mt-1 text-xl font-semibold tabular-nums">{m(report.revenue)}</dd>
             </div>
-            <div className="rounded-md border border-border p-4">
-              <dt className="text-[13px] text-fg-muted">Costo de lo vendido</dt>
-              <dd className="mt-1 text-xl font-semibold tabular-nums">{m(report.cost)}</dd>
-            </div>
+            {coverage.state !== "none" && (
+              <div className="rounded-md border border-border p-4">
+                <dt className="text-[13px] text-fg-muted">Costo de lo vendido</dt>
+                <dd className="mt-1 text-xl font-semibold tabular-nums">{m(report.cost)}</dd>
+                {coverage.state === "partial" && (
+                  <dd className="mt-1 text-[13px] text-fg-muted">
+                    Solo de lo que tiene costo capturado.
+                  </dd>
+                )}
+              </div>
+            )}
           </dl>
 
           <section aria-labelledby="como" className="space-y-2 text-sm">
             <h2 id="como" className="font-semibold">
               Cómo sale la cuenta
             </h2>
-            <dl className="max-w-md space-y-1 tabular-nums">
-              <div className="flex justify-between gap-4">
-                <dt>Venta de productos con costo (sin impuestos ni envío)</dt>
-                <dd>{m(withCost)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>Menos costo de lo vendido</dt>
-                <dd>−{m(report.cost)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>Menos otros reembolsos</dt>
-                <dd>−{m(report.other_refunds)}</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-t border-border pt-1 font-medium">
-                <dt>Utilidad</dt>
-                <dd>{m(report.profit)}</dd>
-              </div>
-            </dl>
+            {coverage.state === "none" ? (
+              <p>
+                La utilidad es tu venta menos lo que te costó lo vendido. Sin costos capturados
+                todavía no hay cuenta que hacer: tu venta de productos fue de {m(report.revenue)}.
+              </p>
+            ) : (
+              <dl className="max-w-md space-y-1 tabular-nums">
+                <div className="flex justify-between gap-4">
+                  <dt>Venta de productos con costo (sin impuestos ni envío)</dt>
+                  <dd>{m(withCost)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>Menos costo de lo vendido</dt>
+                  <dd>−{m(report.cost)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>Menos otros reembolsos</dt>
+                  <dd>−{m(report.other_refunds)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-border pt-1 font-medium">
+                  <dt>Utilidad</dt>
+                  <dd>{m(report.profit)}</dd>
+                </div>
+              </dl>
+            )}
             <ul className="list-disc space-y-1 pl-5 text-fg-muted">
-              {profitNotes(report).map((note) => (
+              {notes.map((note) => (
                 <li key={note}>{note}</li>
               ))}
             </ul>
@@ -237,7 +295,9 @@ export default async function ProfitPage({
                       </th>
                       <td className="py-2 pr-4">{dayLabel(o.paid_at)}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">{m(o.revenue)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{m(o.cost)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {orderCostLabel(o) ?? m(o.cost)}
+                      </td>
                       <td className="py-2 text-right tabular-nums">
                         {o.profit === null ? "Falta costo" : m(o.profit)}
                       </td>
