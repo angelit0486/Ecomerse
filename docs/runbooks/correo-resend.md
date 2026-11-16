@@ -4,6 +4,8 @@ Misión vendible F1.3. Sin esto **no sale ningún correo** en staging ni en prod
 
 > En todo este documento, `tudominio.com` es un ejemplo: usa el dominio desde el que quieres enviar. Las claves se pegan **solo** en Vercel o en Supabase, nunca en el chat ni en el código.
 
+Arquitectura del código, eventos e idempotencia: `docs/email/ARQUITECTURA.md`.
+
 ## Antes de empezar
 
 - Un dominio propio y acceso al lugar donde administras su DNS (donde lo compraste, o Vercel si el DNS está ahí).
@@ -28,13 +30,9 @@ En otra pestaña abre el panel DNS de tu dominio y, **por cada registro que mues
 
 Esos registros son SPF (quién puede enviar) y DKIM (firma de cada correo).
 
-**DMARC** (recomendado; Resend lo sugiere aparte): agrega un TXT con nombre `_dmarc` y valor:
+**No copies valores de ejemplo de este documento.** SPF, DKIM y cualquier MX o CNAME los muestra Resend para _tu_ dominio; cambian de una cuenta a otra. Pégalos tal cual.
 
-```
-v=DMARC1; p=none; rua=mailto:tu-correo@tudominio.com
-```
-
-`p=none` solo observa; cuando todo funcione unas semanas se puede subir a `p=quarantine`.
+**DMARC** lo indica Resend en la misma pantalla o en su documentación vigente (no lo inventes). Si Resend te da el registro, cópialo. Si te pide configurarlo tú, usa la política que te recomiende su asistente (suele empezar en observación) y un `rua` a un buzón tuyo.
 
 ## 3. Verificar en Resend
 
@@ -50,13 +48,22 @@ Vuelve a Resend → tu dominio → **Verify DNS Records**. Cuando todos digan **
 
 Vercel → proyecto `ecomerse` → **Settings** → **Environment Variables**. Agrega (entorno Preview y Production):
 
-| Nombre           | Valor                                      |
-| ---------------- | ------------------------------------------ |
-| `EMAIL_PROVIDER` | `resend`                                   |
-| `RESEND_API_KEY` | la clave `re_…` del paso 4                 |
-| `EMAIL_FROM`     | `Tu Marca <no-reply@envios.tudominio.com>` |
+| Nombre                     | Entorno                          | Valor                                                                                                                                                   |
+| -------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMAIL_PROVIDER`           | Production                       | `resend`                                                                                                                                                |
+| `EMAIL_PROVIDER`           | Preview                          | `fake` (recomendado) o `resend` solo si también pones la lista de abajo                                                                                 |
+| `EMAIL_PROVIDER`           | Development                      | `mailpit` o `fake`                                                                                                                                      |
+| `RESEND_API_KEY`           | Production (y Preview si aplica) | la clave `re_…` del paso 4. **Nunca** `NEXT_PUBLIC_*`.                                                                                                  |
+| `EMAIL_FROM`               | Production                       | `Tu Marca <no-reply@envios.tudominio.com>` (el dominio tiene que estar verificado en Resend)                                                            |
+| `EMAIL_REPLY_TO`           | Opcional                         | p. ej. `soporte@tudominio.com`. Los correos de tienda siguen usando el contacto de esa tienda.                                                          |
+| `EMAIL_ALLOWED_RECIPIENTS` | Preview / Development con Resend | Obligatoria. Lista `qa@tuempresa.com,@tuempresa.com`. Fuera de esa lista no se envía nada.                                                              |
+| `APP_URL`                  | Todos                            | Origen público del panel (`https://…`). Equivale a lo que otros sistemas llaman `NEXT_PUBLIC_APP_URL`; en PRUVA **no** existe esa variable a propósito. |
+| `RESEND_WEBHOOK_SECRET`    | Opcional, Production             | Secreto del webhook de Resend (rebotes y quejas).                                                                                                       |
+| `SEND_EMAIL_HOOK_SECRET`   | Production (paso 6)              | Secreto del Send Email Hook de Supabase Auth.                                                                                                           |
 
-Guarda y, en **Deployments**, toca los tres puntos del último despliegue → **Redeploy** para que tome las variables.
+Guarda y, en **Deployments**, toca los tres puntos del último despliegue → **Redeploy** para que tome las variables. Un cambio de estas variables no aplica al despliegue ya publicado hasta ese redeploy.
+
+**Importante:** en Preview no uses `EMAIL_PROVIDER=resend` sin `EMAIL_ALLOWED_RECIPIENTS`. Si omites la lista, el arranque falla a propósito (un preview no debe escribir a clientes reales).
 
 ## 6. Códigos de acceso con tu marca (Send Email Hook de Supabase)
 

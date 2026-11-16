@@ -1,6 +1,7 @@
 import type { Sql } from "@/server/db/role-clients";
 
 import { PermanentJobError, type JobHandler, type JobRecord } from "@/server/jobs/types";
+import { log } from "@/server/observability/logger";
 
 import {
   ownerNoticeEmail,
@@ -8,6 +9,7 @@ import {
   supportAccessNoticeEmail,
   type OwnerNoticeKind,
 } from "./templates";
+import { RecipientNotAllowedError } from "./recipient-guard";
 import { PermanentDeliveryError, type EmailChannel } from "./types";
 
 /**
@@ -50,6 +52,12 @@ export async function sendNotification(
       'suppressed', ${deps.channel.provider}, null)`;
     return;
   }
+  // Bitácora sin el destinatario ni el contenido (CLAUDE.md regla 12).
+  const fields = {
+    template: input.template,
+    dedupe_key: input.dedupeKey,
+    provider: deps.channel.provider,
+  };
   try {
     const result = await deps.channel.send(input.message, {
       ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
@@ -57,7 +65,19 @@ export async function sendNotification(
     await deps.db`select system.record_notification_delivery(
       ${input.dedupeKey}, ${input.template}, ${input.message.to}, ${input.organizationId}::uuid,
       'sent', ${deps.channel.provider}, ${result.providerMessageId})`;
+    // «Aceptado por el proveedor», no «entregado»: la entrega real llega por el webhook.
+    log.info("email.accepted", { ...fields, provider_message_id: result.providerMessageId });
   } catch (error) {
+    if (error instanceof RecipientNotAllowedError) {
+      // Vista previa o desarrollo: se omite sin registrar (no suprime ni consume el dedupe).
+      log.warn("email.skipped_not_allowed", fields);
+      return;
+    }
+    log.warn("email.failed", {
+      ...fields,
+      permanent: error instanceof PermanentDeliveryError,
+      reason: error instanceof Error ? error.message : "desconocido",
+    });
     if (error instanceof PermanentDeliveryError) {
       // Rechazo definitivo (dirección inexistente o mal escrita): se suprime para siempre.
       await deps.db`select system.email_suppress(${input.message.to}, 'bounce', 'send_rejected')`.catch(
