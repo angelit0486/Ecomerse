@@ -100,7 +100,7 @@ create function pg_temp.paid(p_store text, p_customer uuid, p_at timestamptz) re
 declare v uuid := tests.order(tests.fx('store_' || p_store));
 begin
   set local session_replication_role = replica;
-  update public.orders set customer_id = p_customer, total = 1000, paid_total = case when p_at is null then 0 else 1000 end, paid_at = p_at,
+  update public.orders set customer_id = p_customer, subtotal = 1000, total = 1000, paid_total = case when p_at is null then 0 else 1000 end, paid_at = p_at,
                            status = case when p_at is null then 'pending_payment' else 'open' end,
                            payment_status = case when p_at is null then 'pending' else 'paid' end
    where id = v;

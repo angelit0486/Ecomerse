@@ -24,9 +24,7 @@ export function addDays(iso: string, n: number): string {
 
 /** Días entre dos fechas de calendario (b − a). */
 export function daysBetween(a: string, b: string): number {
-  return Math.round(
-    (Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000,
-  );
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 }
 
 /** Desfase (ms) de la zona respecto de UTC en el instante dado. */

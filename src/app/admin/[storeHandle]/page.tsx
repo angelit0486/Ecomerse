@@ -248,9 +248,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
     const at = oldest[key];
     if (!at) return null;
     return (
-      <span
-        className={`block text-[13px] ${isStale(at, now) ? "text-warning" : "text-fg-muted"}`}
-      >
+      <span className={`block text-[13px] ${isStale(at, now) ? "text-warning" : "text-fg-muted"}`}>
         El más antiguo: {formatAge(at, now)}
       </span>
     );
@@ -259,23 +257,31 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   // Estado del sistema (plan del panel, A2): configuración que falta y trabajo en cola.
   const canManage = hasPermission(ctx, "store.update");
   const issues = canManage ? configIssues() : [];
-  let waiting: { photos: number; imports: number } | null = null;
-  if (canManage) {
-    const supabase = await createSupabaseServerClient();
-    const [photos, imports] = await Promise.all([
-      supabase
-        .from("media")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .eq("status", "pending")
-        .is("deleted_at", null),
-      supabase
-        .from("import_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .eq("status", "committing"),
-    ]);
-    waiting = { photos: photos.count ?? 0, imports: imports.count ?? 0 };
+  // Orden correctiva 1: un conteo que falla ya no se pinta como «0 en espera»
+  // («Todo funciona»): queda en `error` y la sección lo dice.
+  const waitingState: CardState<{ photos: number; imports: number }> = canManage
+    ? await loadCard("system_waiting", storeId, async () => {
+        const [photos, imports] = await Promise.all([
+          db
+            .from("media")
+            .select("id", { count: "exact", head: true })
+            .eq("store_id", storeId)
+            .eq("status", "pending")
+            .is("deleted_at", null),
+          db
+            .from("import_jobs")
+            .select("id", { count: "exact", head: true })
+            .eq("store_id", storeId)
+            .eq("status", "committing"),
+        ]);
+        if (photos.error) throw photos.error;
+        if (imports.error) throw imports.error;
+        return { photos: photos.count ?? 0, imports: imports.count ?? 0 };
+      })
+    : CARD_FORBIDDEN;
+  const waiting = waitingState.status === "ok" ? waitingState.data : null;
+  const waitingFailed = waitingState.status === "error";
+  if (waiting) {
     // Fotos sin clave de Storage: retomar solo gastaría sus intentos (D-PANEL-10).
     const photosCanRun = !issues.some((i) => i.key === "image_processing");
     if (waiting.imports > 0 || (photosCanRun && waiting.photos > 0)) resumeQueue("home");
@@ -333,9 +339,28 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   ].filter((a) => a.show);
 
   // Estado del sistema: arriba si hay algo que atender, al final si todo funciona.
-  const healthy = !waiting || (issues.length === 0 && waiting.photos + waiting.imports === 0);
+  const healthy =
+    !waitingFailed && (!waiting || (issues.length === 0 && waiting.photos + waiting.imports === 0));
   const systemState =
-    canManage && waiting ? (
+    canManage && waitingFailed ? (
+      <section aria-labelledby="sistema" className="space-y-2">
+        <h2 id="sistema" className="font-semibold">
+          Estado del sistema
+        </h2>
+        {issues.length > 0 ? (
+          <ul className="space-y-2 text-sm">
+            {issues.map((issue) => (
+              <li key={issue.key} className="rounded-md border border-warning p-3">
+                <p className="font-medium">{issue.title}</p>
+                <p className="text-fg-muted">{issue.impact}</p>
+                <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <CardError what="los trabajos en espera (fotos e importaciones)" retryHref={retryHref} />
+      </section>
+    ) : canManage && waiting ? (
       <section aria-labelledby="sistema" className="space-y-2">
         <h2 id="sistema" className="font-semibold">
           Estado del sistema

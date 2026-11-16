@@ -14,10 +14,7 @@ import { addDays, daysBetween } from "@/lib/time/zoned-day";
  * no se pudo cargar (regla de "sin ceros engañosos").
  */
 export type CardState<T> =
-  | { status: "ok"; data: T }
-  | { status: "error" }
-  | { status: "forbidden" }
-  | { status: "off" };
+  { status: "ok"; data: T } | { status: "error" } | { status: "forbidden" } | { status: "off" };
 
 export const cardOk = <T>(data: T): CardState<T> => ({ status: "ok", data });
 export const CARD_ERROR = { status: "error" } as const;
@@ -58,7 +55,12 @@ export function compareValues(current: number, previous: number): Comparison {
   if (previous === 0) return current === 0 ? { kind: "both_zero" } : { kind: "no_previous" };
   const delta = current - previous;
   const percent = previous > 0 ? Math.round((delta / previous) * 1000) / 10 : null;
-  return { kind: "change", delta, percent, direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat" };
+  return {
+    kind: "change",
+    delta,
+    percent,
+    direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
+  };
 }
 
 const pct = (n: number) =>
