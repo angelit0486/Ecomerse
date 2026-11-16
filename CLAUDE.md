@@ -54,3 +54,25 @@ pnpm test:stack         # extremo a extremo contra ese stack
 - Código, SQL e identificadores en inglés; UI, mensajes de error y documentación en español.
 - Errores públicos con `AppError` (formato `{ ok:false, error:{ code, message, request_id } }`).
 - Comentarios solo donde aportan el porqué; referenciar la sección del contrato (`GATE0 §x`).
+
+## Reglas de operación con agentes (Grok CTO → Claude Code)
+
+Estas reglas complementan a las anteriores; ante conflicto gana la más restrictiva.
+
+**Prohibido sin autorización explícita del propietario (y bloqueado en `.claude/settings.json`):**
+
+- `git push`, `git merge`, `git rebase`, `gh pr merge`/`create`, trabajar sobre `main`. El push y el PR los hace el orquestador.
+- Desplegar (`vercel`, `npx vercel`) o cualquier acción contra producción o staging.
+- Migraciones remotas (`supabase db push`, `supabase link`, `pnpm deploy:migrate`, SQL contra bases remotas) o escrituras en Supabase remoto. Solo se permite PostgreSQL/Supabase **local** (`pnpm db:test`, `supabase start`, reset local).
+- Leer, imprimir o editar `.env*`, llaves `service_role` o cualquier secreto. Nunca exponer secretos en código, logs ni commits.
+- `curl`/`wget`, `sudo`, `rm -rf` y comandos destructivos fuera del worktree.
+
+**Tiendas demo: solo lectura.** No modificar las tiendas demo, sus datos ni los seeds/scripts que las afectan (`scripts/dev/demo-seed.mjs` y relacionados). No ejecutar `pnpm demo:seed*`.
+
+**Continuidad:** nunca reconstruir ni reemplazar la arquitectura existente sin justificación y ADR; no eliminar funciones existentes. Mejorar lo que hay, en cambios pequeños y revisables.
+
+**Aislamiento:** mantener RLS forzado y aislamiento multi-tenant. Todo SQL o RPC nuevo va en un archivo nuevo de `supabase/migrations/` (solo local, forward-only) con pruebas pgTAP que demuestren el aislamiento entre al menos dos tiendas.
+
+**Definición de terminado para cada función:** propósito, estados (carga, vacío, error, sin permiso), validaciones, manejo de errores explícito (sin ceros engañosos ni tarjetas que desaparecen), permisos respetados, persistencia real y pruebas (unit; pgTAP si hay SQL; E2E si es factible). UI y textos en español.
+
+**Evidencia:** no declarar nada terminado sin evidencia. Al terminar, reportar archivos cambiados, comandos ejecutados y sus resultados reales (número de pruebas que pasan/fallan), y lo que no se pudo verificar y por qué.
