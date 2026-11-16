@@ -21,9 +21,19 @@
 --    zona de la tienda, igual que `dashboard_kpis`. Exige `analytics.read` y
 --    `customers.read`. Solo conteos: ningún dato personal.
 --
+-- 3. Índices: `dashboard_kpis` (2–3 llamadas por carga de Inicio) y
+--    `dashboard_customer_mix` filtran pedidos por (store_id, paid_at); eso ya
+--    lo cubre `orders_store_paid_idx` (20261104000500, parcial `paid_at is not
+--    null`, con `include (total)`), así que no se duplica. Nuevo: carritos
+--    candidatos por tienda y última actividad (`carts_recovery_due_idx`
+--    de 20261029000700 no lleva store_id).
+--
 -- Solo lee; ninguna tabla nueva. Aditiva (regla 17). Reversa: `drop function`
--- de ambas; ningún dato cambia.
+-- de ambas y `drop index public.carts_store_recoverable_idx`; ningún dato cambia.
 -- =============================================================================
+
+create index carts_store_recoverable_idx on public.carts (store_id, last_activity_at)
+  where status = 'active' and email is not null;
 
 create function public.dashboard_recoverable_carts(p_store_id uuid)
 returns jsonb

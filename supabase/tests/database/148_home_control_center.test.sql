@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(24);
 
 select tests.create_user('owner', 'owner@a.io');
 select tests.create_user('catalog', 'catalog@a.io');
@@ -163,6 +163,17 @@ select tests.logout();
 select ok(not has_function_privilege('anon', 'public.dashboard_customer_mix(uuid, date, date)', 'EXECUTE')
           and not has_function_privilege('anon', 'public.dashboard_recoverable_carts(uuid)', 'EXECUTE'),
           'anon no ejecuta ninguna de las dos');
+
+-- ------------------------------------------------------------ Índices
+-- orders_store_paid_idx viene de 20261104000500; lleva `include (total)`, que
+-- has_index contaría como columna: la forma se comprueba con su definición.
+select has_index('public', 'orders', 'orders_store_paid_idx',
+                 'pedidos por tienda y fecha de pago (lo usan dashboard_kpis y dashboard_customer_mix)');
+select is(pg_get_indexdef('public.orders_store_paid_idx'::regclass),
+          'CREATE INDEX orders_store_paid_idx ON public.orders USING btree (store_id, paid_at) INCLUDE (total) WHERE (paid_at IS NOT NULL)',
+          'orders_store_paid_idx: (store_id, paid_at), parcial por pagados');
+select has_index('public', 'carts', 'carts_store_recoverable_idx', array['store_id', 'last_activity_at'],
+                 'carritos candidatos por tienda y última actividad');
 
 select * from finish();
 rollback;

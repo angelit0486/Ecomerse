@@ -577,17 +577,20 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
               ).map((metric) => (
                 <div key={metric.key} className="rounded-md border border-border p-4">
                   <dt className="text-[13px] text-fg-muted">{metric.label}</dt>
-                  <dd className="mt-1 text-xl font-semibold tabular-nums">
-                    {/* Punto 5: la cifra lleva a los pedidos pagados en el mismo rango. */}
-                    {canOrders && period ? (
-                      <Link href={ordersHref(base, "todos", period)} className="hover:underline">
-                        {metric.value}
-                      </Link>
-                    ) : (
-                      metric.value
-                    )}
-                  </dd>
+                  {/* Un solo dd por dt: la cifra (con su propio elemento) y su
+                      variación contra el periodo anterior. */}
                   <dd>
+                    <span className="mt-1 block text-xl font-semibold tabular-nums">
+                      {/* Punto 5: la cifra lleva a los pedidos pagados en el mismo rango. */}
+                      {canOrders && period ? (
+                        <Link href={ordersHref(base, "todos", period)} className="hover:underline">
+                          <span data-testid="metric-value">{metric.value}</span>
+                          <span className="sr-only">: ver los pedidos pagados del periodo</span>
+                        </Link>
+                      ) : (
+                        <span data-testid="metric-value">{metric.value}</span>
+                      )}
+                    </span>
                     {previous ? (
                       <ComparisonLine comparison={metric.compare(previous)} />
                     ) : (
@@ -603,7 +606,9 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
               ))}
               <div className="rounded-md border border-border p-4">
                 <dt className="text-[13px] text-fg-muted">Reembolsos</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">{m(kpis.refunds)}</dd>
+                <dd className="mt-1 text-xl font-semibold tabular-nums">
+                  <span data-testid="metric-value">{m(kpis.refunds)}</span>
+                </dd>
               </div>
             </dl>
 

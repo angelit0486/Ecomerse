@@ -45,11 +45,17 @@ test.beforeAll(async () => {
 test("inicio: ventas, pedidos, ticket promedio y más vendidos del periodo", async ({ page }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
-  const tile = (label: string) =>
+  // Un dd por dt: la cifra (data-testid="metric-value") y su variación (Orden 1).
+  const card = (label: string) =>
     page.locator("dt", { hasText: label }).locator("xpath=following-sibling::dd");
+  const tile = (label: string) => card(label).getByTestId("metric-value");
   await expect(tile("Ventas netas")).toHaveText("$420.00");
   await expect(tile("Pedidos pagados")).toHaveText("2");
   await expect(tile("Ticket promedio")).toHaveText("$210.00");
+  // Periodo anterior (30 días antes): solo el pedido de hace 40 días, $90.00.
+  await expect(card("Ventas netas")).toContainText("+$330.00 (+366.7 %) vs. periodo anterior");
+  await expect(card("Pedidos pagados")).toContainText("+1 (+100 %) vs. periodo anterior");
+  await expect(card("Ticket promedio")).toContainText("+$120.00 (+133.3 %) vs. periodo anterior");
   await expect(page.getByText("3 por surtir")).toBeVisible(); // estado actual, no del periodo
   const top = page.getByRole("heading", { name: "Más vendidos" }).locator("xpath=..");
   await expect(top.getByRole("listitem").first()).toContainText("1. Llavero");
@@ -59,6 +65,9 @@ test("inicio: ventas, pedidos, ticket promedio y más vendidos del periodo", asy
   await page.getByRole("link", { name: "90 días" }).click();
   await expect(tile("Pedidos pagados")).toHaveText("3");
   await expect(tile("Ventas netas")).toHaveText("$510.00");
+  // Los 90 días anteriores no tienen ventas: texto explicativo, nunca «∞».
+  await expect(card("Ventas netas")).toContainText("Sin ventas en el periodo anterior");
+  await expect(card("Ventas netas")).not.toContainText("∞");
 
   // Avisos del panel: lo que requiere acción, desde cualquier pantalla (F3).
   await page.getByRole("button", { name: /^Avisos/ }).click();
