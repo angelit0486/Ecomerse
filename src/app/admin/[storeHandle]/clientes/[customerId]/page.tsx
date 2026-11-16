@@ -9,6 +9,7 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { notFoundOrThrow } from "../../_shared/not-found-or-throw";
 import { AnonymizeForm, CustomerForm } from "../customer-forms";
 import type { CustomerRow } from "../page";
 
@@ -48,10 +49,11 @@ export default async function CustomerPage({ params }: Props) {
   const ctx = await getStoreContextForPage(storeHandle);
   if (!hasPermission(ctx, "customers.read") || !/^[0-9a-f-]{36}$/.test(customerId)) notFound();
   const supabase = await createSupabaseServerClient();
+  // 404 solo si no existe; otro fallo va a error.tsx (no parece que se borró).
   const c = await callRpc<CustomerDetail>(supabase, "customers_get", {
     p_store_id: ctx.store.id,
     p_customer_id: customerId,
-  }).catch(() => null);
+  }).catch(notFoundOrThrow);
   if (!c) notFound();
   const pii = !c.masked;
   const m = (cents: number) => formatMoney(cents, ctx.store.currency);

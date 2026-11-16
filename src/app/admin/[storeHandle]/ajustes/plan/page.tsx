@@ -6,11 +6,18 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { canSeePlan, loadPlanUsage } from "@/server/billing/plan-usage";
 import { stripeBilling } from "@/server/billing/stripe-billing";
 import { callRpc } from "@/server/db/rpc";
+import { log } from "@/server/observability/logger";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { PlanUsage } from "@/ui/billing/plan-usage";
 
 import { CardPaymentForm, type PayablePlan } from "./card-payment-form";
 import { ChangePlanForm } from "./change-plan-form";
+import {
+  canPayOnline,
+  loadPaymentOptions,
+  PAYMENT_OPTIONS_ERROR_TEXT,
+  PLAN_UNAVAILABLE_TEXT,
+} from "./plan-state";
 
 export const metadata: Metadata = { title: "Plan y uso" };
 
@@ -20,6 +27,11 @@ type Props = {
 };
 
 const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" });
+
+interface ChangeOptions {
+  current: { plan_key: string | null; interval: string; status: string };
+  plans: PayablePlan[];
+}
 
 /**
  * Plan y uso (F10-T02): qué incluye el plan de la organización y cuánto se usa
@@ -36,8 +48,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
     return (
       <section className="max-w-2xl space-y-4">
         <h1 className="text-xl font-semibold">Plan y uso</h1>
-        <p className="rounded-md border border-border p-4 text-sm">
-          Esta sección estará disponible en cuanto la plataforma termine su actualización.
+        <p role="status" className="rounded-md border border-border p-4 text-sm">
+          {PLAN_UNAVAILABLE_TEXT}
         </p>
       </section>
     );
@@ -48,22 +60,26 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   // Pagar con tarjeta (ADR-044): solo la dueña de la organización y con Stripe
   // configurado. La base no ofrece planes si ya hay una suscripción de Stripe vigente.
-  const payWithCard =
-    ctx.orgRole === "org_owner" && stripeBilling() !== null
-      ? await callRpc<PayablePlan[]>(await createSupabaseServerClient(), "org_billing_plans", {
-          p_store_id: ctx.store.id,
-        }).catch(() => [])
-      : [];
   // Cambiar plan (ADR-044, prorrateo): solo con una suscripción de Stripe vigente.
-  const changeOptions =
-    ctx.orgRole === "org_owner" && stripeBilling() !== null
-      ? await callRpc<{
-          current: { plan_key: string | null; interval: string; status: string };
-          plans: PayablePlan[];
-        } | null>(await createSupabaseServerClient(), "org_billing_change_options", {
-          p_store_id: ctx.store.id,
-        }).catch(() => null)
-      : null;
+  // Si una lectura falla se avisa (antes las secciones desaparecían sin explicación).
+  const args = { p_store_id: ctx.store.id };
+  const payment = await loadPaymentOptions(
+    canPayOnline(ctx.orgRole, stripeBilling() !== null),
+    async () =>
+      callRpc<PayablePlan[]>(await createSupabaseServerClient(), "org_billing_plans", args),
+    async () =>
+      callRpc<ChangeOptions | null>(
+        await createSupabaseServerClient(),
+        "org_billing_change_options",
+        args,
+      ),
+    (error) =>
+      log.warn("plan.payment_options_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      }),
+  );
+  const payWithCard = payment.plans;
+  const changeOptions = payment.change;
   return (
     <section className="max-w-2xl space-y-6">
       <header className="space-y-1">
@@ -101,6 +117,11 @@ export default async function PlanPage({ params, searchParams }: Props) {
         <p role="status" className="rounded-md border border-success p-3 text-sm">
           Recibimos tu pago en Stripe. Tu plan se actualiza en cuanto Stripe lo confirma (suele
           tardar unos segundos).
+        </p>
+      ) : null}
+      {payment.failed ? (
+        <p role="alert" className="rounded-md border border-warning p-3 text-sm">
+          {PAYMENT_OPTIONS_ERROR_TEXT}
         </p>
       ) : null}
       {payWithCard.length > 0 ? (

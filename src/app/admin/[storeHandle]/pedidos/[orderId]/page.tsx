@@ -167,7 +167,11 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       .eq("order_id", orderId)
       .order("created_at"),
   ]);
-  for (const r of [items, events, shipments, shipmentItems, refunds]) if (r.error) throw r.error;
+  // Pagos incluidos: si su lectura falla, no deben desaparecer en silencio la
+  // sección de pagos ni la confirmación del pago manual.
+  for (const r of [items, events, payments, shipments, shipmentItems, refunds]) {
+    if (r.error) throw r.error;
+  }
   const [supplierOrders, canPrint, returnsOn] = await Promise.all([
     getOrderSupplierOrders(supabase, ctx.store.id, orderId),
     // Nota de empaque (interruptor order_printing).
@@ -175,7 +179,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     // Devoluciones (ADR-061, interruptor returns).
     panelFlagEnabled(supabase, ctx.store.id, "returns"),
   ]);
-  const { data: lastReturn } = returnsOn
+  const { data: lastReturn, error: lastReturnError } = returnsOn
     ? await supabase
         .from("return_requests")
         .select("id, status")
@@ -184,7 +188,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         .order("requested_at", { ascending: false })
         .limit(1)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (lastReturnError) throw lastReturnError;
   const m = (cents: number) => formatMoney(cents, order.currency as string);
   // Fechas en el calendario de la tienda (el servidor corre en UTC).
   const when = new Intl.DateTimeFormat("es-MX", {

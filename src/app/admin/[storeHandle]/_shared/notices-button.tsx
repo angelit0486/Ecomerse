@@ -4,17 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@/ui/primitives/button";
 import { Skeleton } from "@/ui/primitives/skeleton";
 
 import { panelNotices, type PanelNotice } from "./notice-actions";
 
 /**
  * Botón «Avisos» con lo que requiere acción (misión panel, F3). Se actualiza al
- * cambiar de pantalla; sin avisos dice que no hay pendientes.
+ * cambiar de pantalla; sin avisos dice que no hay pendientes. Si no se pudieron
+ * revisar lo dice y ofrece reintentar: un fallo nunca se muestra como «Todo al día».
  */
 export function NoticesButton({ storeHandle }: { storeHandle: string }) {
   const pathname = usePathname();
-  const [notices, setNotices] = useState<PanelNotice[] | null>(null);
+  // null: revisando; "error": no se pudieron revisar.
+  const [notices, setNotices] = useState<PanelNotice[] | "error" | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -22,14 +26,19 @@ export function NoticesButton({ storeHandle }: { storeHandle: string }) {
   useEffect(() => {
     let alive = true;
     panelNotices(storeHandle)
-      .catch(() => [])
+      .catch(() => null)
       .then((list) => {
-        if (alive) setNotices(list);
+        if (alive) setNotices(list ?? "error");
       });
     return () => {
       alive = false;
     };
-  }, [storeHandle, pathname]);
+  }, [storeHandle, pathname, attempt]);
+
+  function retry() {
+    setNotices(null);
+    setAttempt((n) => n + 1);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -50,8 +59,9 @@ export function NoticesButton({ storeHandle }: { storeHandle: string }) {
     };
   }, [open]);
 
-  const total = notices?.length ?? 0;
-  const urgent = notices?.some((n) => n.urgent) ?? false;
+  const list = Array.isArray(notices) ? notices : [];
+  const total = list.length;
+  const urgent = list.some((n) => n.urgent);
 
   return (
     <div ref={ref} className="relative shrink-0">
@@ -87,11 +97,18 @@ export function NoticesButton({ storeHandle }: { storeHandle: string }) {
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
             </div>
+          ) : notices === "error" ? (
+            <div role="alert" className="space-y-2 px-2 py-2 text-sm">
+              <p>No pudimos revisar tus avisos. Vuelve a intentarlo.</p>
+              <Button type="button" variant="secondary" size="sm" onClick={retry}>
+                Reintentar
+              </Button>
+            </div>
           ) : total === 0 ? (
             <p className="px-2 py-2 text-sm">No hay nada pendiente. Todo al día.</p>
           ) : (
             <ul aria-label="Avisos del panel">
-              {notices.map((n) => (
+              {list.map((n) => (
                 <li key={n.key}>
                   <Link
                     href={n.href}

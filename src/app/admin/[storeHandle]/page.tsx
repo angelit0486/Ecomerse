@@ -2,12 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formatMoney } from "@/lib/money/format";
-import {
-  buildStoreAlerts,
-  LEVEL_LABEL,
-  storeAlertsSchema,
-  type StoreAlert,
-} from "@/lib/store-alerts/alerts";
+import { buildStoreAlerts, storeAlertsSchema, type StoreAlert } from "@/lib/store-alerts/alerts";
 import { hasPermission } from "@/server/auth/context";
 import { resumeQueue } from "@/server/jobs/run-now";
 import { configIssues } from "@/server/system/health";
@@ -17,6 +12,15 @@ import { log } from "@/server/observability/logger";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { panelFlagEnabled } from "./_shared/panel-flags";
+import {
+  launchCopy,
+  launchPendingFrom,
+  pendingReviewsFrom,
+  QUEUE_ERROR_TEXT,
+  QUEUE_OK_TEXT,
+  queueWaitingFrom,
+} from "./home-state";
+import { StoreAlertsPanel } from "./store-alerts-panel";
 
 type Props = {
   params: Promise<{ storeHandle: string }>;
@@ -117,22 +121,25 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
           });
   }
   // Opiniones esperando revisión (ADR-029): ninguna se publica sola.
+  // Si la consulta falla queda null: la tarjeta no aparece (nunca un 0 falso).
   let pendingReviews: number | null = null;
   if (kpis && hasPermission(ctx, "products.read")) {
     const supabase = await createSupabaseServerClient();
-    const { count } = await supabase
-      .from("product_reviews")
-      .select("id", { count: "exact", head: true })
-      .eq("store_id", ctx.store.id)
-      .eq("status", "pending");
-    pendingReviews = count ?? 0;
+    pendingReviews = pendingReviewsFrom(
+      await supabase
+        .from("product_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ctx.store.id)
+        .eq("status", "pending"),
+    );
   }
   const max = kpis ? Math.max(1, ...kpis.series.map((s) => s.sales)) : 1;
 
   // Estado del sistema (plan del panel, A2): configuración que falta y trabajo en cola.
   const canManage = hasPermission(ctx, "store.update");
   const issues = canManage ? configIssues() : [];
-  let waiting: { photos: number; imports: number } | null = null;
+  // "error": no se pudo contar (no se afirma «Todo funciona»).
+  let waiting: { photos: number; imports: number } | "error" | null = null;
   if (canManage) {
     const supabase = await createSupabaseServerClient();
     const [photos, imports] = await Promise.all([
@@ -148,15 +155,16 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         .eq("store_id", ctx.store.id)
         .eq("status", "committing"),
     ]);
-    waiting = { photos: photos.count ?? 0, imports: imports.count ?? 0 };
+    waiting = queueWaitingFrom(photos, imports);
     // Fotos sin clave de Storage: retomar solo gastaría sus intentos (D-PANEL-10).
     const photosCanRun = !issues.some((i) => i.key === "image_processing");
-    if (waiting.imports > 0 || (photosCanRun && waiting.photos > 0)) resumeQueue("home");
+    const queued = waiting !== "error" && waiting.imports + (photosCanRun ? waiting.photos : 0);
+    if (queued) resumeQueue("home");
   }
 
   // Alertas accionables (Orden 10, O10-02): con «Salud de tu tienda» encendida.
-  // Si la consulta falla, Inicio sigue funcionando sin ellas.
-  let alerts: StoreAlert[] | null = null;
+  // Si la consulta falla, Inicio sigue funcionando y la sección lo dice.
+  let alerts: StoreAlert[] | "error" | null = null;
   if (hasPermission(ctx, "products.read")) {
     const supabase = await createSupabaseServerClient();
     if (await panelFlagEnabled(supabase, ctx.store.id, "store_health")) {
@@ -169,17 +177,21 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         log.warn("home.store_alerts_failed", {
           error: error instanceof Error ? error.message : String(error),
         });
+        alerts = "error";
       }
     }
   }
 
   // Tienda sin publicar: cuántos pendientes le faltan (misión panel, F3).
-  let launchPending: number | null = null;
+  // "error": no se pudo revisar (nunca «Ya tiene todo lo necesario» por un fallo).
+  let launchPending: number | "error" | null = null;
   if (ctx.store.status === "draft" && canManage) {
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id });
-    launchPending = ((data as { issues?: unknown[] } | null)?.issues ?? []).length;
+    launchPending = launchPendingFrom(
+      await supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
+    );
   }
+  const launch = launchPending === null ? null : launchCopy(launchPending);
   const quickActions = [
     {
       href: `${base}/productos/nuevo`,
@@ -204,17 +216,26 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   ].filter((a) => a.show);
 
   // Estado del sistema: arriba si hay algo que atender, al final si todo funciona.
-  const healthy = !waiting || (issues.length === 0 && waiting.photos + waiting.imports === 0);
+  // Un conteo fallido no es «todo funciona»: se avisa arriba.
+  const counted = waiting && waiting !== "error" ? waiting : null;
+  const allClear =
+    counted !== null && issues.length === 0 && counted.photos + counted.imports === 0;
+  const healthy = !waiting || allClear;
   const systemState =
     canManage && waiting ? (
       <section aria-labelledby="sistema" className="space-y-2">
         <h2 id="sistema" className="font-semibold">
           Estado del sistema
         </h2>
-        {issues.length === 0 && waiting.photos + waiting.imports === 0 ? (
-          <p className="text-sm text-success">Todo funciona: no hay trabajos en espera.</p>
+        {allClear ? (
+          <p className="text-sm text-success">{QUEUE_OK_TEXT}</p>
         ) : (
           <ul className="space-y-2 text-sm">
+            {waiting === "error" ? (
+              <li role="status" className="rounded-md border border-warning p-3">
+                {QUEUE_ERROR_TEXT}
+              </li>
+            ) : null}
             {issues.map((issue) => (
               <li key={issue.key} className="rounded-md border border-warning p-3">
                 <p className="font-medium">{issue.title}</p>
@@ -222,26 +243,26 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
               </li>
             ))}
-            {waiting.photos > 0 ? (
+            {counted && counted.photos > 0 ? (
               <li className="rounded-md border border-border p-3">
                 <Link href={`${base}/productos/importar/fotos`} className="underline">
-                  {waiting.photos === 1
+                  {counted.photos === 1
                     ? "1 foto en proceso"
-                    : `${waiting.photos.toLocaleString("es-MX")} fotos en proceso`}
+                    : `${counted.photos.toLocaleString("es-MX")} fotos en proceso`}
                 </Link>
                 {issues.some((i) => i.key === "image_processing")
                   ? ". Esperan a que se configure la optimización de imágenes."
-                  : waiting.photos > 20
+                  : counted.photos > 20
                     ? ". Abre el avance para que sigan sin esperar."
                     : ". Se terminan en unos segundos."}
               </li>
             ) : null}
-            {waiting.imports > 0 ? (
+            {counted && counted.imports > 0 ? (
               <li className="rounded-md border border-border p-3">
                 <Link href={`${base}/productos/importar`} className="underline">
-                  {waiting.imports === 1
+                  {counted.imports === 1
                     ? "1 importación en curso"
-                    : `${waiting.imports} importaciones en curso`}
+                    : `${counted.imports} importaciones en curso`}
                 </Link>
               </li>
             ) : null}
@@ -260,25 +281,25 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             ? "Soporte (solo lectura)"
             : (ROLE[ctx.orgRole ?? ""] ?? "Equipo de la tienda")}
         </p>
-        {launchPending !== null ? (
+        {launch ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent p-4">
             <p className="text-sm">
-              <strong>Tu tienda aún no está publicada.</strong>{" "}
-              {launchPending === 0
-                ? "Ya tiene todo lo necesario."
-                : launchPending === 1
-                  ? "Le falta 1 paso."
-                  : `Le faltan ${launchPending} pasos.`}
+              <strong>Tu tienda aún no está publicada.</strong> {launch.message}
             </p>
             <Link
               href={`${base}/configuracion`}
               className="inline-flex h-11 items-center rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"
             >
-              {launchPending === 0 ? "Publicar mi tienda" : "Terminar de configurar"}
+              {launch.cta}
             </Link>
           </div>
         ) : null}
-        {alerts ? <StoreAlertsPanel alerts={alerts} /> : null}
+        {alerts ? (
+          <StoreAlertsPanel
+            alerts={alerts}
+            healthHref={hasPermission(ctx, "store.read") ? `${base}/salud` : null}
+          />
+        ) : null}
         {quickActions.length > 0 ? (
           <nav aria-label="Acciones rápidas" className="flex flex-wrap gap-2">
             {quickActions.map((a) => (
@@ -508,53 +529,6 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         </>
       ) : null}
       {systemState && healthy ? systemState : null}
-    </section>
-  );
-}
-
-const LEVEL_STYLE: Record<StoreAlert["level"], string> = {
-  alta: "border-danger",
-  media: "border-warning",
-  baja: "border-border",
-};
-
-/** «Qué atender hoy»: cada alerta con su conteo, su urgencia y la lista para resolverla. */
-function StoreAlertsPanel({ alerts }: { alerts: StoreAlert[] }) {
-  return (
-    <section aria-labelledby="alertas" className="space-y-2">
-      <h2 id="alertas" className="font-semibold">
-        Qué atender hoy
-      </h2>
-      {alerts.length === 0 ? (
-        <p className="text-sm text-success">
-          Todo en orden: tus productos publicados tienen foto, categoría y existencias.
-        </p>
-      ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {alerts.map((alert) => (
-            <li
-              key={alert.key}
-              className={`space-y-1 rounded-md border p-3 text-sm ${LEVEL_STYLE[alert.level]}`}
-            >
-              <p className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-medium">
-                  {alert.title}:{" "}
-                  <span className="tabular-nums">{alert.count.toLocaleString("es-MX")}</span>
-                </span>
-                <span className="text-[13px] text-fg-muted">{LEVEL_LABEL[alert.level]}</span>
-              </p>
-              <p className="text-fg-muted">{alert.description}</p>
-              <p>{alert.action}</p>
-              <Link
-                href={alert.href}
-                className="inline-flex min-h-11 items-center font-medium underline"
-              >
-                Ver {alert.count === 1 ? "el producto" : "los productos"}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }

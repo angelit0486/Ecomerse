@@ -21,13 +21,16 @@ export default async function TeamPage({ params }: Props) {
   const members = await callRpc<MemberRow[]>(supabase, "access_list_store_members", {
     p_store_id: ctx.store.id,
   });
-  const { data: roles } = await supabase
+  // Si una lectura falla va a error.tsx: ni «No hay invitaciones pendientes»
+  // falso ni un selector de rol vacío al invitar.
+  const { data: roles, error: rolesError } = await supabase
     .from("roles")
     .select("id, key, name, rank")
     .is("organization_id", null)
     .order("rank", { ascending: false });
+  if (rolesError) throw rolesError;
   const canManage = hasPermission(ctx, "staff.manage");
-  const { data: invitations } = canManage
+  const { data: invitations, error: invitationsError } = canManage
     ? await supabase
         .from("organization_invitations")
         .select("id, email, store_role_id, expires_at")
@@ -36,7 +39,8 @@ export default async function TeamPage({ params }: Props) {
         .is("revoked_at", null)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
-    : { data: [] };
+    : { data: [], error: null };
+  if (invitationsError) throw invitationsError;
 
   // Solo org_owner/org_admin asignan store_admin; un store_admin asigna roles de
   // rango menor (GATE0 §8.3). La base lo vuelve a comprobar en cada acción.

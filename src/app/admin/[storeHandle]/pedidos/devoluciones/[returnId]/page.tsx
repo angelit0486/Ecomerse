@@ -12,6 +12,7 @@ import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { notFoundOrThrow } from "../../../_shared/not-found-or-throw";
 import { panelFlagEnabled } from "../../../_shared/panel-flags";
 import { CloseReturnForm, DecideForms, ReceiveForm, RefundReturnForm } from "../forms";
 
@@ -85,8 +86,9 @@ export default async function ReturnPage({ params, searchParams }: Props) {
       p_store_id: ctx.store.id,
       p_return_id: returnId,
     });
-  } catch {
-    notFound();
+  } catch (error) {
+    // 404 solo si no existe; otro fallo va a error.tsx (no parece que se borró).
+    notFoundOrThrow(error);
   }
   const { aviso } = await searchParams;
   const base = `/admin/${ctx.store.handle}/pedidos`;

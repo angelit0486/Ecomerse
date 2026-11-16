@@ -35,21 +35,24 @@ export default async function InventoryHistoryPage({ params }: Props) {
   if (!hasPermission(ctx, "inventory.read") || !/^[0-9a-f-]{36}$/.test(variantId)) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const { data: variant } = await supabase
+  // Un fallo de lectura va a error.tsx: no se confunde con «no existe» ni «sin movimientos».
+  const { data: variant, error: variantError } = await supabase
     .from("product_variants")
     .select("id, sku, option_signature, products(title)")
     .eq("store_id", ctx.store.id)
     .eq("id", variantId)
     .maybeSingle();
-  const { data: level } = await supabase
+  if (variantError) throw variantError;
+  const { data: level, error: levelError } = await supabase
     .from("inventory_levels")
     .select("id, on_hand, reserved, available")
     .eq("store_id", ctx.store.id)
     .eq("variant_id", variantId)
     .maybeSingle();
+  if (levelError) throw levelError;
   if (!variant || !level) notFound();
 
-  const { data: movements } = await supabase
+  const { data: movements, error: movementsError } = await supabase
     .from("inventory_movements")
     .select(
       "id, type, on_hand_delta, reserved_delta, on_hand_after, reserved_after, reason, reference_type, actor_type, created_at",
@@ -58,6 +61,7 @@ export default async function InventoryHistoryPage({ params }: Props) {
     .eq("level_id", level.id)
     .order("created_at", { ascending: false })
     .limit(100);
+  if (movementsError) throw movementsError;
 
   const product = (variant.products as unknown as { title: string } | null)?.title ?? "";
   const label = [product, variantLabel(variant.option_signature)].filter(Boolean).join(" · ");

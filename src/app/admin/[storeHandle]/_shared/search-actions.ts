@@ -27,8 +27,13 @@ const PER_GROUP = 5;
  * en un solo lugar. Es una acción (POST), no una URL: lo escrito puede ser un
  * email y no debe quedar en registros ni en el historial (APP-L8). Cada grupo
  * respeta su permiso y la base filtra por tienda (RLS).
+ *
+ * `null` si la búsqueda falló: el buscador lo dice en lugar de «Sin resultados».
  */
-export async function searchPanel(storeHandle: string, rawQuery: string): Promise<SearchResults> {
+export async function searchPanel(
+  storeHandle: string,
+  rawQuery: string,
+): Promise<SearchResults | null> {
   const q = rawQuery.trim().slice(0, 100);
   if (q.length < 2) return EMPTY;
   try {
@@ -47,7 +52,10 @@ export async function searchPanel(storeHandle: string, rawQuery: string): Promis
             .ilike("display_number", `%${digits}%`)
             .order("placed_at", { ascending: false })
             .limit(PER_GROUP)
-            .then(({ data }) => data ?? [])
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return data ?? [];
+            })
         : Promise.resolve([]),
       // Buscar por email o nombre es ver datos personales: requiere ese permiso.
       hasPermission(ctx, "customers.read") && hasPermission(ctx, "customers.pii.read")
@@ -77,6 +85,6 @@ export async function searchPanel(storeHandle: string, rawQuery: string): Promis
     };
   } catch (error) {
     reportActionError("panel.search", error);
-    return EMPTY;
+    return null;
   }
 }
