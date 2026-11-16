@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatMoney } from "@/lib/money/format";
+import { parsePaidRange } from "@/lib/orders/paid-range";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { hasPermission } from "@/server/auth/context";
 import { resumeQueue } from "@/server/jobs/run-now";
@@ -35,6 +36,14 @@ const FILTERS: Record<string, string> = {
   cancelados: "Cancelados",
 };
 const PAGE = 50;
+
+const dayLabel = (iso: string) =>
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
 /** Listado de pedidos (lectura, F6): sin datos de contacto (D-F6-01). */
 export default async function OrdersPage({ params, searchParams }: Props) {
@@ -74,6 +83,10 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   if (filter === "pendientes") query = query.eq("status", "pending_payment");
   if (filter === "pagados") query = query.eq("status", "open");
   if (filter === "cancelados") query = query.eq("status", "cancelled");
+  // Pagados en un rango de días de la tienda (enlaces de Inicio, Orden 1):
+  // el mismo criterio que cuenta dashboard_kpis.
+  const paid = parsePaidRange(sp, ctx.store.timezone);
+  if (paid) query = query.gte("paid_at", paid.start).lt("paid_at", paid.end);
   if (before) {
     const op = oldestFirst ? "gt" : "lt";
     query = query.or(
@@ -171,9 +184,22 @@ export default async function OrdersPage({ params, searchParams }: Props) {
             </Link>
           ))}
         </nav>
+        {paid ? (
+          <p className="text-sm text-fg-muted">
+            Solo pedidos pagados del {dayLabel(paid.from)} al {dayLabel(paid.to)}.{" "}
+            <Link href={`${base}?estado=${filter}`} className="underline">
+              Quitar fechas
+            </Link>
+          </p>
+        ) : null}
       </header>
       {rows.length === 0 ? (
-        filter === "por-surtir" ? (
+        paid ? (
+          <EmptyState
+            title="Sin pedidos pagados en esas fechas"
+            description="Quita las fechas para ver todos los pedidos."
+          />
+        ) : filter === "por-surtir" ? (
           <EmptyState
             title="Nada por surtir"
             description="Todos los pedidos pagados ya salieron. Los nuevos aparecerán aquí."
@@ -198,7 +224,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
       )}
       {next ? (
         <Link
-          href={`${base}?estado=${filter}&antes=${encodeURIComponent(next)}`}
+          href={`${base}?estado=${filter}${paid ? `&desde=${paid.from}&hasta=${paid.to}` : ""}&antes=${encodeURIComponent(next)}`}
           className="inline-flex min-h-11 items-center text-sm underline"
         >
           {oldestFirst ? "Más pedidos" : "Pedidos anteriores"}
