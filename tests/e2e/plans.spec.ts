@@ -54,14 +54,16 @@ test("la plataforma crea un plan, lo asigna y registra el pago", async ({ page }
   await expectNoSeriousA11yViolations(page);
 
   await page.goto(`/platform/organizaciones/${tenant.orgId}`);
-  await page.getByLabel("Qué hacer").selectOption("change_plan");
+  // La página también tiene «Cuota de arranque» (ADR-068) con su propio «Qué hacer».
+  const change = page.getByRole("region", { name: "Registrar un cambio" });
+  await change.getByLabel("Qué hacer").selectOption("change_plan");
   await page.getByRole("combobox", { name: "Plan", exact: true }).selectOption(planKey);
   await page.getByLabel("Motivo").first().fill("Contrató el plan Crece");
   await page.getByRole("button", { name: "Aplicar" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Plan cambiado." })).toBeVisible();
 
   await page.reload();
-  await page.getByLabel("Qué hacer").selectOption("activate");
+  await change.getByLabel("Qué hacer").selectOption("activate");
   await page.getByLabel("Días").fill("30");
   await page.getByLabel("Motivo").first().fill("Pagó noviembre por transferencia");
   await page.getByRole("button", { name: "Aplicar" }).click();
