@@ -21,6 +21,8 @@ Alcance: todos los route handlers y archivos `"use server"` (excepto `src/server
 | 3   | Baja      | `src/app/_store/[storeId]/buscar/sugerencias/route.ts` | Sugerencias públicas sin límite ni caché compartida; un cliente puede ocupar el pool de la tienda (3 conexiones). Propuesta: límite por `clientIpHash()` en la función SQL o regla de rate limit en Vercel WAF.                                                                                 |
 | 4   | Baja      | `src/app/api/health/ready/route.ts`                    | Readiness público consulta la base en cada hit. Propuesta: cachear el último resultado ~5 s en memoria o exigir `HEALTHCHECK_TOKEN` (dejar `/api/health` público).                                                                                                                              |
 
+**Estado del hallazgo 1:** Corregido en la rama fix/totp-rate-limit (migración 20261117000300, pendiente de aprobación)
+
 ## Sospechas descartadas (verificadas)
 
 Reset de MFA con service role (lo aprueba `access_authorize_mfa_reset`), cliente admin de Storage (solo el worker de media, rutas validadas), `storeHandle/storeId/organizationId` del cliente (re-chequeados con `getStoreContext` y `has_store_permission`), parámetro `[storeId]` del storefront (firmado por el proxy), `?ruta=` de vista previa, redirecciones abiertas, OAuth de Mercado Pago, webhooks (HMAC en tiempo constante, ventana ±5 min, cuerpo limitado), autenticación del runner, baja de un clic, pagos falsos (rechazados en producción), fugas en errores y PII en logs (redacción por campo y patrón).

@@ -43,6 +43,15 @@ async function takeLoginAttempt(email: string): Promise<boolean> {
   return attempt?.ok === true;
 }
 
+/** Un intento del código TOTP: 5 por usuario, 5 por factor y 30 por IP cada 15 min. */
+async function takeMfaAttempt(userId: string, factorId: string): Promise<boolean> {
+  const [attempt] = await workerDb()<{ ok: boolean }[]>`
+    select system.take_staff_mfa_attempt(${userId}::uuid, ${factorId}::uuid, ${await clientIpHash()}) as ok`;
+  return attempt?.ok === true;
+}
+
+const TOO_MANY_MFA_ATTEMPTS = "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
+
 export async function requestLoginCode(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = emailSchema.safeParse(
     String(formData.get("email") ?? "")
@@ -220,16 +229,23 @@ export async function verifyTotp(_: FormState, formData: FormData): Promise<Form
   const factorId = String(formData.get("factorId") ?? "");
   const enrolling = formData.get("enrolling") === "1";
   const code = codeSchema.safeParse(String(formData.get("code") ?? "").replace(/\s/g, ""));
-  if (!code.success || !/^[0-9a-f-]{36}$/.test(factorId)) {
+  // UUID estricto: el factor llega al cast ::uuid del límite de intentos.
+  if (!code.success || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(factorId)) {
     return { error: "El código tiene 6 dígitos." };
   }
+  // Límite propio por usuario, factor e IP (auditoría 2026-11-17, hallazgo 1): el
+  // de Supabase Auth es por la IP del servidor, compartida por todo el staff.
+  if (!(await takeMfaAttempt(session.userId, factorId))) return { error: TOO_MANY_MFA_ATTEMPTS };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code: code.data });
   if (error) {
     await recordSecurityEvent("auth.mfa_failed", { userId: session.userId });
     return {
-      error: "El código no es correcto. Revisa la hora de tu teléfono e inténtalo de nuevo.",
+      error:
+        error.status === 429
+          ? TOO_MANY_MFA_ATTEMPTS
+          : "El código no es correcto. Revisa la hora de tu teléfono e inténtalo de nuevo.",
     };
   }
   await recordSecurityEvent(enrolling ? "auth.mfa_enrolled" : "auth.mfa_verified", {

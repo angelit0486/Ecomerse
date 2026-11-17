@@ -80,4 +80,22 @@ describe("guiones de la ventana única", () => {
     expect(guard).toBeGreaterThan(0);
     expect(guard).toBeLessThan(firstChange);
   });
+  it("la reversa de 20261117000300 (límite del 2FA) empieza con su candado y vuelve a 0400", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261117000300_staff_mfa_attempts.reversa.sql"),
+      "utf8",
+    ).replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(sql).toMatch(/<> '20261117000300'/);
+    expect(sql).toMatch(/select '20261113000400'::text/);
+    // Sin pérdida: solo borra la función nueva; ni tablas, ni columnas, ni datos.
+    expect(sql.match(/\bdrop\b[^;]*;/gi)).toEqual([
+      "drop function system.take_staff_mfa_attempt(uuid, uuid, text);",
+    ]);
+    expect(sql).not.toMatch(/\btruncate\b/i);
+    expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
+  });
 });
