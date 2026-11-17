@@ -1,5 +1,10 @@
+import { clientIpHash } from "@/server/storefront/cart";
 import { mediaUrl, searchSuggestions } from "@/server/storefront/catalog";
 import { storefrontForRoute } from "@/server/storefront/context";
+import {
+  createSuggestionsGuard,
+  SUGGESTIONS_WINDOW_MS,
+} from "@/server/storefront/suggestions-guard";
 
 import { money } from "../../_components/format";
 import type { SuggestionItem } from "../../_components/search-box";
@@ -11,12 +16,36 @@ import type { SuggestionItem } from "../../_components/search-box";
  */
 type Params = { params: Promise<{ storeId: string }> };
 
+/** Por instancia: límite por IP y una sola consulta en curso (ver suggestions-guard). */
+const guard = createSuggestionsGuard();
+
 export async function GET(request: Request, { params }: Params): Promise<Response> {
-  const resolved = await storefrontForRoute((await params).storeId, request.headers);
-  if (!resolved) return new Response("Not found", { status: 404 });
+  const turn = guard.take(await clientIpHash());
+  if (!turn) {
+    // El buscador trata cualquier respuesta no-ok como «sin sugerencias».
+    return Response.json(
+      { items: [] },
+      {
+        status: 429,
+        headers: {
+          "cache-control": "no-store",
+          "retry-after": String(Math.ceil(SUGGESTIONS_WINDOW_MS / 1000)),
+          "x-robots-tag": "noindex",
+        },
+      },
+    );
+  }
+  let resolved: Awaited<ReturnType<typeof storefrontForRoute>>;
+  let s: Awaited<ReturnType<typeof searchSuggestions>>;
+  try {
+    resolved = await storefrontForRoute((await params).storeId, request.headers);
+    if (!resolved) return new Response("Not found", { status: 404 });
+    const q = new URL(request.url).searchParams.get("q") ?? "";
+    s = await searchSuggestions(resolved.store.id, q);
+  } finally {
+    turn.release();
+  }
   const { store, preview } = resolved;
-  const q = new URL(request.url).searchParams.get("q") ?? "";
-  const s = await searchSuggestions(store.id, q);
   const items: SuggestionItem[] = [
     ...s.products.map((p) => ({
       kind: "product" as const,
