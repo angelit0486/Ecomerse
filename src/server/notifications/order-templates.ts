@@ -33,6 +33,13 @@ export interface OrderEmailData {
     shipping_address?: ShippingAddress | null;
     /** Días estimados de entrega de la tarifa elegida (copia del pedido). */
     estimated_days?: { min: number | null; max: number | null } | null;
+    /** Tipo de la forma de envío copiada al pedido; «pickup» = «Recoger en tienda». */
+    shipping_type?: string | null;
+    /**
+     * Dónde y cuándo recoger: el contacto que la tienda declaró en su tema. La base
+     * lo manda solo si el pedido es de retiro y hay dirección (nunca se inventa).
+     */
+    pickup?: { address: string; hours: string | null } | null;
   };
   items: {
     title: string;
@@ -77,15 +84,66 @@ export function addressLines(a: ShippingAddress | null | undefined): string[] {
   return [a.recipient_name, street, place].filter((l): l is string => Boolean(l && l.trim()));
 }
 
+/** «Recoger en tienda»: no hay envío, así que ni «Enviaremos a» ni entrega estimada. */
+function isPickup(d: OrderEmailData): boolean {
+  return d.order.shipping_type === "pickup";
+}
+
+/** Líneas de un texto de la tienda (la dirección puede venir en varias líneas). */
+function textLines(s: string | null | undefined): string[] {
+  return (s ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Dónde y cuándo recoger. Sin dirección declarada por la tienda no se dice nada
+ * (misma regla que la página del pedido, `orderPickupInfo`); el horario solo
+ * acompaña a la dirección.
+ */
+function pickupHtml(d: OrderEmailData, label: string): string {
+  const address = textLines(d.order.pickup?.address);
+  if (address.length === 0) return "";
+  const hours = textLines(d.order.pickup?.hours);
+  return `<p style="margin-top:16px"><strong>${escapeHtml(label)}</strong><br>${address.map(escapeHtml).join("<br>")}${
+    hours.length ? `<br><strong>Horario:</strong> ${hours.map(escapeHtml).join("<br>")}` : ""
+  }</p>`;
+}
+
+function pickupText(d: OrderEmailData, label: string): string[] {
+  const address = textLines(d.order.pickup?.address);
+  if (address.length === 0) return [];
+  const hours = textLines(d.order.pickup?.hours);
+  return ["", label, ...address, ...(hours.length ? [`Horario: ${hours.join(" / ")}`] : [])];
+}
+
 function addressHtml(d: OrderEmailData): string {
+  if (isPickup(d)) return pickupHtml(d, "Recoges en:");
   const lines = addressLines(d.order.shipping_address);
   if (lines.length === 0) return "";
   return `<p style="margin-top:16px"><strong>Enviaremos a:</strong><br>${lines.map(escapeHtml).join("<br>")}</p>`;
 }
 
 function addressText(d: OrderEmailData): string[] {
+  if (isPickup(d)) return pickupText(d, "Recoges en:");
   const lines = addressLines(d.order.shipping_address);
   return lines.length ? ["", "Enviaremos a:", ...lines] : [];
+}
+
+/** Para la tienda: que el cliente recoge (y lo que se le dijo), en lugar de a dónde enviar. */
+function staffAddressHtml(d: OrderEmailData): string {
+  if (!isPickup(d)) return addressHtml(d);
+  return (
+    pickupHtml(d, "El cliente recoge en tienda:") ||
+    `<p style="margin-top:16px"><strong>El cliente recoge en tienda.</strong></p>`
+  );
+}
+
+function staffAddressText(d: OrderEmailData): string[] {
+  if (!isPickup(d)) return addressText(d);
+  const lines = pickupText(d, "El cliente recoge en tienda:");
+  return lines.length ? lines : ["", "El cliente recoge en tienda."];
 }
 
 const METHOD_LABEL: Record<string, string> = {
@@ -200,13 +258,17 @@ const color = (d: OrderEmailData) =>
 export function orderReceivedEmail(d: OrderEmailData, to: string): EmailMessage {
   const subject = `Recibimos tu pedido ${d.order.display_number}`;
   const instructions = d.payment?.instructions ?? "";
+  // Este correo nunca llevó la dirección de envío; en un retiro dice dónde recoger.
+  const pickup = isPickup(d)
+    ? { html: addressHtml(d), text: addressText(d) }
+    : { html: "", text: [] as string[] };
   return message(
     d,
     to,
     subject,
     `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Recibimos tu pedido <strong>${escapeHtml(d.order.display_number)}</strong>. Queda pendiente de pago${
       d.payment ? ` (${escapeHtml(d.payment.display_name)})` : ""
-    }.</p>${instructions ? `<p style="white-space:pre-line;background:#f5f5f5;padding:12px;border-radius:6px">${escapeHtml(instructions)}</p>` : ""}${itemsHtml(d)}${
+    }.</p>${instructions ? `<p style="white-space:pre-line;background:#f5f5f5;padding:12px;border-radius:6px">${escapeHtml(instructions)}</p>` : ""}${itemsHtml(d)}${pickup.html}${
       d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""
     }`,
     [
@@ -216,6 +278,7 @@ export function orderReceivedEmail(d: OrderEmailData, to: string): EmailMessage 
       instructions,
       "",
       itemsText(d),
+      ...pickup.text,
       d.orderUrl ? `Tu pedido: ${d.orderUrl}` : "",
     ],
   );
@@ -265,7 +328,8 @@ export function orderPendingPaymentEmail(
 export function orderConfirmationEmail(d: OrderEmailData, to: string): EmailMessage {
   const subject = `Confirmamos tu pedido ${d.order.display_number}`;
   const method = paymentMethodLabel(d.payment);
-  const eta = d.order.shipping_address ? deliveryEstimate(d) : null;
+  // Un retiro en tienda no tiene «entrega después del envío».
+  const eta = d.order.shipping_address && !isPickup(d) ? deliveryEstimate(d) : null;
   const facts = [
     method ? `<strong>Pagaste con:</strong> ${escapeHtml(method)}` : "",
     eta ? `<strong>Entrega estimada:</strong> ${escapeHtml(eta)} después del envío` : "",
@@ -442,8 +506,8 @@ export type StaffEmailKind =
 
 /**
  * Staff: pedido nuevo, pagado o que requiere atención. Lleva los mismos datos que
- * el comprador (productos, pago sin datos sensibles y dirección para enviar) y el
- * enlace al panel; nunca el teléfono.
+ * el comprador (productos, pago sin datos sensibles y dirección para enviar, o que
+ * el cliente recoge en tienda) y el enlace al panel; nunca el teléfono.
  */
 export function staffOrderEmail(
   d: OrderEmailData,
@@ -487,7 +551,7 @@ export function staffOrderEmail(
       subject,
       `<p>${escapeHtml(body)}</p><p>Cliente: ${escapeHtml(d.order.customer_name)}</p>${itemsHtml(d)}${
         method ? `<p><strong>Pago:</strong> ${escapeHtml(method)}</p>` : ""
-      }${addressHtml(d)}${button("Abrir en el panel", panelUrl, "#1a1a1a")}`,
+      }${staffAddressHtml(d)}${button("Abrir en el panel", panelUrl, "#1a1a1a")}`,
     ),
     text: [
       body,
@@ -495,7 +559,7 @@ export function staffOrderEmail(
       "",
       itemsText(d),
       method ? `Pago: ${method}` : "",
-      ...addressText(d),
+      ...staffAddressText(d),
       `Panel: ${panelUrl}`,
     ].join("\n"),
   };

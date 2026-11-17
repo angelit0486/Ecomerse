@@ -80,4 +80,29 @@ describe("guiones de la ventana única", () => {
     expect(guard).toBeGreaterThan(0);
     expect(guard).toBeLessThan(firstChange);
   });
+
+  it("la reversa de 20261117000400 (retiro en el correo) empieza con su candado y vuelve a 0400", () => {
+    const raw = readFileSync(
+      join(root, "scripts/ops/reversa/20261117000400_order_email_pickup.reversa.sql"),
+      "utf8",
+    );
+    const sql = raw.replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(sql).toMatch(/<> '20261117000400'/);
+    expect(sql).toMatch(/select '20261113000400'::text/);
+    // Sin pérdida: no borra nada ni toca datos; solo reemplaza la función y la versión.
+    expect(sql).not.toMatch(/\b(drop|truncate|alter)\b/i);
+    expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update|insert)\b/i);
+    // La función restaurada es EXACTAMENTE la de 20261110000100 (comentarios incluidos).
+    const fn = (s: string) =>
+      /create or replace function system\.order_notification\([\s\S]*?\n\$\$;/.exec(s)?.[0];
+    const previous = fn(
+      readFileSync(join(root, "supabase/migrations/20261110000100_guest_link_expiry.sql"), "utf8"),
+    );
+    expect(previous).toBeDefined();
+    expect(fn(raw)).toBe(previous);
+  });
 });

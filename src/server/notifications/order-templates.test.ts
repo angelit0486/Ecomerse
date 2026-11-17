@@ -7,6 +7,7 @@ import {
   orderPendingPaymentEmail,
   orderDeliveredEmail,
   orderLinkEmail,
+  orderReceivedEmail,
   orderShippedEmail,
   paymentMethodLabel,
   staffOrderEmail,
@@ -291,6 +292,133 @@ describe("confirmación completa (misión pagos, 2026-10-29)", () => {
     expect(m.html).toContain("2 × Proteína");
     expect(m.text).toContain("Panel: https://panel.test/admin/t/pedidos/1");
     expect(m.html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("recoger en tienda (shipping_type = pickup)", () => {
+  // Pickup también pide la dirección del comprador en el checkout: el pedido la trae.
+  const buyer = {
+    recipient_name: "Ana",
+    line1: "Calle del comprador 9",
+    line2: null,
+    postal_code: "82000",
+    city: "Mazatlán",
+    region: "Sinaloa",
+    country: "MX",
+  };
+  const pickup: OrderEmailData = {
+    ...base,
+    order: {
+      ...base.order,
+      shipping_name: "Recoger en tienda",
+      shipping_type: "pickup",
+      estimated_days: { min: 1, max: 3 },
+      shipping_address: buyer,
+      pickup: { address: "Av. Juárez 10 <b>\nCentro, Puebla", hours: "L-V 9 a 18 & S 10 a 14" },
+    },
+    payment: { display_name: "Transferencia", instructions: "CLABE 123", method: null },
+  };
+  const noAddress: OrderEmailData = { ...pickup, order: { ...pickup.order, pickup: null } };
+  const panel = "https://panel.test/admin/t/pedidos/1";
+
+  it("confirmación: «Recoges en» con dirección multilínea y horario, sin envío ni entrega estimada", () => {
+    const m = orderConfirmationEmail(pickup, "c@x.test");
+    expect(m.html).toContain(
+      "<strong>Recoges en:</strong><br>Av. Juárez 10 &lt;b&gt;<br>Centro, Puebla<br><strong>Horario:</strong> L-V 9 a 18 &amp; S 10 a 14",
+    );
+    expect(m.text).toContain(
+      "Recoges en:\nAv. Juárez 10 <b>\nCentro, Puebla\nHorario: L-V 9 a 18 & S 10 a 14",
+    );
+    for (const body of [m.html, m.text]) {
+      expect(body).not.toContain("Enviaremos a");
+      expect(body).not.toContain("Entrega estimada");
+      expect(body).not.toContain("Calle del comprador 9");
+    }
+    expect(m.html).not.toContain("<b>\n");
+    expect(m.html).not.toContain("Av. Juárez 10 <b>");
+  });
+
+  it("recibido (pago manual) y pendiente de pago también dicen dónde recoger", () => {
+    for (const m of [
+      orderReceivedEmail(pickup, "c@x.test"),
+      orderPendingPaymentEmail(pickup, "c@x.test", "ticket"),
+    ]) {
+      expect(m.html).toContain("<strong>Recoges en:</strong><br>Av. Juárez 10 &lt;b&gt;");
+      expect(m.text).toContain("Recoges en:\nAv. Juárez 10 <b>\nCentro, Puebla");
+      expect(m.text).toContain("Horario: L-V 9 a 18 & S 10 a 14");
+      expect(m.text).not.toContain("Enviaremos a");
+      expect(m.text).not.toContain("Calle del comprador 9");
+    }
+  });
+
+  it("sin horario: solo la dirección", () => {
+    const m = orderConfirmationEmail(
+      { ...pickup, order: { ...pickup.order, pickup: { address: "Calle 1", hours: null } } },
+      "c@x.test",
+    );
+    expect(m.html).toContain("<strong>Recoges en:</strong><br>Calle 1</p>");
+    expect(m.text).not.toContain("Horario");
+  });
+
+  it("sin dirección declarada: solo se omite lo falso, no se inventa nada", () => {
+    for (const m of [
+      orderConfirmationEmail(noAddress, "c@x.test"),
+      orderReceivedEmail(noAddress, "c@x.test"),
+      orderPendingPaymentEmail(noAddress, "c@x.test", "ticket"),
+    ]) {
+      for (const body of [m.html, m.text]) {
+        expect(body).not.toContain("Enviaremos a");
+        expect(body).not.toContain("Entrega estimada");
+        expect(body).not.toContain("Recoges en");
+        expect(body).not.toContain("Horario");
+        expect(body).not.toContain("Calle del comprador 9");
+      }
+    }
+    // Una dirección de puros espacios cuenta como vacía.
+    const blank = orderConfirmationEmail(
+      { ...pickup, order: { ...pickup.order, pickup: { address: " \n ", hours: "L-V" } } },
+      "c@x.test",
+    );
+    expect(blank.html).not.toContain("Recoges en");
+    expect(blank.html).not.toContain("Horario");
+  });
+
+  it("staff: «El cliente recoge en tienda», con lo que se le dijo y sin «Enviaremos a»", () => {
+    const m = staffOrderEmail(pickup, "s@x.test", "paid", panel);
+    expect(m.html).toContain(
+      "<strong>El cliente recoge en tienda:</strong><br>Av. Juárez 10 &lt;b&gt;<br>Centro, Puebla",
+    );
+    expect(m.text).toContain("El cliente recoge en tienda:\nAv. Juárez 10 <b>");
+    expect(m.text).not.toContain("Enviaremos a");
+    expect(m.text).not.toContain("Calle del comprador 9");
+    const bare = staffOrderEmail(noAddress, "s@x.test", "new", panel);
+    expect(bare.html).toContain("<strong>El cliente recoge en tienda.</strong>");
+    expect(bare.text).toContain("El cliente recoge en tienda.");
+    expect(bare.text).not.toContain("Enviaremos a");
+    expect(bare.text).not.toContain("Calle del comprador 9");
+  });
+
+  it("envío normal: sin cambios (aunque la tienda haya declarado dirección)", () => {
+    const shipped: OrderEmailData = {
+      ...pickup,
+      order: { ...pickup.order, shipping_name: "Estándar", shipping_type: "flat" },
+    };
+    const m = orderConfirmationEmail(shipped, "c@x.test");
+    expect(m.html).toContain("Enviaremos a:");
+    expect(m.html).toContain("Calle del comprador 9");
+    expect(m.html).toContain("<strong>Entrega estimada:</strong> Llega en 1 a 3 días");
+    expect(m.html).not.toContain("Recoges en");
+    expect(orderReceivedEmail(shipped, "c@x.test").text).not.toContain("Recoges en");
+    expect(orderReceivedEmail(shipped, "c@x.test").text).not.toContain("Enviaremos a");
+    expect(staffOrderEmail(shipped, "s@x.test", "paid", panel).html).toContain("Enviaremos a:");
+    expect(staffOrderEmail(shipped, "s@x.test", "paid", panel).html).not.toContain("recoge");
+    // Sin shipping_type (correos encolados antes de la migración): como siempre.
+    const legacy = orderConfirmationEmail(
+      { ...shipped, order: { ...shipped.order, shipping_type: undefined, pickup: undefined } },
+      "c@x.test",
+    );
+    expect(legacy.html).toContain("Enviaremos a:");
+    expect(legacy.html).toContain("Entrega estimada:");
   });
 });
 
