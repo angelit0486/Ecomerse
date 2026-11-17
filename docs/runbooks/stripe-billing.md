@@ -22,6 +22,10 @@ Estado: probado con un **Stripe simulado** (pruebas unitarias, de integración y
   - No se permite bajar a un plan que no alcanza para sus tiendas, productos o equipo, ni cambiar con un cobro pendiente.
   - El plan cambia en PRUVA cuando llega el webhook `customer.subscription.updated`.
 - El cobro manual de la consola sigue disponible para quien pague por transferencia.
+- **Cuota de arranque (ADR-068):** si el plan tiene cuota y la organización nunca pagó con tarjeta ni la tiene marcada como
+  saldada, el Checkout agrega una partida de pago único; Stripe la cobra solo en la primera factura.
+- **IVA (ADR-068):** con `STRIPE_BILLING_TAX_RATE_ID`, cada partida (plan, cuota y cambio de plan) lleva esa tasa y Stripe suma
+  el IVA; «Plan y uso» dice «más IVA».
 
 ## Pasos del propietario (desde la computadora)
 
@@ -37,11 +41,15 @@ Estado: probado con un **Stripe simulado** (pruebas unitarias, de integración y
 
    Después vuelve a desplegar.
 
-5. En **Consola → Planes**, carga los precios de cada plan («Precios de …»).
-6. **Prueba:** con una organización de prueba, paga con la tarjeta de prueba que publica Stripe y confirma en Plan y uso que el plan quedó «Activa». Anota aquí la fecha y el resultado.
-7. Para cobrar de verdad, repite los pasos 2 a 4 en **modo live** (`sk_live_…` y su propio webhook).
+5. **IVA (ADR-068):** en Stripe → Tasas de impuesto crea «IVA 16 %» **no incluido en el precio** y pon su id (`txr_…`) en
+   `STRIPE_BILLING_TAX_RATE_ID` en Vercel. Sin ella, Stripe cobra el precio sin sumar IVA.
+6. En **Consola → Planes**, carga los precios de cada plan («Precios de …»), incluida la cuota de arranque. Cifras aprobadas y
+   pasos en `docs/runbooks/precios-aprobados-2026-11.md`.
+7. **Prueba:** con una organización de prueba, paga con la tarjeta de prueba que publica Stripe y confirma en Plan y uso que el plan quedó «Activa». Anota aquí la fecha y el resultado.
+8. Para cobrar de verdad, repite los pasos 2 a 5 en **modo live** (`sk_live_…` y su propio webhook).
 
 ## Pendientes de decisión (ADR-044)
 
 - ~~Cambio de plan a mitad de periodo~~: **prorratear** (propietario, 2026-10-29); hecho, migración `20261029000800`.
-- **Precios y días de prueba de cada plan.**
+- ~~Precios y días de prueba de cada plan~~: **aprobados el 2026-11-17 (ADR-068)**: Tienda $699/mes o $6,990/año, Tienda Plus
+  $1,299/mes o $12,990/año, más IVA, cuota de arranque $2,900 / $5,900 y 14 días de prueba sin tarjeta.

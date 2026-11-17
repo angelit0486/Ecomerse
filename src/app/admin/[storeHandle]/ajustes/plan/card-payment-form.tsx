@@ -12,6 +12,8 @@ export interface PayablePlan {
   currency: string;
   price_monthly: number | null;
   price_annual: number | null;
+  /** Cuota única de arranque que cobraría el primer pago (ADR-068); 0 o ausente = ninguna. */
+  setup_fee?: number;
 }
 
 /** Elegir plan y periodo y pagar en Stripe (ADR-044). El precio mostrado es el de la base. */
@@ -19,10 +21,13 @@ export function CardPaymentForm({
   storeHandle,
   plans,
   currentPlan,
+  plusTax = false,
 }: {
   storeHandle: string;
   plans: PayablePlan[];
   currentPlan: string | null;
+  /** La plataforma configuró el IVA «no incluido» en Stripe: los precios son más IVA. */
+  plusTax?: boolean;
 }) {
   const [state, action, pending] = useSafeActionState(startCardPayment.bind(null, storeHandle), {});
   const firstKey = plans.find((p) => p.key === currentPlan)?.key ?? plans[0]?.key;
@@ -53,6 +58,14 @@ export function CardPaymentForm({
                 <span>
                   <span className="font-medium">{p.name}</span> · {formatMoney(price!, p.currency)}{" "}
                   {label}
+                  {plusTax ? " más IVA" : ""}
+                  {p.setup_fee && p.setup_fee > 0 ? (
+                    <span className="block text-[13px] text-fg-muted">
+                      El primer pago incluye la cuota única de arranque de{" "}
+                      {formatMoney(p.setup_fee, p.currency)}
+                      {plusTax ? " más IVA" : ""}.
+                    </span>
+                  ) : null}
                 </span>
               </label>
             )),
@@ -69,6 +82,7 @@ export function CardPaymentForm({
       <p className="text-[13px] text-fg-muted">
         El pago se hace en Stripe; PRUVA no ve ni guarda los datos de tu tarjeta. Tu plan se activa
         en cuanto Stripe confirma el cobro.
+        {plusTax ? " Stripe suma el IVA (16 %) y te muestra el total antes de pagar." : ""}
       </p>
     </form>
   );

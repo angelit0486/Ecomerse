@@ -80,4 +80,25 @@ describe("guiones de la ventana única", () => {
     expect(guard).toBeGreaterThan(0);
     expect(guard).toBeLessThan(firstChange);
   });
+  it("la reversa de 20261117000500 (cuota de arranque) empieza con su candado y vuelve a 0400", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261117000500_plan_setup_fee.reversa.sql"),
+      "utf8",
+    );
+    const code = sql.replace(/--.*$/gm, "");
+    const guard = code.indexOf("reversa_bloqueada");
+    const firstChange = code.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(code).toMatch(/<> '20261117000500'/);
+    expect(code).toMatch(/select '20261113000400'::text/);
+    // Con pérdida menor y dicha: solo las dos columnas nuevas, nunca datos de otras tablas.
+    expect(sql).toMatch(/CON PÉRDIDA MENOR/);
+    expect(code.match(/drop column \w+/g)).toEqual([
+      "drop column setup_fee_settled_at",
+      "drop column setup_fee",
+    ]);
+    expect(code).not.toMatch(/\b(truncate|drop table)\b/i);
+    expect(code.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
+  });
 });

@@ -9,9 +9,10 @@
 #   3. Verificación posterior de cada una (consultas del runbook).
 #   4. El esquema resultante debe ser idéntico al de una base creada desde cero.
 #   5. Un archivo alterado se rechaza por sha256 antes de ejecutarse.
-#   6. pgTAP de seguridad y de las 10 migraciones sobre la base actualizada.
+#   6. pgTAP de seguridad y de las migraciones del manifiesto sobre la base actualizada.
 #
 # Orden 10, mensaje 4 (D7): de 6 a 10 migraciones (las 4 de 20261113).
+# 2026-11-17 (issue #18): + 20261117000500 (cuota de arranque, ADR-068).
 #
 # Uso: bash scripts/ops/migration-rehearsal.sh
 # Manifiesto: docs/runbooks/despliegue-migraciones-2026-11.md (sección 2).
@@ -36,6 +37,8 @@ MANIFEST=(
   "20261113000200_import_new_categories.sql 31b44ed75cea0d1bfba1a998e201d0967e5d79aacdde9a019e84dd1b9d4f9579"
   "20261113000300_publish_runs.sql 8c8fc176daf8ff7e3685847a23dc44d0e8a32affb51ed3723defe5c3901022de"
   "20261113000400_import_batches.sql 3f0eb416a75d8ca5d0c70c153ff868c38cd6bdae950838212b3c713303fe55a5"
+  # Issue #18 (ADR-068, precios aprobados): cuota única de arranque por plan.
+  "20261117000500_plan_setup_fee.sql 8a63f47013e4d9120f8d3078b9b1ef18c60cad1d1ebd2d7181e9b11a00b9e8d3"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -104,7 +107,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261113000400"
+check "versión final" "select public.app_schema_version()" "20261117000500"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -129,6 +132,9 @@ check "0400 (ADR-064): una parte no se aplica suelta" "select prosrc ~ 'batch_pa
 check "0400 (ADR-064): una parte atascada detiene su lote" "select prosrc ~ 'import_batch_after_part' from pg_proc where oid = 'system.fail_stuck_imports()'::regprocedure" "t"
 check "0400: publicación sin trabajo se retoma" "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'publish_runs' and column_name = 'resumes'" "1"
 check "0400: importaciones existentes intactas (ninguna queda en un lote)" "select count(*) from public.import_jobs where batch_id is not null" "0"
+check "1117 (arranque): ningún plan queda con cuota ni organización saldada" "select (select count(*) from public.plans where setup_fee is not null) + (select count(*) from public.organizations where setup_fee_settled_at is not null)" "0"
+check "1117 (arranque): precios de 4 y de 5 argumentos" "select count(*) from pg_proc where proname = 'platform_set_plan_pricing' and pronamespace = 'public'::regnamespace" "2"
+check "1117 (arranque): marcar la cuota solo con sesión (no anon)" "select has_function_privilege('authenticated', 'public.platform_set_setup_fee_settled(uuid, boolean, text)', 'execute') and not has_function_privilege('anon', 'public.platform_set_setup_fee_settled(uuid, boolean, text)', 'execute') and not has_function_privilege('authenticated', 'app.org_setup_fee_due(uuid)', 'execute')" "t"
 ventana 02-despues.sql
 # H4-B (mensaje 7): aislamiento entre las dos tiendas de prueba; escribe y revierte.
 ventana 04-aislamiento.sql
@@ -161,6 +167,7 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/118_keys_and_fk_indexes.test.sql supabase/tests/database/42_imports.test.sql \
   supabase/tests/database/144_photo_checks.test.sql supabase/tests/database/145_import_new_categories.test.sql \
   supabase/tests/database/146_publish_runs.test.sql supabase/tests/database/147_import_batches.test.sql \
+  supabase/tests/database/153_plan_setup_fee.test.sql \
   2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"

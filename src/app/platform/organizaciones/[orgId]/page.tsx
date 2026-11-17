@@ -14,7 +14,7 @@ import { AppError } from "@/server/errors";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { PlanUsage } from "@/ui/billing/plan-usage";
 
-import { OverrideForm, SubscriptionForm } from "../../billing-forms";
+import { OverrideForm, SetupFeeForm, SubscriptionForm } from "../../billing-forms";
 
 export const metadata = { title: "Organización" };
 
@@ -29,6 +29,20 @@ const orgBilling = billingSchema.extend({
 });
 
 const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" });
+
+const setupFeeSchema = z.object({
+  settled_at: z.string().nullable(),
+  paid_by_card: z.boolean(),
+  due: z.boolean(),
+});
+
+/** «Pagada con tarjeta», «Saldada el …» o «Pendiente: se cobra en el primer pago con tarjeta». */
+function setupFeeLine(fee: z.infer<typeof setupFeeSchema>): string {
+  if (fee.settled_at)
+    return `Saldada por la plataforma el ${date.format(new Date(fee.settled_at))}`;
+  if (fee.paid_by_card) return "Incluida en su primer pago con tarjeta";
+  return "Pendiente: se cobra en su primer pago con tarjeta";
+}
 
 /**
  * Plan, suscripción y límites de una organización (F10-T02). El cobro es manual
@@ -52,6 +66,9 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
     supabase,
     "platform_list_plans",
     {},
+  );
+  const setupFee = setupFeeSchema.parse(
+    await callRpc(supabase, "platform_org_setup_fee", { p_organization_id: orgId }),
   );
   const manage = canManageTenants(role);
   const sub = billing.subscription;
@@ -101,6 +118,10 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
               <dd>{date.format(new Date(due.at))}</dd>
             </div>
           ) : null}
+          <div>
+            <dt className="text-fg-muted">Cuota de arranque</dt>
+            <dd>{setupFeeLine(setupFee)}</dd>
+          </div>
         </dl>
         {sub?.notes ? <p className="text-[13px] text-fg-muted">Notas: {sub.notes}</p> : null}
       </section>
@@ -122,6 +143,19 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
               .map((p) => ({ value: p.key, label: p.name }))}
             currentPlan={billing.plan?.key ?? null}
           />
+        </section>
+      ) : null}
+
+      {manage && !setupFee.paid_by_card ? (
+        <section aria-labelledby="arranque" className="space-y-3">
+          <h2 id="arranque" className="font-semibold">
+            Cuota de arranque
+          </h2>
+          <p className="text-sm text-fg-muted">
+            Se cobra una sola vez, con el primer pago con tarjeta. Si la cobraste por transferencia
+            o la condonas, márcala aquí para que no se cobre otra vez.
+          </p>
+          <SetupFeeForm organizationId={billing.organization_id} due={setupFee.due} />
         </section>
       ) : null}
 

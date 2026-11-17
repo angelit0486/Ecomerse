@@ -71,6 +71,20 @@ async function keepValues(
   return result.ok ? result : { ...result, values: formValues(formData, keys) };
 }
 
+/** Días de prueba guardados en el plan, o null si no tiene (la base usa 14). */
+async function planTrialDays(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  planKey: string,
+): Promise<number | null> {
+  const plans = await callRpc<{ key: string; trial_days: number | null }[]>(
+    supabase,
+    "platform_list_plans",
+    {},
+  );
+  const days = plans.find((p) => p.key === planKey)?.trial_days;
+  return typeof days === "number" && Number.isInteger(days) ? days : null;
+}
+
 export async function createTenant(_: ConsoleState, formData: FormData): Promise<ConsoleState> {
   return keepValues(
     formData,
@@ -78,6 +92,8 @@ export async function createTenant(_: ConsoleState, formData: FormData): Promise
     attempt(
       async () => {
         const supabase = await createSupabaseServerClient();
+        // Días de prueba del plan (ADR-068: 14 sin tarjeta); sin dato, los 14 de la base.
+        const trialDays = await planTrialDays(supabase, text(formData, "plan"));
         const result = await callRpc<{ hostname: string }>(
           supabase,
           "platform_create_organization_with_store",
@@ -89,6 +105,7 @@ export async function createTenant(_: ConsoleState, formData: FormData): Promise
             p_store_name: text(formData, "store_name"),
             p_store_handle: text(formData, "store_handle"),
             p_plan_key: text(formData, "plan"),
+            ...(trialDays !== null ? { p_trial_days: trialDays } : {}),
           },
         );
         // Invitación y alta de la dirección en el hosting, sin esperar al cron.
@@ -239,15 +256,16 @@ export async function savePlan(_: ConsoleState, formData: FormData): Promise<Con
 }
 
 /**
- * Precios de un plan (ADR-044): mensual y anual en pesos con centavos, y días de
- * prueba. Vacío = sin precio (no cuenta en el MRR). La base exige dueño o administración.
+ * Precios de un plan (ADR-044 y ADR-068): mensual y anual en pesos con centavos,
+ * días de prueba y cuota única de arranque. Vacío = sin precio (no cuenta en el
+ * MRR) o sin cuota. La base exige dueño o administración.
  */
 export async function savePlanPricing(
   planKey: string,
   _: ConsoleState,
   formData: FormData,
 ): Promise<ConsoleState> {
-  const keys = ["price_monthly", "price_annual", "trial_days"];
+  const keys = ["price_monthly", "price_annual", "trial_days", "setup_fee"];
   const fields: Record<string, string> = {};
   const money = (key: string) => {
     const raw = text(formData, key);
@@ -258,6 +276,7 @@ export async function savePlanPricing(
   };
   const monthly = money("price_monthly");
   const annual = money("price_annual");
+  const setupFee = money("setup_fee");
   const trialRaw = text(formData, "trial_days");
   const trial = trialRaw === "" ? null : Number(trialRaw);
   if (trial !== null && (!Number.isInteger(trial) || trial < 0 || trial > 90)) {
@@ -277,6 +296,7 @@ export async function savePlanPricing(
           p_price_monthly: monthly,
           p_price_annual: annual,
           p_trial_days: trial,
+          p_setup_fee: setupFee,
         });
         return "Precios guardados.";
       },
@@ -286,8 +306,43 @@ export async function savePlanPricing(
           price_monthly: "Escribe un importe de 0 a 1,000,000.",
           price_annual: "Escribe un importe de 0 a 10,000,000.",
           trial_days: "Escribe de 0 a 90 días.",
+          setup_fee: "Escribe un importe de 0 a 1,000,000.",
         },
       },
+    ),
+  );
+}
+
+/**
+ * Cuota de arranque (ADR-068) cobrada por fuera o condonada: deja de pedirse en
+ * el primer pago con tarjeta. «Volver a deberla» la reactiva. Siempre con motivo.
+ */
+export async function setSetupFeeSettled(
+  organizationId: string,
+  _: ConsoleState,
+  formData: FormData,
+): Promise<ConsoleState> {
+  const settled = text(formData, "settled");
+  if (settled !== "true" && settled !== "false") {
+    return { error: "Elige qué hacer.", fields: { settled: "Elige qué hacer." } };
+  }
+  return keepValues(
+    formData,
+    ["settled", "reason"],
+    attempt(
+      async () => {
+        const supabase = await createSupabaseServerClient();
+        await callRpc(supabase, "platform_set_setup_fee_settled", {
+          p_organization_id: organizationId,
+          p_settled: settled === "true",
+          p_reason: text(formData, "reason"),
+        });
+        return settled === "true"
+          ? "Cuota de arranque marcada como saldada: no se cobrará con tarjeta."
+          : "La cuota de arranque se cobrará en el primer pago con tarjeta.";
+      },
+      `/platform/organizaciones/${organizationId}`,
+      { fieldText: { reason: "Escribe un motivo (mínimo 5 caracteres)." } },
     ),
   );
 }
