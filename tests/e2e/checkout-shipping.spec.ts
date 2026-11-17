@@ -178,3 +178,47 @@ test("teléfono escrito con puntos (222.123.4567): no se rechaza y llega al pago
      where store_id = ${tenant.storeId} order by created_at desc limit 1`;
   expect(order!.phone).toBe("222 123 4567");
 });
+
+test("«Recoger en tienda»: el resumen, el total y el botón cambian al elegirla y no se cobra envío", async ({
+  page,
+}) => {
+  await setFlag(false);
+  await admin`update public.shipping_rates set is_active = false where store_id = ${tenant.storeId}`;
+  await upsertRate("Estándar", 9900);
+  await asOwner(
+    (sql) => sql`
+      select public.shipping_upsert_rate(${tenant.storeId}, ${sql.json({
+        zone_id: zoneId,
+        name: "Recoger en tienda",
+        type: "pickup",
+        price: 0,
+      })})`,
+  );
+  await toCheckout(page);
+  await fillAddress(page, "72000", "Puebla");
+  // Se cotiza sola al terminar la dirección y el servidor elige la más barata con envío.
+  const shipping = page.getByRole("group", { name: "Forma de envío" });
+  await expect(shipping.getByRole("radio")).toHaveCount(2);
+  await shipping.getByRole("radio", { name: /Estándar/ }).check();
+  await expect(page.getByRole("button", { name: "Confirmar pedido · $349.00" })).toBeVisible();
+
+  // Antes: el botón y el resumen seguían en $349.00 (con $99 de envío) hasta confirmar.
+  await shipping.getByRole("radio", { name: /Recoger en tienda/ }).check();
+  await expect(page.getByRole("button", { name: "Confirmar pedido · $250.00" })).toBeVisible();
+  const summary = page.getByRole("complementary", { name: "Resumen del pedido" });
+  await expect(summary).toContainText("$250.00");
+  await expect(summary).not.toContainText("$99.00");
+  await expect(summary).not.toContainText("$349.00");
+
+  // Un solo clic: sin «El total cambió», directo al pago y sin envío cobrado.
+  await page.getByRole("button", { name: "Confirmar pedido · $250.00" }).click();
+  await expect(page.getByRole("heading", { name: "Pago de prueba" })).toBeVisible();
+  const [order] = await admin<{ shipping_total: string; total: string; type: string }[]>`
+    select shipping_total, total, shipping_snapshot->>'type' as type from public.orders
+     where store_id = ${tenant.storeId} order by created_at desc limit 1`;
+  expect([Number(order!.shipping_total), Number(order!.total), order!.type]).toEqual([
+    0,
+    25000,
+    "pickup",
+  ]);
+});
