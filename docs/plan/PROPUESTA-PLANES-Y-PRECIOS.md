@@ -1,6 +1,32 @@
-# Propuesta: planes, precio y paso de prueba a pago
+# Planes, precio y paso de prueba a pago
 
-**Estado: PROPUESTO** — requiere decisión del propietario. No es un ADR aprobado ni cambia comportamiento.
+**Estado: APROBADO por el propietario el 2026-11-17 — opción B** («Apruebo los precios recomendados: Tienda $699 y Tienda Plus
+$1,299 al mes, anual con 2 meses gratis, cuota de arranque y prueba de 14 días sin tarjeta»). Registrado como **ADR-068** en
+`docs/DECISIONS.md` (extiende ADR-044). Captura en la consola: `docs/runbooks/precios-aprobados-2026-11.md`.
+
+## 0. Decisión aprobada (2026-11-17)
+
+Cifras en MXN, **más IVA**.
+
+| Plan        | Mensual | Anual (2 meses gratis) | Cuota única de arranque | Prueba               |
+| ----------- | ------- | ---------------------- | ----------------------- | -------------------- |
+| Tienda      | $699    | $6,990                 | $2,900                  | 14 días, sin tarjeta |
+| Tienda Plus | $1,299  | $12,990                | $5,900                  | 14 días, sin tarjeta |
+
+Límites (opción B del análisis de mercado del 2026-11-17): Tienda 1 tienda, 1,000 productos, 3 personas, 1 almacén, 1 dominio
+propio, 2 GB de fotos; Tienda Plus 2 tiendas, 10,000 productos, 10 personas, 3 almacenes, sin marca PRUVA, estadísticas
+avanzadas, carritos abandonados, roles a la medida, 20 GB. Tabla completa, con los valores que el análisis no fijó marcados como
+propuesta, en el runbook §2.
+
+Lo que esto necesitó de código (cuota de arranque, IVA en Stripe, días de prueba del plan al dar de alta) está en la rama
+`feat/precios-aprobados`; el resto es configuración. Las secciones 1 a 5 siguientes son la propuesta original, sin cambios,
+como historial.
+
+---
+
+_Propuesta original (2026-11-17, antes de la aprobación):_
+
+~~**Estado: PROPUESTO**~~ (superado: APROBADO el 2026-11-17, ver arriba y ADR-068).
 Complementa ADR-044 (cobro con Stripe Billing; **pendientes del propietario: precios de cada plan y días de prueba**) y respeta
 ADR-045 (alta autoservicio **no aprobada**: la plataforma sigue dando de alta las tiendas). Fecha: 2026-11-17.
 

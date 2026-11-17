@@ -22,6 +22,7 @@ import {
   savePlan,
   savePlanPricing,
   setOverride,
+  setSetupFeeSettled,
   setSubscription,
   type ConsoleState,
 } from "./actions";
@@ -296,16 +297,20 @@ export interface PlanPricing {
   price_monthly: number | null;
   price_annual: number | null;
   trial_days: number | null;
+  setup_fee?: number | null;
 }
 
-/** Precios del plan (ADR-044). Vacío = sin precio: no se cobra ni cuenta en el MRR. */
+/**
+ * Precios del plan (ADR-044) y cuota única de arranque (ADR-068). Vacío = sin
+ * precio: no se cobra ni cuenta en el MRR.
+ */
 export function PlanPricingForm({ plan }: { plan: PlanPricing }) {
   const [state, action, pending] = useSafeActionState(savePlanPricing.bind(null, plan.key), {});
   const v = (key: string, fallback: string) => state.values?.[key] ?? fallback;
-  const rendered = ["price_monthly", "price_annual", "trial_days"];
+  const rendered = ["price_monthly", "price_annual", "trial_days", "setup_fee"];
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label={`Precio mensual de ${plan.name}`}
           hint="En pesos, IVA según tu contrato."
@@ -343,11 +348,66 @@ export function PlanPricingForm({ plan }: { plan: PlanPricing }) {
             />
           )}
         </Field>
+        <Field
+          label={`Cuota de arranque de ${plan.name}`}
+          hint="Pago único con el primer cobro con tarjeta. Vacío = sin cuota."
+          error={state.fields?.setup_fee}
+        >
+          {(c) => (
+            <Input
+              {...c}
+              name="setup_fee"
+              inputMode="decimal"
+              defaultValue={v("setup_fee", centsToInput(plan.setup_fee ?? null))}
+            />
+          )}
+        </Field>
       </div>
       <Feedback state={state} rendered={rendered} />
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? "Guardando…" : "Guardar precios"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const SETUP_FEE_ACTIONS = [
+  { value: "true", label: "Marcar como cobrada por fuera o condonada" },
+  { value: "false", label: "Volver a cobrarla en el primer pago con tarjeta" },
+];
+
+/** Cuota de arranque de una organización (ADR-068): saldarla por fuera o volver a deberla. */
+export function SetupFeeForm({ organizationId, due }: { organizationId: string; due: boolean }) {
+  const [state, action, pending] = useSafeActionState(
+    setSetupFeeSettled.bind(null, organizationId),
+    {},
+  );
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <Field label="Acción sobre la cuota" required error={state.fields?.settled}>
+        {(c) => (
+          <Select
+            {...c}
+            name="settled"
+            options={SETUP_FEE_ACTIONS}
+            defaultValue={state.values?.settled ?? (due ? "true" : "false")}
+          />
+        )}
+      </Field>
+      <Field
+        label="Motivo de la cuota"
+        required
+        hint="Queda en la auditoría (ej. «Pagó el arranque por transferencia»)."
+        error={state.fields?.reason}
+      >
+        {(c) => <Input {...c} name="reason" defaultValue={state.values?.reason ?? ""} />}
+      </Field>
+      <Feedback state={state} rendered={["settled", "reason"]} />
+      <div>
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? "Guardando…" : "Guardar"}
         </Button>
       </div>
     </form>

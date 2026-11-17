@@ -26,7 +26,7 @@ with tipos_nuevos(tipo) as (
   ]::text[])
 )
 select 'versión del esquema' as comprobacion, public.app_schema_version() as valor,
-       '20261113000400' as esperado, public.app_schema_version() = '20261113000400' as ok,
+       '20261117000500' as esperado, public.app_schema_version() = '20261117000500' as ok,
        'detener' as categoria
 union all
 select 'tablas nuevas con RLS forzado',

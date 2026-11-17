@@ -10,6 +10,8 @@
 >
 > Se aplican en ese orden. El ensayo local cubre las 10.
 >
+> **Actualización (2026-11-17, issue #18, ADR-068): una más, `20261117000500_plan_setup_fee.sql` (anexo E).** Cuota única de arranque por plan (precios aprobados por el propietario). Donde este documento dice que la versión final es `20261113000400`, con el anexo E es `20261117000500` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás.
+>
 > **Estado: PREPARADO, NO APLICADO.** Nada de esto se ha ejecutado en staging ni en producción. Aplicarlo requiere la autorización expresa del propietario (Orden 10 lo prohíbe en este bloque).
 >
 > Ensayo local reproducible: `bash scripts/ops/migration-rehearsal.sh` (38 s). Último resultado: 2026-11-13, rama `producto/orden-10` (`07ba916`), las 10 en verde (sección 7).
@@ -377,3 +379,16 @@ Termina con `ROLLBACK`. Probado en `tests/integration/window-isolation.test.ts`,
     - **Antes de la reversa (mensaje 7, H2):** desplegar una app compatible con 0300 y pasar el candado. Orden, candado y conciliación en §9.2 a §9.5. El guion cancela las partes sin aplicar, para que no se puedan confirmar sueltas.
     - **Qué demuestra el verificador:** `bash scripts/ops/reversa/comprobar-0400.sh` (solo local) comprueba la app compatible, el candado (3 rechazos que cubren sus 6 motivos), la conciliación y que el **esquema** queda idéntico al de `20261113000300` (24,576 líneas con permisos, 2026-11-14). Eso prueba el esquema y las condiciones; no recupera los datos de arriba.
     - **Corrección:** el informe del mensaje 4 decía «ensayada»; ese ensayo usó un guion que no estaba en el repositorio. El encabezado de la migración describe la reversa sin la advertencia de pérdida: manda este runbook.
+
+## Anexo E. Cuota de arranque por plan (ADR-068, issue #18, agregada el 2026-11-17)
+
+| #   | Archivo                             | sha256                                                             | Bytes  | Qué hace                                                                                                                                                                                                                                                                                                                                                                                         | Depende de  |
+| --- | ----------------------------------- | ------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| +1  | `20261117000500_plan_setup_fee.sql` | `8a63f47013e4d9120f8d3078b9b1ef18c60cad1d1ebd2d7181e9b11a00b9e8d3` | 12,753 | Columnas `plans.setup_fee` y `organizations.setup_fee_settled_at` (vacías); `app.org_setup_fee_due`; `platform_set_plan_pricing` de 5 argumentos (la de 4 sigue igual); `platform_org_setup_fee` y `platform_set_setup_fee_settled` (consola, con auditoría); redefine `platform_list_plans`, `org_billing_plans` y `org_billing_checkout_input` (misma firma y permisos) para devolver la cuota | la anterior |
+
+- **Por qué.** El propietario aprobó el 2026-11-17 una cuota única de arranque (MXN 2,900 Tienda / 5,900 Tienda Plus). Mensual, anual y prueba ya existían; la cuota no.
+- **Con el código.** Migrar primero, desplegar después (D-POR-06). El código anterior sigue funcionando sobre esta base: usa la función de 4 argumentos y el Checkout ignora el campo nuevo.
+- **Datos.** No escribe datos: ningún plan queda con cuota hasta capturarla en Consola → Planes (`docs/runbooks/precios-aprobados-2026-11.md`).
+- **Verificación posterior:** versión `20261117000500` y 3 comprobaciones del ensayo («1117 (arranque)»): sin cuotas ni marcas al aplicar, las dos versiones de `platform_set_plan_pricing`, y permisos (solo sesión; `app.org_setup_fee_due` no se llama directo). pgTAP: `153_plan_setup_fee.test.sql` (27).
+- **Reversa (con pérdida menor):** `scripts/ops/reversa/20261117000500_plan_setup_fee.reversa.sql`, con candado de versión. Pierde la cuota capturada y las marcas de «saldada» (quedan en `audit.audit_logs`). Primero desplegar el código que espera `20261113000400`; después correrla. Deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0).
+- **Con #12, #20, #21 y las de `fix/totp-rate-limit` y `feat/retiro-en-correo`** (`20261116000100`, `20261117000100` a `0400`): esta va al final por nombre. Al resolver conflictos: el manifiesto lleva todas en orden, la versión final es la más nueva (`20261117000500`), la reversa de esta vuelve a la versión anterior que quede en el manifiesto (no necesariamente `20261113000400`) y `NEWER` de `comprobar-0400.sh` lista primero esta y luego las demás, de la más nueva a la más vieja.

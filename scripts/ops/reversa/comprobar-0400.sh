@@ -11,6 +11,12 @@
 #      el esquema idéntico (pg_dump -s) al de una base hasta 20261113000300.
 #   5. Correrla otra vez, o sobre otra versión, se rechaza.
 #   6. La sentencia que la app actual ejecuta en cada importación falla sobre 0300.
+#   0. (2026-11-17, issue #18) Migraciones posteriores a 0400: la base con TODAS
+#      llega a la versión más nueva; ahí la reversa de 0400 se RECHAZA sin cambiar
+#      nada (su candado no se toca). Las reversas posteriores (NEWER, de la más
+#      nueva a la más vieja) corren cada una sobre su versión, su segunda corrida
+#      se rechaza, y al final el esquema es idéntico al de una base hasta
+#      20261113000400. Solo entonces siguen las pruebas 2–6 de la reversa de 0400.
 # Prueba el esquema y las condiciones; no recupera los datos que la reversa borra.
 # Uso: bash scripts/ops/reversa/comprobar-0400.sh
 # =============================================================================
@@ -20,8 +26,13 @@ export PGHOST=${PGHOST:-localhost} PGUSER=${PGUSER:-postgres} PGPASSWORD=${PGPAS
 case "$PGHOST" in localhost|127.0.0.1|/*) ;; *) echo "✗ Solo contra PostgreSQL local" >&2; exit 1 ;; esac
 REV=scripts/ops/reversa/20261113000400_import_batches.reversa.sql
 OLD_APP=a730989
-A=pruva_rev_hasta_0300; B=pruva_rev_con_reversa
-WORK=$(mktemp -d); trap 'rm -rf "$WORK"; dropdb --if-exists "$A" 2>/dev/null; dropdb --if-exists "$B" 2>/dev/null' EXIT
+# Reversas de las migraciones posteriores a 0400, de la más nueva a la más vieja:
+# «versión de la base antes de correrla | archivo | versión en que la deja».
+NEWER=(
+  "20261117000500|scripts/ops/reversa/20261117000500_plan_setup_fee.reversa.sql|20261113000400"
+)
+A=pruva_rev_hasta_0300; B=pruva_rev_con_reversa; C=pruva_rev_hasta_0400
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"; for d in "$A" "$B" "$C"; do dropdb --if-exists "$d" 2>/dev/null; done' EXIT
 p() { psql -X -q -v ON_ERROR_STOP=1 -d "$1" "${@:2}"; }
 q() { psql -X -q -At -v ON_ERROR_STOP=1 -d "$B" -c "$1"; }
 fail() { echo "✗ $*" >&2; exit 1; }
@@ -40,15 +51,47 @@ git grep -q -w -e import_batch_after_part HEAD -- src/server/imports/handlers.ts
   || fail "Se esperaba que la app actual llame a import_batch_after_part"
 echo "✓ App: $OLD_APP espera 20261113000300 y no usa ninguno de los ${#OBJS[@]} objetos de 0400; la actual sí los usa"
 
-# --- Bases: A hasta 0300; B con las 10 migraciones ----------------------------
-for db in "$A" "$B"; do
+# --- Bases: A hasta 0300; C hasta 0400; B con TODAS ----------------------------
+for db in "$A" "$B" "$C"; do
   dropdb --if-exists "$db"; createdb "$db"
   for f in scripts/db/supabase-shim.sql scripts/db/supabase-shim-auth.sql scripts/db/supabase-shim-storage.sql scripts/db/supabase-shim-storage-grants.sql; do p "$db" -f "$f" > /dev/null; done
 done
 for f in supabase/migrations/*.sql; do
-  case "$f" in *20261113000400_*) ;; *) p "$A" -1 -f "$f" > /dev/null ;; esac
+  v=$(basename "$f" | cut -d_ -f1)
+  if [[ "$v" < 20261113000400 ]]; then p "$A" -1 -f "$f" > /dev/null; fi
+  if [[ ! "$v" > 20261113000400 ]]; then p "$C" -1 -f "$f" > /dev/null; fi
   p "$B" -1 -f "$f" > /dev/null
 done
+[ "$(psql -X -At -d "$A" -c 'select public.app_schema_version()')" = 20261113000300 ] || fail "A no quedó en 0300"
+[ "$(psql -X -At -d "$C" -c 'select public.app_schema_version()')" = 20261113000400 ] || fail "C no quedó en 0400"
+
+dump() { pg_dump -s --no-owner -d "$1" | grep -vE '^--|^$|^\\(un)?restrict ' | sort; }
+
+# --- 0. Orden de reversa: primero las posteriores a 0400 ------------------------
+if [ "${#NEWER[@]}" -gt 0 ]; then
+  top=${NEWER[0]%%|*}
+  [ "$(q 'select public.app_schema_version()')" = "$top" ] || fail "B no quedó en $top (¿falta una reversa en NEWER?)"
+  dump "$B" > "$WORK/b0.sql"
+  out=$(psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$REV" 2>&1) && fail "La reversa de 0400 corrió sobre $top"
+  grep -q "La base está en $top" <<<"$out" || { echo "$out" >&2; fail "0400 sobre $top: motivo inesperado"; }
+  dump "$B" > "$WORK/b1.sql"; diff -q "$WORK/b0.sql" "$WORK/b1.sql" > /dev/null || fail "La reversa de 0400 rechazada cambió el esquema"
+  echo "✓ Candado: la reversa de 0400 sobre $top → rechazada sin cambios (primero van las posteriores)"
+  for entry in "${NEWER[@]}"; do
+    IFS='|' read -r from file to <<<"$entry"
+    [ "$(q 'select public.app_schema_version()')" = "$from" ] || fail "$file: la base no está en $from"
+    psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$file" > /dev/null
+    [ "$(q 'select public.app_schema_version()')" = "$to" ] || fail "$file no dejó la versión en $to"
+    out=$(psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$file" 2>&1) && fail "$file corrió dos veces"
+    grep -q "La base está en $to" <<<"$out" || { echo "$out" >&2; fail "$file otra vez: motivo inesperado"; }
+    echo "✓ Reversa $from → $to; su segunda corrida se rechaza"
+  done
+  dump "$C" > "$WORK/c.sql"; dump "$B" > "$WORK/b2.sql"
+  if diff -q "$WORK/c.sql" "$WORK/b2.sql" > /dev/null; then
+    echo "✓ Tras las reversas posteriores: esquema idéntico al de 20261113000400 ($(wc -l < "$WORK/c.sql") líneas, con permisos)"
+  else
+    diff "$WORK/c.sql" "$WORK/b2.sql" | head -30; fail "Tras las reversas posteriores el esquema difiere del de 0400"
+  fi
+fi
 
 # Datos sintéticos: una tienda, un lote de 1 parte aplicándose (con su trabajo),
 # un lote detenido con una parte validada sin aplicar y una publicación en cola.
@@ -143,7 +186,6 @@ psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$REV" > /dev/null
   || fail "La parte aplicada cambió de estado"
 echo "✓ Reversa drenada: versión 20261113000300; parte sin aplicar cancelada; la aplicada sigue aplicada"
 
-dump() { pg_dump -s --no-owner -d "$1" | grep -vE '^--|^$|^\\(un)?restrict ' | sort; }
 dump "$A" > "$WORK/a.sql"; dump "$B" > "$WORK/b.sql"
 if diff -q "$WORK/a.sql" "$WORK/b.sql" > /dev/null; then
   echo "✓ Tras la reversa, el esquema es idéntico al de 20261113000300 ($(wc -l < "$WORK/a.sql") líneas, con permisos)"
