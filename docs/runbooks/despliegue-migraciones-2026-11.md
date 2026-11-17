@@ -1,6 +1,14 @@
-# Paquete de despliegue: 10 migraciones pendientes en staging (Orden 10, O10-05; actualizado en el mensaje 4)
+# Paquete de despliegue: 11 migraciones pendientes en staging (Orden 10, O10-05; actualizado en el mensaje 4 y el 2026-11-17 con el PR #12)
 
 > **Procedimiento vigente: §11, ventana única (Orden 10, mensaje 5).** Las secciones 4 a 6 explican cada comprobación; §11 dice en qué orden se hacen, con qué guiones y cuándo detenerse.
+>
+> **Actualización (2026-11-17, PR #12 «Inicio como centro de control»): son 11 migraciones; versión final `20261116000100`.**
+>
+> - La 11.ª, `20261116000100_home_control_center.sql` (anexo C): 2 funciones de lectura y un índice; sube la versión.
+> - Vale solo si se une el PR #12. Sin el PR #12, el paquete sigue siendo de 10 y versión `20261113000400`.
+> - `scripts/ops/migration-rehearsal.sh`, `scripts/ops/ventana/01-antes.sql` y `02-despues.sql` ya esperan las 11 y `20261116000100`.
+> - **Orden de reversa:** primero la de la 11.ª (`scripts/ops/reversa/20261116000100_home_control_center.reversa.sql`) y, solo si hace falta, después la de la 10. El candado de la 10 se rechaza mientras la base esté en `20261116000100` y no se debilita (§9.3, anexo C).
+> - Ensayo y verificador corridos en local el 2026-11-17 sobre `feat/inicio-centro-control` (anexo C). Las cifras de la sección 7 y del anexo B son del 2026-11-13/14 con 10 migraciones y no se volvieron a medir aquí salvo lo dicho en el anexo C.
 >
 > **Actualización (2026-11-13, Orden 10, mensaje 4, corrección D7): son 10 migraciones.**
 >
@@ -16,12 +24,12 @@
 
 ## 1. Situación [staging VERIFICADO el 2026-11-12, solo lectura; repositorio al 2026-11-13]
 
-|                             | Staging                                   | Repositorio         |
-| --------------------------- | ----------------------------------------- | ------------------- |
-| Versión del esquema         | `20261110000200`                          | `20261113000400`    |
-| Migraciones                 | 162                                       | 172                 |
-| Código desplegado en Vercel | `88edc6d`                                 | `producto/orden-10` |
-| Datos                       | 3 tiendas, 91 productos, 0 pedidos, 38 MB | —                   |
+|                             | Staging                                   | Repositorio                                       |
+| --------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| Versión del esquema         | `20261110000200`                          | `20261113000400` (`20261116000100` con el PR #12) |
+| Migraciones                 | 162                                       | 172                                               |
+| Código desplegado en Vercel | `88edc6d`                                 | `producto/orden-10`                               |
+| Datos                       | 3 tiendas, 91 productos, 0 pedidos, 38 MB | —                                                 |
 
 ## 2. Manifiesto (orden obligatorio)
 
@@ -39,7 +47,7 @@ Las sumas se obtienen con `sha256sum supabase/migrations/<archivo>`. El ensayo l
 
 - El código decide si la base le sirve con `current >= EXPECTED_SCHEMA_VERSION` (`src/server/db/schema-version.ts`, `src/server/storefront/schema.ts`).
 - El código desplegado (`88edc6d`) espera `20261110000200`. Con la base en `20261111000400` sigue funcionando: las 5 migraciones solo agregan una columna, una tabla, funciones nuevas y reemplazan funciones **con la misma firma**.
-- El código nuevo espera `20261113000400`. Si se despliega antes de migrar, el panel y la tienda muestran **«mantenimiento»** hasta que se apliquen.
+- El código nuevo espera `20261113000400` (`20261116000100` con el PR #12). Si se despliega antes de migrar, el panel y la tienda muestran **«mantenimiento»** hasta que se apliquen.
 - **Con las 10, la ventana entre migrar y desplegar importa.**
   - El código desplegado no conoce el trabajo `catalog.publish_run` (migración 9). Una importación con «Publicado: sí» hecha en esa ventana deja sus productos en borrador.
   - La corrida se retoma sola hasta 3 veces, cada 15 min (migración 10). Si aún no está el código nuevo, termina fallida con el motivo.
@@ -51,20 +59,20 @@ Por eso: **1) migraciones, 2) despliegue.** Entre uno y otro, staging funciona c
 
 Todas son de solo lectura. Si una no da lo esperado, **no se aplica nada**.
 
-| Comprobación                | Consulta                                                                                                                                                                 | Esperado                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| Respaldo reciente           | Correr `scripts/ops/backup-export.sh` (runbook `respaldos.md`) y `restore-check.sh` en local                                                                             | Restauración sin diferencias          |
-| Versión actual              | `select public.app_schema_version();`                                                                                                                                    | `20261110000200`                      |
-| Ninguna de las 10 aplicada  | `select version from supabase_migrations.schema_migrations where version >= '20261110000300';`                                                                           | 0 filas                               |
-| Cola sin trabajos corriendo | `select count(*) from system.jobs where status = 'running';`                                                                                                             | 0                                     |
-| Sin importaciones en curso  | `select count(*) from public.import_jobs where status = 'committing';`                                                                                                   | 0                                     |
-| Sumas del commit a usar     | `net.http_get` de cada archivo en `raw.githubusercontent.com/angelit0486/Ecomerse/<commit>/supabase/migrations/…` y `encode(sha256(convert_to(content, 'UTF8')), 'hex')` | Las 10 sumas (tabla 2 y anexos A y B) |
+| Comprobación                | Consulta                                                                                                                                                                 | Esperado                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Respaldo reciente           | Correr `scripts/ops/backup-export.sh` (runbook `respaldos.md`) y `restore-check.sh` en local                                                                             | Restauración sin diferencias             |
+| Versión actual              | `select public.app_schema_version();`                                                                                                                                    | `20261110000200`                         |
+| Ninguna de las 11 aplicada  | `select version from supabase_migrations.schema_migrations where version >= '20261110000300';`                                                                           | 0 filas                                  |
+| Cola sin trabajos corriendo | `select count(*) from system.jobs where status = 'running';`                                                                                                             | 0                                        |
+| Sin importaciones en curso  | `select count(*) from public.import_jobs where status = 'committing';`                                                                                                   | 0                                        |
+| Sumas del commit a usar     | `net.http_get` de cada archivo en `raw.githubusercontent.com/angelit0486/Ecomerse/<commit>/supabase/migrations/…` y `encode(sha256(convert_to(content, 'UTF8')), 'hex')` | Las 11 sumas (tabla 2 y anexos A, B y C) |
 
 ## 5. Procedimiento de aplicación
 
 Es el mismo método ya usado en staging (`docs/runbooks/database-roles.md` §7), sin contraseña de la base:
 
-1. Descargar los 10 archivos con `net.http_get` desde el **commit fijo** y comparar sus sumas con la tabla 2. Solo funciona mientras el repositorio sea público (riesgo R-08). Si se hace privado, hay que usar `MIGRATION_DATABASE_URL` y `scripts/deploy/migrate.mjs`.
+1. Descargar los 11 archivos con `net.http_get` desde el **commit fijo** y comparar sus sumas con la tabla 2. Solo funciona mientras el repositorio sea público (riesgo R-08). Si se hace privado, hay que usar `MIGRATION_DATABASE_URL` y `scripts/deploy/migrate.mjs`.
 2. Un solo bloque `do`, archivo por archivo **en orden**:
    - comprobar que no esté registrado;
    - comprobar que la suma coincide;
@@ -85,7 +93,7 @@ Son las mismas consultas que corre el ensayo (`scripts/ops/migration-rehearsal.s
 
 | Comprobación                     | Consulta                                                                                                                                                                            | Esperado                 |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Versión                          | `select public.app_schema_version();`                                                                                                                                               | `20261113000400`         |
+| Versión                          | `select public.app_schema_version();`                                                                                                                                               | `20261116000100`         |
 | 1: RLS forzado en la tabla nueva | `select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass;`                                                                      | `t`                      |
 | 1: interruptor apagado           | `select default_enabled from public.feature_flags where key = 'profit_report';`                                                                                                     | `f`                      |
 | 1: trigger                       | `select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost';`                                                                                                       | 1                        |
@@ -172,6 +180,7 @@ La reversa **no es una recuperación de datos**.
 
 ### 9.3 Orden seguro
 
+0. **Con el PR #12 (base en `20261116000100`): primero la reversa de la 11.ª.** Desplegar el código que espera `20261113000400` (`producto/orden-10` sin el PR #12, p. ej. `e497304`; como `current >= expected`, también funciona con la base en `20261116000100`). Luego `psql -X -1 -v ON_ERROR_STOP=1 -f scripts/ops/reversa/20261116000100_home_control_center.reversa.sql` (su candado exige la versión exacta `20261116000100`; solo quita 2 funciones de lectura y un índice, no borra datos). Verificar `app_schema_version()` = `20261113000400`. Solo entonces siguen los pasos 1 a 4. Sin este paso, el candado de la 10 rechaza la reversa (versión distinta de `20261113000400`): así está diseñado.
 1. **Drenar con la app 0400 todavía desplegada.** Ningún lote aplicándose, ninguna parte validándose o aplicándose, ninguna publicación en curso. Avisar al propietario que nadie importe (no hay bloqueo técnico, §11.3).
 2. **Desplegar `a730989`** (u otro commit que espere `20261113000300` y pase `comprobar-0400.sh`). Con la base aún en 0400 funciona.
 3. **Correr la reversa con su candado:** `psql -X -1 -v ON_ERROR_STOP=1 -f scripts/ops/reversa/20261113000400_import_batches.reversa.sql`.
@@ -303,9 +312,9 @@ Todas las horas se cuentan desde el paso indicado. Sustituyen a las cifras suelt
 | 1    | Fijar el commit                                | `git ls-remote origin refs/heads/producto/orden-10`; el commit aprobado. Anotar el hash completo                                              | `git merge-base --is-ancestor origin/claude/ecommerce-regulated-platform-41vu1e <hash>` responde 0 (avance rápido)  | Bloqueante         |
 | 2    | Respaldo y restauración                        | `docs/runbooks/respaldos.md`: `scripts/ops/backup-export.sh` contra staging y `scripts/ops/restore-check.sh` en local                         | Restauración sin errores; metatests de seguridad en verde sobre la copia                                            | Bloqueante         |
 | 3    | Aviso y comprobación previa                    | Avisar al propietario (§11.3). Correr `scripts/ops/ventana/01-antes.sql` en el editor SQL                                                     | Las 7 filas con `ok = true` (incluye las tiendas de prueba). Si hay trabajos corriendo, repetir cada 5 min hasta 30 | Bloqueante         |
-| 4    | Sumas de los 10 archivos                       | Descargar del commit del paso 1 con `net.http_get` y comparar con la tabla 2 y los anexos A y B (sección 5, paso 1)                           | Las 10 sumas coinciden                                                                                              | Bloqueante         |
+| 4    | Sumas de los 11 archivos                       | Descargar del commit del paso 1 con `net.http_get` y comparar con la tabla 2 y los anexos A, B y C (sección 5, paso 1)                        | Las 10 sumas coinciden                                                                                              | Bloqueante         |
 | 5    | Inicio de la ventana                           | Anotar la hora UTC: es `:INICIO_VENTANA`                                                                                                      | —                                                                                                                   | —                  |
-| 6    | Aplicar las 10 en orden                        | Sección 5, paso 2: un bloque, archivo por archivo, registro en `supabase_migrations.schema_migrations`; luego `notify pgrst, 'reload schema'` | `select public.app_schema_version()` = `20261113000400`                                                             | Detener            |
+| 6    | Aplicar las 11 en orden                        | Sección 5, paso 2: un bloque, archivo por archivo, registro en `supabase_migrations.schema_migrations`; luego `notify pgrst, 'reload schema'` | `select public.app_schema_version()` = `20261113000400`                                                             | Detener            |
 | 7    | Desplegar enseguida                            | `git push origin <hash>:claude/ecommerce-regulated-platform-41vu1e` (avance rápido, sin forzar). Esperar READY en Vercel                      | READY dentro del límite de §11.2                                                                                    | Detener            |
 | 8    | Salud                                          | `/api/health` y Consola → Salud                                                                                                               | `ok`; el panel abre sin «Faltan migraciones»                                                                        | Detener            |
 | 9    | Comprobación posterior                         | `scripts/ops/ventana/02-despues.sql` a los 5 y a los 15 min del paso 7                                                                        | Las 7 filas en verde a los 15 min, o cada fila en falso resuelta según su categoría                                 | La de cada fila    |
@@ -377,3 +386,23 @@ Termina con `ROLLBACK`. Probado en `tests/integration/window-isolation.test.ts`,
     - **Antes de la reversa (mensaje 7, H2):** desplegar una app compatible con 0300 y pasar el candado. Orden, candado y conciliación en §9.2 a §9.5. El guion cancela las partes sin aplicar, para que no se puedan confirmar sueltas.
     - **Qué demuestra el verificador:** `bash scripts/ops/reversa/comprobar-0400.sh` (solo local) comprueba la app compatible, el candado (3 rechazos que cubren sus 6 motivos), la conciliación y que el **esquema** queda idéntico al de `20261113000300` (24,576 líneas con permisos, 2026-11-14). Eso prueba el esquema y las condiciones; no recupera los datos de arriba.
     - **Corrección:** el informe del mensaje 4 decía «ensayada»; ese ensayo usó un guion que no estaba en el repositorio. El encabezado de la migración describe la reversa sin la advertencia de pérdida: manda este runbook.
+
+## Anexo C. 11.ª migración: Inicio como centro de control (PR #12, agregada el 2026-11-17)
+
+Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
+
+| #   | Archivo                                  | sha256                                                             | Bytes | Qué hace                                                                                                                                                                                                           | Depende de |
+| --- | ---------------------------------------- | ------------------------------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| 11  | `20261116000100_home_control_center.sql` | `8f13e8fbc5efb3be6d611ab4d5a4d0716e4e958d5a39f4a45ca3c46e7fee2258` | 6,507 | Índice `carts_store_recoverable_idx`; `public.dashboard_recoverable_carts` y `public.dashboard_customer_mix` (security definer, `search_path` vacío, solo `authenticated`, solo conteos); versión `20261116000100` | 10         |
+
+- **Con el código:** el código del PR #12 espera `20261116000100`; migrar primero, desplegar después (sección 3). El código sin el PR #12 (espera `20261113000400`) sigue funcionando con la base en `20261116000100`, porque la migración solo agrega lecturas y un índice.
+- **Verificación posterior:** 3 comprobaciones nuevas en el ensayo (paso 4: índice, permisos, security definer con `search_path` vacío) y 1 fila nueva de categoría «detener» en `02-despues.sql` (lecturas de Inicio solo para `authenticated`). La fila de versión de `02-despues.sql` espera `20261116000100`. `01-antes.sql` también comprueba que el índice de la 11.ª no exista.
+- **Reversa (en orden, cada una con su candado):**
+  1. `scripts/ops/reversa/20261116000100_home_control_center.reversa.sql`: solo sobre `20261116000100`; quita las 2 funciones y el índice y deja `app_schema_version()` idéntica a la de `20261113000400`. No borra datos. Antes, desplegar el código que espera `20261113000400`.
+  2. Solo si hace falta: la reversa de la 10 (§9.3), sin cambios en su candado.
+- **Qué demuestra el verificador** (`bash scripts/ops/reversa/comprobar-0400.sh`, solo local): con la base en `20261116000100`, la reversa de la 10 se rechaza sin cambiar el esquema; la de la 11.ª deja el esquema idéntico al de `20261113000400` (pg_dump -s con permisos); repetirla se rechaza; después siguen todas las pruebas anteriores de la 10.
+- **Medido en local el 2026-11-17** (PostgreSQL 17.7 local, rama `feat/inicio-centro-control`):
+  - `migration-rehearsal.sh`: verde de punta a punta en unos 33 s. La 11.ª se aplicó en 34 ms con 2,000 productos. Esquema actualizado idéntico al creado desde cero (24,157 líneas). pgTAP del paso 7: 15 archivos, 331 pruebas.
+  - `comprobar-0400.sh`: verde en unos 24 s. Tras la reversa de la 11.ª, el esquema quedó idéntico al de `20261113000400` (25,090 líneas). Tras la de la 10, quedó idéntico al de `20261113000300` (24,577 líneas).
+  - `pnpm db:test`: pgTAP 150 archivos y 3,181 pruebas en verde.
+  - Tiempo en staging: [PENDIENTE DE MEDIR].

@@ -32,7 +32,8 @@ test.beforeAll(async () => {
 test("clientes: buscar, editar, retirar consentimiento y anonimizar", async ({ page }) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
-  await page.getByRole("link", { name: "Clientes" }).click();
+  // `exact`: el del menú, no «Ver clientes» de Inicio (Orden 1).
+  await page.getByRole("link", { name: "Clientes", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Clientes" })).toBeVisible();
   await page.getByLabel("Buscar por email o nombre").fill("luisa");
   await page.getByRole("button", { name: "Buscar" }).click();

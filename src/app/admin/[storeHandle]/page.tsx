@@ -1,25 +1,34 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import {
+  CARD_ERROR,
+  CARD_FORBIDDEN,
+  CARD_OFF,
+  cartRecoverySettingsHref,
+  customersHref,
+  formatAge,
+  isStale,
+  metricComparison,
+  ordersHref,
+  previousPeriod,
+  type CardState,
+} from "@/lib/dashboard/home-insights";
 import { formatMoney } from "@/lib/money/format";
+import { addDays } from "@/lib/time/zoned-day";
 import { buildStoreAlerts, storeAlertsSchema, type StoreAlert } from "@/lib/store-alerts/alerts";
 import { hasPermission } from "@/server/auth/context";
 import { resumeQueue } from "@/server/jobs/run-now";
 import { configIssues } from "@/server/system/health";
 import { getStoreContextForPage } from "@/server/auth/store-context-page";
 import { callRpc } from "@/server/db/rpc";
-import { log } from "@/server/observability/logger";
+import { loadCard } from "@/server/dashboard/load-card";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
+import { CardError, ComparisonLine } from "./_shared/home-cards";
 import { panelFlagEnabled } from "./_shared/panel-flags";
-import {
-  launchCopy,
-  launchPendingFrom,
-  pendingReviewsFrom,
-  QUEUE_ERROR_TEXT,
-  QUEUE_OK_TEXT,
-  queueWaitingFrom,
-} from "./home-state";
+import { launchCopy, launchPendingFrom, QUEUE_OK_TEXT } from "./home-state";
 import { StoreAlertsPanel } from "./store-alerts-panel";
 
 type Props = {
@@ -78,11 +87,51 @@ interface Kpis {
     | null;
 }
 
-/** Fecha local "YYYY-MM-DD" − n días (las fechas del rango son de la zona de la tienda). */
-function minusDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - n);
-  return d.toISOString().slice(0, 10);
+interface CustomerMix {
+  from: string;
+  to: string;
+  new: number;
+  returning: number;
+}
+
+interface RecoverableCarts {
+  enabled: boolean;
+  count: number;
+  amount: number;
+}
+
+/** `placed_at` del pedido más antiguo de cada pendiente (null si no hay). */
+interface OldestPending {
+  to_fulfill: string | null;
+  pending_payment: string | null;
+  needs_attention: string | null;
+}
+
+/**
+ * Punto 2: el pedido más antiguo de cada pendiente, con las MISMAS definiciones
+ * que los contadores de `dashboard_kpis` y los filtros de la lista de pedidos.
+ * Acotado por tienda; RLS exige `orders.read`.
+ */
+async function oldestPending(db: SupabaseClient, storeId: string): Promise<OldestPending> {
+  const orders = () => db.from("orders").select("placed_at").eq("store_id", storeId);
+  const results = await Promise.all([
+    orders()
+      .eq("status", "open")
+      .in("fulfillment_status", ["unfulfilled", "partially_fulfilled"])
+      .order("placed_at", { ascending: true })
+      .limit(1),
+    orders().eq("status", "pending_payment").order("placed_at", { ascending: true }).limit(1),
+    orders().eq("needs_attention", true).order("placed_at", { ascending: true }).limit(1),
+  ]);
+  const [toFulfill, pendingPayment, needsAttention] = results.map(({ data, error }) => {
+    if (error) throw error;
+    return ((data ?? []) as { placed_at: string }[])[0]?.placed_at ?? null;
+  });
+  return {
+    to_fulfill: toFulfill ?? null,
+    pending_payment: pendingPayment ?? null,
+    needs_attention: needsAttention ?? null,
+  };
 }
 
 const dayLabel = (iso: string) =>
@@ -102,83 +151,158 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   // Los atajos a Pedidos solo para quien puede verlos (si no, llevarían a un 404).
   const canOrders = hasPermission(ctx, "orders.read");
 
-  let kpis: Kpis | null = null;
-  if (hasPermission(ctx, "analytics.read")) {
-    const supabase = await createSupabaseServerClient();
-    // Sin fechas: la base calcula "hoy" en la zona horaria de la tienda.
-    const today = await callRpc<Kpis>(supabase, "dashboard_kpis", {
-      p_store_id: ctx.store.id,
-      p_from: null,
-      p_to: null,
-    });
-    kpis =
-      rangeKey === "30"
-        ? today
-        : await callRpc<Kpis>(supabase, "dashboard_kpis", {
-            p_store_id: ctx.store.id,
-            p_from: minusDays(today.to, RANGES[rangeKey]!.days - 1),
-            p_to: today.to,
-          });
-  }
-  // Opiniones esperando revisión (ADR-029): ninguna se publica sola.
-  // Si la consulta falla queda null: la tarjeta no aparece (nunca un 0 falso).
-  let pendingReviews: number | null = null;
-  if (kpis && hasPermission(ctx, "products.read")) {
-    const supabase = await createSupabaseServerClient();
-    pendingReviews = pendingReviewsFrom(
-      await supabase
-        .from("product_reviews")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .eq("status", "pending"),
-    );
-  }
+  const canAnalytics = hasPermission(ctx, "analytics.read");
+  const canCustomers = hasPermission(ctx, "customers.read");
+  const retryHref = `${base}?rango=${rangeKey}`;
+  const storeId = ctx.store.id;
+  const db = await createSupabaseServerClient();
+
+  // Orden 1, punto 6: cada tarjeta carga por separado; un fallo deja esa tarjeta
+  // en «No pudimos cargar…» (y queda en el log), nunca tumba Inicio ni se pinta en cero.
+  const kpisState: CardState<Kpis> = canAnalytics
+    ? await loadCard("kpis", storeId, async () => {
+        // Sin fechas: la base calcula "hoy" en la zona horaria de la tienda.
+        const today = await callRpc<Kpis>(db, "dashboard_kpis", {
+          p_store_id: storeId,
+          p_from: null,
+          p_to: null,
+        });
+        return rangeKey === "30"
+          ? today
+          : callRpc<Kpis>(db, "dashboard_kpis", {
+              p_store_id: storeId,
+              p_from: addDays(today.to, -(RANGES[rangeKey]!.days - 1)),
+              p_to: today.to,
+            });
+      })
+    : CARD_FORBIDDEN;
+  const kpis = kpisState.status === "ok" ? kpisState.data : null;
+  const period = kpis ? { from: kpis.from, to: kpis.to } : null;
+
+  const [previousState, customerMixState, cartsState, oldestState, reviewsState] =
+    await Promise.all([
+      // Punto 1: el mismo RPC con los N días inmediatamente anteriores.
+      period
+        ? loadCard("kpis_previous", storeId, () => {
+            const prev = previousPeriod(period);
+            return callRpc<Kpis>(db, "dashboard_kpis", {
+              p_store_id: storeId,
+              p_from: prev.from,
+              p_to: prev.to,
+            });
+          })
+        : Promise.resolve(kpisState.status === "error" ? CARD_ERROR : CARD_FORBIDDEN),
+      // Punto 4: solo con permiso de clientes (la base vuelve a exigirlo).
+      !canCustomers || !canAnalytics
+        ? Promise.resolve(CARD_FORBIDDEN)
+        : period
+          ? loadCard("customer_mix", storeId, () =>
+              callRpc<CustomerMix>(db, "dashboard_customer_mix", {
+                p_store_id: storeId,
+                p_from: period.from,
+                p_to: period.to,
+              }),
+            )
+          : Promise.resolve(CARD_ERROR),
+      // Punto 3: definición del recordatorio de carritos (ADR-048).
+      canAnalytics
+        ? loadCard("recoverable_carts", storeId, () =>
+            callRpc<RecoverableCarts>(db, "dashboard_recoverable_carts", { p_store_id: storeId }),
+          )
+        : Promise.resolve(CARD_FORBIDDEN),
+      // Punto 2: el pedido más antiguo de cada pendiente (RLS: orders.read).
+      canOrders && canAnalytics
+        ? loadCard("oldest_pending", storeId, () => oldestPending(db, storeId))
+        : Promise.resolve(CARD_FORBIDDEN),
+      // Opiniones esperando revisión (ADR-029): ninguna se publica sola.
+      canAnalytics && hasPermission(ctx, "products.read")
+        ? loadCard("pending_reviews", storeId, async () => {
+            const { count, error } = await db
+              .from("product_reviews")
+              .select("id", { count: "exact", head: true })
+              .eq("store_id", storeId)
+              .eq("status", "pending");
+            if (error) throw error;
+            return count ?? 0;
+          })
+        : Promise.resolve(CARD_OFF),
+    ]);
+  const previous = previousState.status === "ok" ? previousState.data : null;
+  const pendingReviews = reviewsState.status === "ok" ? reviewsState.data : null;
+  const oldest = oldestState.status === "ok" ? oldestState.data : null;
+  const now = new Date();
   const max = kpis ? Math.max(1, ...kpis.series.map((s) => s.sales)) : 1;
+  /** «El más antiguo: hace X» bajo cada pendiente (punto 2). */
+  const pendingAge = (key: keyof OldestPending, count: number) => {
+    if (count === 0 || oldestState.status === "forbidden" || oldestState.status === "off") {
+      return null;
+    }
+    if (!oldest) {
+      return (
+        <span className="block text-[13px] text-fg-muted">No pudimos calcular su antigüedad.</span>
+      );
+    }
+    const at = oldest[key];
+    if (!at) return null;
+    return (
+      <span className={`block text-[13px] ${isStale(at, now) ? "text-warning" : "text-fg-muted"}`}>
+        El más antiguo: {formatAge(at, now)}
+      </span>
+    );
+  };
 
   // Estado del sistema (plan del panel, A2): configuración que falta y trabajo en cola.
   const canManage = hasPermission(ctx, "store.update");
   const issues = canManage ? configIssues() : [];
-  // "error": no se pudo contar (no se afirma «Todo funciona»).
-  let waiting: { photos: number; imports: number } | "error" | null = null;
-  if (canManage) {
-    const supabase = await createSupabaseServerClient();
-    const [photos, imports] = await Promise.all([
-      supabase
-        .from("media")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .eq("status", "pending")
-        .is("deleted_at", null),
-      supabase
-        .from("import_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .eq("status", "committing"),
-    ]);
-    waiting = queueWaitingFrom(photos, imports);
+  // Orden correctiva 1: un conteo que falla ya no se pinta como «0 en espera»
+  // («Todo funciona»): queda en `error` y la sección lo dice.
+  const waitingState: CardState<{ photos: number; imports: number }> = canManage
+    ? await loadCard("system_waiting", storeId, async () => {
+        const [photos, imports] = await Promise.all([
+          db
+            .from("media")
+            .select("id", { count: "exact", head: true })
+            .eq("store_id", storeId)
+            .eq("status", "pending")
+            .is("deleted_at", null),
+          db
+            .from("import_jobs")
+            .select("id", { count: "exact", head: true })
+            .eq("store_id", storeId)
+            .eq("status", "committing"),
+        ]);
+        if (photos.error) throw photos.error;
+        if (imports.error) throw imports.error;
+        return { photos: photos.count ?? 0, imports: imports.count ?? 0 };
+      })
+    : CARD_FORBIDDEN;
+  const waiting = waitingState.status === "ok" ? waitingState.data : null;
+  const waitingFailed = waitingState.status === "error";
+  if (waiting) {
     // Fotos sin clave de Storage: retomar solo gastaría sus intentos (D-PANEL-10).
     const photosCanRun = !issues.some((i) => i.key === "image_processing");
-    const queued = waiting !== "error" && waiting.imports + (photosCanRun ? waiting.photos : 0);
+    const queued = waiting.imports + (photosCanRun ? waiting.photos : 0);
     if (queued) resumeQueue("home");
   }
 
   // Alertas accionables (Orden 10, O10-02): con «Salud de tu tienda» encendida.
-  // Si la consulta falla, Inicio sigue funcionando y la sección lo dice.
-  let alerts: StoreAlert[] | "error" | null = null;
+  // Si la consulta falla, «Qué atender hoy» sigue en su lugar con el aviso del
+  // fallo (Orden 1, punto 6) en vez de desaparecer.
+  let alertsState: CardState<StoreAlert[]> = CARD_OFF;
   if (hasPermission(ctx, "products.read")) {
-    const supabase = await createSupabaseServerClient();
-    if (await panelFlagEnabled(supabase, ctx.store.id, "store_health")) {
-      try {
-        const counts = storeAlertsSchema.parse(
-          await callRpc<unknown>(supabase, "store_alerts", { p_store_id: ctx.store.id }),
-        );
-        alerts = buildStoreAlerts(counts, base);
-      } catch (error) {
-        log.warn("home.store_alerts_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        alerts = "error";
-      }
+    const enabled = await loadCard("store_alerts_flag", storeId, () =>
+      panelFlagEnabled(db, storeId, "store_health"),
+    );
+    if (enabled.status !== "ok") alertsState = enabled;
+    else if (enabled.data) {
+      alertsState = await loadCard("store_alerts", storeId, async () =>
+        buildStoreAlerts(
+          storeAlertsSchema.parse(
+            await callRpc<unknown>(db, "store_alerts", { p_store_id: storeId }),
+          ),
+          base,
+        ),
+      );
     }
   }
 
@@ -216,26 +340,16 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   ].filter((a) => a.show);
 
   // Estado del sistema: arriba si hay algo que atender, al final si todo funciona.
-  // Un conteo fallido no es «todo funciona»: se avisa arriba.
-  const counted = waiting && waiting !== "error" ? waiting : null;
-  const allClear =
-    counted !== null && issues.length === 0 && counted.photos + counted.imports === 0;
-  const healthy = !waiting || allClear;
+  const healthy =
+    !waitingFailed && (!waiting || (issues.length === 0 && waiting.photos + waiting.imports === 0));
   const systemState =
-    canManage && waiting ? (
+    canManage && waitingFailed ? (
       <section aria-labelledby="sistema" className="space-y-2">
         <h2 id="sistema" className="font-semibold">
           Estado del sistema
         </h2>
-        {allClear ? (
-          <p className="text-sm text-success">{QUEUE_OK_TEXT}</p>
-        ) : (
+        {issues.length > 0 ? (
           <ul className="space-y-2 text-sm">
-            {waiting === "error" ? (
-              <li role="status" className="rounded-md border border-warning p-3">
-                {QUEUE_ERROR_TEXT}
-              </li>
-            ) : null}
             {issues.map((issue) => (
               <li key={issue.key} className="rounded-md border border-warning p-3">
                 <p className="font-medium">{issue.title}</p>
@@ -243,26 +357,46 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
               </li>
             ))}
-            {counted && counted.photos > 0 ? (
+          </ul>
+        ) : null}
+        <CardError what="los trabajos en espera (fotos e importaciones)" retryHref={retryHref} />
+      </section>
+    ) : canManage && waiting ? (
+      <section aria-labelledby="sistema" className="space-y-2">
+        <h2 id="sistema" className="font-semibold">
+          Estado del sistema
+        </h2>
+        {issues.length === 0 && waiting.photos + waiting.imports === 0 ? (
+          <p className="text-sm text-success">{QUEUE_OK_TEXT}</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {issues.map((issue) => (
+              <li key={issue.key} className="rounded-md border border-warning p-3">
+                <p className="font-medium">{issue.title}</p>
+                <p className="text-fg-muted">{issue.impact}</p>
+                <p className="mt-1">Cómo resolverlo: {issue.fix}</p>
+              </li>
+            ))}
+            {waiting.photos > 0 ? (
               <li className="rounded-md border border-border p-3">
                 <Link href={`${base}/productos/importar/fotos`} className="underline">
-                  {counted.photos === 1
+                  {waiting.photos === 1
                     ? "1 foto en proceso"
-                    : `${counted.photos.toLocaleString("es-MX")} fotos en proceso`}
+                    : `${waiting.photos.toLocaleString("es-MX")} fotos en proceso`}
                 </Link>
                 {issues.some((i) => i.key === "image_processing")
                   ? ". Esperan a que se configure la optimización de imágenes."
-                  : counted.photos > 20
+                  : waiting.photos > 20
                     ? ". Abre el avance para que sigan sin esperar."
                     : ". Se terminan en unos segundos."}
               </li>
             ) : null}
-            {counted && counted.imports > 0 ? (
+            {waiting.imports > 0 ? (
               <li className="rounded-md border border-border p-3">
                 <Link href={`${base}/productos/importar`} className="underline">
-                  {counted.imports === 1
+                  {waiting.imports === 1
                     ? "1 importación en curso"
-                    : `${counted.imports} importaciones en curso`}
+                    : `${waiting.imports} importaciones en curso`}
                 </Link>
               </li>
             ) : null}
@@ -294,11 +428,18 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             </Link>
           </div>
         ) : null}
-        {alerts ? (
+        {alertsState.status === "ok" ? (
           <StoreAlertsPanel
-            alerts={alerts}
+            alerts={alertsState.data}
             healthHref={hasPermission(ctx, "store.read") ? `${base}/salud` : null}
           />
+        ) : alertsState.status === "error" ? (
+          <section aria-labelledby="alertas" className="space-y-2">
+            <h2 id="alertas" className="font-semibold">
+              Qué atender hoy
+            </h2>
+            <CardError what="los pendientes de tus productos" retryHref={retryHref} />
+          </section>
         ) : null}
         {quickActions.length > 0 ? (
           <nav aria-label="Acciones rápidas" className="flex flex-wrap gap-2">
@@ -326,34 +467,42 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             <ul className="flex flex-wrap gap-3 text-sm">
               <li className="rounded-md border border-border px-3 py-2">
                 {canOrders ? (
-                  <Link href={`${base}/pedidos?estado=por-surtir`} className="underline">
+                  <Link href={ordersHref(base, "por-surtir")} className="underline">
                     {kpis.to_fulfill} por surtir
                   </Link>
                 ) : (
                   `${kpis.to_fulfill} por surtir`
                 )}
+                {pendingAge("to_fulfill", kpis.to_fulfill)}
               </li>
               <li className="rounded-md border border-border px-3 py-2">
                 {canOrders ? (
-                  <Link href={`${base}/pedidos?estado=pendientes`} className="underline">
+                  <Link href={ordersHref(base, "pendientes")} className="underline">
                     {kpis.pending_payment} pendientes de pago
                   </Link>
                 ) : (
                   `${kpis.pending_payment} pendientes de pago`
                 )}
+                {pendingAge("pending_payment", kpis.pending_payment)}
               </li>
               <li
                 className={`rounded-md border px-3 py-2 ${kpis.needs_attention > 0 ? "border-warning" : "border-border"}`}
               >
                 {kpis.needs_attention > 0 ? "⚠ " : ""}
                 {canOrders && kpis.needs_attention > 0 ? (
-                  <Link href={`${base}/pedidos?estado=atencion`} className="underline">
+                  <Link href={ordersHref(base, "atencion")} className="underline">
                     {kpis.needs_attention} necesitan atención
                   </Link>
                 ) : (
                   `${kpis.needs_attention} necesitan atención`
                 )}
+                {pendingAge("needs_attention", kpis.needs_attention)}
               </li>
+              {reviewsState.status === "error" ? (
+                <li className="rounded-md border border-border px-3 py-2 text-fg-muted">
+                  No pudimos contar las opiniones por revisar.
+                </li>
+              ) : null}
               {pendingReviews ? (
                 <li className="rounded-md border border-border px-3 py-2">
                   <Link href={`${base}/productos/opiniones`} className="underline">
@@ -385,23 +534,80 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
               </nav>
             </div>
             <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <div className="rounded-md border border-border p-4">
-                <dt className="text-[13px] text-fg-muted">Ventas netas</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">{m(kpis.net_sales)}</dd>
-              </div>
-              <div className="rounded-md border border-border p-4">
-                <dt className="text-[13px] text-fg-muted">Pedidos pagados</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">{kpis.orders}</dd>
-              </div>
-              <div className="rounded-md border border-border p-4">
-                <dt className="text-[13px] text-fg-muted">Ticket promedio</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">
-                  {m(kpis.average_ticket)}
-                </dd>
-              </div>
+              {(
+                [
+                  {
+                    key: "net_sales",
+                    label: "Ventas netas",
+                    value: m(kpis.net_sales),
+                    compare: (p: Kpis) =>
+                      metricComparison(
+                        kpis.net_sales,
+                        p.net_sales,
+                        m,
+                        "Sin ventas en el periodo anterior",
+                      ),
+                  },
+                  {
+                    key: "orders",
+                    label: "Pedidos pagados",
+                    value: kpis.orders.toLocaleString("es-MX"),
+                    compare: (p: Kpis) =>
+                      metricComparison(
+                        kpis.orders,
+                        p.orders,
+                        (n) => n.toLocaleString("es-MX"),
+                        "Sin pedidos en el periodo anterior",
+                      ),
+                  },
+                  {
+                    key: "average_ticket",
+                    label: "Ticket promedio",
+                    value: m(kpis.average_ticket),
+                    compare: (p: Kpis) =>
+                      metricComparison(
+                        kpis.average_ticket,
+                        p.average_ticket,
+                        m,
+                        "Sin pedidos en el periodo anterior",
+                      ),
+                  },
+                ] as const
+              ).map((metric) => (
+                <div key={metric.key} className="rounded-md border border-border p-4">
+                  <dt className="text-[13px] text-fg-muted">{metric.label}</dt>
+                  {/* Un solo dd por dt: la cifra (con su propio elemento) y su
+                      variación contra el periodo anterior. */}
+                  <dd>
+                    <span className="mt-1 block text-xl font-semibold tabular-nums">
+                      {/* Punto 5: la cifra lleva a los pedidos pagados en el mismo rango. */}
+                      {canOrders && period ? (
+                        <Link href={ordersHref(base, "todos", period)} className="hover:underline">
+                          <span data-testid="metric-value">{metric.value}</span>
+                          <span className="sr-only">: ver los pedidos pagados del periodo</span>
+                        </Link>
+                      ) : (
+                        <span data-testid="metric-value">{metric.value}</span>
+                      )}
+                    </span>
+                    {previous ? (
+                      <ComparisonLine comparison={metric.compare(previous)} />
+                    ) : (
+                      <p className="mt-1 text-[13px] text-fg-muted">
+                        No pudimos cargar el periodo anterior.{" "}
+                        <Link href={retryHref} className="underline">
+                          Reintenta
+                        </Link>
+                      </p>
+                    )}
+                  </dd>
+                </div>
+              ))}
               <div className="rounded-md border border-border p-4">
                 <dt className="text-[13px] text-fg-muted">Reembolsos</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">{m(kpis.refunds)}</dd>
+                <dd className="mt-1 text-xl font-semibold tabular-nums">
+                  <span data-testid="metric-value">{m(kpis.refunds)}</span>
+                </dd>
               </div>
             </dl>
 
@@ -527,6 +733,98 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             ) : null}
           </div>
         </>
+      ) : kpisState.status === "error" ? (
+        <section aria-labelledby="ventas" className="space-y-2">
+          <h2 id="ventas" className="font-semibold">
+            Ventas y pedidos por atender
+          </h2>
+          <CardError what="tus ventas ni tus pedidos por atender" retryHref={retryHref} />
+        </section>
+      ) : null}
+
+      {canAnalytics ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {customerMixState.status !== "forbidden" ? (
+            <section aria-labelledby="clientes" className="space-y-2">
+              <h2 id="clientes" className="font-semibold">
+                Clientes del periodo
+              </h2>
+              {customerMixState.status === "ok" ? (
+                customerMixState.data.new + customerMixState.data.returning === 0 ? (
+                  <p className="text-sm text-fg-muted">
+                    Aún no hay clientes con pedidos pagados en este periodo.
+                  </p>
+                ) : (
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-md border border-border p-3">
+                      <dt className="text-[13px] text-fg-muted">Nuevos</dt>
+                      <dd className="text-lg font-semibold tabular-nums">
+                        {customerMixState.data.new.toLocaleString("es-MX")}
+                      </dd>
+                      <dd className="text-[13px] text-fg-muted">Su primera compra pagada</dd>
+                    </div>
+                    <div className="rounded-md border border-border p-3">
+                      <dt className="text-[13px] text-fg-muted">Recurrentes</dt>
+                      <dd className="text-lg font-semibold tabular-nums">
+                        {customerMixState.data.returning.toLocaleString("es-MX")}
+                      </dd>
+                      <dd className="text-[13px] text-fg-muted">Ya te habían comprado antes</dd>
+                    </div>
+                  </dl>
+                )
+              ) : (
+                <CardError what="tus clientes del periodo" retryHref={retryHref} />
+              )}
+              {customerMixState.status === "ok" ? (
+                <Link
+                  href={customersHref(base)}
+                  className="inline-flex min-h-11 items-center text-sm underline md:min-h-0"
+                >
+                  Ver clientes
+                </Link>
+              ) : null}
+            </section>
+          ) : null}
+          {cartsState.status !== "forbidden" ? (
+            <section aria-labelledby="carritos" className="space-y-2">
+              <h2 id="carritos" className="font-semibold">
+                Carritos recuperables
+              </h2>
+              {cartsState.status === "ok" ? (
+                <>
+                  {cartsState.data.count === 0 ? (
+                    <p className="text-sm text-fg-muted">
+                      Ningún carrito por recuperar ahora. Aquí verás los que dejaron con su correo
+                      hace más de 3 horas.
+                    </p>
+                  ) : (
+                    <p className="text-sm">
+                      <strong className="tabular-nums">
+                        {cartsState.data.count === 1
+                          ? "1 carrito"
+                          : `${cartsState.data.count.toLocaleString("es-MX")} carritos`}
+                      </strong>{" "}
+                      · {m(cartsState.data.amount)}{" "}
+                      <span className="text-fg-muted">(estimado con los precios de hoy)</span>
+                    </p>
+                  )}
+                  <p className="text-[13px] text-fg-muted">
+                    {cartsState.data.enabled
+                      ? "El recordatorio por correo está encendido: les escribimos una vez, 3 horas después."
+                      : "El recordatorio por correo está apagado: nadie les escribe para que vuelvan."}{" "}
+                    {hasPermission(ctx, "notifications.manage") ? (
+                      <Link href={cartRecoverySettingsHref(base)} className="underline">
+                        {cartsState.data.enabled ? "Ver el ajuste" : "Encenderlo"}
+                      </Link>
+                    ) : null}
+                  </p>
+                </>
+              ) : (
+                <CardError what="los carritos recuperables" retryHref={retryHref} />
+              )}
+            </section>
+          ) : null}
+        </div>
       ) : null}
       {systemState && healthy ? systemState : null}
     </section>

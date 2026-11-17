@@ -26,8 +26,20 @@ with tipos_nuevos(tipo) as (
   ]::text[])
 )
 select 'versión del esquema' as comprobacion, public.app_schema_version() as valor,
-       '20261113000400' as esperado, public.app_schema_version() = '20261113000400' as ok,
+       '20261116000100' as esperado, public.app_schema_version() = '20261116000100' as ok,
        'detener' as categoria
+union all
+select 'lecturas de Inicio (0100) solo para authenticated',
+       (select count(*)::text from pg_proc
+         where oid in (to_regprocedure('public.dashboard_recoverable_carts(uuid)'),
+                       to_regprocedure('public.dashboard_customer_mix(uuid, date, date)'))
+           and has_function_privilege('authenticated', oid, 'execute')
+           and not has_function_privilege('anon', oid, 'execute')), '2',
+       (select count(*) from pg_proc
+         where oid in (to_regprocedure('public.dashboard_recoverable_carts(uuid)'),
+                       to_regprocedure('public.dashboard_customer_mix(uuid, date, date)'))
+           and has_function_privilege('authenticated', oid, 'execute')
+           and not has_function_privilege('anon', oid, 'execute')) = 2, 'detener'
 union all
 select 'tablas nuevas con RLS forzado',
        (select count(*)::text from pg_class
