@@ -253,6 +253,10 @@ export async function startInvitationLogin(token: string): Promise<FormState> {
   const invitation = await peekInvitation(token);
   if (!invitation) return { error: "La invitación no es válida o caducó. Pide una nueva." };
 
+  // Mismo límite propio que el login normal (Auth solo limita por la IP del servidor, compartida).
+  if (!(await takeLoginAttempt(invitation.email))) {
+    return { error: "Demasiados intentos. Espera unos minutos." };
+  }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: invitation.email,
