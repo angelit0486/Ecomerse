@@ -81,18 +81,42 @@ describe("guiones de la ventana única", () => {
     expect(guard).toBeLessThan(firstChange);
   });
 
-  it("la reversa de 0100 (Inicio) empieza con su candado y deja la versión en 0400 (PR #12)", () => {
-    const sql = readFileSync(
-      join(root, "scripts/ops/reversa/20261116000100_home_control_center.reversa.sql"),
-      "utf8",
-    ).replace(/--.*$/gm, "");
-    const guard = sql.indexOf("reversa_bloqueada");
-    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
-    expect(guard).toBeGreaterThan(0);
-    expect(guard).toBeLessThan(firstChange);
-    expect(sql).toMatch(/<> '20261116000100'/);
-    expect(sql).toMatch(/select '20261113000400'::text/);
-    expect(sql).not.toMatch(/\b(delete|truncate|update)\b/i);
+  // Integración del issue #18: cada migración posterior a 0400 trae su reversa sin
+  // pérdida, que solo aplica a su versión y deja la de la migración anterior. Las
+  // reversas se corren de la más nueva a la más vieja (comprobar-0400.sh, NEWER).
+  const migrations = readdirSync(join(root, "supabase/migrations"))
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => f.split("_")[0]!)
+    .sort();
+  const later = migrations.filter((v) => v > "20261113000400");
+  it.each(later)(
+    "la reversa de %s tiene candado, vuelve a la versión anterior y no borra datos",
+    (v) => {
+      const file = readdirSync(join(root, "scripts/ops/reversa")).find(
+        (f) => f.startsWith(`${v}_`) && f.endsWith(".reversa.sql"),
+      );
+      expect(file, `falta scripts/ops/reversa/${v}_*.reversa.sql`).toBeDefined();
+      const sql = readFileSync(join(root, "scripts/ops/reversa", file!), "utf8").replace(
+        /--.*$/gm,
+        "",
+      );
+      const guard = sql.indexOf("reversa_bloqueada");
+      const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+      expect(guard).toBeGreaterThan(0);
+      expect(guard).toBeLessThan(firstChange);
+      expect(sql).toMatch(new RegExp(`<> '${v}'`));
+      const previous = migrations[migrations.indexOf(v) - 1]!;
+      expect(sql).toMatch(new RegExp(`select '${previous}'::text`));
+      expect(sql).not.toMatch(/\btruncate\b/i);
+      expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
+    },
+  );
+
+  it("comprobar-0400.sh corre todas esas reversas, de la más nueva a la más vieja", () => {
+    const sh = readFileSync(join(root, "scripts/ops/reversa/comprobar-0400.sh"), "utf8");
+    const listed = [...sh.matchAll(/^  "(\d{14})\|scripts\/ops\/reversa\/[^|]+\|(\d{14})"$/gm)];
+    expect(listed.map((m) => m[1])).toEqual([...later].reverse());
+    for (const m of listed) expect(m[2]).toBe(migrations[migrations.indexOf(m[1]!) - 1]);
   });
 
   it("las comprobaciones de la ventana esperan la versión de la última migración", () => {

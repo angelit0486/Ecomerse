@@ -18,6 +18,8 @@
 >
 > Se aplican en ese orden. El ensayo local cubre las 10.
 >
+> **Actualización (2026-11-17, issue #18): una más, `20261117000100_import_commit_speed.sql` (anexo C).** Solo redefine dos funciones (importación más rápida) y sube la versión: donde este documento dice que la versión final es `20261113000400`, con el anexo C es `20261117000100` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás.
+>
 > **Estado: PREPARADO, NO APLICADO.** Nada de esto se ha ejecutado en staging ni en producción. Aplicarlo requiere la autorización expresa del propietario (Orden 10 lo prohíbe en este bloque).
 >
 > Ensayo local reproducible: `bash scripts/ops/migration-rehearsal.sh` (38 s). Último resultado: 2026-11-13, rama `producto/orden-10` (`07ba916`), las 10 en verde (sección 7).
@@ -406,3 +408,15 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
   - `comprobar-0400.sh`: verde en unos 24 s. Tras la reversa de la 11.ª, el esquema quedó idéntico al de `20261113000400` (25,090 líneas). Tras la de la 10, quedó idéntico al de `20261113000300` (24,577 líneas).
   - `pnpm db:test`: pgTAP 150 archivos y 3,181 pruebas en verde.
   - Tiempo en staging: [PENDIENTE DE MEDIR].
+
+## Anexo C. Importación más rápida (issue #18, agregada el 2026-11-17)
+
+| #   | Archivo                                  | sha256                                                             | Bytes  | Qué hace                                                                                                                                                                                                                                                                                                                                             | Depende de  |
+| --- | ---------------------------------------- | ------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| +1  | `20261117000100_import_commit_speed.sql` | `909acaf5f2c6242c0890974f35eab6a550a6193d6bbe3b1e8de33469cdf21926` | 17,883 | Redefine `app.products_derive` (deja el texto de búsqueda para el final solo durante `system.import_commit`, con una marca local de la transacción) y `system.import_commit` (misma firma y permisos: texto de búsqueda una vez por producto, exclusión de productos con error con hash, ANALYZE a los 100, 400 y 1,000 productos en una base chica) | la anterior |
+
+- **Por qué.** La prueba E2E de 18,000 filas falla en CI cuando una parte de ~5,000 filas agota sus 3 intentos por `statement_timeout` (~50–57 s). Medido en local (PostgreSQL 17.7, mismo lote): parte de 4,998 filas en una base sin estadísticas **29.5 s → 12.1 s**; con estadísticas **21.0 s → 11.2 s**; parte de 2,499 filas sin estadísticas **12.2 s → 6.4 s** [MEDIDO, local; no en Supabase alojado].
+- **Con el código.** Sin tablas, columnas ni datos nuevos. El código no usa nada nuevo, pero espera la versión `20261117000100` (D-POR-06): migrar primero, desplegar después, como el resto del paquete.
+- **Verificación posterior:** versión `20261117000100` y 3 comprobaciones del ensayo (paso 4, «1117»): la marca solo vale para su txid, `import_commit` recalcula el texto al final, y solo `system_worker` ejecuta `import_commit`. La comprobación «0100: texto de búsqueda al día» sigue en verde. pgTAP: `149_import_commit_speed.test.sql`.
+- **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000100_import_commit_speed.reversa.sql`, con candado de versión. Primero desplegar el código que espera `20261113000400`; después correrla. Deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0). Es la primera reversa del orden: la de 0400 se rechaza mientras la base esté en `20261117000100`.
+- **Con el PR #12** (`20261116000100`, Inicio): si se une antes, esta migración sigue yendo después (orden por nombre); al resolver el conflicto, el manifiesto queda con las dos, la versión final es la de esta, la reversa de esta vuelve a `20261116000100` (no a `20261113000400`) y `NEWER` de `comprobar-0400.sh` lista esta y luego la de #12.

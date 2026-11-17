@@ -13,6 +13,8 @@
 #
 # Orden 10, mensaje 4 (D7): de 6 a 10 migraciones (las 4 de 20261113).
 # 2026-11-17 (PR #12): de 10 a 11 (20261116000100, Inicio como centro de control).
+#   6. pgTAP de seguridad y de las migraciones del manifiesto sobre la base actualizada.
+# 2026-11-17 (issue #18): + 20261117000100 (importación más rápida).
 #
 # Uso: bash scripts/ops/migration-rehearsal.sh
 # Manifiesto: docs/runbooks/despliegue-migraciones-2026-11.md (sección 2).
@@ -39,6 +41,8 @@ MANIFEST=(
   "20261113000400_import_batches.sql 3f0eb416a75d8ca5d0c70c153ff868c38cd6bdae950838212b3c713303fe55a5"
   # 11.ª (PR #12): Inicio como centro de control (2 lecturas y un índice).
   "20261116000100_home_control_center.sql 8f13e8fbc5efb3be6d611ab4d5a4d0716e4e958d5a39f4a45ca3c46e7fee2258"
+  # Issue #18: aplicar una importación más rápido (sin tablas ni datos nuevos).
+  "20261117000100_import_commit_speed.sql 909acaf5f2c6242c0890974f35eab6a550a6193d6bbe3b1e8de33469cdf21926"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -107,7 +111,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261116000100"
+check "versión final" "select public.app_schema_version()" "20261117000100"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -135,6 +139,9 @@ check "0400: importaciones existentes intactas (ninguna queda en un lote)" "sele
 check "0100 (Inicio): índice de carritos recuperables" "select count(*) from pg_indexes where indexname = 'carts_store_recoverable_idx'" "1"
 check "0100 (Inicio): lecturas solo para authenticated" "select bool_and(has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute')) from unnest(array['public.dashboard_recoverable_carts(uuid)', 'public.dashboard_customer_mix(uuid, date, date)']::regprocedure[]) f" "t"
 check "0100 (Inicio): security definer con search_path vacío" "select count(*) from pg_proc where oid in ('public.dashboard_recoverable_carts(uuid)'::regprocedure, 'public.dashboard_customer_mix(uuid, date, date)'::regprocedure) and prosecdef and proconfig = array['search_path=\"\"']" "2"
+check "1117 (importación): products_derive deja el texto de búsqueda solo con la marca de su txid" "select prosrc ~ 'import_defer_search' and prosrc ~ 'txid_current' from pg_proc where oid = 'app.products_derive()'::regprocedure" "t"
+check "1117 (importación): import_commit recalcula el texto al final y apaga la marca" "select prosrc ~ 'v_touched' and prosrc ~ 'import_defer_search' from pg_proc where oid = 'system.import_commit(uuid)'::regprocedure" "t"
+check "1117 (importación): import_commit solo para system_worker" "select has_function_privilege('system_worker', 'system.import_commit(uuid)', 'execute') and not has_function_privilege('authenticated', 'system.import_commit(uuid)', 'execute') and not has_function_privilege('anon', 'system.import_commit(uuid)', 'execute')" "t"
 ventana 02-despues.sql
 # H4-B (mensaje 7): aislamiento entre las dos tiendas de prueba; escribe y revierte.
 ventana 04-aislamiento.sql
@@ -168,6 +175,7 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/144_photo_checks.test.sql supabase/tests/database/145_import_new_categories.test.sql \
   supabase/tests/database/146_publish_runs.test.sql supabase/tests/database/147_import_batches.test.sql \
   supabase/tests/database/148_home_control_center.test.sql \
+  supabase/tests/database/149_import_commit_speed.test.sql \
   2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"
