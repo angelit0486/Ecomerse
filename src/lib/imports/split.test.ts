@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   decodeCsvBytes,
   handleKey,
+  MAX_BATCH_PARTS,
+  MAX_BATCH_ROWS,
   MAX_PART_BYTES,
   MAX_PART_ROWS,
   partBody,
@@ -37,20 +39,20 @@ describe("handleKey (agrupa como el importador)", () => {
 });
 
 describe("splitIntoParts", () => {
-  it("12,000 filas → 5,000 + 5,000 + 2,000, en orden y sin perder ni repetir filas", () => {
+  it("12,000 filas → 4 partes de 2,500 + 2,000, en orden y sin perder ni repetir filas", () => {
     const { rows, rowNumbers } = singles(12_000);
     const result = splitIntoParts(HEADERS, rows, rowNumbers);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.parts.map((p) => p.rows.length)).toEqual([5000, 5000, 2000]);
+    expect(result.parts.map((p) => p.rows.length)).toEqual([2500, 2500, 2500, 2500, 2000]);
     const all = result.parts.flatMap((p) => p.rowNumbers);
     expect(all).toEqual(rowNumbers);
-    expect(result.parts[1]!.rows[0]).toEqual(rows[5000]);
+    expect(result.parts[1]!.rows[0]).toEqual(rows[2500]);
   });
 
   it("nunca separa las filas de un producto: el que cruza el límite pasa completo a la siguiente parte", () => {
-    const { rows, rowNumbers } = singles(4998);
-    // Filas 4999, 5000 y 5001 del archivo: tres presentaciones del mismo producto.
+    const { rows, rowNumbers } = singles(2498);
+    // Filas 2499, 2500 y 2501 del archivo: tres presentaciones del mismo producto.
     for (let v = 0; v < 3; v += 1) {
       rows.push(row("sudadera", 9000 + v));
       rowNumbers.push(rows.length + 1);
@@ -60,7 +62,7 @@ describe("splitIntoParts", () => {
     const result = splitIntoParts(HEADERS, rows, rowNumbers);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.parts.map((p) => p.rows.length)).toEqual([4998, 4]);
+    expect(result.parts.map((p) => p.rows.length)).toEqual([2498, 4]);
     expect(result.parts[1]!.rows.map((r) => r[0])).toEqual([
       "sudadera",
       "sudadera",
@@ -101,7 +103,7 @@ describe("splitIntoParts", () => {
     }
   });
 
-  it("un producto que no cabe en una parte, o más de 10 partes, se rechaza con el motivo", () => {
+  it("un producto que no cabe en una parte, o más partes que el tope, se rechaza con el motivo", () => {
     const rows = [row("a", 1), row("b", 2), row("b", 3), row("b", 4)];
     const rowNumbers = [2, 3, 4, 5];
     expect(
@@ -111,6 +113,16 @@ describe("splitIntoParts", () => {
     expect(
       splitIntoParts(HEADERS, many.rows, many.rowNumbers, [], { rows: 1, bytes: 1e6, parts: 10 }),
     ).toEqual({ ok: false, code: "partes", detail: "12" });
+  });
+
+  it("ADR-067: partes de 2,500 filas y hasta 20 partes conservan el tope de 50,000 filas", () => {
+    expect(MAX_PART_ROWS).toBe(2500);
+    expect(MAX_BATCH_PARTS * MAX_PART_ROWS).toBeGreaterThanOrEqual(MAX_BATCH_ROWS);
+    const { rows, rowNumbers } = singles(MAX_BATCH_ROWS);
+    const result = splitIntoParts(HEADERS, rows, rowNumbers);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.parts).toHaveLength(MAX_BATCH_PARTS);
   });
 
   it("es determinista: el mismo archivo da las mismas partes y las mismas huellas", async () => {
@@ -128,7 +140,7 @@ describe("splitIntoParts", () => {
 });
 
 describe("prepareImport", () => {
-  it("una hoja en español de 6,000 filas se traduce y se parte en 2 partes", () => {
+  it("una hoja en español de 6,000 filas se traduce y se parte en 3 partes", () => {
     const lines = ["Producto,Precio,Existencias,Publicado"];
     for (let i = 1; i <= 6000; i += 1) lines.push(`Taza ${i},$150.00,${i % 7},sí`);
     const prepared = prepareImport(`\uFEFF${lines.join("\r\n")}\r\n`);
@@ -136,8 +148,8 @@ describe("prepareImport", () => {
     if (!prepared.ok) return;
     expect(prepared.platform).toBe("hoja");
     expect(prepared.rows).toBe(6000);
-    expect(prepared.parts.map((p) => p.rows.length)).toEqual([5000, 1000]);
-    const part = prepared.parts[1]!;
+    expect(prepared.parts.map((p) => p.rows.length)).toEqual([2500, 2500, 1000]);
+    const part = prepared.parts[2]!;
     expect(part.headers[0]).toBe("handle");
     expect(part.rowNumbers[0]).toBe(5002);
     expect(part.rows[0]![0]).toBe("taza-5001");

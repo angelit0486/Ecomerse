@@ -100,7 +100,7 @@ afterAll(async () => {
 });
 
 describe("A1: el runner cada minuto, con los límites de producción", () => {
-  it("un lote de 6,000 filas en 2 partes termina solo, con la página cerrada, sin duplicar nada", async () => {
+  it("un lote de 6,000 filas por partes termina solo, con la página cerrada, sin duplicar nada", async () => {
     const lines = ["Producto,Talla,Precio,Existencias,SKU,Publicado"];
     for (let i = 1; i <= 2000; i += 1) {
       for (const size of ["CH", "M", "G"])
@@ -109,7 +109,9 @@ describe("A1: el runner cada minuto, con los límites de producción", () => {
     const csv = lines.join("\n");
     const prepared = prepareImport(csv);
     if (!prepared.ok) throw new Error(prepared.code);
-    expect(prepared.parts.map((p) => p.rows.length)).toEqual([4998, 1002]);
+    // ADR-067: partes de hasta 2,500 filas (833 sudaderas de 3 tallas) → 3 partes.
+    expect(prepared.parts.map((p) => p.rows.length)).toEqual([2499, 2499, 1002]);
+    const partsCount = prepared.parts.length;
     const reads = prepared.parts.map((p) => {
       const r = readPartBody(new TextEncoder().encode(partBody(p)));
       if (!r.ok) throw new Error(r.code);
@@ -146,7 +148,7 @@ describe("A1: el runner cada minuto, con los límites de producción", () => {
                (select count(*)::int from system.jobs where status in ('queued', 'running')) as open,
                (select count(*)::int from public.publish_runs r join public.import_jobs j on j.id = r.import_job_id
                  where j.batch_id = ${batchId} and r.status = 'completed') as runs`;
-      if (state!.batch === "completed" && state!.open === 0 && state!.runs === 2) break;
+      if (state!.batch === "completed" && state!.open === 0 && state!.runs === partsCount) break;
     }
     // Ningún minuto pasa del límite de la función.
     expect(Math.max(...minutes)).toBeLessThan(FUNCTION_LIMIT_MS);
@@ -158,10 +160,9 @@ describe("A1: el runner cada minuto, con los límites de producción", () => {
       select q.attempts, q.status from system.jobs q
        where q.type = 'import.commit'
          and (q.payload ->> 'import_job_id')::uuid in (select id from public.import_jobs where batch_id = ${batchId})`;
-    expect(commits).toEqual([
-      { attempts: 1, status: "succeeded" },
-      { attempts: 1, status: "succeeded" },
-    ]);
+    expect(commits).toEqual(
+      Array.from({ length: partsCount }, () => ({ attempts: 1, status: "succeeded" })),
+    );
     const [counts] = await admin<
       { products: number; variants: number; skus: number; active: number }[]
     >`

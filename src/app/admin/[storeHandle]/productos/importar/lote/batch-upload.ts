@@ -1,8 +1,10 @@
 import {
   decodeCsvBytes,
   MAX_BATCH_FILE_BYTES,
+  MAX_BATCH_PARTS,
   MAX_PART_ROWS,
   MAX_SINGLE_FILE_BYTES,
+  MAX_SINGLE_ROWS,
   partBody,
   partsToSend as planParts,
   prepareImport,
@@ -55,13 +57,13 @@ function preparedError(prepared: Exclude<PreparedImport, { ok: true }>): string 
     case "filas":
       return "El archivo tiene más de 50,000 filas. Divídelo en varios archivos.";
     case "producto":
-      return `El producto que empieza en la fila ${prepared.detail} tiene demasiadas filas para una parte (más de 5,000 o más de 3.5 MB).`;
+      return `El producto que empieza en la fila ${prepared.detail} tiene demasiadas filas para una parte (más de ${MAX_PART_ROWS.toLocaleString("es-MX")} o más de 3.5 MB).`;
     case "partes":
-      return `El archivo necesitaría ${prepared.detail} partes y el máximo es 10. Divídelo en varios archivos.`;
+      return `El archivo necesitaría ${prepared.detail} partes y el máximo es ${MAX_BATCH_PARTS}. Divídelo en varios archivos.`;
   }
 }
 
-/** Saltos de línea del archivo: con 5,001 o menos, no puede pasar de 5,000 filas. */
+/** Saltos de línea del archivo: con 5,001 o menos, no puede pasar de 5,000 filas (MAX_SINGLE_ROWS). */
 function lineBreaks(bytes: Uint8Array): number {
   let count = 0;
   for (const b of bytes) if (b === 0x0a) count += 1;
@@ -78,7 +80,7 @@ export async function readImportFile(file: File, forceBatch = false): Promise<Re
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   const small = file.size <= MAX_SINGLE_FILE_BYTES;
-  if (!forceBatch && small && lineBreaks(bytes) <= MAX_PART_ROWS + 1) return { kind: "single" };
+  if (!forceBatch && small && lineBreaks(bytes) <= MAX_SINGLE_ROWS + 1) return { kind: "single" };
   const text = decodeCsvBytes(bytes);
   if (text === null) {
     return {
@@ -93,7 +95,7 @@ export async function readImportFile(file: File, forceBatch = false): Promise<Re
     if (!forceBatch && small) return { kind: "single" };
     return { kind: "error", message: preparedError(prepared) };
   }
-  if (!forceBatch && small && prepared.rows <= MAX_PART_ROWS) return { kind: "single" };
+  if (!forceBatch && small && prepared.rows <= MAX_SINGLE_ROWS) return { kind: "single" };
   const bodies = prepared.parts.map(partBody);
   const fingerprints = await Promise.all(bodies.map((body) => sha256Hex(body)));
   return {

@@ -15,8 +15,8 @@ type State =
 /**
  * Paso 3 del importador. Un archivo de hasta 4 MB y 5,000 filas sube entero, como
  * siempre (el servidor lo lee y lo valida). Uno más grande se parte aquí, en el
- * navegador, en partes de hasta 5,000 filas sin separar las filas de un producto
- * (ADR-064 A); cada parte se valida en el servidor como un archivo más.
+ * navegador, en partes de hasta 2,500 filas sin separar las filas de un producto
+ * (ADR-064 A, ADR-067); cada parte se valida en el servidor como un archivo más.
  */
 export function ImportFileForm({ action, storeHandle }: { action: string; storeHandle: string }) {
   const router = useRouter();
@@ -71,7 +71,7 @@ export function ImportFileForm({ action, storeHandle }: { action: string; storeH
         </label>
         <p id="file-limits" className="text-[13px] text-fg-muted">
           Hasta 5,000 filas se revisan de una vez. Un archivo más grande (hasta 50,000 filas) se
-          sube por partes de hasta 5,000 filas, sin separar las presentaciones de un producto.
+          sube por partes de hasta 2,500 filas, sin separar las presentaciones de un producto.
         </p>
         <input
           id="file"

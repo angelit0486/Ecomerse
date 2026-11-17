@@ -1742,6 +1742,28 @@ Rama `producto/orden-09`. Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. B
 
 **Qué decidir:** A, B o C. A y B cambian el comportamiento del importador (migración aditiva en `app.import_resolve_base` y relacionadas).
 
+### ADR-067 — Partes de 2,500 filas en los lotes, hasta 20 partes · **PROPUESTO (issue #18, 2026-11-17); preparado en un PR en borrador, sin aplicar**
+
+> **Número.** ADR-066 está en el PR #13 (borrador), que lo agrega en otra sección de este archivo. Por eso este es el 067. Se puso aquí, junto a ADR-064 y ADR-065, y no al final del archivo, para no chocar con los cambios de #12 y #13 en este documento.
+
+**Contexto.**
+
+- ADR-064 parte los archivos grandes en partes de hasta 5,000 filas; cada parte se aplica todo o nada en un `import.commit` del worker, dentro de un `statement_timeout` de 55 s en el entorno alojado y de 30 s para `system_worker` en local.
+- La E2E de 18,000 filas falla en CI cuando una parte de ~5,000 filas agota sus 3 intentos por tiempo. La migración `20261117000100` (PR #20) baja una parte de 4,998 filas en una base sin estadísticas de 29.5 s a 12.1 s [MEDIDO, local]. Una parte de 2,500 filas tarda la mitad: más margen frente al tope, sobre todo en un plan alojado más lento [NO VERIFICADO en Supabase].
+
+**Opción preparada** (migración `20261117000200_import_parts_2500.sql`, PR apilado sobre #20):
+
+- La pantalla parte en partes de **2,500** filas (sin separar un producto) y un lote admite **hasta 20 partes**: el tope de 50,000 filas por archivo no cambia.
+- La base acepta `parts_count` y `part_number` de 1 a 20, e `imports_batch_create` rechaza partes de más de 2,500 filas.
+- Los lotes existentes no cambian. Reversa sin pérdida, con candado: se rechaza si ya existe un lote de más de 10 partes (no borra nada).
+
+**Qué decidir** (el propietario):
+
+1. **Aprobar o no ADR-067.** Sin él, #20 solo ya deja una parte de 5,000 filas en ~12 s.
+2. **Importación suelta.** Se dejó en **5,000 filas, todo o nada** (un archivo de hasta 5,000 filas y menos de 4 MB no se parte). Alternativa: partir desde 2,500 filas, que da más margen pero quita el «todo o nada» a archivos de 2,501–5,000 filas. Excepción ya incluida: un archivo de más de 4 MB con 2,501–5,000 filas ahora entra como lote de 2 partes, no de una.
+3. **Tope de 30 importaciones por hora.** Cada parte cuenta como una: un lote de 50,000 filas usa 20 (antes 10), así que caben 1 lote grande y 10 importaciones más por hora. Se dejó en 30; se puede subir a 60.
+4. **Lotes a medias al desplegar** [riesgo, sin resolver en código]. Un lote creado antes del despliegue (partes de 5,000) que se retoma después, eligiendo otra vez el archivo, no se puede terminar: el navegador nuevo parte en 2,500 y la base rechaza esas partes por huella (`part_fingerprint`). Hoy no afecta: staging aún no tiene `import_batches` (la 0400 va en la misma ventana y `01-antes.sql` lo exige), así que si ADR-067 va en esa ventana no hay lotes viejos. Si va después, desplegar sin lotes a medias o cancelarlos y volver a subir el archivo. Si hace falta, se puede hacer que el navegador reparta como el lote original (cambio aparte). Además, una pestaña cargada antes del despliegue que pida partes de más de 2,500 filas recibe «No pudimos preparar el archivo» y debe recargar.
+
 ## 37. Productización, bloque 1 (Orden 10, 2026-11-12/13)
 
 Rama `producto/orden-10` (desde `producto/orden-09` @ `b6cd725`). Tablero: `docs/audit/PRUVA_PRODUCTIZATION_BOARD.md`. Bitácora: `docs/audit/PRUVA_PRODUCTIZATION_EXECUTION_LOG.md`. Nada se desplegó ni se aplicó fuera de local.

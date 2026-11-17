@@ -20,6 +20,8 @@
 >
 > **Actualización (2026-11-17, issue #18): una más, `20261117000100_import_commit_speed.sql` (anexo C).** Solo redefine dos funciones (importación más rápida) y sube la versión: donde este documento dice que la versión final es `20261113000400`, con el anexo C es `20261117000100` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás.
 >
+> **Solo si se aprueba ADR-067: una más, `20261117000200_import_parts_2500.sql` (anexo D).** Partes de 2,500 filas, hasta 20 por lote. Con ella la versión final es `20261117000200` (el ensayo y `02-despues.sql` de esa rama ya la esperan). Va al final.
+>
 > **Estado: PREPARADO, NO APLICADO.** Nada de esto se ha ejecutado en staging ni en producción. Aplicarlo requiere la autorización expresa del propietario (Orden 10 lo prohíbe en este bloque).
 >
 > Ensayo local reproducible: `bash scripts/ops/migration-rehearsal.sh` (38 s). Último resultado: 2026-11-13, rama `producto/orden-10` (`07ba916`), las 10 en verde (sección 7).
@@ -420,3 +422,17 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Verificación posterior:** versión `20261117000100` y 3 comprobaciones del ensayo (paso 4, «1117»): la marca solo vale para su txid, `import_commit` recalcula el texto al final, y solo `system_worker` ejecuta `import_commit`. La comprobación «0100: texto de búsqueda al día» sigue en verde. pgTAP: `149_import_commit_speed.test.sql`.
 - **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000100_import_commit_speed.reversa.sql`, con candado de versión. Primero desplegar el código que espera `20261113000400`; después correrla. Deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0). Es la primera reversa del orden: la de 0400 se rechaza mientras la base esté en `20261117000100`.
 - **Con el PR #12** (`20261116000100`, Inicio): si se une antes, esta migración sigue yendo después (orden por nombre); al resolver el conflicto, el manifiesto queda con las dos, la versión final es la de esta, la reversa de esta vuelve a `20261116000100` (no a `20261113000400`) y `NEWER` de `comprobar-0400.sh` lista esta y luego la de #12.
+
+## Anexo D. Partes de 2,500 filas (ADR-067, PROPUESTO; agregada el 2026-11-17)
+
+| #   | Archivo                                | sha256                                                             | Bytes | Qué hace                                                                                                                                                                                            | Depende de  |
+| --- | -------------------------------------- | ------------------------------------------------------------------ | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| +2  | `20261117000200_import_parts_2500.sql` | `7079f730ea139f192816c7d0a6b3a80096ac139e6503a7a62509f653f824f6d9` | 5,238 | Cambia los `check` de `import_batches.parts_count` e `import_jobs.part_number` a 1–20 y redefine `public.imports_batch_create` (misma firma y permisos) con partes de hasta 2,500 filas y 20 partes | la anterior |
+
+- **Por qué.** Partes de la mitad de tamaño: más margen frente al `statement_timeout` del worker. Medido en local con la anexo C: parte de 2,499 filas sin estadísticas **6.4 s**, contra 12.1 s de una de 4,998 [MEDIDO, local].
+- **Con el código.** Va con el código de ADR-067 (parte en 2,500 en el navegador), que espera `20261117000200`: migrar primero, desplegar después.
+- **Bloqueo.** Quitar y poner los dos `check` revisa `import_batches` e `import_jobs` con un bloqueo exclusivo breve; en staging son tablas chicas o vacías.
+- **Verificación posterior:** versión `20261117000200` y 3 comprobaciones del ensayo (paso 4, «ADR-067»): los dos topes en 20 e `imports_batch_create` con 20 partes de 2,500 filas. pgTAP: `150_import_parts_2500.test.sql` y `147_import_batches.test.sql`.
+- **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000200_import_parts_2500.reversa.sql`. Candado: versión exacta y ningún lote de más de 10 partes (no borra nada). Primero desplegar el código que espera `20261117000100`; después correrla. Deja el esquema idéntico al de `20261117000100` (comprobado con `pg_dump -s`). Es la primera reversa del orden; `comprobar-0400.sh` la corre en el paso 0, incluido el rechazo con un lote de 11 partes.
+- **Lotes a medias.** Un lote creado con partes de 5,000 no se puede retomar con el código nuevo (ver ADR-067, punto 4). En la primera ventana no hay lotes viejos.
+- **Con el PR #12:** igual que el anexo C; la versión final es la más nueva.

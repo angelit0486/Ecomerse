@@ -1,7 +1,7 @@
 /**
  * ADR-064, opción A: importar más de 5,000 filas por partes. El navegador lee el
  * archivo, lo pasa al formato de la tienda (lo mismo que haría el servidor con un
- * archivo chico) y lo parte en partes de hasta 5,000 filas sin separar nunca las
+ * archivo chico) y lo parte en partes de hasta 2,500 filas (ADR-067) sin separar nunca las
  * filas de un mismo producto. Cada parte viaja sola (≤ 3.5 MB) y el servidor la
  * valida como cualquier archivo: el navegador no decide nada sobre el catálogo.
  *
@@ -11,15 +11,21 @@
 import { CsvParseError, parseCsv } from "@/lib/csv-parse";
 import { translatePlatformCsv, type SourcePlatform } from "@/lib/imports/platforms";
 
-/** Filas por parte: el mismo tope de una importación sola. */
-export const MAX_PART_ROWS = 5000;
-export const MAX_BATCH_PARTS = 10;
+/**
+ * Filas por parte (ADR-067): la mitad del tope de una importación sola, para que
+ * cada parte se aplique con holgura dentro del tiempo de la cola. 20 partes
+ * conservan el tope de 50,000 filas por lote.
+ */
+export const MAX_PART_ROWS = 2500;
+export const MAX_BATCH_PARTS = 20;
+/** Un archivo de hasta 5,000 filas (y 4 MB) sube entero: todo o nada, como siempre. */
+export const MAX_SINGLE_ROWS = 5000;
 export const MAX_BATCH_ROWS = 50_000;
 /** Cuerpo de una parte: por debajo de los 4.5 MB que acepta una función de Vercel. */
 export const MAX_PART_BYTES = 3_500_000;
 /** Archivo que el navegador acepta partir (el servidor nunca lo recibe entero). */
 export const MAX_BATCH_FILE_BYTES = 40 * 1024 * 1024;
-/** Por debajo de esto (y de 5,000 filas) el archivo sube entero, como siempre. */
+/** Por debajo de esto (y de MAX_SINGLE_ROWS filas) el archivo sube entero, como siempre. */
 export const MAX_SINGLE_FILE_BYTES = 4 * 1024 * 1024;
 
 /**
@@ -76,7 +82,7 @@ export function decodeCsvBytes(bytes: ArrayBuffer | Uint8Array): string | null {
 export type SplitFailure =
   /** Un producto (todas sus filas) no cabe en una parte. */
   | { ok: false; code: "producto"; detail: string }
-  /** El archivo necesita más de 10 partes. */
+  /** El archivo necesita más de MAX_BATCH_PARTS partes. */
   | { ok: false; code: "partes"; detail: string };
 
 export interface SplitLimits {
@@ -92,7 +98,7 @@ const DEFAULT_LIMITS: SplitLimits = {
 };
 
 /**
- * Parte las filas (ya en el formato de la tienda) en partes de hasta 5,000 filas
+ * Parte las filas (ya en el formato de la tienda) en partes de hasta 2,500 filas
  * y 3.5 MB. Las filas de un producto (mismo nombre corto) van siempre juntas, en
  * la parte donde aparece su primera fila; dentro de cada parte se conserva el
  * orden del archivo, así la primera fila de cada producto sigue siendo la misma.
