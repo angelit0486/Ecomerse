@@ -72,16 +72,67 @@ export function revenueWithCost(r: ProfitReport): number {
   return r.revenue - r.revenue_without_cost;
 }
 
-/** Avisos sobre qué tan completo es el número, del más importante al menos. */
-export function profitNotes(r: ProfitReport): string[] {
+export interface ProfitCoverage {
+  /**
+   * none: hay venta sin costo y ninguna con costo (la utilidad no se puede calcular).
+   * partial: la utilidad cubre solo parte de la venta. full: toda la venta tiene costo.
+   */
+  state: "none" | "partial" | "full";
+  /** Venta con costo ÷ venta total, en entero 0–100 redondeado hacia abajo. */
+  coveredPct: number;
+}
+
+/**
+ * Qué parte de la venta entra en la utilidad. `profit_report()` solo resta el
+ * costo de la venta que lo tiene (`revenue_without_cost` queda fuera), así que
+ * sin costos la utilidad sale $0 o negativa por reembolsos: no es un resultado.
+ * Se decide por venta, no por unidades: unidades sin costo y sin venta (regalos
+ * al 100 %) no cambian la utilidad calculada y se siguen avisando en las notas.
+ */
+export function profitCoverage(r: ProfitReport): ProfitCoverage {
+  if (r.revenue_without_cost <= 0) return { state: "full", coveredPct: 100 };
+  const withCost = revenueWithCost(r);
+  if (withCost <= 0) return { state: "none", coveredPct: 0 };
+  // revenue > revenue_without_cost > 0: sin división entre cero; enteros, sin flotantes.
+  return { state: "partial", coveredPct: Math.floor((withCost * 100) / r.revenue) };
+}
+
+/** «62 %»; si lo cubierto no llega al 1 %, no se dice «0 %». */
+export function coveredPctLabel(pct: number): string {
+  return pct < 1 ? "menos del 1 %" : `${pct} %`;
+}
+
+/**
+ * Columna Costo de «Por pedido». La base deja `profit` en null cuando alguna
+ * unidad conservada del pedido no tiene costo, y `cost` suma solo las que sí:
+ * con 0 no hay costo capturado; con más de 0, es parcial. Límite: un pedido que
+ * mezcla unidades sin costo con otras de costo capturado en $0 se ve «Sin costo».
+ */
+export function orderCostLabel(row: { cost: number; profit: number | null }): string | null {
+  if (row.profit !== null) return null;
+  return row.cost === 0 ? "Sin costo" : "Incompleto";
+}
+
+/** Aviso de unidades vendidas sin costo capturado (null si no hay). */
+export function missingCostNote(r: ProfitReport): string | null {
+  if (r.units_without_cost <= 0) return null;
+  return r.units_without_cost === 1
+    ? "1 unidad vendida no tiene costo capturado: su venta no entra en la utilidad. Captura el costo en el producto."
+    : `${r.units_without_cost} unidades vendidas no tienen costo capturado: su venta no entra en la utilidad. Captura el costo en cada producto.`;
+}
+
+/**
+ * Avisos sobre qué tan completo es el número, del más importante al menos.
+ * Con `includeMissingCost: false` se omite el de unidades sin costo (la página
+ * lo muestra destacado arriba de las tarjetas).
+ */
+export function profitNotes(
+  r: ProfitReport,
+  { includeMissingCost = true }: { includeMissingCost?: boolean } = {},
+): string[] {
   const notes: string[] = [];
-  if (r.units_without_cost > 0) {
-    notes.push(
-      r.units_without_cost === 1
-        ? "1 unidad vendida no tiene costo capturado: su venta no entra en la utilidad. Captura el costo en el producto."
-        : `${r.units_without_cost} unidades vendidas no tienen costo capturado: su venta no entra en la utilidad. Captura el costo en cada producto.`,
-    );
-  }
+  const missing = missingCostNote(r);
+  if (includeMissingCost && missing) notes.push(missing);
   if (r.units_current_cost > 0) {
     notes.push(
       r.units_current_cost === 1
