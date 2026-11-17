@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { orderPickupInfo } from "@/lib/checkout/pickup";
 import { deliveryEstimate } from "@/lib/orders/delivery-estimate";
 import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
@@ -63,6 +64,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const steps = orderProgress(order);
   const settings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const whatsapp = settings.success ? settings.data.contact?.whatsapp : undefined;
+  const pickup = orderPickupInfo(order, settings.success ? settings.data.contact : undefined);
   const email = store.contact?.email;
   const phone = store.contact?.phone;
   const minutesLeft = order.minutes_left;
@@ -215,6 +217,15 @@ export default async function OrderPage({ params, searchParams }: Props) {
             {order.shipping_address.postal_code} {order.shipping_address.city},{" "}
             {order.shipping_address.region}, {order.shipping_address.country}
           </p>
+        </section>
+      ) : null}
+      {pickup ? (
+        <section aria-labelledby="retiro" className="space-y-1 text-sm">
+          <h2 id="retiro" className="font-semibold">
+            Recoger en tienda
+          </h2>
+          <p>Recoges en: {pickup.address}</p>
+          {pickup.hours ? <p>Horario: {pickup.hours}</p> : null}
         </section>
       ) : null}
       <OrderReviews
