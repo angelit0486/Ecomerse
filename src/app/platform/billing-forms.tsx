@@ -386,7 +386,7 @@ export function SetupFeeForm({ organizationId, due }: { organizationId: string; 
   );
   return (
     <form action={action} className="flex flex-col gap-4">
-      <Field label="Qué hacer" required error={state.fields?.settled}>
+      <Field label="Acción sobre la cuota" required error={state.fields?.settled}>
         {(c) => (
           <Select
             {...c}
@@ -397,7 +397,7 @@ export function SetupFeeForm({ organizationId, due }: { organizationId: string; 
         )}
       </Field>
       <Field
-        label="Motivo"
+        label="Motivo de la cuota"
         required
         hint="Queda en la auditoría (ej. «Pagó el arranque por transferencia»)."
         error={state.fields?.reason}

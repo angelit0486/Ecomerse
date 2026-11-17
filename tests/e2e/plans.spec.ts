@@ -54,6 +54,14 @@ test("la plataforma crea un plan, lo asigna y registra el pago", async ({ page }
   await expectNoSeriousA11yViolations(page);
 
   await page.goto(`/platform/organizaciones/${tenant.orgId}`);
+  // ADR-068: la cuota de arranque se ve y se marca en su propia sección.
+  await expect(page.getByText("Pendiente: se cobra en su primer pago con tarjeta")).toBeVisible();
+  const fee = page.getByRole("region", { name: "Cuota de arranque" });
+  await fee.getByLabel("Motivo de la cuota").fill("Pagó el arranque por transferencia");
+  await fee.getByRole("button", { name: "Guardar" }).click();
+  await expect(fee.getByRole("status")).toHaveText(
+    "Cuota de arranque marcada como saldada: no se cobrará con tarjeta.",
+  );
   await page.getByLabel("Qué hacer").selectOption("change_plan");
   await page.getByRole("combobox", { name: "Plan", exact: true }).selectOption(planKey);
   await page.getByLabel("Motivo").first().fill("Contrató el plan Crece");
