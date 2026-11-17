@@ -1952,3 +1952,24 @@ Partida: segunda auditoría del bloque 2 sobre `48a2931`, «APROBADO CON OBSERVA
   - Probado contra tablas equivalentes en una base desechable, en 10 escenarios (`pg-cron-diagnostics.test.ts`). Las columnas reales de Supabase están [NO VERIFICADO]. No se corrió nada de pg_cron ni pg_net en remoto.
   - **Estado:** corregido en documentación, probado en local. Pendiente de integración remota.
 - **D-O10-25. H1 y H6 sin cambio.** H1 (cron diario) requiere autorizar Vercel Pro o pg_cron (PB-45). H6 (rendimiento alojado) requiere staging. La prueba de `maxDuration` ahora también exige que `vercel.json` siga en `0 12 * * *`: activar «cada minuto» queda como un cambio deliberado.
+
+## 41. Venta de mostrador (propuesta, 2026-11-16)
+
+### ADR-066 — Venta de mostrador mínima · **PROPUESTO, pendiente de aprobación del propietario**
+
+Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-venta-de-mostrador.md). Origen: O3 / PB-17 («Dos inventarios, el del local y el de la tienda»; objetivo «Sin sobreventa»).
+
+- **Problema:** lo vendido en el local no baja las existencias en línea. Hay riesgo de sobreventa y los reportes quedan incompletos.
+- **Opciones:**
+  - A: pedido con canal mostrador en `orders`;
+  - B: tablas propias de ventas físicas;
+  - C: solo ajuste de inventario.
+- **Recomendación: A.** `orders.source` ya existe (`'storefront','admin','api'`) y se le agrega `'pos'`. La RPC `public.pos_sell` crea en una sola transacción, sin red, el pedido pagado, entregado y completado, con movimientos `reservation` + `sale` por `app.apply_inventory_movement`. El precio sale de la base (`price_changed` si difiere), y la idempotencia usa el `unique (store_id, checkout_idempotency_key)` existente.
+- **Cobro sin pasarela:** proveedor nuevo `in_store` (efectivo, transferencia o terminal externa). PRUVA no toca dinero.
+- **Anulación:** `public.pos_void` exige `orders.refund`. Es un reembolso total con reposición (`return`) y no borra el pedido.
+- **Permisos e interruptor:** permiso nuevo `pos.sell`, rol opcional `cashier` («Mostrador») e interruptor `pos_counter_sales` apagado por defecto.
+- **Reportes y correos:** Inicio y Rentabilidad separan por canal con claves aditivas. Sin correo al comprador por defecto.
+- **Contratos críticos tocados (§43):** `PermissionKey`, `PaymentProvider` (valor sin adaptador) y un valor nuevo en `Order snapshot v1`, sin cambio de forma. **Ninguna tabla nueva.**
+- **Fuera de alcance:** POS completo, hardware, cobro con tarjeta por PRUVA, turnos y cortes de caja, multi-ubicación, CFDI y modo sin conexión.
+- **Pendiente:** 5 preguntas abiertas para el propietario (§11 del ADR). Estimación orientativa: ≈ 6 días de agente.
+- **Estado:** no se creó migración ni código. Requiere aprobación antes de cualquier migración.
