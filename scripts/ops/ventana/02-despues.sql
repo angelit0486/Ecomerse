@@ -26,7 +26,7 @@ with tipos_nuevos(tipo) as (
   ]::text[])
 )
 select 'versión del esquema' as comprobacion, public.app_schema_version() as valor,
-       '20261117000500' as esperado, public.app_schema_version() = '20261117000500' as ok,
+       '20261117000600' as esperado, public.app_schema_version() = '20261117000600' as ok,
        'detener' as categoria
 union all
 select 'lecturas de Inicio (0100) solo para authenticated',

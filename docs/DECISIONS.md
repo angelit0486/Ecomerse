@@ -2030,3 +2030,39 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   3. El alta de una tienda usa los días de prueba del plan (antes la consola guardaba el dato pero el alta siempre ponía 14).
 - **Pendiente para cobrar (no es código):** facturación CFDI de la mensualidad (PRUVA aún no emite CFDI), cuenta Stripe México y sus llaves, tasa de IVA en Stripe, términos del servicio y página de precios, aplicar las migraciones con autorización. Detalle y orden en `docs/runbooks/precios-aprobados-2026-11.md` §4.
 - **Nota sobre Mercado Pago:** la mensualidad se cobra con **Stripe** (ADR-044). Mercado Pago es para que cada tienda cobre a sus compradores (ADR-041); no cobra la mensualidad de PRUVA.
+
+## 44. Integración del issue #18 y venta por transferencia (2026-11-17)
+
+- **D-INT-01. Integración de los 19 PRs de Grok en `producto/orden-10`.**
+  - Autorizada por el propietario («arranca con el #17 e incluye los de Grok»). Coordinada en el issue #18.
+  - Merge commits, sin rebase ni force-push sobre las ramas de Grok.
+  - Orden:
+    1. #17 (Next.js 16.4.6, seguridad).
+    2. Los PRs sin migración: #15, #16, #14, #11, #19, #22, #25, #24, #27, #23 y #13.
+    3. Los PRs con migración, de la más vieja a la más nueva: #12, #20, #21, #26, #29 y #28.
+  - **Choques resueltos:**
+    - Inicio: carga de tarjetas de #12 y componente de alertas con enlace a «Salud» de #14.
+    - Pedidos: el vacío con fechas de #12 y los vacíos por vista de #14.
+    - `package.json`: Next.js 16.4.6 y Resend.
+    - Paquete de despliegue: un solo manifiesto de 17 migraciones y la cadena de reversas `NEWER`, con la propuesta de #20.
+  - **Pruebas:** `ventana-sql.test.ts` queda genérica. Exige que cada migración posterior a 0400 tenga una reversa con candado que vuelva a la versión anterior, y que `comprobar-0400.sh` las corra en orden.
+  - **Propuestas incluidas por instrucción del propietario:**
+    - ADR-067 (partes de 2,500 filas, #21) y ADR-068 (cuota de arranque, #28) entran con su código.
+    - ADR-066 (venta de mostrador, #13) es solo documento y sigue PROPUESTO.
+  - **Prueba corregida:** `tests/e2e/plans.spec.ts`. Tras #28, la página de la organización tiene dos campos «Qué hacer»; la prueba se acota a «Registrar un cambio».
+- **D-INT-02. Venta por transferencia: las piezas quedan apartadas 24 horas.**
+  - **Problema:** un pedido con pago manual vencía con el plazo de la tienda (30 min por omisión, máximo 120). `system.expire_orders` lo cancelaba y liberaba las piezas antes de que el comprador pudiera transferir o el personal confirmar.
+  - **Decisión del propietario:**
+    - 24 horas fijas para el pago manual (transferencia, depósito, efectivo al recoger), con las piezas apartadas;
+    - la tarjeta sigue con el plazo de la tienda.
+  - **Migración `20261117000600_manual_payment_hold.sql`:** solo redefine `storefront.place_order`, con la misma firma, permisos y transacción única (contrato Checkout, GATE0 §43, sin cambios). Reversa sin pérdida con candado.
+  - **Página del pedido:** dice el tiempo en horas (`holdLeftLabel`).
+  - **Ya existía, sin cambios:**
+    - instrucciones de la cuenta en Ajustes → Pagos;
+    - el comprador elige la transferencia al pagar y ve las instrucciones;
+    - el personal confirma con `orders_mark_paid_manual`, con auditoría;
+    - «Recoger en tienda» como tarifa de envío gratuita, con dirección y horario (#22, #25, #29).
+  - **Pruebas:** pgTAP `154_manual_payment_hold` (13).
+    - Sin la migración fallan 5: a los 40 minutos la transferencia se cancela y ya no se puede confirmar.
+    - Incluye aislamiento: una tienda no usa la cuenta ni confirma los pagos de otra.
+    - Unitarias de `holdLeftLabel`.

@@ -54,6 +54,8 @@ MANIFEST=(
   "20261117000400_order_email_pickup.sql 2248f9ee81a5da34d1e2c395c32ffbd55a9726867d2a889a6bb293a0a520ce28"
   # Issue #18 (ADR-068, precios aprobados): cuota única de arranque por plan.
   "20261117000500_plan_setup_fee.sql 8a63f47013e4d9120f8d3078b9b1ef18c60cad1d1ebd2d7181e9b11a00b9e8d3"
+  # Integración del issue #18 (D-INT-02): transferencia aparta 24 horas (solo redefine place_order).
+  "20261117000600_manual_payment_hold.sql 094f824cc2e3a066a27dd056524035c67f1952ade194dee042d08e41f1bc9cbc"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -122,7 +124,9 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261117000500"
+check "versión final" "select public.app_schema_version()" "20261117000600"
+check "1117-0600 (transferencia): place_order aparta 24 horas con pago manual" "select prosrc ~ 'when v_provider = ''manual'' then 24 \* 60' from pg_proc where oid = 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)'::regprocedure" "t"
+check "1117-0600 (transferencia): place_order sigue solo para storefront_gateway" "select has_function_privilege('storefront_gateway', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('anon', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('authenticated', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute')" "t"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -203,6 +207,7 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/151_staff_mfa_attempts.test.sql \
   supabase/tests/database/152_order_email_pickup.test.sql \
   supabase/tests/database/153_plan_setup_fee.test.sql \
+  supabase/tests/database/154_manual_payment_hold.test.sql \
   2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"

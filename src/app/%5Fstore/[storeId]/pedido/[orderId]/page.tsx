@@ -7,6 +7,7 @@ import { deliveryEstimate } from "@/lib/orders/delivery-estimate";
 import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
+import { holdLeftLabel } from "@/lib/orders/hold-left";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestLinkState, guestOrder } from "@/server/storefront/checkout";
 import { returnOptions } from "@/server/storefront/returns";
@@ -153,7 +154,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
             <p className="text-sm">
               La tienda confirmará tu pago y te avisaremos.
               {minutesLeft !== null
-                ? ` Tus productos quedan apartados ${minutesLeft} minutos más.`
+                ? ` Tus productos quedan apartados ${holdLeftLabel(minutesLeft)} más.`
                 : ""}
             </p>
           ) : null}

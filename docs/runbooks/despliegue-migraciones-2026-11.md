@@ -1,29 +1,25 @@
-# Paquete de despliegue: 11 migraciones pendientes en staging (Orden 10, O10-05; actualizado en el mensaje 4 y el 2026-11-17 con el PR #12)
+# Paquete de despliegue: 17 migraciones pendientes en staging (Orden 10, O10-05; integración del issue #18, 2026-11-17)
 
 > **Procedimiento vigente: §11, ventana única (Orden 10, mensaje 5).** Las secciones 4 a 6 explican cada comprobación; §11 dice en qué orden se hacen, con qué guiones y cuándo detenerse.
 >
-> **Actualización (2026-11-17, PR #12 «Inicio como centro de control»): son 11 migraciones; versión final `20261116000100`.**
+> **Paquete integrado (2026-11-17, issue #18): 17 migraciones; versión final `20261117000600`.** Staging está en `20261110000200`. Se aplican en orden de nombre, cada una en su transacción:
 >
-> - La 11.ª, `20261116000100_home_control_center.sql` (anexo C): 2 funciones de lectura y un índice; sube la versión.
-> - Vale solo si se une el PR #12. Sin el PR #12, el paquete sigue siendo de 10 y versión `20261113000400`.
-> - `scripts/ops/migration-rehearsal.sh`, `scripts/ops/ventana/01-antes.sql` y `02-despues.sql` ya esperan las 11 y `20261116000100`.
-> - **Orden de reversa:** primero la de la 11.ª (`scripts/ops/reversa/20261116000100_home_control_center.reversa.sql`) y, solo si hace falta, después la de la 10. El candado de la 10 se rechaza mientras la base esté en `20261116000100` y no se debilita (§9.3, anexo C).
-> - Ensayo y verificador corridos en local el 2026-11-17 sobre `feat/inicio-centro-control` (anexo C). Las cifras de la sección 7 y del anexo B son del 2026-11-13/14 con 10 migraciones y no se volvieron a medir aquí salvo lo dicho en el anexo C.
+> | #    | Migración                                                   | Anexo | Reversa                       |
+> | ---- | ----------------------------------------------------------- | ----- | ----------------------------- |
+> | 1–5  | Las de la tabla 2 (`20261110000300` a `20261111000400`)     | —     | Hacia adelante (§9)           |
+> | 6    | `20261112000100_store_alerts.sql`                           | A     | Hacia adelante (§9)           |
+> | 7–10 | Las 4 de `20261113` (fotos, categorías, publicación, lotes) | B     | La 10 pierde datos (§9.1–9.5) |
+> | 11   | `20261116000100_home_control_center.sql`                    | C     | Sin pérdida, con candado      |
+> | 12   | `20261117000100_import_commit_speed.sql`                    | D     | Sin pérdida, con candado      |
+> | 13   | `20261117000200_import_parts_2500.sql`                      | E     | Sin pérdida, con candado      |
+> | 14   | `20261117000300_staff_mfa_attempts.sql`                     | F     | Sin pérdida, con candado      |
+> | 15   | `20261117000400_order_email_pickup.sql`                     | G     | Sin pérdida, con candado      |
+> | 16   | `20261117000500_plan_setup_fee.sql`                         | H     | Con candado (ver anexo)       |
+> | 17   | `20261117000600_manual_payment_hold.sql`                    | I     | Sin pérdida, con candado      |
 >
-> **Actualización (2026-11-13, Orden 10, mensaje 4, corrección D7): son 10 migraciones.**
->
-> - Las 5 de la tabla 2.
-> - La 6.ª, `20261112000100_store_alerts.sql` (anexo A).
-> - Las 4 de `20261113`: fotos con límites persistentes, categorías al importar (ADR-065), publicación por candidatos e importación por partes (ADR-064). Están en el anexo B.
->
-> Se aplican en ese orden. El ensayo local cubre las 10.
->
-> **Actualización (2026-11-17, issue #18): una más, `20261117000100_import_commit_speed.sql` (anexo C).** Solo redefine dos funciones (importación más rápida) y sube la versión: donde este documento dice que la versión final es `20261113000400`, con el anexo C es `20261117000100` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás.
->
-> **Solo si se aprueba ADR-067: una más, `20261117000200_import_parts_2500.sql` (anexo D).** Partes de 2,500 filas, hasta 20 por lote. Con ella la versión final es `20261117000200` (el ensayo y `02-despues.sql` de esa rama ya la esperan). Va al final.
-> **Actualización (2026-11-17, auditoría de autorización, hallazgo 1): una más, `20261117000300_staff_mfa_attempts.sql` (anexo E).** Solo agrega una función (límite de intentos del 2FA) y sube la versión: donde este documento dice que la versión final es `20261113000400`, con el anexo E es `20261117000300` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás. Los anexos C y D son de los PR #20/#21.
-> **Actualización (2026-11-17, retiro en tienda en el correo): una más, `20261117000400_order_email_pickup.sql` (anexo F).** Solo reemplaza una función (los datos del correo del pedido) y sube la versión: donde este documento dice que la versión final es `20261113000400`, con el anexo F es `20261117000400` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás. Los anexos C y D son de los PR #20/#21 y el E del PR #26: la coordinación de la cadena de versiones está al final del anexo F.
-> **Actualización (2026-11-17, issue #18, ADR-068): una más, `20261117000500_plan_setup_fee.sql` (anexo E).** Cuota única de arranque por plan (precios aprobados por el propietario). Donde este documento dice que la versión final es `20261113000400`, con el anexo E es `20261117000500` (§3, §6, §11.6; el ensayo y `02-despues.sql` ya la esperan). Va después de todas las demás.
+> - `scripts/ops/migration-rehearsal.sh`, `ventana/01-antes.sql` y `02-despues.sql` esperan las 17 y `20261117000600`.
+> - **Orden de reversa:** de la más nueva a la más vieja; cada reversa solo corre sobre su versión y deja la de la migración anterior. La de la 10 se rechaza mientras haya alguna posterior. Lo prueba `scripts/ops/reversa/comprobar-0400.sh` (lista `NEWER`).
+> - Las cifras de la sección 7 y del anexo B son del 2026-11-13/14 con 10 migraciones; las del paquete de 17 están en la bitácora de la integración (2026-11-17).
 >
 > **Estado: PREPARADO, NO APLICADO.** Nada de esto se ha ejecutado en staging ni en producción. Aplicarlo requiere la autorización expresa del propietario (Orden 10 lo prohíbe en este bloque).
 >
@@ -414,7 +410,7 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
   - `pnpm db:test`: pgTAP 150 archivos y 3,181 pruebas en verde.
   - Tiempo en staging: [PENDIENTE DE MEDIR].
 
-## Anexo C. Importación más rápida (issue #18, agregada el 2026-11-17)
+## Anexo D. Importación más rápida (issue #18, agregada el 2026-11-17)
 
 | #   | Archivo                                  | sha256                                                             | Bytes  | Qué hace                                                                                                                                                                                                                                                                                                                                             | Depende de  |
 | --- | ---------------------------------------- | ------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -426,7 +422,7 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000100_import_commit_speed.reversa.sql`, con candado de versión. Primero desplegar el código que espera `20261113000400`; después correrla. Deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0). Es la primera reversa del orden: la de 0400 se rechaza mientras la base esté en `20261117000100`.
 - **Con el PR #12** (`20261116000100`, Inicio): si se une antes, esta migración sigue yendo después (orden por nombre); al resolver el conflicto, el manifiesto queda con las dos, la versión final es la de esta, la reversa de esta vuelve a `20261116000100` (no a `20261113000400`) y `NEWER` de `comprobar-0400.sh` lista esta y luego la de #12.
 
-## Anexo D. Partes de 2,500 filas (ADR-067, PROPUESTO; agregada el 2026-11-17)
+## Anexo E. Partes de 2,500 filas (ADR-067, PROPUESTO; agregada el 2026-11-17)
 
 | #   | Archivo                                | sha256                                                             | Bytes | Qué hace                                                                                                                                                                                            | Depende de  |
 | --- | -------------------------------------- | ------------------------------------------------------------------ | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -440,7 +436,7 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Lotes a medias.** Un lote creado con partes de 5,000 no se puede retomar con el código nuevo (ver ADR-067, punto 4). En la primera ventana no hay lotes viejos.
 - **Con el PR #12:** igual que el anexo C; la versión final es la más nueva.
 
-## Anexo E. Límite de intentos del 2FA (auditoría de autorización, hallazgo 1, agregada el 2026-11-17)
+## Anexo F. Límite de intentos del 2FA (auditoría de autorización, hallazgo 1, agregada el 2026-11-17)
 
 | #   | Archivo                                 | sha256                                                             | Bytes | Qué hace                                                                                                                                                                                                                                                                         | Depende de  |
 | --- | --------------------------------------- | ------------------------------------------------------------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -453,7 +449,7 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000300_staff_mfa_attempts.reversa.sql`, con candado de versión. Primero desplegar el código que espera `20261113000400`; después correrla. Borra la función y deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0). Las claves `staff_mfa:*` son efímeras y los eventos son auditoría: se quedan. Es la primera reversa del orden: la de 0400 se rechaza mientras la base esté en `20261117000300`.
 - **Coordinación con los PR #20/#21 (anexos C y D):** si se unen antes, esta migración sigue yendo después (orden por nombre). Al resolver el conflicto: el manifiesto queda con todas; la versión final pasa a ser la más nueva de la cadena (esta, `20261117000300`, si nadie agrega otra posterior) en `EXPECTED_SCHEMA_VERSION`, las aserciones pgTAP, el ensayo y `02-despues.sql`; la reversa de esta vuelve a la versión **anterior en la cadena** (p. ej. `20261117000100`, no `20261113000400`: cambiar su `select '…'::text` y el comentario); y `NEWER` de `comprobar-0400.sh` lista las reversas de la más nueva a la más vieja.
 
-## Anexo F. Retiro en tienda en el correo (agregada el 2026-11-17)
+## Anexo G. Retiro en tienda en el correo (agregada el 2026-11-17)
 
 | #   | Archivo                                 | sha256                                                             | Bytes | Qué hace                                                                                         | Depende de  |
 | --- | --------------------------------------- | ------------------------------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------ | ----------- |
@@ -467,7 +463,7 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000400_order_email_pickup.reversa.sql`, con candado de versión. Primero desplegar el código que espera `20261113000400`; después correrla. Restaura la definición exacta de `20261110000100` (lo comprueba `tests/unit/ventana-sql.test.ts`) y la versión `20261113000400`, y deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0). Es la primera reversa del orden: la de 0400 se rechaza mientras la base esté en `20261117000400`.
 - **Coordinación de la cadena de versiones con los PR #20/#21 (anexos C y D) y #26 (anexo E):** cada uno sube la versión por su cuenta. Si se unen antes, esta migración sigue yendo después de todas (orden por nombre: `20261117000400` es la más nueva). Al resolver el conflicto: el manifiesto del ensayo queda con todas, en orden; la versión final pasa a ser la más nueva de la cadena (esta, `20261117000400`, si nadie agrega otra posterior) en `EXPECTED_SCHEMA_VERSION`, las aserciones pgTAP, el ensayo y `02-despues.sql`; la reversa de esta vuelve a la versión **anterior en la cadena** (p. ej. `20261117000300` si ya está el anexo E, no `20261113000400`: cambiar su `select '…'::text`, el comentario y la prueba de `ventana-sql.test.ts`), y la de la anterior deja de ser la primera; y `NEWER` de `comprobar-0400.sh` lista las reversas de la más nueva a la más vieja (esta primero). Si alguno de esos PR también reemplaza `system.order_notification`, esta migración debe partir de esa definición y su reversa restaurarla a ella.
 
-## Anexo E. Cuota de arranque por plan (ADR-068, issue #18, agregada el 2026-11-17)
+## Anexo H. Cuota de arranque por plan (ADR-068, issue #18, agregada el 2026-11-17)
 
 | #   | Archivo                             | sha256                                                             | Bytes  | Qué hace                                                                                                                                                                                                                                                                                                                                                                                         | Depende de  |
 | --- | ----------------------------------- | ------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
@@ -479,3 +475,14 @@ Solo aplica si se une el PR #12 (`feat/inicio-centro-control`).
 - **Verificación posterior:** versión `20261117000500` y 3 comprobaciones del ensayo («1117 (arranque)»): sin cuotas ni marcas al aplicar, las dos versiones de `platform_set_plan_pricing`, y permisos (solo sesión; `app.org_setup_fee_due` no se llama directo). pgTAP: `153_plan_setup_fee.test.sql` (27).
 - **Reversa (con pérdida menor):** `scripts/ops/reversa/20261117000500_plan_setup_fee.reversa.sql`, con candado de versión. Pierde la cuota capturada y las marcas de «saldada» (quedan en `audit.audit_logs`). Primero desplegar el código que espera `20261113000400`; después correrla. Deja el esquema idéntico al de `20261113000400` (lo prueba `scripts/ops/reversa/comprobar-0400.sh`, paso 0).
 - **Con #12, #20, #21 y las de `fix/totp-rate-limit` y `feat/retiro-en-correo`** (`20261116000100`, `20261117000100` a `0400`): esta va al final por nombre. Al resolver conflictos: el manifiesto lleva todas en orden, la versión final es la más nueva (`20261117000500`), la reversa de esta vuelve a la versión anterior que quede en el manifiesto (no necesariamente `20261113000400`) y `NEWER` de `comprobar-0400.sh` lista primero esta y luego las demás, de la más nueva a la más vieja.
+
+## Anexo I. Transferencia: apartar 24 horas (D-INT-02, agregada el 2026-11-17)
+
+| #   | Archivo                                  | sha256                                                             | Qué hace                                                                                                                                                                                                                                                     |
+| --- | ---------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 17  | `20261117000600_manual_payment_hold.sql` | `094f824cc2e3a066a27dd056524035c67f1952ade194dee042d08e41f1bc9cbc` | Redefine `storefront.place_order` (definición de `20261013000600`) con una sola diferencia: con pago manual (transferencia, depósito, efectivo al recoger) el apartado dura **24 horas** en vez del plazo de la tienda (30 min por omisión). Sube la versión |
+
+- **Por qué.** Un pedido por transferencia se cancelaba a los 30 minutos y liberaba las piezas antes de que el comprador pagara. El propietario decidió 24 horas fijas, con las piezas apartadas.
+- **Con el código.** Sin tablas ni columnas. El código espera `20261117000600`; la página del pedido dice el tiempo en horas («quedan apartados 23 horas más»).
+- **Verificación posterior:** versión `20261117000600` y 2 comprobaciones del ensayo (paso 4, «1117-0600»): la regla de 24 horas y que `place_order` sigue solo para `storefront_gateway`. pgTAP `154_manual_payment_hold` (13 pruebas, incluye aislamiento entre dos tiendas).
+- **Reversa (sin pérdida):** `scripts/ops/reversa/20261117000600_manual_payment_hold.reversa.sql`, con candado de versión. Los pedidos ya creados conservan su plazo.
