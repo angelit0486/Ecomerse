@@ -130,7 +130,9 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       : undefined;
 
   const supabase = await createSupabaseServerClient();
-  const { data: job } = await supabase
+  // Cada lectura lanza su error (va a error.tsx): un fallo no se confunde con
+  // «no existe», ni oculta los errores por fila o el aviso de archivo repetido.
+  const { data: job, error: jobError } = await supabase
     .from("import_jobs")
     .select(
       "id, file_name, mode, status, totals, error, columns, ignored_columns, created_at, committed_at, rows_purged_at, batch_id, part_number",
@@ -138,20 +140,22 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
     .eq("store_id", ctx.store.id)
     .eq("id", jobId)
     .maybeSingle();
+  if (jobError) throw jobError;
   if (!job) notFound();
   const totals = job.totals as Totals;
   const errors = totals.errors ?? 0;
   // ADR-064: una parte de un lote se aplica (y se corrige) desde su lote, en orden.
-  const { data: batch } = job.batch_id
+  const { data: batch, error: batchError } = job.batch_id
     ? await supabase
         .from("import_batches")
         .select("id, file_name, parts_count")
         .eq("store_id", ctx.store.id)
         .eq("id", job.batch_id)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (batchError) throw batchError;
   const isPart = Boolean(job.batch_id);
-  const { data: rows } = errors
+  const { data: rows, error: rowsError } = errors
     ? await supabase
         .from("import_job_rows")
         .select("row_number, raw, errors")
@@ -160,12 +164,13 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
         .eq("action", "error")
         .order("row_number")
         .limit(SHOWN_ROWS)
-    : { data: [] };
+    : { data: [], error: null };
+  if (rowsError) throw rowsError;
   // La importación confirmada espera en la cola: se retoma al mirarla (D-LOTE-05).
   if (job.status === "committing") resumeQueue("imports.page");
   // El mismo archivo ya se importa o se importó hace poco: se avisa antes de
   // confirmar (antes, confirmar dos veces fallaba con «ya existe ese handle»).
-  const { data: twins } =
+  const { data: twins, error: twinsError } =
     job.status === "validated" && !isPart
       ? await supabase
           .from("import_jobs")
@@ -177,7 +182,8 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
           .gte("created_at", hoursAgoIso(24))
           .order("created_at", { ascending: false })
           .limit(1)
-      : { data: [] };
+      : { data: [], error: null };
+  if (twinsError) throw twinsError;
   const twin = twins?.[0] as { status: string; committed_at: string | null } | undefined;
   const ready =
     !isPart && job.status === "validated" && errors === 0 && twin?.status !== "committing";
@@ -202,20 +208,21 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
     }
   }
   // Publicación de los productos marcados para publicar (Orden 10, mensaje 4).
-  const { data: publishRun } = done
+  const { data: publishRun, error: publishRunError } = done
     ? await supabase
         .from("publish_runs")
         .select("id, status, totals, error")
         .eq("store_id", ctx.store.id)
         .eq("import_job_id", job.id)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (publishRunError) throw publishRunError;
   if (publishRun && (publishRun.status === "queued" || publishRun.status === "running")) {
     resumeQueue("imports.publish");
   }
   let blocked: BlockedProduct[] = [];
   if (publishRun && publishRun.status !== "queued") {
-    const { data: items } = await supabase
+    const { data: items, error: itemsError } = await supabase
       .from("publish_run_items")
       .select("product_id, reasons")
       .eq("store_id", ctx.store.id)
@@ -223,14 +230,16 @@ export default async function ImportJobPage({ params, searchParams }: Props) {
       .eq("status", "blocked")
       .order("id")
       .limit(50);
+    if (itemsError) throw itemsError;
     const ids = (items ?? []).map((i) => i.product_id as string);
-    const { data: products } = ids.length
+    const { data: products, error: productsError } = ids.length
       ? await supabase
           .from("products")
           .select("id, title")
           .eq("store_id", ctx.store.id)
           .in("id", ids)
-      : { data: [] };
+      : { data: [], error: null };
+    if (productsError) throw productsError;
     const titles = new Map((products ?? []).map((p) => [p.id as string, p.title as string]));
     blocked = (items ?? []).map((i) => ({
       id: i.product_id as string,

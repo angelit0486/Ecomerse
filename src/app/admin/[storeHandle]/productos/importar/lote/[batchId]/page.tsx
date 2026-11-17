@@ -148,7 +148,9 @@ export default async function ImportBatchPage({ params, searchParams }: Props) {
   const base = `/admin/${ctx.store.handle}/productos/importar`;
 
   const supabase = await createSupabaseServerClient();
-  const { data: batch } = await supabase
+  // Cada lectura lanza su error (va a error.tsx): si fallara la de las partes,
+  // todas parecerían «sin subir» aunque ya estén validadas o aplicadas.
+  const { data: batch, error: batchError } = await supabase
     .from("import_batches")
     .select(
       "id, file_name, mode, status, parts_count, part_rows, total_rows, stop_reason, created_at",
@@ -156,14 +158,16 @@ export default async function ImportBatchPage({ params, searchParams }: Props) {
     .eq("store_id", ctx.store.id)
     .eq("id", batchId)
     .maybeSingle();
+  if (batchError) throw batchError;
   if (!batch) notFound();
-  const { data: jobRows } = await supabase
+  const { data: jobRows, error: jobRowsError } = await supabase
     .from("import_jobs")
     .select("id, part_number, status, totals, error, part_fingerprint, created_at")
     .eq("store_id", ctx.store.id)
     .eq("batch_id", batch.id)
     .order("created_at", { ascending: false })
     .limit(200);
+  if (jobRowsError) throw jobRowsError;
   const jobs = (jobRows ?? []) as PartJob[];
   const partsCount = batch.parts_count as number;
   const numbers = Array.from({ length: partsCount }, (_, i) => i + 1);
@@ -195,13 +199,14 @@ export default async function ImportBatchPage({ params, searchParams }: Props) {
 
   // Publicación de las partes ya aplicadas, sumada (Orden 10, mensaje 4).
   const appliedIds = applied.map((p) => live.get(p)!.id);
-  const { data: runs } = appliedIds.length
+  const { data: runs, error: runsError } = appliedIds.length
     ? await supabase
         .from("publish_runs")
         .select("id, status, totals, error")
         .eq("store_id", ctx.store.id)
         .in("import_job_id", appliedIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (runsError) throw runsError;
   const publishTotals: PublishTotals = { groups: {} };
   for (const run of runs ?? []) {
     const t = run.totals as PublishTotals;
@@ -224,7 +229,7 @@ export default async function ImportBatchPage({ params, searchParams }: Props) {
   const publishFailed = (runs ?? []).find((r) => r.status === "failed");
   let blocked: BlockedProduct[] = [];
   if ((runs ?? []).length > 0 && (publishTotals.blocked ?? 0) > 0) {
-    const { data: items } = await supabase
+    const { data: items, error: itemsError } = await supabase
       .from("publish_run_items")
       .select("product_id, reasons")
       .eq("store_id", ctx.store.id)
@@ -235,14 +240,16 @@ export default async function ImportBatchPage({ params, searchParams }: Props) {
       .eq("status", "blocked")
       .order("id")
       .limit(50);
+    if (itemsError) throw itemsError;
     const ids = (items ?? []).map((i) => i.product_id as string);
-    const { data: products } = ids.length
+    const { data: products, error: productsError } = ids.length
       ? await supabase
           .from("products")
           .select("id, title")
           .eq("store_id", ctx.store.id)
           .in("id", ids)
-      : { data: [] };
+      : { data: [], error: null };
+    if (productsError) throw productsError;
     const titles = new Map((products ?? []).map((p) => [p.id as string, p.title as string]));
     blocked = (items ?? []).map((i) => ({
       id: i.product_id as string,

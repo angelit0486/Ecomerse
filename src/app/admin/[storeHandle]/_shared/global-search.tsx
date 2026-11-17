@@ -20,6 +20,8 @@ export function GlobalSearch({ storeHandle }: { storeHandle: string }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
+  // La última búsqueda falló (red o servidor): no es lo mismo que «Sin resultados».
+  const [failed, setFailed] = useState(false);
   const resultsId = useId();
   const latest = useRef(0);
 
@@ -50,6 +52,7 @@ export function GlobalSearch({ storeHandle }: { storeHandle: string }) {
           // Solo la última búsqueda escrita pinta resultados.
           if (ticket !== latest.current) return;
           setResults(r);
+          setFailed(r === null);
           setLoading(false);
         });
     }, 250);
@@ -85,11 +88,15 @@ export function GlobalSearch({ storeHandle }: { storeHandle: string }) {
           className="absolute inset-x-0 top-12 z-30 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-surface p-2 shadow-lg"
         >
           <p aria-live="polite" className="px-2 py-1 text-[13px] text-fg-muted">
-            {loading || !results
+            {loading
               ? "Buscando…"
-              : total === 0
-                ? "Sin resultados. Prueba con otro nombre, SKU o número de pedido."
-                : `${total} ${total === 1 ? "resultado" : "resultados"}`}
+              : failed
+                ? "No pudimos buscar ahora. Revisa tu conexión e inténtalo de nuevo."
+                : !results
+                  ? "Buscando…"
+                  : total === 0
+                    ? "Sin resultados. Prueba con otro nombre, SKU o número de pedido."
+                    : `${total} ${total === 1 ? "resultado" : "resultados"}`}
           </p>
           {results
             ? GROUPS.filter((g) => results[g.key].length > 0).map((g) => (

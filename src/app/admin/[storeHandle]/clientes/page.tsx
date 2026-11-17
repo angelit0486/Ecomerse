@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
 import { searchCustomers } from "./actions";
+import { customersEmptyCopy } from "./empty-copy";
 import { SEARCH_COOKIE } from "./search";
 
 export const metadata: Metadata = { title: "Clientes" };
@@ -45,11 +46,12 @@ export default async function CustomersPage({ params, searchParams }: Props) {
   const q = canSearch ? ((await cookies()).get(SEARCH_COOKIE)?.value ?? "").slice(0, 100) : "";
   const cursor = typeof sp.despues === "string" ? sp.despues.slice(0, 80) : null;
   const supabase = await createSupabaseServerClient();
+  // Si la lectura falla, el error llega a error.tsx: nunca se muestra «Sin clientes».
   const page = await callRpc<{ items: CustomerRow[]; next_cursor: string | null }>(
     supabase,
     "customers_list",
     { p_store_id: ctx.store.id, p_query: q || null, p_cursor: cursor, p_limit: 50 },
-  ).catch(() => ({ items: [] as CustomerRow[], next_cursor: null }));
+  );
   const base = `/admin/${ctx.store.handle}/clientes`;
 
   return (
@@ -93,10 +95,7 @@ export default async function CustomersPage({ params, searchParams }: Props) {
         </p>
       ) : null}
       {page.items.length === 0 ? (
-        <EmptyState
-          title="Sin clientes"
-          description="Aparecen cuando alguien compra en tu tienda."
-        />
+        <EmptyState {...customersEmptyCopy(q)} />
       ) : (
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border text-[13px] text-fg-muted">

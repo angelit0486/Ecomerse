@@ -18,12 +18,19 @@ export interface PanelNotice {
  * Avisos del panel (misión panel, F3): lo que requiere acción, contado al
  * momento. Se piden después de cargar la página (no la hacen más lenta) y cada
  * aviso respeta su permiso; la base filtra por tienda (RLS).
+ *
+ * `null` si no se pudo revisar: el botón lo dice en lugar de «Todo al día»
+ * (una consulta fallida no cuenta como cero).
  */
-export async function panelNotices(storeHandle: string): Promise<PanelNotice[]> {
+export async function panelNotices(storeHandle: string): Promise<PanelNotice[] | null> {
   try {
     const { ctx, supabase, storeId } = await storeClient(storeHandle);
     const base = `/admin/${ctx.store.handle}`;
-    const count = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0);
+    const count = (q: PromiseLike<{ count: number | null; error: unknown }>) =>
+      q.then((r) => {
+        if (r.error) throw r.error;
+        return r.count ?? 0;
+      });
     const canOrders = hasPermission(ctx, "orders.read");
     const canReviews = hasPermission(ctx, "products.read");
     const [toFulfill, attention, reviews] = await Promise.all([
@@ -92,6 +99,6 @@ export async function panelNotices(storeHandle: string): Promise<PanelNotice[]> 
     return notices;
   } catch (error) {
     reportActionError("panel.notices", error);
-    return [];
+    return null;
   }
 }

@@ -83,22 +83,26 @@ export default async function ImportPage({ params, searchParams }: Props) {
   const base = `/admin/${ctx.store.handle}/productos/importar`;
 
   const supabase = await createSupabaseServerClient();
-  const { data: jobs } = await supabase
+  // Si una lectura falla va a error.tsx: no desaparecen en silencio las
+  // importaciones recientes ni los lotes por terminar.
+  const { data: jobs, error: jobsError } = await supabase
     .from("import_jobs")
     .select("id, file_name, mode, status, totals, created_at")
     .eq("store_id", ctx.store.id)
     .order("created_at", { ascending: false })
     .limit(10);
+  if (jobsError) throw jobsError;
   // Importaciones confirmadas que esperan en la cola: se retoman al mirar la lista (D-LOTE-05).
   if (jobs?.some((j) => j.status === "committing")) resumeQueue("imports.list");
   // ADR-064: lotes por partes que no han terminado (se retoman desde su página).
-  const { data: openBatches } = await supabase
+  const { data: openBatches, error: batchesError } = await supabase
     .from("import_batches")
     .select("id, file_name, status, parts_count, total_rows, created_at")
     .eq("store_id", ctx.store.id)
     .in("status", ["uploading", "ready", "running", "stopped"])
     .order("created_at", { ascending: false })
     .limit(5);
+  if (batchesError) throw batchesError;
 
   return (
     <section className="space-y-6">

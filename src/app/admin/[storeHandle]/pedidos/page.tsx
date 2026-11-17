@@ -12,6 +12,7 @@ import { EmptyState } from "@/ui/primitives/empty-state";
 
 import { panelFlagEnabled } from "../_shared/panel-flags";
 
+import { ordersEmptyCopy } from "./empty-copy";
 import { OrdersTable } from "./orders-table";
 
 export const metadata: Metadata = { title: "Pedidos" };
@@ -105,6 +106,8 @@ export default async function OrdersPage({ params, searchParams }: Props) {
   const last = rows.at(-1);
   const next = (data ?? []).length > PAGE && last ? `${last.placed_at}|${last.id}` : null;
   const base = `/admin/${ctx.store.handle}/pedidos`;
+  // Con filtro o al pasar de página no se dice «Sin pedidos» (la tienda sí tiene).
+  const empty = ordersEmptyCopy(filter, FILTERS[filter]!, before !== null);
   // Fechas en el calendario de la tienda (el servidor corre en UTC).
   const when = new Intl.DateTimeFormat("es-MX", {
     dateStyle: "medium",
@@ -173,14 +176,17 @@ export default async function OrdersPage({ params, searchParams }: Props) {
         </nav>
       </header>
       {rows.length === 0 ? (
-        filter === "por-surtir" ? (
-          <EmptyState
-            title="Nada por surtir"
-            description="Todos los pedidos pagados ya salieron. Los nuevos aparecerán aquí."
-          />
-        ) : (
-          <EmptyState title="Sin pedidos" description="Los pedidos de tu tienda aparecerán aquí." />
-        )
+        <EmptyState
+          title={empty.title}
+          description={empty.description}
+          action={
+            empty.showAll ? (
+              <Link href={base} className="inline-flex min-h-11 items-center text-sm underline">
+                Ver todos los pedidos
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
         <OrdersTable
           storeHandle={ctx.store.handle}

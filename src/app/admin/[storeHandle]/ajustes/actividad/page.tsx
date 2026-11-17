@@ -59,11 +59,12 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const area = typeof sp.area === "string" && Object.hasOwn(AREAS, sp.area) ? sp.area : "";
   const cursor = typeof sp.antes === "string" ? sp.antes.slice(0, 80) : null;
   const supabase = await createSupabaseServerClient();
+  // Si la lectura falla, el error llega a error.tsx: nunca se muestra «Sin actividad».
   const page = await callRpc<{ items: AuditItem[]; next_cursor: string | null }>(
     supabase,
     "audit_list",
     { p_store_id: ctx.store.id, p_area: area || null, p_cursor: cursor, p_limit: 50 },
-  ).catch(() => ({ items: [] as AuditItem[], next_cursor: null }));
+  );
   const base = `/admin/${ctx.store.handle}/ajustes/actividad`;
 
   return (
