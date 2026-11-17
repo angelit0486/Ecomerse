@@ -1,3 +1,5 @@
+import { Resend, type CreateEmailOptions } from "resend";
+
 import {
   isEmail,
   PermanentDeliveryError,
@@ -21,35 +23,94 @@ async function failure(provider: string, response: Response): Promise<never> {
   throw new PermanentDeliveryError(message);
 }
 
-/** Resend (producción): API HTTP, sin SDK. */
-export function resendChannel(apiKey: string, from: string, fetchImpl = fetch): EmailChannel {
+/** Lo mínimo del SDK oficial que usa el canal (inyectable en pruebas). */
+export interface ResendEmailsClient {
+  emails: {
+    send(
+      payload: CreateEmailOptions,
+      options?: { idempotencyKey?: string },
+    ): Promise<{
+      data: { id: string } | null;
+      error: { message: string; statusCode: number | null; name: string } | null;
+    }>;
+  };
+}
+
+/**
+ * Errores de configuración de la cuenta o de la plataforma (clave, dominio remitente,
+ * cuota, idempotencia): NO son culpa del destinatario, así que nunca se suprime su
+ * dirección; el trabajo se reintenta y la salud lo muestra.
+ */
+const RESEND_CONFIG_ERRORS = new Set([
+  "missing_api_key",
+  "invalid_api_key",
+  "restricted_api_key",
+  "invalid_from_address",
+  "invalid_access",
+  "invalid_region",
+  "security_error",
+  "monthly_quota_exceeded",
+  "daily_quota_exceeded",
+  "rate_limit_exceeded",
+  "invalid_idempotency_key",
+  "invalid_idempotent_request",
+  "concurrent_idempotent_requests",
+  "application_error",
+  "internal_server_error",
+]);
+
+/** Rechazo definitivo solo si Resend dice que el MENSAJE es inválido (400/422 de validación). */
+export function isPermanentResendError(error: { statusCode: number | null; name: string }) {
+  if (RESEND_CONFIG_ERRORS.has(error.name)) return false;
+  return error.statusCode === 400 || error.statusCode === 422;
+}
+
+/**
+ * Resend (producción) con el SDK oficial `resend`. `replyTo` por defecto
+ * (EMAIL_REPLY_TO) solo si el mensaje no trae el de la tienda.
+ */
+export function resendChannel(
+  apiKey: string,
+  from: string,
+  options: { client?: ResendEmailsClient; replyTo?: string } = {},
+): EmailChannel {
+  const client: ResendEmailsClient = options.client ?? (new Resend(apiKey) as ResendEmailsClient);
   return {
     provider: "resend",
-    async send(message: EmailMessage, options): Promise<SendResult> {
-      const response = await fetchImpl("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${apiKey}`,
-          "content-type": "application/json",
-          ...(options?.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}),
-        },
-        body: JSON.stringify({
-          from: message.fromName
-            ? `"${safeDisplayName(message.fromName)}" <${parseFrom(from).email}>`
-            : from,
-          ...(isEmail(message.replyTo) ? { reply_to: message.replyTo } : {}),
-          to: [message.to],
-          subject: message.subject,
-          html: message.html,
-          text: message.text,
-          ...(Object.keys(unsubscribeHeaders(message)).length
-            ? { headers: unsubscribeHeaders(message) }
-            : {}),
-        }),
-      });
-      if (!response.ok) await failure("resend", response);
-      const body = (await response.json()) as { id?: string };
-      return { providerMessageId: body.id ?? null };
+    async send(message: EmailMessage, sendOptions): Promise<SendResult> {
+      const replyTo = isEmail(message.replyTo)
+        ? message.replyTo
+        : isEmail(options.replyTo)
+          ? options.replyTo
+          : undefined;
+      const headers = unsubscribeHeaders(message);
+      let result: Awaited<ReturnType<ResendEmailsClient["emails"]["send"]>>;
+      try {
+        result = await client.emails.send(
+          {
+            from: message.fromName
+              ? `"${safeDisplayName(message.fromName)}" <${parseFrom(from).email}>`
+              : from,
+            to: [message.to],
+            subject: message.subject,
+            html: message.html,
+            text: message.text,
+            ...(replyTo ? { replyTo } : {}),
+            ...(Object.keys(headers).length ? { headers } : {}),
+          },
+          sendOptions?.idempotencyKey ? { idempotencyKey: sendOptions.idempotencyKey } : undefined,
+        );
+      } catch {
+        // Red o excepción del SDK: transitorio, sin detalles (podrían traer datos).
+        throw new Error("resend no respondió");
+      }
+      if (result.error) {
+        // Solo estado y código de Resend: el texto podría contener el destinatario.
+        const text = `resend respondió ${result.error.statusCode ?? "sin estado"} (${result.error.name})`;
+        if (isPermanentResendError(result.error)) throw new PermanentDeliveryError(text);
+        throw new Error(text);
+      }
+      return { providerMessageId: result.data?.id ?? null };
     },
   };
 }

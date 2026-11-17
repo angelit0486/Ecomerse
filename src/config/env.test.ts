@@ -120,6 +120,52 @@ describe("parseServerEnv", () => {
     );
   });
 
+  it("fuera de producción, Resend real exige EMAIL_ALLOWED_RECIPIENTS; en producción no", () => {
+    const previewResend = {
+      ...valid,
+      APP_ENV: "preview",
+      EMAIL_PROVIDER: "resend",
+      RESEND_API_KEY: "re_0123456789", // gitleaks:allow (valor ficticio de prueba)
+      APP_URL: "https://app.x.test",
+    };
+    expect(() => parseServerEnv(previewResend)).toThrow(
+      /EMAIL_ALLOWED_RECIPIENTS: requerida con resend fuera de producción/,
+    );
+    expect(
+      parseServerEnv({ ...previewResend, EMAIL_ALLOWED_RECIPIENTS: "qa@x.test,@equipo.test" })
+        .EMAIL_ALLOWED_RECIPIENTS,
+    ).toBe("qa@x.test,@equipo.test");
+    expect(
+      parseServerEnv({
+        ...valid,
+        APP_ENV: "production",
+        EMAIL_PROVIDER: "resend",
+        RESEND_API_KEY: "re_0123456789", // gitleaks:allow (valor ficticio de prueba)
+        SUPABASE_SERVICE_ROLE_KEY: "s".repeat(40),
+        APP_URL: "https://app.x.test",
+      }).EMAIL_ALLOWED_RECIPIENTS,
+    ).toBeUndefined();
+  });
+
+  it("EMAIL_REPLY_TO es opcional y debe ser un email; RESEND_API_KEY empieza con re_", () => {
+    expect(parseServerEnv({ ...valid, EMAIL_REPLY_TO: "soporte@x.test" }).EMAIL_REPLY_TO).toBe(
+      "soporte@x.test",
+    );
+    expect(() => parseServerEnv({ ...valid, EMAIL_REPLY_TO: "no-es-email" })).toThrow(
+      /EMAIL_REPLY_TO: valor inválido/,
+    );
+    expect(() =>
+      parseServerEnv({
+        ...valid,
+        APP_ENV: "production",
+        EMAIL_PROVIDER: "resend",
+        RESEND_API_KEY: "sk_not_resend_key",
+        SUPABASE_SERVICE_ROLE_KEY: "s".repeat(40),
+        APP_URL: "https://app.x.test",
+      }),
+    ).toThrow(/RESEND_API_KEY: valor inválido/);
+  });
+
   it("Mercado Pago: token y secreto del webhook van juntos y con formato (ADR-028)", () => {
     const token = "TEST-1234567890123456-101716-abcdef0123456789abcdef0123456789-123456789";
     expect(() =>

@@ -144,7 +144,17 @@ export const serverEnvSchema = z.object({
   EMAIL_PROVIDER: z.enum(["resend", "mailpit", "fake"]),
   /** Remitente de los emails de plataforma: "Nombre <no-reply@dominio>". */
   EMAIL_FROM: z.string().regex(/^[^<>]{1,80} <[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/),
-  RESEND_API_KEY: z.string().min(10).optional(),
+  RESEND_API_KEY: z
+    .string()
+    .regex(/^re_[A-Za-z0-9_-]{8,200}$/)
+    .optional(),
+  /** Respuestas por defecto de los correos de plataforma (los de tienda usan su contacto). */
+  EMAIL_REPLY_TO: z.email().max(254).optional(),
+  /**
+   * Fuera de producción con Resend real: lista de destinatarios permitidos
+   * ("ana@x.com,@miempresa.mx"). Los demás se omiten (ver recipient-guard.ts).
+   */
+  EMAIL_ALLOWED_RECIPIENTS: z.string().max(2000).optional(),
   // Firma de los webhooks de Resend (rebotes y quejas). Opcional.
   RESEND_WEBHOOK_SECRET: z
     .string()
@@ -178,6 +188,19 @@ const serverEnvRules = serverEnvSchema.superRefine((env, ctx) => {
   }
   if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
     ctx.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "requerida" });
+  }
+  // Fuera de producción, Resend real exige una lista de destinatarios permitidos:
+  // una vista previa nunca escribe a clientes reales por accidente.
+  if (
+    env.EMAIL_PROVIDER === "resend" &&
+    env.APP_ENV !== "production" &&
+    !env.EMAIL_ALLOWED_RECIPIENTS?.trim()
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["EMAIL_ALLOWED_RECIPIENTS"],
+      message: "requerida con resend fuera de producción",
+    });
   }
   // En la vista previa es opcional (D-F9-17): sin ella solo fallan, con un error
   // claro, el reset de MFA y el worker de medios; producción la exige.

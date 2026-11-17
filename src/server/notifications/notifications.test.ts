@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mailpitChannel, resendChannel } from "./channels";
+import {
+  isPermanentResendError,
+  mailpitChannel,
+  resendChannel,
+  type ResendEmailsClient,
+} from "./channels";
 import {
   escapeHtml,
   ownerNoticeEmail,
@@ -82,61 +87,104 @@ describe("plantillas", () => {
   });
 });
 
-describe("canal Resend", () => {
+type SendFn = ResendEmailsClient["emails"]["send"];
+function fakeResend(impl?: SendFn) {
+  const send = vi.fn<SendFn>(impl ?? (async () => ({ data: { id: "re_1" }, error: null })));
+  return { client: { emails: { send } }, send };
+}
+const resendError = (statusCode: number | null, name: string) => async () => ({
+  data: null,
+  error: { statusCode, name, message: "ana@example.test inválido" },
+});
+
+describe("canal Resend (SDK oficial)", () => {
   it("envía con clave de idempotencia y devuelve el id", async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ id: "re_1" }));
-    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", fetchImpl);
+    const { client, send } = fakeResend();
+    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", { client });
     await expect(channel.send(message, { idempotencyKey: "k1" })).resolves.toEqual({
       providerMessageId: "re_1",
     });
-    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect((init.headers as Record<string, string>)["idempotency-key"]).toBe("k1");
-    expect(JSON.parse(init.body as string)).toMatchObject({ to: ["ana@example.test"] });
+    expect(send.mock.calls[0]![1]).toEqual({ idempotencyKey: "k1" });
+    expect(send.mock.calls[0]![0]).toMatchObject({ to: ["ana@example.test"], text: "Hola" });
   });
 
   it("nombre de la tienda como quoted-string: comas, @ o paréntesis no rompen el From", async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ id: "re_2" }));
-    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", fetchImpl);
+    const { client, send } = fakeResend();
+    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", { client });
     await channel.send({ ...message, fromName: 'Café, Pan & Más (Moda@Casa) "x"\r\nBcc: y' });
-    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(JSON.parse(init.body as string).from).toBe(
+    expect(send.mock.calls[0]![0].from).toBe(
       '"Café, Pan & Más (Moda@Casa) xBcc: y" <no-reply@x.test>',
     );
   });
 
+  it("replyTo: el de la tienda manda; si no hay, EMAIL_REPLY_TO; si no, ninguno", async () => {
+    const { client, send } = fakeResend();
+    const withDefault = resendChannel("k", "P <a@x.test>", { client, replyTo: "hola@x.test" });
+    await withDefault.send({ ...message, replyTo: "tienda@x.test" });
+    await withDefault.send(message);
+    await resendChannel("k", "P <a@x.test>", { client }).send(message);
+    expect(send.mock.calls.map((c) => c[0].replyTo)).toEqual([
+      "tienda@x.test",
+      "hola@x.test",
+      undefined,
+    ]);
+  });
+
   it("baja en un clic (RFC 8058) solo si el correo la trae y con una URL válida", async () => {
-    const fetchImpl = vi.fn(async () => Response.json({ id: "re_3" }));
-    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", fetchImpl);
+    const { client, send } = fakeResend();
+    const channel = resendChannel("re_key", "Plataforma <no-reply@x.test>", { client });
     await channel.send({
       ...message,
       listUnsubscribeUrl: "https://panel.test/api/email/unsubscribe/cart?s=1",
     });
     await channel.send(message);
     await channel.send({ ...message, listUnsubscribeUrl: "https://x.test/a>\r\nBcc: y" });
-    const bodies = fetchImpl.mock.calls.map((c) =>
-      JSON.parse((c as unknown as [string, RequestInit])[1].body as string),
-    );
-    expect(bodies[0].headers).toEqual({
+    const bodies = send.mock.calls.map((c) => c[0]);
+    expect(bodies[0]!.headers).toEqual({
       "List-Unsubscribe": "<https://panel.test/api/email/unsubscribe/cart?s=1>",
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     });
-    expect(bodies[1].headers).toBeUndefined();
-    expect(bodies[2].headers).toBeUndefined();
+    expect(bodies[1]!.headers).toBeUndefined();
+    expect(bodies[2]!.headers).toBeUndefined();
   });
 
-  it("422 es definitivo; 429 y 5xx se reintentan", async () => {
-    const reject = (status: number) =>
-      resendChannel("k", "P <a@x.test>", async () => new Response("{}", { status })).send(message);
-    await expect(reject(422)).rejects.toBeInstanceOf(PermanentDeliveryError);
-    await expect(reject(429)).rejects.not.toBeInstanceOf(PermanentDeliveryError);
-    await expect(reject(503)).rejects.not.toBeInstanceOf(PermanentDeliveryError);
-  });
-
-  it("el error no incluye el cuerpo de la respuesta (podría tener el destinatario)", async () => {
-    const channel = resendChannel("k", "P <a@x.test>", async () =>
-      Response.json({ message: "ana@example.test inválido" }, { status: 422 }),
+  it("422 de validación es definitivo; 429, 5xx, red y errores de configuración se reintentan", async () => {
+    const reject = (impl: SendFn) =>
+      resendChannel("k", "P <a@x.test>", { client: fakeResend(impl).client }).send(message);
+    await expect(reject(resendError(422, "validation_error"))).rejects.toBeInstanceOf(
+      PermanentDeliveryError,
     );
-    await expect(channel.send(message)).rejects.toThrow(/^resend respondió 422$/);
+    for (const [status, name] of [
+      [429, "rate_limit_exceeded"],
+      [500, "internal_server_error"],
+      [403, "invalid_from_address"],
+      [401, "invalid_api_key"],
+      [null, "application_error"],
+    ] as const) {
+      await expect(reject(resendError(status, name))).rejects.not.toBeInstanceOf(
+        PermanentDeliveryError,
+      );
+    }
+    await expect(
+      reject(async () => {
+        throw new Error("ECONNRESET ana@example.test");
+      }),
+    ).rejects.toThrow(/^resend no respondió$/);
+  });
+
+  it("el error no incluye el texto de Resend (podría tener el destinatario)", async () => {
+    const channel = resendChannel("k", "P <a@x.test>", {
+      client: fakeResend(resendError(422, "validation_error")).client,
+    });
+    await expect(channel.send(message)).rejects.toThrow(
+      /^resend respondió 422 \(validation_error\)$/,
+    );
+  });
+
+  it("isPermanentResendError no suprime direcciones por fallas de la cuenta", () => {
+    expect(isPermanentResendError({ statusCode: 422, name: "validation_error" })).toBe(true);
+    expect(isPermanentResendError({ statusCode: 422, name: "invalid_from_address" })).toBe(false);
+    expect(isPermanentResendError({ statusCode: 403, name: "validation_error" })).toBe(false);
   });
 });
 
