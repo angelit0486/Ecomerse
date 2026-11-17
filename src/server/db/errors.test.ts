@@ -22,6 +22,28 @@ describe("toAppError", () => {
     expect(toAppError({ code: "P0001", message: "limit_reached" }).code).toBe("limit_reached");
   });
 
+  it("limit_reached con límite de plan dice cuál es y qué hacer", () => {
+    const error = toAppError({
+      code: "P0001",
+      message: "limit_reached",
+      details: JSON.stringify({ key: "max_products", limit: 100, used: 100 }),
+    });
+    expect(error.code).toBe("limit_reached");
+    expect(error.message).toContain("100 productos");
+    expect(error.message).toContain("Plan y uso");
+  });
+
+  it.each([
+    undefined,
+    "no es json",
+    "null",
+    JSON.stringify({ key: "max_options_per_product", limit: 3 }),
+    JSON.stringify({ key: "max_products" }),
+  ])("limit_reached sin detalle útil (%s) conserva el mensaje por defecto", (details) => {
+    const error = toAppError({ code: "P0001", message: "limit_reached", details });
+    expect(error.message).toBe(new AppError("limit_reached").message);
+  });
+
   it("validation_failed lleva el campo del detalle", () => {
     const error = toAppError({ code: "P0001", message: "validation_failed", details: "email" });
     expect(error.code).toBe("validation_failed");
