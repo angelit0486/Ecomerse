@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Ventana única (Orden 10, mensaje 5, A2) — PASO 3: comprobación ANTES de migrar.
 -- Solo lectura. Se corre en staging (editor SQL o execute_sql) justo antes de
--- aplicar las 10 migraciones. Cada fila trae su resultado esperado y ok = true.
+-- aplicar las 11 migraciones. Cada fila trae su resultado esperado y ok = true.
 -- REGLA: todas las filas son de categoría «bloqueante» (runbook §11.1): si
 -- alguna trae ok = false, NO se aplica nada y la ventana no empieza.
 -- =============================================================================
@@ -26,12 +26,14 @@ select 'versión del esquema' as comprobacion, public.app_schema_version() as va
        '20261110000200' as esperado, public.app_schema_version() = '20261110000200' as ok,
        'bloqueante' as categoria
 union all
-select 'ninguna de las 10 migraciones aplicada',
+select 'ninguna de las 11 migraciones aplicada',
        concat_ws(',', to_regclass('public.order_item_costs'), to_regclass('public.import_photo_checks'),
-                 to_regclass('public.publish_runs'), to_regclass('public.import_batches')),
+                 to_regclass('public.publish_runs'), to_regclass('public.import_batches'),
+                 to_regclass('public.carts_store_recoverable_idx')),
        '(vacío)',
        to_regclass('public.order_item_costs') is null and to_regclass('public.import_photo_checks') is null
-         and to_regclass('public.publish_runs') is null and to_regclass('public.import_batches') is null, 'bloqueante'
+         and to_regclass('public.publish_runs') is null and to_regclass('public.import_batches') is null
+         and to_regclass('public.carts_store_recoverable_idx') is null, 'bloqueante'
 union all
 select 'importaciones aplicándose o validándose',
        (select count(*)::text from public.import_jobs where status in ('committing', 'validating')), '0',

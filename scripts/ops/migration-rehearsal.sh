@@ -9,9 +9,10 @@
 #   3. Verificación posterior de cada una (consultas del runbook).
 #   4. El esquema resultante debe ser idéntico al de una base creada desde cero.
 #   5. Un archivo alterado se rechaza por sha256 antes de ejecutarse.
-#   6. pgTAP de seguridad y de las 10 migraciones sobre la base actualizada.
+#   6. pgTAP de seguridad y de las 11 migraciones sobre la base actualizada.
 #
 # Orden 10, mensaje 4 (D7): de 6 a 10 migraciones (las 4 de 20261113).
+# 2026-11-17 (PR #12): de 10 a 11 (20261116000100, Inicio como centro de control).
 #
 # Uso: bash scripts/ops/migration-rehearsal.sh
 # Manifiesto: docs/runbooks/despliegue-migraciones-2026-11.md (sección 2).
@@ -36,6 +37,8 @@ MANIFEST=(
   "20261113000200_import_new_categories.sql 31b44ed75cea0d1bfba1a998e201d0967e5d79aacdde9a019e84dd1b9d4f9579"
   "20261113000300_publish_runs.sql 8c8fc176daf8ff7e3685847a23dc44d0e8a32affb51ed3723defe5c3901022de"
   "20261113000400_import_batches.sql 3f0eb416a75d8ca5d0c70c153ff868c38cd6bdae950838212b3c713303fe55a5"
+  # 11.ª (PR #12): Inicio como centro de control (2 lecturas y un índice).
+  "20261116000100_home_control_center.sql 8f13e8fbc5efb3be6d611ab4d5a4d0716e4e958d5a39f4a45ca3c46e7fee2258"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -104,7 +107,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261113000400"
+check "versión final" "select public.app_schema_version()" "20261116000100"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -129,6 +132,9 @@ check "0400 (ADR-064): una parte no se aplica suelta" "select prosrc ~ 'batch_pa
 check "0400 (ADR-064): una parte atascada detiene su lote" "select prosrc ~ 'import_batch_after_part' from pg_proc where oid = 'system.fail_stuck_imports()'::regprocedure" "t"
 check "0400: publicación sin trabajo se retoma" "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'publish_runs' and column_name = 'resumes'" "1"
 check "0400: importaciones existentes intactas (ninguna queda en un lote)" "select count(*) from public.import_jobs where batch_id is not null" "0"
+check "0100 (Inicio): índice de carritos recuperables" "select count(*) from pg_indexes where indexname = 'carts_store_recoverable_idx'" "1"
+check "0100 (Inicio): lecturas solo para authenticated" "select bool_and(has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute')) from unnest(array['public.dashboard_recoverable_carts(uuid)', 'public.dashboard_customer_mix(uuid, date, date)']::regprocedure[]) f" "t"
+check "0100 (Inicio): security definer con search_path vacío" "select count(*) from pg_proc where oid in ('public.dashboard_recoverable_carts(uuid)'::regprocedure, 'public.dashboard_customer_mix(uuid, date, date)'::regprocedure) and prosecdef and proconfig = array['search_path=\"\"']" "2"
 ventana 02-despues.sql
 # H4-B (mensaje 7): aislamiento entre las dos tiendas de prueba; escribe y revierte.
 ventana 04-aislamiento.sql
@@ -161,6 +167,7 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/118_keys_and_fk_indexes.test.sql supabase/tests/database/42_imports.test.sql \
   supabase/tests/database/144_photo_checks.test.sql supabase/tests/database/145_import_new_categories.test.sql \
   supabase/tests/database/146_publish_runs.test.sql supabase/tests/database/147_import_batches.test.sql \
+  supabase/tests/database/148_home_control_center.test.sql \
   2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -79,5 +79,31 @@ describe("guiones de la ventana única", () => {
     const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
     expect(guard).toBeGreaterThan(0);
     expect(guard).toBeLessThan(firstChange);
+  });
+
+  it("la reversa de 0100 (Inicio) empieza con su candado y deja la versión en 0400 (PR #12)", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261116000100_home_control_center.reversa.sql"),
+      "utf8",
+    ).replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(sql).toMatch(/<> '20261116000100'/);
+    expect(sql).toMatch(/select '20261113000400'::text/);
+    expect(sql).not.toMatch(/\b(delete|truncate|update)\b/i);
+  });
+
+  it("las comprobaciones de la ventana esperan la versión de la última migración", () => {
+    const last = readdirSync(join(root, "supabase/migrations"))
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .at(-1)!
+      .split("_")[0]!;
+    const after = readFileSync(join(root, "scripts/ops/ventana/02-despues.sql"), "utf8");
+    expect(after).toContain(`public.app_schema_version() = '${last}'`);
+    const rehearsal = readFileSync(join(root, "scripts/ops/migration-rehearsal.sh"), "utf8");
+    expect(rehearsal).toContain(`"select public.app_schema_version()" "${last}"`);
   });
 });
