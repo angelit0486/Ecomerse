@@ -2008,8 +2008,11 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   - **Índices:** `dashboard_kpis` y `dashboard_customer_mix` usan `orders_store_paid_idx` (ya existía desde 20261104000500: `(store_id, paid_at) include (total) where paid_at is not null`; no se duplica). Nuevo `carts_store_recoverable_idx (store_id, last_activity_at) where status = 'active' and email is not null`. EXPLAIN local con 200 tiendas y 20 000 pedidos/carritos sintéticos (transacción revertida, sin `enable_seqscan = off`): ventas por Bitmap Index Scan en `orders_store_paid_idx`, carritos por Index Scan en `carts_store_recoverable_idx`. pgTAP 148 comprueba ambos.
   - **E2E:** nuevo `tests/e2e/home-control-center.spec.ts` (comparativo con variación exacta y periodo anterior sin ventas, antigüedad, carritos, clientes nuevos/recurrentes, enlace a pedidos por fecha de pago, permisos de `catalog_manager`, axe). `dashboard.spec.ts`: cada `dt` tiene un solo `dd`; la cifra va en `data-testid="metric-value"` y se afirma también la variación. `customers.spec.ts`: enlace del menú con `exact: true`. Playwright lo corre el CTO (no disponible en el entorno del agente).
   - **Estado (2026-11-16, local):** lint, format:check y typecheck en verde; unit 163 archivos / 1454 pruebas; pgTAP 150 archivos / 3181 pruebas (incluye 00_schema_security y 148 con 24 aserciones); integración 43 archivos / 468 pruebas. Build y Playwright los corre el CTO.
-## 41. Precios de PRUVA (2026-11-17)
+
+## 43. Precios de PRUVA (2026-11-17)
+
 ### ADR-068 — Planes, precios, prueba y cuota de arranque · **APROBADO por el propietario el 2026-11-17** («Apruebo los precios recomendados: Tienda $699 y Tienda Plus $1,299 al mes, anual con 2 meses gratis, cuota de arranque y prueba de 14 días sin tarjeta»). Extiende ADR-044.
+
 - **Contexto.** ADR-044 dejó pendientes los precios y los días de prueba. La propuesta (`docs/plan/PROPUESTA-PLANES-Y-PRECIOS.md`, opción B) y el análisis de mercado y rentabilidad del 2026-11-17 recomendaron dos planes.
 - **Decisión (cifras en MXN, más IVA):**
   | Plan        | Clave sugerida | Mensual | Anual (10 meses) | Cuota única de arranque | Prueba               |
