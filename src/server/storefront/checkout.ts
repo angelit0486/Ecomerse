@@ -167,7 +167,13 @@ export interface GuestOrder {
   shipping_total: number;
   tax_total: number;
   total: number;
-  shipping: { name: string; est_days_min: number | null; est_days_max: number | null } | null;
+  /** Copia de la tarifa elegida (`orders.shipping_snapshot`); `type` viene de `app.calculate_cart`. */
+  shipping: {
+    name: string;
+    type?: "flat" | "free_over" | "pickup";
+    est_days_min: number | null;
+    est_days_max: number | null;
+  } | null;
   discount: { code: string; amount: number } | null;
   items: {
     product_title: string;
