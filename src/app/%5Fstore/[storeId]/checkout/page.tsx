@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { pickupInfo } from "@/lib/checkout/pickup";
 import { effectiveShippingPrice, shippingEstimate } from "@/lib/checkout/shipping";
 import { getCart, getCartLegends, paymentMethods } from "@/server/storefront/cart";
 import { getPolicyLinks, getShippingPromo } from "@/server/storefront/catalog";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
 import { storeFlags } from "@/server/storefront/flags";
+import { ThemeSettingsV2 } from "@/lib/theme/schema";
 
 import { money } from "../_components/format";
 import { PurchaseLegends } from "../_components/supplement-info";
@@ -28,6 +30,8 @@ type Props = { params: Promise<{ storeId: string }> };
 /** Checkout de una página (§17): todo lo calcula la base en cada render. */
 export default async function CheckoutPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
+  const parsedSettings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
+  const pickup = pickupInfo(parsedSettings.success ? parsedSettings.data.contact : undefined);
   const [cart, methods, legends, promo, policies] = await Promise.all([
     getCart(store.id),
     paymentMethods(store.id),
@@ -106,6 +110,7 @@ export default async function CheckoutPage({ params }: Props) {
           idempotencyKey={newCheckoutKey()}
           shippingLabels={labels}
           totalLabel={totalLabel}
+          pickup={pickup}
           clearShipping={(await storeFlags(store.id)).has("checkout_shipping_messages")}
         />
         {/* Las políticas publicadas, junto al botón de pago (auditoría REG-07). */}
