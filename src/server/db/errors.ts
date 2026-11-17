@@ -1,4 +1,5 @@
 import { AppError, ERROR_STATUS, type ErrorCode } from "@/server/errors";
+import { LIMIT_LABELS, type LimitKey } from "@/lib/billing/entitlements";
 
 /**
  * Traduce errores de la base (PostgREST vía supabase-js o postgres.js) a
@@ -66,6 +67,27 @@ export function isDbErrorLike(value: unknown): value is DbErrorLike {
   return typeof value === "object" && value !== null && "code" in value && "message" in value;
 }
 
+/**
+ * Mensaje de «límite alcanzado» que dice qué límite del plan es y qué hacer, en
+ * lugar de un aviso genérico. El `detail` de la base trae `{key, limit, used}`;
+ * si falta o no es de un límite de plan conocido, queda el mensaje por defecto.
+ */
+export function limitReachedMessage(detail: string | undefined): string | undefined {
+  if (!detail) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(detail);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null) return undefined;
+  const { key, limit } = parsed as { key?: unknown; limit?: unknown };
+  if (typeof key !== "string" || !Object.hasOwn(LIMIT_LABELS, key)) return undefined;
+  if (typeof limit !== "number" || !Number.isFinite(limit)) return undefined;
+  const label = LIMIT_LABELS[key as LimitKey].toLowerCase();
+  return `Llegaste al límite de tu plan: ${limit} ${label}. Avisa a la persona dueña de la cuenta para cambiar de plan (Ajustes → Plan y uso).`;
+}
+
 export function toAppError(error: unknown): AppError {
   if (error instanceof AppError) return error;
   if (!isDbErrorLike(error)) return new AppError("internal", undefined, { cause: error });
@@ -84,6 +106,9 @@ export function toAppError(error: unknown): AppError {
   if (code === "P0001") {
     const alias = BUSINESS_ALIASES[message];
     if (alias) return new AppError(alias.code, alias.message, { cause: error });
+    if (message === "limit_reached") {
+      return new AppError("limit_reached", limitReachedMessage(detail), { cause: error });
+    }
     if (isErrorCode(message) && message !== "internal") {
       const fields =
         message === "validation_failed" && detail && /^[a-z_]{1,40}$/.test(detail)
