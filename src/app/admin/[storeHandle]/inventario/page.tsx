@@ -80,12 +80,20 @@ export default async function InventoryPage({ params, searchParams }: Props) {
 
   return (
     <section className="space-y-5">
-      <header>
-        <h1 className="text-xl font-semibold">Inventario</h1>
-        <p className="text-sm text-fg-muted">
-          Existencias de tu bodega por variante. «Disponible» es lo que se puede vender: en mano
-          menos reservado por pedidos. Lo de proveedores se indica aparte.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Inventario</h1>
+          <p className="text-sm text-fg-muted">
+            Existencias de tu bodega por variante. «Disponible» es lo que se puede vender: en mano
+            menos reservado por pedidos. Lo de proveedores se indica aparte.
+          </p>
+        </div>
+        <Link
+          href={`${base}/reposicion`}
+          className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-control px-4 text-sm font-medium"
+        >
+          Ver qué pedir
+        </Link>
       </header>
 
       <form
