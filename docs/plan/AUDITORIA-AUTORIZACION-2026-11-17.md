@@ -22,6 +22,7 @@ Alcance: todos los route handlers y archivos `"use server"` (excepto `src/server
 | 4   | Baja      | `src/app/api/health/ready/route.ts`                    | Readiness público consulta la base en cada hit. Propuesta: cachear el último resultado ~5 s en memoria o exigir `HEALTHCHECK_TOKEN` (dejar `/api/health` público).                                                                                                                              |
 
 Estado de los hallazgos 3 y 4: corregidos sin migración en la rama `fix/sugerencias-salud-limites` (freno por instancia en sugerencias: 30 por IP cada 10 s y una consulta en curso; readiness reutiliza su último resultado 5 s y comparte la consulta en curso). El límite global por IP de las sugerencias sigue siendo una regla del WAF de Vercel, pendiente de aprobación.
+**Estado del hallazgo 1:** Corregido en la rama fix/totp-rate-limit (migración 20261117000300, pendiente de aprobación)
 
 ## Sospechas descartadas (verificadas)
 
