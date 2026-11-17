@@ -90,13 +90,28 @@ test("fotos de varias categorías y banner desde el celular", async ({ page }) =
   await expect(creatinas.getByRole("status").filter({ hasText: "Listo." })).toBeVisible({
     timeout: 20_000,
   });
-  await runJobs();
 
-  // Re-codificadas, de la misma tienda y con texto alternativo desde el nombre.
-  const media = await admin<{ owner_type: string; status: string; alt_text: string }[]>`
+  // La pasada inmediata de la cola puede seguir optimizando cuando termina la
+  // subida (runJobs() no toma lo que ya está en proceso): se espera a que las
+  // dos fotos estén listas, con runJobs() como respaldo idempotente.
+  type CategoryMedia = { owner_type: string; status: string; alt_text: string };
+  const readMedia = () =>
+    admin<CategoryMedia[]>`
     select m.owner_type, m.status, m.alt_text from public.categories c
       join public.media m on m.store_id = c.store_id and m.id in (c.image_media_id, c.cover_media_id)
      where c.store_id = ${tenant.storeId} order by m.alt_text`;
+  await expect
+    .poll(
+      async () => {
+        await runJobs();
+        return (await readMedia()).map((m) => m.status);
+      },
+      { timeout: 30_000, message: "las fotos de categoría deben quedar listas" },
+    )
+    .toEqual(["ready", "ready"]);
+
+  // Re-codificadas, de la misma tienda y con texto alternativo desde el nombre.
+  const media = await readMedia();
   expect(media.map((m) => m.alt_text)).toEqual(["Banner de Creatinas", "Foto de Proteínas"]);
   expect(media.every((m) => m.owner_type === "category" && m.status === "ready")).toBe(true);
 
