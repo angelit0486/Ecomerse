@@ -80,4 +80,19 @@ describe("guiones de la ventana única", () => {
     expect(guard).toBeGreaterThan(0);
     expect(guard).toBeLessThan(firstChange);
   });
+  it("la reversa de 20261117000100 (importación más rápida) empieza con su candado y vuelve a 0400", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261117000100_import_commit_speed.reversa.sql"),
+      "utf8",
+    ).replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(sql).toMatch(/<> '20261117000100'/);
+    expect(sql).toMatch(/select '20261113000400'::text/);
+    // Sin pérdida: no borra tablas, columnas ni datos (solo redefine funciones).
+    expect(sql).not.toMatch(/\b(drop|truncate)\b/i);
+    expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
+  });
 });
