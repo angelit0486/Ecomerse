@@ -87,6 +87,7 @@ export function CheckoutForm({
   idempotencyKey,
   shippingLabels,
   totalLabel,
+  pickup = null,
   clearShipping = false,
 }: {
   storeId: string;
@@ -98,6 +99,8 @@ export function CheckoutForm({
   shippingLabels: Record<string, string>;
   /** Total ya formateado, repetido en el botón de confirmar. */
   totalLabel: string;
+  /** Dirección y horario de retiro declarados por la tienda (null si no los hay). */
+  pickup?: { address: string | null; hours: string | null } | null;
   /**
    * Interruptor `checkout_shipping_messages`: sin envío para la dirección dice
    * qué falta, y con una sola forma de envío la marca sola.
@@ -441,6 +444,13 @@ export function CheckoutForm({
                       <span className="text-[var(--sf-muted)]">
                         {" "}
                         · {o.est_days_min}–{o.est_days_max} días
+                      </span>
+                    ) : null}
+                    {o.type === "pickup" && pickup ? (
+                      <span className="mt-0.5 block text-[var(--sf-muted)]">
+                        {pickup.address ? `Recoges en: ${pickup.address}` : null}
+                        {pickup.address && pickup.hours ? " · " : null}
+                        {pickup.hours ? `Horario: ${pickup.hours}` : null}
                       </span>
                     ) : null}
                   </span>
