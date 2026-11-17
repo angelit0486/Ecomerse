@@ -8,6 +8,7 @@ import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { holdLeftLabel } from "@/lib/orders/hold-left";
+import { proofMessage, whatsappChatUrl, whatsappNumber } from "@/lib/whatsapp/order-messages";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestLinkState, guestOrder } from "@/server/storefront/checkout";
 import { returnOptions } from "@/server/storefront/returns";
@@ -69,6 +70,19 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const email = store.contact?.email;
   const phone = store.contact?.phone;
   const minutesLeft = order.minutes_left;
+  // D-INT-03: el comprobante de una transferencia se manda por WhatsApp a la tienda.
+  const storeWa = whatsappNumber(whatsapp, "");
+  const proofUrl = storeWa
+    ? whatsappChatUrl(
+        storeWa,
+        proofMessage({
+          storeName: store.name,
+          customerName: order.customer_name,
+          displayNumber: order.display_number,
+          total: money(order.total, store),
+        }),
+      )
+    : null;
   const payment = order.payment;
   const canRetry =
     order.status === "pending_payment" &&
@@ -157,6 +171,16 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 ? ` Tus productos quedan apartados ${holdLeftLabel(minutesLeft)} más.`
                 : ""}
             </p>
+          ) : null}
+          {payment.provider === "manual" && proofUrl ? (
+            <a
+              href={proofUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-primary)] px-4 text-sm font-medium text-[var(--sf-on-primary)]"
+            >
+              Enviar comprobante por WhatsApp
+            </a>
           ) : null}
           {canRetry ? <RetryPayment storeId={store.id} orderId={order.id} token={t} /> : null}
         </section>

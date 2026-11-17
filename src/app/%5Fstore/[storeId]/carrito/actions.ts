@@ -211,9 +211,10 @@ function missingFields(fd: FormData, email: string, requiresShipping: boolean) {
     if (text(fd, "country", 2).toUpperCase() === "MX" && !text(fd, "line2")) {
       fields.line2 = "Escribe la colonia.";
     }
-    if (!normalizePhone(text(fd, "phone", 40)))
-      fields.phone = "Escribe un teléfono para la paquetería.";
   }
+  // D-INT-03: el celular es obligatorio siempre (avisos por WhatsApp y paquetería).
+  if (!normalizePhone(text(fd, "phone", 40)))
+    fields.phone = "Escribe tu celular: por WhatsApp te avisamos de tu pedido.";
   return fields;
 }
 

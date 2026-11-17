@@ -2066,3 +2066,21 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - Sin la migración fallan 5: a los 40 minutos la transferencia se cancela y ya no se puede confirmar.
     - Incluye aislamiento: una tienda no usa la cuenta ni confirma los pagos de otra.
     - Unitarias de `holdLeftLabel`.
+- **D-INT-03. Cerrar la venta por WhatsApp, con un toque (sin API de Meta).**
+  - **Decisión del propietario:**
+    - avisos al cliente por WhatsApp abriendo el chat con el mensaje escrito (`wa.me`), en lugar de la API de Meta (cuenta verificada, plantillas aprobadas, costo por conversación);
+    - celular obligatorio al comprar.
+  - **Comprador:** en la página de su pedido por transferencia, «Enviar comprobante por WhatsApp» abre un chat con el WhatsApp de la tienda (`contact.whatsapp` de Apariencia) y un mensaje con el número de pedido y el total.
+  - **Panel (detalle del pedido, sección Cliente):** «Avisar por WhatsApp». Cada aviso abre el chat con el celular del cliente y el mensaje escrito:
+    - «Pedido recibido»: esperando el pago, con las instrucciones de la transferencia;
+    - «Pago confirmado»;
+    - «Listo para recoger»: si es para recoger y ya está pagado;
+    - «Enviado con guía»: uno por envío con guía o enlace de rastreo.
+  - **Formato de los celulares de 10 dígitos:** se completan con 52 si la tienda está en México. Si el celular no se entiende, el panel lo dice en vez de adivinar.
+  - **Permisos:** solo con `customers.pii.read`, el mismo que ya muestra el celular. Sin migración ni datos nuevos. Nada se manda solo: quien atiende revisa y toca Enviar.
+  - **Checkout:** el campo es «Celular (WhatsApp)», obligatorio siempre (antes, solo con envío por paquetería). Se valida en el servidor.
+  - **Pruebas:**
+    - unitarias de mensajes, números y avisos (14);
+    - E2E `whatsapp-orders.spec.ts`: compra por transferencia de punta a punta, comprobante, «Pedido recibido» y «Pago confirmado»;
+    - las 6 pruebas de checkout, actualizadas al campo nuevo.
+  - **Pendiente:** la versión automática (API de WhatsApp Business de Meta) cuando el propietario tenga la cuenta.

@@ -53,7 +53,7 @@ async function checkout(page: Page, t: Tenant): Promise<string> {
   await page.goto(`${origin(t)}/checkout`);
   await page.getByRole("textbox", { name: "Email" }).fill("misma@example.test");
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel(/^Celular/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");

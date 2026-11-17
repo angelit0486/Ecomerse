@@ -148,7 +148,7 @@ test("compra completa en 3 clics desde la ficha", async ({ page }) => {
   // dirección se cotiza el envío solo y se preselecciona la tarifa.
   await page.getByRole("textbox", { name: "Email" }).fill(`comprador-${run}@example.test`);
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel(/^Celular/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");

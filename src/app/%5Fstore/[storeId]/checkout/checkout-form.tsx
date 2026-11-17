@@ -50,24 +50,34 @@ function Field({
   label,
   name,
   error,
+  hint,
   ...rest
 }: {
   label: string;
   name: string;
   error?: string | undefined;
+  hint?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const id = `co-${name}`;
+  const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
+      {hint ? (
+        <p id={`${id}-hint`} className="text-xs text-[var(--sf-muted)]">
+          {hint}
+        </p>
+      ) : null}
       <input
         id={id}
         name={name}
         className={input}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={describedBy || undefined}
         {...rest}
       />
       {error ? (
@@ -270,11 +280,13 @@ export function CheckoutForm({
           error={f.customer_name}
         />
         <Field
-          label={cart.requires_shipping ? "Teléfono (para la paquetería)" : "Teléfono (opcional)"}
+          label="Celular (WhatsApp)"
+          hint="Por aquí te avisamos de tu pedido y de tu guía."
           inputMode="tel"
           name="phone"
           type="tel"
           autoComplete="tel"
+          required
           defaultValue={a?.phone ?? ""}
           error={f.phone}
         />

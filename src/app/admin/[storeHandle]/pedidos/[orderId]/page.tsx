@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { RETURN_STATUS_LABEL } from "@/lib/returns/labels";
 import { centsToInput, formatMoney } from "@/lib/money/format";
+import { orderWhatsappNotices } from "@/lib/whatsapp/order-notices";
 import {
   axisValueLabel,
   paymentAttemptLabel,
@@ -198,6 +199,48 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     timeZone: ctx.store.timezone,
   });
   const lastPayment = payments.data?.at(-1) as { provider: string; status: string } | undefined;
+
+  // D-INT-03: avisos por WhatsApp con un toque. Solo con permiso de ver los datos
+  // del cliente; si falla una lectura auxiliar, los avisos salen sin ese dato.
+  const [storeRow, manualAccount] = contact
+    ? await Promise.all([
+        supabase.from("stores").select("country").eq("id", ctx.store.id).maybeSingle(),
+        canPayments
+          ? supabase
+              .from("payment_accounts")
+              .select("public_config")
+              .eq("store_id", ctx.store.id)
+              .eq("provider", "manual")
+              .eq("status", "active")
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ])
+    : [null, null];
+  const whatsapp = contact
+    ? orderWhatsappNotices({
+        storeName: ctx.store.name,
+        storeCountry: (storeRow?.data?.country as string | undefined) ?? "",
+        customerName: contact.customer_name,
+        customerPhone: contact.phone,
+        order: {
+          displayNumber: order.display_number as string,
+          status: order.status as string,
+          paidTotal: Number(order.paid_total ?? 0),
+          total: m(order.total as number),
+          pickup: (order.shipping_snapshot as { type?: string } | null)?.type === "pickup",
+        },
+        shipments: (shipments.data ?? []).map((sh) => ({
+          id: sh.id as string,
+          carrier: (sh.carrier as string | null) ?? null,
+          trackingNumber: (sh.tracking_number as string | null) ?? null,
+          trackingUrl: (sh.tracking_url as string | null) ?? null,
+        })),
+        paymentInstructions:
+          ((manualAccount?.data?.public_config as { instructions?: string } | null)?.instructions ??
+            null) ||
+          null,
+      })
+    : null;
   const canConfirm =
     hasPermission(ctx, "orders.update") &&
     order.status === "pending_payment" &&
@@ -548,6 +591,40 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             </p>
           ) : null}
           {contact.customer_note ? <p>Nota del cliente: {contact.customer_note}</p> : null}
+          {whatsapp ? (
+            <div className="space-y-2 pt-2">
+              <h3 className="font-medium">Avisar por WhatsApp</h3>
+              {whatsapp.ok ? (
+                whatsapp.notices.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {whatsapp.notices.map((n) => (
+                      <li key={n.key}>
+                        <a
+                          href={n.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-control px-3 text-sm md:min-h-9"
+                        >
+                          {n.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-fg-muted">No hay avisos para este pedido.</p>
+                )
+              ) : (
+                <p className="text-fg-muted">
+                  {whatsapp.reason === "no_phone"
+                    ? "El cliente no dejó celular: avísale por correo."
+                    : "El celular del cliente no tiene un formato que WhatsApp entienda. Revísalo antes de escribirle."}
+                </p>
+              )}
+              <p className="text-xs text-fg-muted">
+                Se abre tu WhatsApp con el mensaje escrito; revísalo y toca Enviar.
+              </p>
+            </div>
+          ) : null}
           {hasPermission(ctx, "orders.update") ? (
             <StaffNoteForm
               storeHandle={ctx.store.handle}

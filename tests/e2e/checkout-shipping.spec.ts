@@ -53,7 +53,7 @@ const upsertRate = (name: string, price: number) =>
 async function fillAddress(page: Page, postal: string, state: string) {
   await page.getByRole("textbox", { name: "Email" }).fill("comprador@example.test");
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel(/^Celular/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Ciudad");
@@ -164,7 +164,7 @@ test("teléfono escrito con puntos (222.123.4567): no se rechaza y llega al pago
   await setFlag(false);
   await toCheckout(page);
   await fillAddress(page, "72000", "Puebla");
-  await page.getByLabel(/^Teléfono/).fill("222.123.4567");
+  await page.getByLabel(/^Celular/).fill("222.123.4567");
   // Uno o dos clics: si el servidor elige el envío, pide confirmar con el total.
   const confirm = page.getByRole("button", { name: /Confirmar pedido/ });
   const paid = page.getByRole("heading", { name: "Pago de prueba" });

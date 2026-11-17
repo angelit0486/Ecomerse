@@ -129,7 +129,7 @@ test("el checkout ofrece la tarifa del panel y el pedido conserva la elegida", a
   await page.goto(`${origin()}/checkout`);
   await page.getByRole("textbox", { name: "Email" }).fill("comprador@example.test");
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel(/^Celular/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");

@@ -103,7 +103,9 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   await expect(page.getByRole("alert").filter({ hasText: /Faltan \d+ datos/ })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
   await expect(page.getByText("Escribe la colonia.")).toBeVisible();
-  await expect(page.getByText("Escribe un teléfono para la paquetería.")).toBeVisible();
+  await expect(
+    page.getByText("Escribe tu celular: por WhatsApp te avisamos de tu pedido."),
+  ).toBeVisible();
   // Pago sin distracciones: encabezado mínimo, sin buscador (auditoría UX-12).
   await expect(page.getByText("Pago seguro")).toBeVisible();
   await expect(page.getByRole("link", { name: "Volver al carrito" })).toBeVisible();
@@ -113,7 +115,7 @@ test("del carrito al pedido pagado; el total manipulado se rechaza", async ({ pa
   // El error del campo corregido se quita al momento y el conteo baja (UX-03).
   await expect(page.getByText("Escribe un email válido.")).toHaveCount(0);
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("2221234567");
+  await page.getByLabel(/^Celular/).fill("2221234567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");

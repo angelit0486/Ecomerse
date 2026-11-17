@@ -59,7 +59,7 @@ async function toMercadoPago(page: Page, email: string): Promise<string> {
   await page.goto(`${origin()}/checkout`);
   await page.getByRole("textbox", { name: "Email" }).fill(email);
   await page.getByLabel("Nombre completo").fill("Ana Ruiz");
-  await page.getByLabel(/^Teléfono/).fill("222 123 4567");
+  await page.getByLabel(/^Celular/).fill("222 123 4567");
   await page.getByLabel("Calle, número e interior").fill("Av. Juárez 10");
   await page.getByLabel("Colonia").fill("Centro");
   await page.getByLabel("Ciudad o municipio").fill("Puebla");
