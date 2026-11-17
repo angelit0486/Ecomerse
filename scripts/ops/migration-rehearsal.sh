@@ -17,6 +17,7 @@
 # 2026-11-17 (issue #18): + 20261117000100 (importación más rápida).
 # 2026-11-17 (issue #18, ADR-067): + 20261117000200 (partes de 2,500 filas, hasta 20).
 # 2026-11-17 (auditoría de autorización, hallazgo 1): + 20261117000300 (límite del 2FA).
+# 2026-11-17 (retiro en tienda en el correo): + 20261117000400 (anexo F).
 #
 # Uso: bash scripts/ops/migration-rehearsal.sh
 # Manifiesto: docs/runbooks/despliegue-migraciones-2026-11.md (sección 2).
@@ -48,6 +49,8 @@ MANIFEST=(
   "20261117000200_import_parts_2500.sql 7079f730ea139f192816c7d0a6b3a80096ac139e6503a7a62509f653f824f6d9"
   # Auditoría de autorización 2026-11-17, hallazgo 1: límite de intentos del 2FA (sin tablas nuevas).
   "20261117000300_staff_mfa_attempts.sql 423e0f549af7faf6c5562e91ce1838431b6d5e7853dd6b35d722e3ae7f4f2c75"
+  # 2026-11-17: retiro en tienda en los correos del pedido (solo reemplaza una función).
+  "20261117000400_order_email_pickup.sql 2248f9ee81a5da34d1e2c395c32ffbd55a9726867d2a889a6bb293a0a520ce28"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -116,7 +119,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261117000300"
+check "versión final" "select public.app_schema_version()" "20261117000400"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
 check "0300: interruptor profit_report apagado" "select default_enabled from public.feature_flags where key = 'profit_report'" "f"
 check "0300: trigger de costo al vender" "select count(*) from pg_trigger where tgname = 'order_items_snapshot_cost'" "1"
@@ -153,6 +156,9 @@ check "1117 (ADR-067): imports_batch_create topa en 20 partes de 2,500 filas" "s
 check "1117 (2FA): take_staff_mfa_attempt solo para system_worker" "select has_function_privilege('system_worker', 'system.take_staff_mfa_attempt(uuid, uuid, text)', 'execute') and not has_function_privilege('authenticated', 'system.take_staff_mfa_attempt(uuid, uuid, text)', 'execute') and not has_function_privilege('anon', 'system.take_staff_mfa_attempt(uuid, uuid, text)', 'execute')" "t"
 check "1117 (2FA): take_staff_mfa_attempt SECURITY DEFINER con search_path vacío" "select prosecdef::text || proconfig::text from pg_proc where oid = 'system.take_staff_mfa_attempt(uuid, uuid, text)'::regprocedure" 'true{"search_path=\"\""}'
 check "1117 (2FA): límites por IP, usuario y factor" "select prosrc ~ 'staff_mfa:ip:' and prosrc ~ 'staff_mfa:user:' and prosrc ~ 'staff_mfa:factor:' from pg_proc where oid = 'system.take_staff_mfa_attempt(uuid, uuid, text)'::regprocedure" "t"
+check "1117 (retiro): order_notification solo para system_worker" "select has_function_privilege('system_worker', 'system.order_notification(uuid,uuid,uuid)', 'execute') and not has_function_privilege('authenticated', 'system.order_notification(uuid,uuid,uuid)', 'execute') and not has_function_privilege('anon', 'system.order_notification(uuid,uuid,uuid)', 'execute')" "t"
+check "1117 (retiro): order_notification SECURITY DEFINER con search_path vacío" "select prosecdef::text || proconfig::text from pg_proc where oid = 'system.order_notification(uuid,uuid,uuid)'::regprocedure" 'true{"search_path=\"\""}'
+check "1117 (retiro): el correo lleva tipo de envío y dónde recoger" "select prosrc ~ 'shipping_type' and prosrc ~ '''pickup''' and prosrc ~ 'contact' from pg_proc where oid = 'system.order_notification(uuid,uuid,uuid)'::regprocedure" "t"
 ventana 02-despues.sql
 # H4-B (mensaje 7): aislamiento entre las dos tiendas de prueba; escribe y revierte.
 ventana 04-aislamiento.sql
@@ -189,6 +195,7 @@ pg_prove --dbname "$UP" supabase/tests/database/000_test_helpers.test.sql \
   supabase/tests/database/149_import_commit_speed.test.sql \
   supabase/tests/database/150_import_parts_2500.test.sql \
   supabase/tests/database/151_staff_mfa_attempts.test.sql \
+  supabase/tests/database/152_order_email_pickup.test.sql \
   2>&1 | grep -E "^(All tests|Files=|Result|Failed)|not ok"
 
 dropdb "$FRESH"
