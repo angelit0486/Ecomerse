@@ -106,7 +106,9 @@ export function partRejection(
   if (detail === "part_fingerprint") {
     return "Esta parte no coincide con el archivo con que empezaste el lote. Elige el mismo archivo.";
   }
-  if (detail === "too_many_rows") return "Una parte no puede tener más de 5,000 filas.";
+  if (detail === "too_many_rows") {
+    return `Una parte no puede tener más de ${MAX_PART_ROWS.toLocaleString("es-MX")} filas.`;
+  }
   if (code === "not_found") return "No encontramos ese lote en esta tienda.";
   if (code === "forbidden") return "Tu rol no permite importar productos.";
   return "No pudimos guardar la parte. Vuelve a intentarlo: lo que ya se subió no se repite.";

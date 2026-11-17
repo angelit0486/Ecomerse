@@ -63,19 +63,19 @@ select is(pg_temp.err(format('select public.imports_batch_create(%L, %L, %L, %L,
             'x.csv', 'upsert', '{}', '{}', pg_temp.fp('x'))),
           'validation_failed/batch', 'un lote necesita al menos 1 parte');
 select is(pg_temp.err(format('select public.imports_batch_create(%L, %L, %L, %L, %L, %L)', tests.fx('store_a'),
-            'x.csv', 'upsert', array(select 10 from generate_series(1, 11)),
-            array(select pg_temp.fp('p' || g) from generate_series(1, 11) g), pg_temp.fp('x'))),
-          'validation_failed/batch', 'ni más de 10 partes');
+            'x.csv', 'upsert', array(select 10 from generate_series(1, 21)),
+            array(select pg_temp.fp('p' || g) from generate_series(1, 21) g), pg_temp.fp('x'))),
+          'validation_failed/batch', 'ni más de 20 partes (ADR-067)');
 select is(pg_temp.err(format('select public.imports_batch_create(%L, %L, %L, %L, %L, %L)', tests.fx('store_a'),
-            'x.csv', 'upsert', '{5001,10}', array[pg_temp.fp('a'), pg_temp.fp('b')], pg_temp.fp('x'))),
-          'validation_failed/batch', 'ninguna parte puede pasar de 5,000 filas');
+            'x.csv', 'upsert', '{2501,10}', array[pg_temp.fp('a'), pg_temp.fp('b')], pg_temp.fp('x'))),
+          'validation_failed/batch', 'ninguna parte puede pasar de 2,500 filas (ADR-067)');
 select tests.set_fx('batch', (pg_temp.create_batch('catalogo.csv', 4) ->> 'batch_id')::uuid);
 select is((select status from public.import_batches where id = tests.fx('batch')), 'uploading', 'el lote nace subiendo');
 select is(pg_temp.create_batch('catalogo.csv', 4) ->> 'batch_id', tests.fx('batch')::text,
           'elegir otra vez el mismo archivo retoma el mismo lote (no crea otro)');
-select is((public.imports_batch_create(tests.fx('store_a'), 'pesado.csv', 'upsert', '{3000}',
+select is((public.imports_batch_create(tests.fx('store_a'), 'pesado.csv', 'upsert', '{2500}',
              array[pg_temp.fp('pesado1')], pg_temp.fp('pesado.csv')) ->> 'resumed')::boolean, false,
-          'un archivo de más de 4 MB con hasta 5,000 filas entra como lote de una parte');
+          'un archivo de más de 4 MB con hasta 2,500 filas entra como lote de una parte (ADR-067)');
 
 -- ------------------------------------------------ 2. Subir partes: idempotencia y productos completos
 select is(pg_temp.err(format('select pg_temp.part(%L, 1, %L, %L)', tests.fx('batch'), pg_temp.fp('otro archivo'),

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { MAX_PART_ROWS } from "@/lib/imports/split";
+
 import {
   admin,
   createAuthUser,
@@ -32,6 +34,15 @@ let resumeTenant: Awaited<ReturnType<typeof createTenant>>;
 const evidence = process.env.E2E_EVIDENCIA_DIR;
 
 const SIZES = ["CH", "M", "G"];
+/** 6,000 playeras: partes de hasta MAX_PART_ROWS filas sin partir un producto (ADR-067: 8). */
+const PRODUCTS = 6000;
+const PER_PART = Math.floor(MAX_PART_ROWS / SIZES.length);
+const PARTS = Math.ceil(PRODUCTS / PER_PART);
+const LAST_PART_ROWS = (PRODUCTS - (PARTS - 1) * PER_PART) * SIZES.length;
+const P3_LAST = 3 * PER_PART;
+const P3_LAST_SKU = `PL-${P3_LAST}-G`;
+const P3_LAST_ROW = P3_LAST * SIZES.length + 1;
+const es = (n: number) => n.toLocaleString("es-MX");
 
 /** Hoja de ropa: `products` playeras en 3 tallas, «Publicado: sí»; cada 500, precio 0. */
 function sheet(products: number, fix?: { sku: string; to: string }) {
@@ -85,22 +96,22 @@ test("18,000 filas por partes: falla la parte 3, se corrige solo esa y el lote t
   await page.goto(`/admin/${tenant.handle}/productos/importar`);
   await page
     .getByLabel(/^Archivo CSV de esta plataforma/)
-    .setInputFiles({ name: "ropa-18k.csv", mimeType: "text/csv", buffer: sheet(6000) });
+    .setInputFiles({ name: "ropa-18k.csv", mimeType: "text/csv", buffer: sheet(PRODUCTS) });
   await page.getByRole("button", { name: "Validar archivo" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "se sube en 4 partes" })).toBeVisible({
-    timeout: 30_000,
-  });
-  // Al terminar de subir, abre el lote: 4 partes revisadas, ninguna aplicada.
+  await expect(
+    page.getByRole("status").filter({ hasText: `se sube en ${PARTS} partes` }),
+  ).toBeVisible({ timeout: 30_000 });
+  // Al terminar de subir, abre el lote: todas las partes revisadas, ninguna aplicada.
   await expect(page.getByRole("heading", { name: "ropa-18k.csv" })).toBeVisible({
     timeout: 180_000,
   });
-  await expect(page.getByText("18,000 filas en 4 partes")).toBeVisible();
-  await expect(parts(page)).toHaveCount(4);
-  for (const i of [0, 1, 2]) {
-    await expect(parts(page).nth(i)).toContainText("4,998 filas");
-    await expect(parts(page).nth(i)).toContainText("Lista: 1,666 por crear");
+  await expect(page.getByText(`18,000 filas en ${PARTS} partes`)).toBeVisible();
+  await expect(parts(page)).toHaveCount(PARTS);
+  for (let i = 0; i < PARTS - 1; i += 1) {
+    await expect(parts(page).nth(i)).toContainText(`${es(PER_PART * SIZES.length)} filas`);
+    await expect(parts(page).nth(i)).toContainText(`Lista: ${es(PER_PART)} por crear`);
   }
-  await expect(parts(page).nth(3)).toContainText("3,006 filas");
+  await expect(parts(page).nth(PARTS - 1)).toContainText(`${es(LAST_PART_ROWS)} filas`);
   await expectNoSeriousA11yViolations(page);
   await capture(page, "lote-18k-1-listo");
 
@@ -112,42 +123,44 @@ test("18,000 filas por partes: falla la parte 3, se corrige solo esa y el lote t
     await sql`select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({
       title: "Intruso",
       slug: "intruso",
-      variants: [{ price: 100, sku: "PL-4998-G" }],
+      variants: [{ price: 100, sku: P3_LAST_SKU }],
     })})`;
   });
 
   await page.getByRole("button", { name: "Aplicar el lote" }).click();
   await untilVisible(page, "El lote se detuvo.");
-  await expect(page.getByText(/La parte 3 no se pudo aplicar: Fila 14995/)).toBeVisible();
+  await expect(
+    page.getByText(new RegExp(`La parte 3 no se pudo aplicar: Fila ${P3_LAST_ROW}`)),
+  ).toBeVisible();
   await expect(page.getByRole("note")).toContainText("Lote aplicado a medias.");
   await expect(page.getByRole("note")).toContainText("Las partes 1 y 2 ya están en tu catálogo");
   await expect(parts(page).nth(0)).toContainText("Aplicada");
   await expect(parts(page).nth(1)).toContainText("Aplicada");
   await expect(parts(page).nth(2)).toContainText("Error");
   await expect(parts(page).nth(2)).toContainText("no dejó ningún cambio");
-  await expect(parts(page).nth(3)).toContainText("Pendiente");
+  for (let i = 3; i < PARTS; i += 1) await expect(parts(page).nth(i)).toContainText("Pendiente");
   await expectNoSeriousA11yViolations(page);
   await capture(page, "lote-18k-2-detenido-a-medias");
   const [partial] = await admin<{ p3: number; p4: number; p12: number }[]>`
-    select count(*) filter (where n between 3333 and 4998)::int as p3,
-           count(*) filter (where n > 4998)::int as p4,
-           count(*) filter (where n <= 3332)::int as p12
+    select count(*) filter (where n between ${2 * PER_PART + 1} and ${P3_LAST})::int as p3,
+           count(*) filter (where n > ${P3_LAST})::int as p4,
+           count(*) filter (where n <= ${2 * PER_PART})::int as p12
       from (select substring(slug from 9)::int as n from public.products
              where store_id = ${tenant.storeId} and slug ~ '^playera-[0-9]+$') x`;
-  expect(partial).toEqual({ p3: 0, p4: 0, p12: 3332 });
+  expect(partial).toEqual({ p3: 0, p4: 0, p12: 2 * PER_PART });
 
   // Corrige el SKU en su archivo y lo vuelve a elegir: solo se sube la parte 3.
   await page.getByLabel("Archivo CSV", { exact: true }).setInputFiles({
     name: "ropa-18k.csv",
     mimeType: "text/csv",
-    buffer: sheet(6000, { sku: "PL-4998-G", to: "PL-4998-G2" }),
+    buffer: sheet(PRODUCTS, { sku: P3_LAST_SKU, to: `${P3_LAST_SKU}2` }),
   });
   await page.getByRole("button", { name: "Revisar y subir" }).click();
   await expect(page.getByText("Se subió la parte 3.")).toBeVisible({ timeout: 120_000 });
   await expect(page.getByRole("status").filter({ hasText: "ya no tiene errores" })).toBeVisible();
   await page.getByRole("button", { name: "Continuar con la parte 3" }).click();
   await untilVisible(page, /^Lote terminado/);
-  for (const i of [0, 1, 2, 3]) await expect(parts(page).nth(i)).toContainText("Aplicada");
+  for (let i = 0; i < PARTS; i += 1) await expect(parts(page).nth(i)).toContainText("Aplicada");
 
   // Publicación masiva de los marcados «sí»: solo los que cumplen.
   await untilVisible(page, "5,988 publicados.", 300_000);
@@ -201,8 +214,11 @@ test("una subida cortada se retoma eligiendo el mismo archivo; un lote sin aplic
   await expect(page.getByRole("heading", { name: "retomar.csv" })).toBeVisible({
     timeout: 180_000,
   });
-  await expect(parts(page)).toHaveCount(3);
-  for (const i of [0, 1, 2]) await expect(parts(page).nth(i)).toContainText("Pendiente");
+  const resumeParts = Math.ceil(3500 / PER_PART);
+  await expect(parts(page)).toHaveCount(resumeParts);
+  for (let i = 0; i < resumeParts; i += 1) {
+    await expect(parts(page).nth(i)).toContainText("Pendiente");
+  }
   const batches = await admin<{ id: string }[]>`
     select id from public.import_batches where store_id = ${resumeTenant.storeId} and file_name = 'retomar.csv'`;
   expect(batches).toHaveLength(1);
@@ -214,7 +230,9 @@ test("una subida cortada se retoma eligiendo el mismo archivo; un lote sin aplic
   await page.getByText("Cancelar el lote", { exact: true }).click();
   await page.getByRole("button", { name: "Sí, cancelar el lote" }).click();
   await expect(page.getByText("Lote cancelado: no se aplicó ninguna parte.")).toBeVisible();
-  for (const i of [0, 1, 2]) await expect(parts(page).nth(i)).toContainText("Cancelada");
+  for (let i = 0; i < resumeParts; i += 1) {
+    await expect(parts(page).nth(i)).toContainText("Cancelada");
+  }
   await expectNoSeriousA11yViolations(page);
   const [applied] = await admin<{ n: number }[]>`
     select count(*)::int as n from public.import_jobs

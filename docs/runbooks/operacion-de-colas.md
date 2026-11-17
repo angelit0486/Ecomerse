@@ -28,7 +28,7 @@ La cola es la tabla `system.jobs`. Una «pasada» del runner (`runQueuedJobs`, `
 - **Importación** (`import.commit`): una parte o importación por pasada como máximo. Solo empieza si quedan 25 s o más; si no, se aplaza sin gastar intento. Hay 3 intentos.
 - **Medido en local** (`tests/integration/queue-cadence.test.ts`, mismos límites que producción): una parte de 4,998 filas se aplicó en una pasada de **30.9 s**. Con `20261117000100` (issue #18), la misma parte tarda **12.1 s** sin estadísticas y **11.2 s** con ellas (antes 29.5 s y 21.0 s, `system.import_commit` medido directo) [MEDIDO, local]. El lote de 6,000 filas en 2 partes, con su publicación, terminó en **2 minutos** de cron [MEDIDO, local; no en Vercel ni en Supabase alojado].
 - **Publicación** (`catalog.publish_run`): tandas de 200 productos, cada una en su transacción. Si quedan menos de 8 s, se aplaza.
-- **Rendimiento:** con un disparo por minuto, se aplica como mínimo una parte por minuto. Un lote de 10 partes tarda unos 10 a 12 minutos, más su publicación [ESTIMADO a partir de la medición local].
+- **Rendimiento:** con un disparo por minuto, se aplica como mínimo una parte por minuto. Un lote de 10 partes tarda unos 10 a 12 minutos, más su publicación [ESTIMADO a partir de la medición local]. Con ADR-067 (partes de 2,500 filas, hasta 20) un lote de 50,000 filas son 20 partes: unos 20 minutos con un disparo por minuto [ESTIMADO].
 
 ### 2.1 Entradas que arrancan la cola (inventario verificable, H3)
 
@@ -67,7 +67,7 @@ Una acción de servidor corre dentro de la función de la **página que la usa**
 | `%5Fstore/[storeId]/checkout/page.tsx` (tienda)                            | `CheckoutForm` → `checkout`                                               | **60 s (M7)** |
 | `%5Fstore/[storeId]/pago-simulado/[paymentId]/page.tsx`                    | `SimulateForm` → `simulatePayment`                                        | **60 s (M7)** |
 
-- **Con 60 s por otra razón:** `productos/importar/lote/[batchId]/parte/[part]/route.ts` (validar una parte de 5,000 filas, D8).
+- **Con 60 s por otra razón:** `productos/importar/lote/[batchId]/parte/[part]/route.ts` (validar una parte de 5,000 filas, D8; 2,500 con ADR-067).
 - **Sin límite, a propósito:** el carrito, los listados y la ficha de producto de la tienda usan `addItem` del mismo `carrito/actions.ts`, que no arranca la cola. Las rutas `route.ts` de la tienda (íconos, robots, sitemap) no tienen layout.
 - **Límite del análisis:** es estático y conservador (basta con nombrar la función). No ve llamadas armadas con texto, como `obj["processQueueSoon"]()`; hoy no hay ninguna.
 
@@ -121,8 +121,8 @@ Una acción de servidor corre dentro de la función de la **página que la usa**
 ## 6. Una tienda con mucha cola
 
 - **Orden:** la cola se atiende por llegada (`run_after`). Lo que llegó después espera a lo que llegó antes, de cualquier tienda.
-- **Cuánto se puede retener la cabeza:** un trabajo aplazado conserva su lugar y se retoma primero, como mucho lo que dura **ese** trabajo. Cada trabajo está acotado: una importación o parte tiene hasta 5,000 filas y una corrida de publicación hasta 5,000 productos.
-- **Lotes:** cada parte nueva entra con su propia hora, así que un lote de 10 partes se intercala con el trabajo de otras tiendas.
+- **Cuánto se puede retener la cabeza:** un trabajo aplazado conserva su lugar y se retoma primero, como mucho lo que dura **ese** trabajo. Cada trabajo está acotado: una importación tiene hasta 5,000 filas y una parte hasta 2,500 (ADR-067) y una corrida de publicación hasta 5,000 productos.
+- **Lotes:** cada parte nueva entra con su propia hora, así que un lote de 20 partes se intercala con el trabajo de otras tiendas.
 - **Espera:** la de otra tienda es acotada, no indefinida (`queue-cadence.test.ts`).
 - **No hay reparto por tienda:** una tienda con 30 importaciones seguidas (el tope por hora) retrasa a las demás lo que duren esas 30. [PROPUESTA para el piloto: reparto por tienda en `system.claim_jobs`, con migración y su ADR.]
 

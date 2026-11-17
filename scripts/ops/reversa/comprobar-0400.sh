@@ -17,6 +17,7 @@
 #      nueva a la más vieja) corren cada una sobre su versión, su segunda corrida
 #      se rechaza, y al final el esquema es idéntico al de una base hasta
 #      20261113000400. Solo entonces siguen las pruebas 2–6 de la reversa de 0400.
+#      La de 20261117000200 (ADR-067) se rechaza además si hay un lote de más de 10 partes.
 # Prueba el esquema y las condiciones; no recupera los datos que la reversa borra.
 # Uso: bash scripts/ops/reversa/comprobar-0400.sh
 # =============================================================================
@@ -29,6 +30,7 @@ OLD_APP=a730989
 # Reversas de las migraciones posteriores a 0400, de la más nueva a la más vieja:
 # «versión de la base antes de correrla | archivo | versión en que la deja».
 NEWER=(
+  "20261117000200|scripts/ops/reversa/20261117000200_import_parts_2500.reversa.sql|20261117000100"
   "20261117000100|scripts/ops/reversa/20261117000100_import_commit_speed.reversa.sql|20261113000400"
 )
 A=pruva_rev_hasta_0300; B=pruva_rev_con_reversa; C=pruva_rev_hasta_0400
@@ -78,6 +80,38 @@ if [ "${#NEWER[@]}" -gt 0 ]; then
   echo "✓ Candado: la reversa de 0400 sobre $top → rechazada sin cambios (primero van las posteriores)"
   for entry in "${NEWER[@]}"; do
     IFS='|' read -r from file to <<<"$entry"
+    if [ "$from" = 20261117000200 ]; then
+      # ADR-067: con un lote de más de 10 partes, la reversa se rechaza sin cambiar nada.
+      p "$B" > /dev/null <<'SQL'
+insert into public.plans (key, name) values ('rev_plan_067', 'rev_plan_067') on conflict (key) do nothing;
+insert into public.plan_entitlements (plan_id, key, value_int)
+  select id, 'max_stores', 1 from public.plans where key = 'rev_plan_067' on conflict (plan_id, key) do nothing;
+insert into public.organizations (id, name, slug, country)
+  values ('00000000-0000-7000-8000-00000000e001', 'Reversa 067', 'org-reversa-067', 'MX');
+insert into public.subscriptions (organization_id, plan_id, status)
+  select '00000000-0000-7000-8000-00000000e001', id, 'active' from public.plans where key = 'rev_plan_067';
+insert into public.stores (id, organization_id, name, handle, currency, country, timezone)
+  values ('00000000-0000-7000-8000-00000000e002', '00000000-0000-7000-8000-00000000e001', 'Reversa 067',
+          'reversa-067', 'MXN', 'MX', 'America/Mexico_City');
+insert into public.import_batches (store_id, file_name, mode, total_rows, parts_count, part_rows, part_fingerprints,
+                                   file_fingerprint)
+  select '00000000-0000-7000-8000-00000000e002', 'once.csv', 'create_only', 11, 11, array_fill(1, array[11]),
+         array_fill(repeat('a', 64), array[11]), repeat('b', 64);
+SQL
+      dump "$B" > "$WORK/e0.sql"
+      out=$(psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$file" 2>&1) && fail "$file corrió con un lote de 11 partes"
+      grep -q 'Hay 1 lotes con más de 10 partes' <<<"$out" || { echo "$out" >&2; fail "$file: motivo inesperado"; }
+      dump "$B" > "$WORK/e1.sql"; diff -q "$WORK/e0.sql" "$WORK/e1.sql" > /dev/null || fail "$file rechazada cambió el esquema"
+      p "$B" > /dev/null <<'SQL'
+delete from public.import_batches where store_id = '00000000-0000-7000-8000-00000000e002';
+delete from public.stores where id = '00000000-0000-7000-8000-00000000e002';
+delete from public.subscriptions where organization_id = '00000000-0000-7000-8000-00000000e001';
+delete from public.organizations where id = '00000000-0000-7000-8000-00000000e001';
+delete from public.plan_entitlements where plan_id in (select id from public.plans where key = 'rev_plan_067');
+delete from public.plans where key = 'rev_plan_067';
+SQL
+      echo "✓ Candado: con un lote de 11 partes la reversa $from se rechaza sin cambios"
+    fi
     [ "$(q 'select public.app_schema_version()')" = "$from" ] || fail "$file: la base no está en $from"
     psql -X -q -1 -v ON_ERROR_STOP=1 -d "$B" -f "$file" > /dev/null
     [ "$(q 'select public.app_schema_version()')" = "$to" ] || fail "$file no dejó la versión en $to"

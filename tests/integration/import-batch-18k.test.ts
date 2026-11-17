@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { handleKey, partBody, partsToSend, prepareImport } from "@/lib/imports/split";
+import {
+  handleKey,
+  MAX_PART_ROWS,
+  partBody,
+  partsToSend,
+  prepareImport,
+} from "@/lib/imports/split";
 import { createImportHandlers } from "@/server/imports/handlers";
 import { readPartBody } from "@/server/imports/parts";
 import { createPublishHandlers } from "@/server/imports/publish-handlers";
@@ -14,13 +20,14 @@ import { createPostgresJobStore } from "@/server/jobs/store";
 import { createLogger } from "@/server/observability/logger";
 
 /**
- * ADR-064 opción A (Orden 10, mensaje 4), prueba obligatoria: 18,000 filas en 4
- * partes con una falla en la tercera. Camino real de punta a punta: el archivo se
+ * ADR-064 opción A (Orden 10, mensaje 4), prueba obligatoria: 18,000 filas por
+ * partes con una falla en la tercera (ADR-067: partes de hasta 2,500 filas, así
+ * que son 8; con 5,000 eran 4). Camino real de punta a punta: el archivo se
  * parte con el módulo del navegador, cada parte pasa por el lector del servidor
  * y por imports_create_part (validación contra la base), el lote se aplica con
  * el worker de producción (system_worker) y la publicación corre por tandas.
  *
- *  - partes 1 y 2 aplicadas; la 3 revertida completa; la 4 pendiente;
+ *  - partes 1 y 2 aplicadas; la 3 revertida completa; de la 4 en adelante pendientes;
  *  - corregir y repetir SOLO la parte 3 (las otras huellas no cambian);
  *  - sin productos ni variantes duplicados;
  *  - otra tienda no puede consultar ni modificar el lote;
@@ -44,6 +51,15 @@ const SIZES = ["CH", "M", "G"] as const;
 const ROWS = PRODUCTS * SIZES.length;
 /** Cada 500 productos, precio 0: se importa, pero no se publica (queda pendiente). */
 const ZERO_EVERY = 500;
+/** Productos por parte (3 tallas cada uno, sin partir un producto) y partes del archivo. */
+const PER_PART = Math.floor(MAX_PART_ROWS / SIZES.length);
+const PARTS = Math.ceil(PRODUCTS / PER_PART);
+const partProducts = (i: number) => Math.min(PER_PART, PRODUCTS - i * PER_PART);
+/** El último producto de la parte 3 y su última fila en el archivo completo (con encabezado). */
+const P3_LAST = 3 * PER_PART;
+const P3_LAST_SKU = `PL-${P3_LAST}-G`;
+const P3_LAST_ROW = P3_LAST * SIZES.length + 1;
+const PENDING = Array.from({ length: PARTS - 3 }, () => "validated");
 
 let storeId = "";
 let ownerId = "";
@@ -172,16 +188,19 @@ afterAll(async () => {
   await Promise.all([admin.end(), worker.end()]);
 });
 
-describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => {
+describe("ADR-064: 18,000 filas por partes con una falla en la tercera", () => {
   let batchId = "";
   const evidence: Record<string, unknown> = {};
 
-  it("parte el archivo en 4 partes sin separar productos y las valida contra la base", async () => {
+  it("parte el archivo sin separar productos y valida cada parte contra la base", async () => {
     const csv = sheet();
     const prepared = prepareImport(csv);
     if (!prepared.ok) throw new Error(prepared.code);
     expect(prepared.rows).toBe(ROWS);
-    expect(prepared.parts.map((p) => p.rows.length)).toEqual([4998, 4998, 4998, 3006]);
+    expect(PARTS).toBe(8);
+    expect(prepared.parts.map((p) => p.rows.length)).toEqual(
+      Array.from({ length: PARTS }, (_, i) => partProducts(i) * SIZES.length),
+    );
     // Ningún producto queda en dos partes.
     const owner = new Map<string, number>();
     prepared.parts.forEach((p, i) => {
@@ -221,15 +240,16 @@ describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => 
     const totals = await admin<{ part_number: number; errors: number; create: number }[]>`
       select part_number, (totals ->> 'errors')::int as errors, (totals ->> 'create')::int as create
         from public.import_jobs where batch_id = ${batchId} order by part_number`;
-    expect(totals).toEqual([
-      { part_number: 1, errors: 0, create: 1666 },
-      { part_number: 2, errors: 0, create: 1666 },
-      { part_number: 3, errors: 0, create: 1666 },
-      { part_number: 4, errors: 0, create: 1002 },
-    ]);
+    expect(totals).toEqual(
+      Array.from({ length: PARTS }, (_, i) => ({
+        part_number: i + 1,
+        errors: 0,
+        create: partProducts(i),
+      })),
+    );
   }, 600_000);
 
-  it("falla la parte 3 al aplicarse: 1 y 2 aplicadas, 3 revertida completa, 4 pendiente", async () => {
+  it("falla la parte 3 al aplicarse: 1 y 2 aplicadas, 3 revertida completa, las demás pendientes", async () => {
     // Entre la vista previa y la aplicación, alguien crea en el panel un producto
     // con el SKU de la ÚLTIMA fila de la parte 3: todas sus filas anteriores se
     // escribirían antes de fallar, así que la prueba demuestra el «todo o nada».
@@ -239,7 +259,7 @@ describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => 
         sql`select public.catalog_upsert_product(${storeId}, ${sql.json({
           title: "Intruso",
           slug: "intruso",
-          variants: [{ price: 100, sku: "PL-4998-G" }],
+          variants: [{ price: 100, sku: P3_LAST_SKU }],
         })})`,
     );
     const commit = await asUser(ownerId, async (sql) => {
@@ -254,49 +274,51 @@ describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => 
     evidence.apply_parts_1_2_and_fail_3_ms = Date.now() - started;
 
     const parts = await liveParts(batchId);
-    expect([1, 2, 3, 4].map((p) => parts.get(p)?.status)).toEqual([
+    expect(Array.from({ length: PARTS }, (_, i) => parts.get(i + 1)?.status)).toEqual([
       "completed",
       "completed",
       "failed",
-      "validated",
+      ...PENDING,
     ]);
-    // La fila del error es la del archivo completo (row 14,995), no la de la parte.
-    expect(parts.get(3)!.error).toMatch(/^Fila 14995: sku/);
+    // La fila del error es la del archivo completo, no la de la parte.
+    expect(parts.get(3)!.error).toMatch(new RegExp(`^Fila ${P3_LAST_ROW}: sku`));
     const [batch] = await admin<{ status: string; stop_reason: string }[]>`
       select status, stop_reason from public.import_batches where id = ${batchId}`;
     expect(batch!.status).toBe("stopped");
-    expect(batch!.stop_reason).toMatch(/^La parte 3 no se pudo aplicar: Fila 14995/);
+    expect(batch!.stop_reason).toMatch(
+      new RegExp(`^La parte 3 no se pudo aplicar: Fila ${P3_LAST_ROW}`),
+    );
 
     const [counts] = await admin<
       { p12: number; v12: number; p3: number; m3: number; p4: number; active12: number }[]
     >`
-      select count(*) filter (where n between 1 and 3332)::int as p12,
+      select count(*) filter (where n between 1 and ${2 * PER_PART})::int as p12,
              (select count(*)::int from public.product_variants v join public.products p
                 on p.store_id = v.store_id and p.id = v.product_id
                where p.store_id = ${storeId} and p.slug ~ '^playera-[0-9]+$'
-                 and substring(p.slug from 9)::int <= 3332) as v12,
-             count(*) filter (where n between 3333 and 4998)::int as p3,
+                 and substring(p.slug from 9)::int <= ${2 * PER_PART}) as v12,
+             count(*) filter (where n between ${2 * PER_PART + 1} and ${P3_LAST})::int as p3,
              (select count(*)::int from public.inventory_movements
                where store_id = ${storeId} and reference_id = ${parts.get(3)!.id}) as m3,
-             count(*) filter (where n > 4998)::int as p4,
-             count(*) filter (where n between 1 and 3332 and status = 'active')::int as active12
+             count(*) filter (where n > ${P3_LAST})::int as p4,
+             count(*) filter (where n between 1 and ${2 * PER_PART} and status = 'active')::int as active12
         from (select substring(slug from 9)::int as n, status from public.products
                where store_id = ${storeId} and slug ~ '^playera-[0-9]+$') x`;
     expect(counts).toEqual({
-      p12: 3332,
-      v12: 9996,
+      p12: 2 * PER_PART,
+      v12: 2 * PER_PART * SIZES.length,
       p3: 0,
       m3: 0,
       p4: 0,
-      // 3,332 menos los de precio 0 (500, 1000, 1500, 2000, 2500, 3000).
-      active12: 3326,
+      // Las partes 1 y 2 menos los de precio 0 (uno cada 500).
+      active12: 2 * PER_PART - Math.floor((2 * PER_PART) / ZERO_EVERY),
     });
   }, 900_000);
 
   it("corregir y repetir SOLO la parte 3; el worker se cae a media parte y se recupera", async () => {
     const before = await liveParts(batchId);
     // El comerciante corrige el SKU en su archivo y lo vuelve a elegir.
-    const corrected = prepareImport(sheet({ sku: "PL-4998-G", to: "PL-4998-G2" }));
+    const corrected = prepareImport(sheet({ sku: P3_LAST_SKU, to: `${P3_LAST_SKU}2` }));
     if (!corrected.ok) throw new Error(corrected.code);
     const bodies = corrected.parts.map(partBody);
     const fingerprints = bodies.map((b) => {
@@ -351,7 +373,8 @@ describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => 
     // Nada de la parte 3 quedó escrito; el lote sigue «aplicando» esa parte.
     const [mid] = await admin<{ p3: number; status: string; part: string }[]>`
       select (select count(*)::int from public.products where store_id = ${storeId}
-                and slug ~ '^playera-[0-9]+$' and substring(slug from 9)::int between 3333 and 4998) as p3,
+                and slug ~ '^playera-[0-9]+$'
+                and substring(slug from 9)::int between ${2 * PER_PART + 1} and ${P3_LAST}) as p3,
              (select status from public.import_batches where id = ${batchId}) as status,
              (select status from public.import_jobs where id = ${p3.id}) as part`;
     expect(mid).toEqual({ p3: 0, status: "running", part: "committing" });
@@ -364,15 +387,12 @@ describe("ADR-064: 18,000 filas en 4 partes con una falla en la tercera", () => 
 
     const started = Date.now();
     await drain();
-    evidence.recover_and_apply_parts_3_4_ms = Date.now() - started;
+    evidence.recover_and_apply_parts_3_on_ms = Date.now() - started;
 
     const after = await liveParts(batchId);
-    expect([1, 2, 3, 4].map((p) => after.get(p)?.status)).toEqual([
-      "completed",
-      "completed",
-      "completed",
-      "completed",
-    ]);
+    expect(Array.from({ length: PARTS }, (_, i) => after.get(i + 1)?.status)).toEqual(
+      Array.from({ length: PARTS }, () => "completed"),
+    );
     // Las partes 1 y 2 no se repitieron: mismas importaciones, misma hora de aplicación.
     for (const p of [1, 2]) {
       expect(after.get(p)!.id).toBe(before.get(p)!.id);

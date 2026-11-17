@@ -95,4 +95,20 @@ describe("guiones de la ventana única", () => {
     expect(sql).not.toMatch(/\b(drop|truncate)\b/i);
     expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
   });
+  it("la reversa de 20261117000200 (ADR-067) empieza con su candado, no borra lotes y vuelve a 20261117000100", () => {
+    const sql = readFileSync(
+      join(root, "scripts/ops/reversa/20261117000200_import_parts_2500.reversa.sql"),
+      "utf8",
+    ).replace(/--.*$/gm, "");
+    const guard = sql.indexOf("reversa_bloqueada");
+    const firstChange = sql.search(/\b(update|delete|drop|alter|create or replace)\b/i);
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstChange);
+    expect(sql).toMatch(/<> '20261117000200'/);
+    expect(sql).toMatch(/parts_count > 10/);
+    expect(sql).toMatch(/select '20261117000100'::text/);
+    // Sin pérdida: solo vuelve a poner los topes y redefine funciones.
+    expect(sql).not.toMatch(/\btruncate\b|\bdrop\s+(table|column)\b/i);
+    expect(sql.replace(/\$\$[\s\S]*?\$\$/g, "")).not.toMatch(/\b(delete|update)\b/i);
+  });
 });

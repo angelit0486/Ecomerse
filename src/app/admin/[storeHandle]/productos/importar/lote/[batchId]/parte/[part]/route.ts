@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { MAX_BATCH_PARTS, MAX_PART_BYTES } from "@/lib/imports/split";
+import { MAX_BATCH_PARTS, MAX_PART_BYTES, MAX_PART_ROWS } from "@/lib/imports/split";
 import { reportActionError } from "@/server/actions/report";
 import { hasPermission } from "@/server/auth/context";
 import { callRpc } from "@/server/db/rpc";
@@ -14,7 +14,7 @@ import { storeClient } from "../../../../../../_shared/action-state";
 
 /**
  * Subida de UNA parte de un lote (ADR-064 A). El navegador partió el archivo y
- * manda cada parte como JSON (≤ 3.5 MB, ≤ 5,000 filas) ya en el formato de la
+ * manda cada parte como JSON (≤ 3.5 MB, ≤ 2,500 filas, ADR-067) ya en el formato de la
  * tienda. Aquí se valida igual que un archivo subido (encabezados, plan, mismos
  * validadores) e imports_create_part la guarda: idempotente por huella, sin
  * productos repartidos entre partes y dentro del tope de importaciones. La tienda
@@ -28,7 +28,7 @@ export const maxDuration = 60;
 const FAILURES: Record<PartFailure, string> = {
   formato: "No pudimos leer esta parte. Vuelve a elegir el archivo.",
   columnas: "Revisa los encabezados del archivo.",
-  filas: "Una parte no puede tener más de 5,000 filas.",
+  filas: `Una parte no puede tener más de ${MAX_PART_ROWS.toLocaleString("es-MX")} filas.`,
 };
 
 export async function POST(request: NextRequest, { params }: Params) {

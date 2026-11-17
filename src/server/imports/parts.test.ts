@@ -14,7 +14,7 @@ describe("readPartBody (ADR-064: una parte del lote)", () => {
     for (let i = 1; i <= 5003; i += 1) lines.push(`Vaso ${i},${i === 5002 ? "gratis" : "99"},3`);
     const prepared = prepareImport(lines.join("\n"));
     if (!prepared.ok) throw new Error("prepare");
-    const body = partBody(prepared.parts[1]!);
+    const body = partBody(prepared.parts.at(-1)!);
     const read = readPartBody(bytes(body));
     expect(read.ok).toBe(true);
     if (!read.ok) return;
@@ -56,7 +56,7 @@ describe("readPartBody (ADR-064: una parte del lote)", () => {
       code: "columnas",
       detail: "handle",
     });
-    const many = Array.from({ length: 5001 }, (_, i) => [`p-${i}`, "P"]);
+    const many = Array.from({ length: 2501 }, (_, i) => [`p-${i}`, "P"]);
     expect(
       readPartBody(bytes(partBody({ ...part, rows: many, rowNumbers: many.map((_, i) => i + 2) }))),
     ).toEqual({ ok: false, code: "filas" });
