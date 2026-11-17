@@ -5,10 +5,14 @@ import { authorizeJobRunner } from "@/server/jobs/authorize";
 import { runQueuedJobs } from "@/server/jobs/run-now";
 import { log } from "@/server/observability/logger";
 import { requestIdFrom } from "@/server/observability/request-id";
+import { readBodyLimited } from "@/server/security/body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+/** El disparo firmado trae un cuerpo mínimo; más que esto no es del runner (se corta antes de autenticar). */
+const MAX_BODY_BYTES = 8_192;
 
 /**
  * Runner de la cola de jobs (GATE0 §28.4). Invocado por Vercel Cron según vercel.json (hoy, una vez al día)
@@ -20,7 +24,10 @@ async function handle(request: Request): Promise<Response> {
 
   try {
     const env = serverEnv();
-    const rawBody = request.method === "POST" ? await request.text() : "";
+    const rawBody = request.method === "POST" ? await readBodyLimited(request, MAX_BODY_BYTES) : "";
+    if (rawBody === null) {
+      return Response.json({ ok: false, error: "payload_too_large" }, { status: 413 });
+    }
     const auth = authorizeJobRunner({
       authorization: request.headers.get("authorization"),
       timestamp: request.headers.get("x-jobs-timestamp"),
