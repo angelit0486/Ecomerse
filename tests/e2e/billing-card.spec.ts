@@ -59,8 +59,9 @@ test.beforeAll(async () => {
   });
   await new Promise<void>((resolve) => server.listen(4599, "127.0.0.1", resolve));
   tenant = await createTenant(`tc${run}`, await createAuthUser(email));
-  await admin`insert into public.plans (key, name, status, sort, price_monthly, price_annual)
-              values (${planKey}, ${`Tarjeta ${run}`}, 'active', 98, 49900, 479000)`;
+  // ADR-068: con cuota única de arranque de $2,900.
+  await admin`insert into public.plans (key, name, status, sort, price_monthly, price_annual, setup_fee)
+              values (${planKey}, ${`Tarjeta ${run}`}, 'active', 98, 49900, 479000, 290000)`;
   const [p2] = await admin<{ id: string }[]>`
     insert into public.plans (key, name, status, sort, price_monthly, price_annual)
     values (${planKey2}, ${`Crece ${run}`}, 'active', 99, 99900, null) returning id`;
@@ -85,7 +86,10 @@ test("pagar el plan con tarjeta: Stripe Checkout y activación por webhook firma
   await page.goto(`/admin/${tenant.handle}/ajustes/plan`);
   const section = page.getByRole("region", { name: "Pagar con tarjeta" });
   await expect(section).toBeVisible();
-  await section.getByLabel(new RegExp(`Tarjeta ${run} · \\$4,790\\.00 al año`)).check();
+  const annual = section.getByLabel(new RegExp(`Tarjeta ${run} · \\$4,790\\.00 al año`));
+  // La dueña ve la cuota de arranque antes de pagar (ADR-068).
+  await expect(annual).toHaveAccessibleName(/cuota única de arranque de \$2,900\.00/);
+  await annual.check();
   await expectNoSeriousA11yViolations(page);
   await section.getByRole("button", { name: "Pagar con tarjeta" }).click();
   await expect(page.getByRole("heading", { name: "Stripe simulado" })).toBeVisible();
@@ -95,6 +99,9 @@ test("pagar el plan con tarjeta: Stripe Checkout y activación por webhook firma
   expect(body.get("mode")).toBe("subscription");
   expect(body.get("line_items[0][price_data][unit_amount]")).toBe("479000");
   expect(body.get("line_items[0][price_data][recurring][interval]")).toBe("year");
+  // La cuota de arranque va como pago único (solo en la primera factura).
+  expect(body.get("line_items[1][price_data][unit_amount]")).toBe("290000");
+  expect(body.get("line_items[1][price_data][recurring][interval]")).toBeNull();
   const orgId = body.get("subscription_data[metadata][organization_id]")!;
   const [org] = await admin<{ organization_id: string }[]>`
     select organization_id from public.stores where id = ${tenant.storeId}`;

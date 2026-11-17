@@ -18,6 +18,8 @@ export interface BillingConfig {
   api: StripeApi;
   webhookSecret: string;
   live: boolean;
+  /** Tasa de IVA «no incluido» de Stripe (ADR-068), o null: se cobra el precio tal cual. */
+  taxRateId?: string | null;
 }
 
 /** Stripe Billing configurado (clave de plataforma + secreto del webhook de cobro), o null. */
@@ -32,6 +34,7 @@ export function stripeBilling(): BillingConfig | null {
     }),
     webhookSecret: env.STRIPE_BILLING_WEBHOOK_SECRET,
     live: env.STRIPE_SECRET_KEY.startsWith("sk_live_"),
+    taxRateId: env.STRIPE_BILLING_TAX_RATE_ID ?? null,
   };
 }
 
@@ -43,13 +46,29 @@ export const checkoutInputSchema = z.object({
   amount: z.number().int().positive(),
   currency: z.string().regex(/^[A-Z]{3}$/),
   customer_id: z.string().nullable(),
+  /** Cuota única de arranque (ADR-068); la base la pone en 0 si ya se pagó o se saldó. */
+  setup_fee: z.number().int().nonnegative().default(0),
 });
 export type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 
-/** Abre Stripe Checkout en modo suscripción y devuelve la URL a la que se manda a la dueña. */
+/** Tasas de impuesto por partida: el IVA «no incluido» si la plataforma lo configuró. */
+const taxRates = (taxRateId: string | null | undefined) =>
+  taxRateId ? { tax_rates: [taxRateId] } : {};
+
+/**
+ * Abre Stripe Checkout en modo suscripción y devuelve la URL a la que se manda a la dueña.
+ * Con cuota de arranque (ADR-068) agrega una partida de pago único: Stripe la cobra
+ * solo en la primera factura, junto con el primer periodo.
+ */
 export async function createSubscriptionCheckout(
   api: StripeApi,
-  input: CheckoutInput & { email: string | null; successUrl: string; cancelUrl: string },
+  input: Omit<CheckoutInput, "setup_fee"> & {
+    setup_fee?: number;
+    email: string | null;
+    successUrl: string;
+    cancelUrl: string;
+    taxRateId?: string | null;
+  },
 ): Promise<string> {
   const metadata = {
     organization_id: input.organization_id,
@@ -78,7 +97,21 @@ export async function createSubscriptionCheckout(
             recurring: { interval: input.interval === "annual" ? "year" : "month" },
             product_data: { name: `PRUVA · plan ${input.plan_name}` },
           },
+          ...taxRates(input.taxRateId),
         },
+        ...((input.setup_fee ?? 0) > 0
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: input.currency.toLowerCase(),
+                  unit_amount: input.setup_fee!,
+                  product_data: { name: `PRUVA · cuota de arranque (plan ${input.plan_name})` },
+                },
+                ...taxRates(input.taxRateId),
+              },
+            ]
+          : []),
       ],
       metadata,
       subscription_data: { metadata },
@@ -111,7 +144,10 @@ const subscriptionItems = z.object({
  * Stripe abona lo no usado del plan anterior y cobra la diferencia. Aquí nada
  * cambia hasta que llega el webhook `customer.subscription.updated`.
  */
-export async function changeSubscriptionPlan(api: StripeApi, input: ChangeInput): Promise<void> {
+export async function changeSubscriptionPlan(
+  api: StripeApi,
+  input: ChangeInput & { taxRateId?: string | null },
+): Promise<void> {
   const current = subscriptionItems.parse(
     await api.request("GET", `/v1/subscriptions/${input.subscription_id}`),
   );
@@ -139,6 +175,7 @@ export async function changeSubscriptionPlan(api: StripeApi, input: ChangeInput)
             recurring: { interval: input.interval === "annual" ? "year" : "month" },
             product: product.id,
           },
+          ...taxRates(input.taxRateId),
         },
       ],
       proration_behavior: "create_prorations",

@@ -20,14 +20,16 @@ interface PlanRow extends PlanValues {
   price_annual: number | null;
   currency: string;
   trial_days: number | null;
+  setup_fee?: number | null;
 }
 
-/** «$499.00 al mes · $4,790.00 al año · 14 días de prueba» o «Sin precio». */
+/** «$699.00 al mes · $6,990.00 al año · 14 días de prueba · $2,900.00 de arranque» o «Sin precio». */
 function priceLine(plan: PlanRow): string {
   const parts = [
     plan.price_monthly !== null ? `${formatMoney(plan.price_monthly, plan.currency)} al mes` : null,
     plan.price_annual !== null ? `${formatMoney(plan.price_annual, plan.currency)} al año` : null,
     plan.trial_days ? `${plan.trial_days} días de prueba` : null,
+    plan.setup_fee ? `${formatMoney(plan.setup_fee, plan.currency)} de arranque` : null,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : "Sin precio";
 }

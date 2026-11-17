@@ -133,6 +133,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
             storeHandle={ctx.store.handle}
             plans={payWithCard}
             currentPlan={billing.plan?.key ?? null}
+            plusTax={stripeBilling()?.taxRateId != null}
           />
         </section>
       ) : null}

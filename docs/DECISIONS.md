@@ -1132,7 +1132,7 @@ Análisis de brechas: `docs/plan/FASE4-SAAS-BRECHAS.md`. Ya existe y no requiere
 
 Lo que sigue necesita la decisión del propietario.
 
-### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. Pendientes del propietario: precios de cada plan y días de prueba. Cambio de plan: **prorratear** (propietario, 2026-10-29; implementado en `20261029000800`).
+### ADR-044 — Cobro a las tiendas: proveedor, precios y periodos · **aprobado por el propietario el 2026-10-29: Stripe Billing**. ~~Pendientes del propietario: precios de cada plan y días de prueba.~~ **Precios y prueba APROBADOS por el propietario el 2026-11-17: ver ADR-068.** Cambio de plan: **prorratear** (propietario, 2026-10-29; implementado en `20261029000800`).
 
 - **Contexto.** Los planes tienen límites pero **no precio**, y el cobro es manual: la plataforma marca «activa por N días» después de recibir el pago por fuera. No se puede calcular el MRR ni cobrar solo. La misión pide suscripción mensual y anual, prueba, cambios de plan, cancelación y suspensión por impago, sin cobrar nada sin ADR aprobado.
 - **Opciones evaluadas (cobro con tarjeta en México):**
@@ -2008,3 +2008,22 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   - **Índices:** `dashboard_kpis` y `dashboard_customer_mix` usan `orders_store_paid_idx` (ya existía desde 20261104000500: `(store_id, paid_at) include (total) where paid_at is not null`; no se duplica). Nuevo `carts_store_recoverable_idx (store_id, last_activity_at) where status = 'active' and email is not null`. EXPLAIN local con 200 tiendas y 20 000 pedidos/carritos sintéticos (transacción revertida, sin `enable_seqscan = off`): ventas por Bitmap Index Scan en `orders_store_paid_idx`, carritos por Index Scan en `carts_store_recoverable_idx`. pgTAP 148 comprueba ambos.
   - **E2E:** nuevo `tests/e2e/home-control-center.spec.ts` (comparativo con variación exacta y periodo anterior sin ventas, antigüedad, carritos, clientes nuevos/recurrentes, enlace a pedidos por fecha de pago, permisos de `catalog_manager`, axe). `dashboard.spec.ts`: cada `dt` tiene un solo `dd`; la cifra va en `data-testid="metric-value"` y se afirma también la variación. `customers.spec.ts`: enlace del menú con `exact: true`. Playwright lo corre el CTO (no disponible en el entorno del agente).
   - **Estado (2026-11-16, local):** lint, format:check y typecheck en verde; unit 163 archivos / 1454 pruebas; pgTAP 150 archivos / 3181 pruebas (incluye 00_schema_security y 148 con 24 aserciones); integración 43 archivos / 468 pruebas. Build y Playwright los corre el CTO.
+## 41. Precios de PRUVA (2026-11-17)
+### ADR-068 — Planes, precios, prueba y cuota de arranque · **APROBADO por el propietario el 2026-11-17** («Apruebo los precios recomendados: Tienda $699 y Tienda Plus $1,299 al mes, anual con 2 meses gratis, cuota de arranque y prueba de 14 días sin tarjeta»). Extiende ADR-044.
+- **Contexto.** ADR-044 dejó pendientes los precios y los días de prueba. La propuesta (`docs/plan/PROPUESTA-PLANES-Y-PRECIOS.md`, opción B) y el análisis de mercado y rentabilidad del 2026-11-17 recomendaron dos planes.
+- **Decisión (cifras en MXN, más IVA):**
+  | Plan        | Clave sugerida | Mensual | Anual (10 meses) | Cuota única de arranque | Prueba               |
+  | ----------- | -------------- | ------- | ---------------- | ----------------------- | -------------------- |
+  | Tienda      | `tienda`       | $699    | $6,990           | $2,900                  | 14 días, sin tarjeta |
+  | Tienda Plus | `tienda_plus`  | $1,299  | $12,990          | $5,900                  | 14 días, sin tarjeta |
+  - Límites por plan: los de la opción B del análisis (tabla en `docs/runbooks/precios-aprobados-2026-11.md` §2). Los valores que el análisis no fijó (presentaciones por producto, dominios de Plus, acceso por API) quedan marcados como **propuesta** para que el propietario los confirme al capturarlos.
+  - **Más IVA:** el precio publicado no incluye IVA. Para que Stripe sume el 16 % se usa una tasa de impuesto de Stripe «no incluida» (`STRIPE_BILLING_TAX_RATE_ID`); sin ella se cobra el precio tal cual y el IVA lo absorbe PRUVA.
+  - **Cuota de arranque:** se cobra **una vez**, en el primer pago con tarjeta (Stripe la pone solo en la primera factura). Si se cobró por transferencia o se condona, la plataforma la marca en la consola (con motivo y auditoría). Al cambiar de plan después no se cobra diferencia de cuota.
+  - **Prueba sin tarjeta:** ya era así. La plataforma da de alta la tienda (ADR-045) con la suscripción en prueba; no se pide tarjeta. Al vencer, el panel queda en solo lectura y la tienda sigue vendiendo.
+- **Qué ya existía (solo configuración):** precio mensual y anual por plan, días de prueba, límites y funciones por plan, Stripe Checkout mensual o anual, cambio de plan con prorrateo, prueba sin tarjeta, cobro manual.
+- **Qué faltaba y se construyó (rama `feat/precios-aprobados`, migración `20261117000500`):**
+  1. Cuota de arranque por plan (columna, consola, Checkout con partida de pago único, se cobra una sola vez, marca de «saldada» en la consola).
+  2. IVA opcional en Stripe con `STRIPE_BILLING_TAX_RATE_ID` (Checkout y cambio de plan) y «más IVA» en «Plan y uso».
+  3. El alta de una tienda usa los días de prueba del plan (antes la consola guardaba el dato pero el alta siempre ponía 14).
+- **Pendiente para cobrar (no es código):** facturación CFDI de la mensualidad (PRUVA aún no emite CFDI), cuenta Stripe México y sus llaves, tasa de IVA en Stripe, términos del servicio y página de precios, aplicar las migraciones con autorización. Detalle y orden en `docs/runbooks/precios-aprobados-2026-11.md` §4.
+- **Nota sobre Mercado Pago:** la mensualidad se cobra con **Stripe** (ADR-044). Mercado Pago es para que cada tienda cobre a sus compradores (ADR-041); no cobra la mensualidad de PRUVA.

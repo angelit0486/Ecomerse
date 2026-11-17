@@ -6,6 +6,7 @@ import { StripeApi } from "@/server/payments/stripe";
 
 import {
   changeSubscriptionPlan,
+  checkoutInputSchema,
   createSubscriptionCheckout,
   parseBillingWebhook,
 } from "./stripe-billing";
@@ -126,6 +127,77 @@ describe("Checkout de la suscripción", () => {
     );
     // La cuenta de la plataforma cobra: nunca la cabecera de una cuenta conectada.
     expect((init.headers as Record<string, string>)["stripe-account"]).toBeUndefined();
+    // Sin cuota de arranque ni IVA configurado: una sola partida, sin impuestos.
+    expect(body.get("line_items[1][price_data][unit_amount]")).toBeNull();
+    expect(body.get("line_items[0][tax_rates][0]")).toBeNull();
+  });
+
+  it("ADR-068: la cuota de arranque va como pago único y el IVA en ambas partidas", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ url: "https://checkout.stripe.test/s/2" }));
+    const api = new StripeApi({ secretKey: "sk_test_x", webhookSecret: SECRET, fetchImpl });
+    await createSubscriptionCheckout(api, {
+      organization_id: ORG,
+      plan_key: "tienda",
+      plan_name: "Tienda",
+      interval: "monthly",
+      amount: 69900,
+      currency: "MXN",
+      customer_id: null,
+      setup_fee: 290000,
+      email: null,
+      successUrl: "https://app.test/ok",
+      cancelUrl: "https://app.test/no",
+      taxRateId: "txr_IVA16mx",
+    });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    const body = new URLSearchParams(String(init.body));
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("69900");
+    expect(body.get("line_items[0][price_data][recurring][interval]")).toBe("month");
+    expect(body.get("line_items[1][price_data][unit_amount]")).toBe("290000");
+    expect(body.get("line_items[1][price_data][currency]")).toBe("mxn");
+    // Pago único: sin `recurring`, Stripe lo cobra solo en la primera factura.
+    expect(body.get("line_items[1][price_data][recurring][interval]")).toBeNull();
+    expect(body.get("line_items[1][price_data][product_data][name]")).toBe(
+      "PRUVA · cuota de arranque (plan Tienda)",
+    );
+    expect(body.get("line_items[0][tax_rates][0]")).toBe("txr_IVA16mx");
+    expect(body.get("line_items[1][tax_rates][0]")).toBe("txr_IVA16mx");
+  });
+
+  it("una cuota en 0 (ya pagada o saldada) no agrega partida", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ url: "https://checkout.stripe.test/s/3" }));
+    const api = new StripeApi({ secretKey: "sk_test_x", webhookSecret: SECRET, fetchImpl });
+    await createSubscriptionCheckout(api, {
+      organization_id: ORG,
+      plan_key: "tienda",
+      plan_name: "Tienda",
+      interval: "annual",
+      amount: 699000,
+      currency: "MXN",
+      customer_id: "cus_123abc",
+      setup_fee: 0,
+      email: null,
+      successUrl: "https://app.test/ok",
+      cancelUrl: "https://app.test/no",
+    });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    const body = new URLSearchParams(String(init.body));
+    expect(body.get("line_items[1][price_data][unit_amount]")).toBeNull();
+    expect(body.get("customer")).toBe("cus_123abc");
+  });
+
+  it("la respuesta de una base sin cuota (código anterior) se lee como cuota 0", () => {
+    const parsed = checkoutInputSchema.parse({
+      organization_id: ORG,
+      plan_key: "tienda",
+      plan_name: "Tienda",
+      interval: "monthly",
+      amount: 69900,
+      currency: "MXN",
+      customer_id: null,
+    });
+    expect(parsed.setup_fee).toBe(0);
+    expect(() => checkoutInputSchema.parse({ ...parsed, setup_fee: -1 })).toThrow();
   });
 });
 
@@ -151,6 +223,7 @@ describe("Cambio de plan con prorrateo", () => {
       interval: "annual",
       amount: 959000,
       currency: "MXN",
+      taxRateId: "txr_IVA16mx",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     const [getUrl, getInit] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
@@ -163,6 +236,7 @@ describe("Cambio de plan con prorrateo", () => {
     expect(body.get("items[0][price_data][recurring][interval]")).toBe("year");
     expect(body.get("items[0][price_data][product]")).toBe("prod_N1abc");
     expect(body.get("proration_behavior")).toBe("create_prorations");
+    expect(body.get("items[0][tax_rates][0]")).toBe("txr_IVA16mx");
     expect(body.get("metadata[plan_key]")).toBe("pro");
     expect(body.get("metadata[interval]")).toBe("annual");
     expect((init.headers as Record<string, string>)["idempotency-key"]).toMatch(

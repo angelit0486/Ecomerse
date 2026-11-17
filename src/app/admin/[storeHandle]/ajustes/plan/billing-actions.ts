@@ -51,6 +51,7 @@ export async function startCardPayment(
       email: (await getSession())?.email ?? null,
       successUrl: `${base}?pago=listo`,
       cancelUrl: `${base}?pago=cancelado`,
+      taxRateId: billing.taxRateId,
     });
   } catch (error) {
     const e = reportActionError("billing.checkout", error);
@@ -97,7 +98,7 @@ export async function changeCardPlan(
         p_interval: interval,
       }),
     );
-    await changeSubscriptionPlan(billing.api, input);
+    await changeSubscriptionPlan(billing.api, { ...input, taxRateId: billing.taxRateId });
     revalidatePath(`/admin/${ctx.store.handle}/ajustes/plan`);
   } catch (error) {
     const e = reportActionError("billing.change", error);

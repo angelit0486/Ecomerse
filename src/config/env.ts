@@ -55,6 +55,15 @@ export const serverEnvSchema = z.object({
     .string()
     .regex(/^whsec_[A-Za-z0-9]{10,}$/)
     .optional(),
+  /**
+   * Stripe Billing (ADR-068): tasa de impuesto de Stripe (`txr_…`) con el IVA 16 %
+   * «no incluido en el precio». Con ella, Stripe suma el IVA a la mensualidad y a
+   * la cuota de arranque; sin ella se cobra el precio tal cual (sin IVA aparte).
+   */
+  STRIPE_BILLING_TAX_RATE_ID: z
+    .string()
+    .regex(/^txr_[A-Za-z0-9]{3,250}$/)
+    .optional(),
   /** Solo pruebas: API de Stripe simulada. */
   STRIPE_API_BASE: z.url({ protocol: /^https?$/ }).optional(),
   /**
