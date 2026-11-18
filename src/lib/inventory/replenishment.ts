@@ -100,6 +100,12 @@ export interface ReplenishmentRow {
   targetDays: number;
   /** Unidades a pedir; null si no hay ritmo para estimarlo (nunca un 0 inventado). */
   suggestedQuantity: number | null;
+  /**
+   * De dónde sale la cantidad: «sales» = ritmo de ventas para cubrir `targetDays`;
+   * «threshold» = lo mínimo para quedar por encima del aviso de stock bajo (el
+   * ritmo pedía menos). null cuando no hay cantidad.
+   */
+  quantityBasis: "sales" | "threshold" | null;
   supplier: ChosenSupplier | null;
 }
 
@@ -174,6 +180,25 @@ export function suggestedQuantity(available: number, units: number, target: numb
   return Math.max(0, Math.ceil(needTimesWindow / WINDOW_DAYS));
 }
 
+/**
+ * Cantidad a pedir coherente con el aviso: si la variante está en o por debajo
+ * de su aviso de stock bajo, nunca se sugiere menos de lo que la saca de él
+ * (aviso − disponible + 1), aunque al ritmo actual alcance para el horizonte.
+ * Así «Stock bajo» nunca aparece junto a «Cantidad a pedir 0».
+ */
+export function quantityWithThreshold(
+  available: number,
+  threshold: number | null,
+  bySales: number | null,
+): { quantity: number | null; basis: "sales" | "threshold" | null } {
+  if (bySales === null) return { quantity: null, basis: null };
+  if (isLowStock(available, threshold)) {
+    const toClear = (threshold ?? 0) - available + 1;
+    if (toClear > bySales) return { quantity: toClear, basis: "threshold" };
+  }
+  return { quantity: bySales, basis: "sales" };
+}
+
 export interface ReplenishmentInput {
   stock: readonly StockItem[];
   /** Unidades por variante; null si no hay permiso o datos de pedidos (solo regla de stock bajo). */
@@ -197,6 +222,11 @@ export function buildReplenishment(input: ReplenishmentInput): ReplenishmentRow[
     const coverage = units === null ? null : coverageDays(item.available, units);
     const lowStock = isLowStock(item.available, item.lowStockThreshold);
     if (!lowStock && !(coverage !== null && coverage <= target)) continue;
+    const quantity = quantityWithThreshold(
+      item.available,
+      item.lowStockThreshold,
+      units === null ? null : suggestedQuantity(item.available, units, target),
+    );
     rows.push({
       variantId: item.variantId,
       productId: item.productId,
@@ -209,7 +239,8 @@ export function buildReplenishment(input: ReplenishmentInput): ReplenishmentRow[
       unitsSold: units,
       coverageDays: coverage,
       targetDays: target,
-      suggestedQuantity: units === null ? null : suggestedQuantity(item.available, units, target),
+      suggestedQuantity: quantity.quantity,
+      quantityBasis: quantity.basis,
       supplier,
     });
   }
