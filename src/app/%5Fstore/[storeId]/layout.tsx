@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
-import { LOOK_FONTS, lookCss, storeLook } from "@/lib/theme/looks";
+import { LOOK_FONTS, lookCss, lookStoreName, storeLook } from "@/lib/theme/looks";
 import { navBarItems } from "@/lib/theme/nav-bar";
 import { DISPLAY_HEADINGS, PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
@@ -168,6 +168,8 @@ export default async function StoreLayout({ children, params }: Props) {
   // Con look, sus colores mandan: los colores por elemento de Apariencia no se
   // mezclan con los del look (se conservan guardados y vuelven al quitarlo).
   const lookRules = look ? lookCss(look) : "";
+  // Con look, el nombre se dibuja con letras normales (ver lookStoreName).
+  const shownStore = look ? { ...store, name: lookStoreName(store.name) } : store;
   const elementRules = look ? "" : elementCss(theme);
 
   return (
@@ -223,12 +225,12 @@ export default async function StoreLayout({ children, params }: Props) {
         Saltar al contenido
       </a>
       <CheckoutChrome
-        checkout={<CheckoutHeader store={store} />}
+        checkout={<CheckoutHeader store={shownStore} />}
         regular={
           <>
             <AnnouncementBar announcement={theme.announcement} />
             <StoreHeader
-              store={store}
+              store={shownStore}
               menu={menus.main}
               discovery={discoveryLinks}
               cartCount={cart?.item_count ?? 0}
@@ -245,10 +247,10 @@ export default async function StoreLayout({ children, params }: Props) {
         {children}
       </main>
       <CheckoutChrome
-        checkout={<CheckoutFooter store={store} policies={policies} />}
+        checkout={<CheckoutFooter store={shownStore} policies={policies} />}
         regular={
           <StoreFooter
-            store={store}
+            store={shownStore}
             menu={menus.footer}
             settings={settings}
             discovery={discoveryLinks}

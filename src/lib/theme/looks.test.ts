@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { contrastRatio } from "@/lib/color/contrast";
 
-import { LOOK_FONTS, lookCss, NOCTURNO, NOCTURNO_PAIRS, STORE_LOOKS, storeLook } from "./looks";
+import {
+  LOOK_FONTS,
+  lookCss,
+  lookStoreName,
+  NOCTURNO,
+  NOCTURNO_PAIRS,
+  STORE_LOOKS,
+  storeLook,
+} from "./looks";
 import { FONT_KEYS } from "./schema";
 
 describe("temas de presentación (looks)", () => {
@@ -54,6 +62,24 @@ describe("temas de presentación (looks)", () => {
     expect(css).toContain(`--sf-primary:${NOCTURNO.alien}`);
     expect(css).toContain(`.sf-hero-cta{background:${NOCTURNO.alien}`);
     expect(css).toContain(`--sf-sale-bg:${NOCTURNO.violet};--sf-sale-fg:${NOCTURNO.white}`);
+  });
+
+  it("el nombre con letras decorativas de Unicode se dibuja con letras normales", () => {
+    expect(lookStoreName("𝓐𝓛𝓘𝓔𝓝 𝓓𝓔𝓜𝓞𝓝 𝓔𝓧𝓞𝓣𝓘𝓒𝓢 |")).toBe("ALIEN DEMON EXOTICS");
+    expect(lookStoreName("Café Ñandú")).toBe("Café Ñandú");
+    expect(lookStoreName("Tienda — ")).toBe("Tienda");
+    // Si solo hubiera separadores, se conserva el nombre guardado.
+    expect(lookStoreName("|")).toBe("|");
+  });
+
+  it("tipografía editorial y categorías redondas, sin numeración ni flechas decorativas", () => {
+    expect(LOOK_FONTS.nocturno).toEqual(["barlow-condensed", "manrope"]);
+    const css = lookCss("nocturno");
+    expect(css).toContain("--sf-font-heading:var(--font-barlow-condensed)");
+    expect(css).toMatch(/\.sf-cat-media\{aspect-ratio:1;border-radius:50%/);
+    expect(css).not.toContain("counter(");
+    expect(css).not.toContain("→");
+    expect(css).not.toContain("space-grotesk");
   });
 
   it("todo el movimiento respeta «reducir movimiento»", () => {

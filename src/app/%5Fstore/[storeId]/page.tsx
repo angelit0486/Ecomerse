@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
+import { lookStoreName, storeLook } from "@/lib/theme/looks";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import {
   getCategoryThumbs,
@@ -79,6 +80,8 @@ export default async function StoreHomePage({ params }: Props) {
       (Object.hasOwn(covers, key) ? covers[key] : null) ??
       null,
   }));
+  // Con look, el nombre visible usa letras normales (ver lookStoreName).
+  const shownName = storeLook(store.theme?.key) ? lookStoreName(store.name) : store.name;
   const sections = home.sections ?? [];
   const categories = home.categories ?? [];
   const featured = home.featured ?? [];
@@ -111,7 +114,7 @@ export default async function StoreHomePage({ params }: Props) {
         <HomeSections
           sections={sections}
           store={store}
-          storeName={store.name}
+          storeName={shownName}
           goals={goals}
           trust={trust}
           contact={settings.contact ?? {}}
@@ -119,7 +122,7 @@ export default async function StoreHomePage({ params }: Props) {
         />
       ) : (
         <TemplateHome
-          store={store}
+          store={{ ...store, name: shownName }}
           categories={categories}
           featured={featured}
           goals={goals}

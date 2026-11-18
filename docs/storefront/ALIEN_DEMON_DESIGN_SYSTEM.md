@@ -6,7 +6,7 @@
 
 «Nocturno» es un **tema de presentación** de la tienda pública: solo CSS, sin cambiar datos, precios, inventario, checkout ni panel.
 
-- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (26 pruebas).
+- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (29 pruebas).
 - Se enciende **solo** cuando la tienda tiene `store_themes.theme_key = 'nocturno'`. Esa columna ya existía (valor por omisión `'base'`, sin uso en el código) y ya llega a la tienda pública como `store.theme.key` por `storefront.get_store_public`. **No hay migración nueva.**
 - Con cualquier otra clave (todas las tiendas hoy tienen `'base'`), la tienda se ve exactamente igual que antes (ver `ALIEN_DEMON_VISUAL_REGRESSION.md`).
 - Todo el CSS va bajo `.sf-root[data-look='nocturno']`, en la misma etiqueta `<style nonce>` que ya genera el tema (CSP intacta, sin archivos nuevos que descargar).
@@ -58,16 +58,17 @@
 
 El morado original `#B200FF` mide 4.11:1 sobre `void`: se usa solo como relleno (con texto blanco), nunca como texto; para texto se usa `glow`. El verde original `#00A303` sí alcanza 5.91:1 con texto negro y se usa tal cual. Los pares están en `NOCTURNO_PAIRS` y la prueba unitaria falla si alguno baja del mínimo.
 
-## 3. Tipografía
+## 3. Tipografía (v2, 2026-11-18)
 
-- Títulos: **Space Grotesk** 600 (autoalojada con `next/font/local`, ya estaba en la lista curada `FONT_KEYS`).
-- Texto: **Inter** (ídem).
-- Escala fluida: título del hero `clamp(2.5rem, 1.3rem + 5.2vw, 5.5rem)`; títulos de sección con `clamp`; nombre de la tienda en encabezado en mayúsculas con espaciado amplio.
-- Contador editorial «01, 02…» antes de cada título de sección (`::before` con texto alternativo vacío: los lectores de pantalla no lo leen).
+- Títulos, nombre de la tienda, precios y rótulos: **Barlow Condensed** 700 en mayúsculas, como etiqueta de producto o cartel de lanzamiento. Ya estaba en la lista curada `FONT_KEYS`.
+- Texto: **Manrope** (ídem), en lugar de Inter.
+- Escala: título del hero `clamp(3.25rem, 1.6rem + 7vw, 7.5rem)` en el verde neón de la portada original (`#AFFF6E`); títulos de sección `clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem)`; nombre en el pie hasta 8.5rem.
+- **Nombre de la tienda:** las letras decorativas de Unicode (𝓐𝓛𝓘𝓔𝓝…) se dibujan como letras normales solo con este look (`lookStoreName`, NFKC). Así no cambia de fuente a media palabra y el lector de pantalla no lo deletrea como símbolos. El nombre guardado no cambia.
+- **Se quitó** lo que hacía ver la tienda «de plantilla»: la numeración 01/02 de las secciones, las flechas «→» en enlaces y botones, los rótulos con espaciado exagerado y la entrada animada de cada sección al desplazarse.
 
 ## 4. Forma, espacio, profundidad
 
-- Radios: 4 / 6 / 12 px (más técnico que la píldora actual).
+- Radios: botones en píldora (como la tienda original), controles 10 px, tarjetas 14 px, paneles 22 px.
 - Separación entre secciones: 4 rem (móvil) / 7 rem (≥1024 px).
 - Profundidad con capas de superficie y filetes de 1 px, sin sombras pesadas.
 
@@ -76,7 +77,7 @@ El morado original `#B200FF` mide 4.11:1 sobre `void`: se usa solo como relleno 
 - **Botón principal:** verde de la marca con texto negro; al pasar, verde claro; al presionar, escala 0.98. «Comprar ahora» pasa a contorno para no competir con «Agregar al carrito».
 - **Tarjeta de producto:** sin caja; foto con filete; marca como «eyebrow»; título de 2 líneas con altura mínima (precios alineados); «Agregar» en contorno; brillo de carga; agotado en opacidad reducida.
 - **Hero:** alto `clamp(32rem, 74svh, 46rem)`, velo degradado para legibilidad, CTA verde con flecha, a sangre en móvil.
-- **Categorías:** mosaicos editoriales 4:5.
+- **Categorías:** círculos con un anillo en degradado verde → morado de la marca y un aro negro alrededor de la foto; al pasar el cursor, el anillo gira media vuelta y brilla (sin movimiento con «reducir movimiento»).
 - **Ficha de producto:** rejilla 7/5, galería sin doble marco, título con `clamp`, panel regulatorio (`.sf-regulatory`) con filete `glow` a la izquierda.
 - **Pie:** nombre grande en mayúsculas, chips de pago en contorno.
 - **Buscador:** contorno fino gris (`mist`, 7.3:1) que se enciende en verde al escribir; sin la caja verde de 2 px de la plataforma.
