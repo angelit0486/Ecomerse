@@ -73,7 +73,7 @@ export function CheckoutHeader({ store }: { store: StorePublic }) {
               className="h-9 w-auto max-w-36 object-contain sm:h-11 sm:max-w-44"
             />
           ) : (
-            <span className="line-clamp-2 text-lg font-extrabold leading-[1.1] tracking-tight sm:text-xl text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]">
+            <span className="sf-wordmark line-clamp-2 text-lg font-extrabold leading-[1.1] tracking-tight sm:text-xl text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif]">
               {store.name}
             </span>
           )}
@@ -148,7 +148,7 @@ export function StoreHeader({
             ) : (
               // Sin logo, el nombre funciona como logotipo: fuente de títulos del tema,
               // en el color de compra. Un nombre largo pasa a 2 líneas en lugar de cortarse.
-              <span className="line-clamp-2 text-xl font-extrabold leading-[1.05] tracking-tight text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-2xl">
+              <span className="sf-wordmark line-clamp-2 text-xl font-extrabold leading-[1.05] tracking-tight text-[var(--sf-link)] [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-2xl">
                 {store.name}
               </span>
             )}
@@ -274,10 +274,10 @@ export function StoreFooter({
   const legalLinks = policies.filter((p) => !help.some((item) => item.href === p.href));
   const heading = "text-sm font-bold";
   return (
-    <footer className="mt-16 bg-[var(--sf-footer-bg)] text-[var(--sf-footer-fg)] [--sf-footer-rule:color-mix(in_srgb,var(--sf-footer-fg)_28%,var(--sf-footer-bg))] [&_:focus-visible]:outline-[var(--sf-footer-fg)]">
+    <footer className="sf-footer mt-16 bg-[var(--sf-footer-bg)] text-[var(--sf-footer-fg)] [--sf-footer-rule:color-mix(in_srgb,var(--sf-footer-fg)_28%,var(--sf-footer-bg))] [&_:focus-visible]:outline-[var(--sf-footer-fg)]">
       <div className="mx-auto max-w-6xl space-y-8 px-4 pb-8 pt-10 sm:pt-14">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-3xl font-extrabold leading-none tracking-tight text-balance [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-4xl">
+          <p className="sf-footer-name text-3xl font-extrabold leading-none tracking-tight text-balance [font-family:var(--sf-font-heading),system-ui,sans-serif] sm:text-4xl">
             {store.name}
           </p>
           {contact.whatsapp ? (

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
+import { LOOK_FONTS, lookCss, storeLook } from "@/lib/theme/looks";
 import { navBarItems } from "@/lib/theme/nav-bar";
 import { DISPLAY_HEADINGS, PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
@@ -156,7 +157,18 @@ export default async function StoreLayout({ children, params }: Props) {
       scrollFix={flags.has("storefront_nav_scroll_fix")}
     />
   );
-  const fonts = fontVariableClasses([theme.fonts.heading, theme.fonts.body]);
+  // Tema de presentación (looks.ts): solo con una clave de tema conocida; con
+  // cualquier otra (hoy todas valen «base») la tienda se ve exactamente igual.
+  const look = storeLook(store.theme?.key);
+  const fonts = fontVariableClasses([
+    theme.fonts.heading,
+    theme.fonts.body,
+    ...(look ? LOOK_FONTS[look] : []),
+  ]);
+  // Con look, sus colores mandan: los colores por elemento de Apariencia no se
+  // mezclan con los del look (se conservan guardados y vuelven al quitarlo).
+  const lookRules = look ? lookCss(look) : "";
+  const elementRules = look ? "" : elementCss(theme);
 
   return (
     <div
@@ -164,6 +176,7 @@ export default async function StoreLayout({ children, params }: Props) {
       data-cols={settings.listing?.columns_mobile === 1 ? "1" : undefined}
       data-brand={settings.listing?.show_brand === false ? "off" : undefined}
       data-mobile-inputs={flags.has("mobile_input_size") ? "" : undefined}
+      data-look={look ?? undefined}
       // Tema v5 (ADR-063): personalidad como atributos con valores de la lista blanca,
       // solo con su interruptor (apagarlo devuelve la tienda a como se veía).
       {...(flags.has("theme_personality")
@@ -174,7 +187,7 @@ export default async function StoreLayout({ children, params }: Props) {
     >
       <style
         nonce={nonce}
-      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}${PERSONALITY_CSS}${elementCss(theme)}`}</style>
+      >{`.sf-root{${themeCss(theme)};${BASE_CSS}}${HEADING_CSS}${LISTING_CSS}${PERSONALITY_CSS}${elementRules}${lookRules}`}</style>
       {/* React lo sube al <head>. */}
       <link rel="preconnect" href={mediaOrigin} />
       {preview ? (

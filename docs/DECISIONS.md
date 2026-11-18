@@ -2084,3 +2084,9 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - E2E `whatsapp-orders.spec.ts`: compra por transferencia de punta a punta, comprobante, «Pedido recibido» y «Pago confirmado»;
     - las 6 pruebas de checkout, actualizadas al campo nuevo.
   - **Pendiente:** la versión automática (API de WhatsApp Business de Meta) cuando el propietario tenga la cuenta.
+- **D-SF-01. Tema de presentación «Nocturno» para Alien Demon Exotics (propuesta, pendiente de aprobación).**
+  - **Qué:** tema solo de CSS para la tienda pública (`src/lib/theme/looks.ts`), confinado a `.sf-root[data-look='nocturno']`, dentro de la misma etiqueta `<style nonce>` del tema.
+  - **Activación:** columna existente `store_themes.theme_key` (ya llegaba como `store.theme.key`); lista blanca `STORE_LOOKS = ["nocturno"]`. Sin migración, sin bandera, sin cambios en panel ni API.
+  - **Alternativas descartadas:** bandera nueva (requiere migración), preset nuevo (visible en el panel y compartido), detectar la tienda por colores (frágil).
+  - **Efecto en otras tiendas:** ninguno; solo clases «gancho» sin estilo en el HTML. Comprobado píxel a píxel y con E2E `storefront-look.spec.ts`.
+  - **Pruebas:** unitarias `looks.test.ts` (23), E2E `storefront-look.spec.ts` (8). Detalle en `docs/storefront/`.

@@ -68,7 +68,7 @@ export function TrustBar({
   return (
     <section
       aria-label="Compra con confianza"
-      className="rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] px-4 py-5 sm:px-6"
+      className="sf-trust rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] px-4 py-5 sm:px-6"
     >
       <ul className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
         {items.map((item) => (

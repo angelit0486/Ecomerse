@@ -174,7 +174,7 @@ function ProductCard({
           </p>
         ) : null}
         <h3
-          className={`sf-text-font line-clamp-2 text-[0.9375rem] font-semibold leading-snug decoration-1 underline-offset-4 group-hover:underline ${product.brand ? "mt-0.5" : "mt-2.5"}`}
+          className={`sf-card-title sf-text-font line-clamp-2 text-[0.9375rem] font-semibold leading-snug decoration-1 underline-offset-4 group-hover:underline ${product.brand ? "mt-0.5" : "mt-2.5"}`}
         >
           {product.title}
         </h3>
@@ -200,7 +200,7 @@ function ProductCard({
       {product.min_price !== null ? (
         // Partes separadas con flex-wrap: sin espacios entre elementos JSX la línea
         // no se puede partir y desbordaba la tarjeta en móvil.
-        <p className="sf-card-row mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 tabular-nums">
+        <p className="sf-card-row sf-card-price mt-auto flex flex-wrap items-baseline gap-x-2 pt-2 tabular-nums">
           <span
             className={`text-lg font-extrabold leading-tight tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${sale ? "text-[var(--sf-sale-text)]" : ""}`}
           >
@@ -235,7 +235,7 @@ function ProductCard({
           href={href}
           aria-hidden="true"
           tabIndex={-1}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-3 text-sm font-semibold text-[var(--sf-link)]"
+          className="sf-card-choose mt-3 inline-flex h-11 w-full items-center justify-center rounded-[var(--sf-radius-btn)] border-2 border-[var(--sf-primary)] px-3 text-sm font-semibold text-[var(--sf-link)]"
         >
           Elegir opción
         </Link>

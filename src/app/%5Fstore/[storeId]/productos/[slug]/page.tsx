@@ -285,9 +285,9 @@ export default async function ProductPage({ params }: Props) {
           { label: product.title },
         ]}
       />
-      <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+      <div className="sf-pdp-grid grid gap-8 md:grid-cols-2 md:gap-12">
         {/* En escritorio la galería acompaña al bajar por la información (pulido visual). */}
-        <section aria-label="Imágenes" className="md:sticky md:top-36 md:self-start">
+        <section aria-label="Imágenes" className="sf-pdp-gallery md:sticky md:top-36 md:self-start">
           <ProductGallery
             images={gallery}
             title={product.title}
@@ -299,7 +299,7 @@ export default async function ProductPage({ params }: Props) {
             {product.unpublished ? <UnpublishedBadge /> : null}
             <Badges badges={badges} />
             {product.brand ? (
-              <p className="text-sm font-semibold text-[var(--sf-muted)]">
+              <p className="sf-pdp-brand text-sm font-semibold text-[var(--sf-muted)]">
                 <Link
                   prefetch={false}
                   href={`/marca/${encodeURIComponent(product.brand.slug)}`}
@@ -311,7 +311,7 @@ export default async function ProductPage({ params }: Props) {
             ) : null}
             <h1
               id="sf-producto"
-              className="text-[1.75rem] font-extrabold leading-[1.1] tracking-tight text-balance sm:text-4xl"
+              className="sf-pdp-title text-[1.75rem] font-extrabold leading-[1.1] tracking-tight text-balance sm:text-4xl"
             >
               {product.title}
             </h1>
@@ -339,7 +339,7 @@ export default async function ProductPage({ params }: Props) {
               <div className="space-y-1">
                 <p className="flex flex-wrap items-baseline gap-x-3 tabular-nums">
                   <span
-                    className={`text-[2rem] font-extrabold leading-none tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${single.compare_at_price && single.compare_at_price > single.price ? "text-[var(--sf-sale-text)]" : ""}`}
+                    className={`sf-pdp-price text-[2rem] font-extrabold leading-none tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif] ${single.compare_at_price && single.compare_at_price > single.price ? "text-[var(--sf-sale-text)]" : ""}`}
                   >
                     {money(single.price, store)}
                   </span>
@@ -420,7 +420,10 @@ export default async function ProductPage({ params }: Props) {
           />
           <ProductAttributes attributes={attributes} />
           {product.description_html ? (
-            <section aria-label="Descripción" className="border-t border-[var(--sf-border)] pt-5">
+            <section
+              aria-label="Descripción"
+              className="sf-pdp-desc border-t border-[var(--sf-border)] pt-5"
+            >
               <SafeHtml
                 html={product.description_html}
                 className="sf-prose space-y-3 text-sm leading-relaxed"
@@ -481,7 +484,7 @@ function PurchaseInfo({
   if (!shipping && payments.length === 0 && !whatsapp) return null;
   const message = encodeURIComponent(`Hola, tengo una duda sobre ${productTitle}.`);
   return (
-    <ul className="divide-y divide-[var(--sf-border)] rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] px-4 text-sm [&>li]:py-3">
+    <ul className="sf-pdp-facts divide-y divide-[var(--sf-border)] rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] px-4 text-sm [&>li]:py-3">
       {shipping ? (
         <li>
           <span className="font-semibold">Envío gratis</span> en compras desde{" "}

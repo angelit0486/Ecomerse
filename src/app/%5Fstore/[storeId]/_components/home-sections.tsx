@@ -66,8 +66,11 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4">
-      <h2 id={id} className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
+    <div className="sf-section-head flex items-end justify-between gap-4">
+      <h2
+        id={id}
+        className="sf-section-title text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+      >
         {title}
       </h2>
       {action}
@@ -81,7 +84,7 @@ export function ViewAll({ href, title }: { href: string; title: string }) {
     <Link
       prefetch={false}
       href={href}
-      className="inline-flex min-h-11 shrink-0 items-end pb-1 text-sm font-semibold text-[var(--sf-link)] underline-offset-4 hover:underline"
+      className="sf-view-all inline-flex min-h-11 shrink-0 items-end pb-1 text-sm font-semibold text-[var(--sf-link)] underline-offset-4 hover:underline"
     >
       Ver todos<span className="sr-only"> de {title}</span>
     </Link>
@@ -213,11 +216,11 @@ function HeroSlide({
   const background = layout === "background" && hasImage;
   const text = (
     <>
-      <Heading className="max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
+      <Heading className="sf-hero-title max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
         {slide.heading}
       </Heading>
       {slide.subheading ? (
-        <p className="max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+        <p className="sf-hero-sub max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
           {slide.subheading}
         </p>
       ) : null}
@@ -225,22 +228,22 @@ function HeroSlide({
   );
   if (background) {
     return (
-      <section className="relative isolate grid min-h-[22rem] overflow-hidden rounded-[var(--sf-radius-panel)] text-white sm:min-h-[28rem] [&_:focus-visible]:outline-white">
+      <section className="sf-hero sf-hero-bg relative isolate grid min-h-[22rem] overflow-hidden rounded-[var(--sf-radius-panel)] text-white sm:min-h-[28rem] [&_:focus-visible]:outline-white">
         <HeroPicture
           slide={slide}
           eager={eager}
           className="absolute inset-0 -z-20 size-full object-cover"
         />
         {/* Capa negra al 60 %: el texto blanco queda ≥ 5.7:1 sobre cualquier foto. */}
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/60" />
+        <div aria-hidden="true" className="sf-hero-veil absolute inset-0 -z-10 bg-black/60" />
         <div
-          className={`flex flex-col justify-end gap-4 px-5 py-8 sm:px-12 sm:py-14 ${centered ? "items-center text-center" : "items-start"}`}
+          className={`sf-hero-body flex flex-col justify-end gap-4 px-5 py-8 sm:px-12 sm:py-14 ${centered ? "items-center text-center" : "items-start"}`}
         >
           {text}
           {slide.cta ? (
             <ThemeLink
               href={slide.cta.link}
-              className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-white px-7 font-bold text-black"
+              className="sf-hero-cta mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-white px-7 font-bold text-black"
             >
               {slide.cta.label}
             </ThemeLink>
@@ -251,18 +254,18 @@ function HeroSlide({
   }
   return (
     <section
-      className={`sf-el-hero grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
+      className={`sf-hero sf-hero-split sf-el-hero grid overflow-hidden rounded-[var(--sf-radius-panel)] bg-[var(--sf-primary)] text-[var(--sf-on-primary)] [&_:focus-visible]:outline-[var(--sf-on-primary)] ${
         hasImage && !centered ? "sm:grid-cols-[1.1fr_1fr] sm:items-center" : ""
       }`}
     >
       <div
-        className={`flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${hasImage ? "pb-2" : "pb-6"} ${centered ? "items-center text-center" : "items-start"}`}
+        className={`sf-hero-body flex flex-col gap-4 px-5 pt-7 sm:px-12 sm:py-14 ${hasImage ? "pb-2" : "pb-6"} ${centered ? "items-center text-center" : "items-start"}`}
       >
         {text}
         {slide.cta ? (
           <ThemeLink
             href={slide.cta.link}
-            className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-on-primary)] px-7 font-bold text-[var(--sf-primary)]"
+            className="sf-hero-cta mt-1 inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] bg-[var(--sf-on-primary)] px-7 font-bold text-[var(--sf-primary)]"
           >
             {slide.cta.label}
           </ThemeLink>
@@ -300,7 +303,7 @@ async function CategoryCircles({
   return (
     <section aria-labelledby={headingId} className="space-y-4">
       <SectionHeading id={headingId} title={section.title} />
-      <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-5 sm:gap-5 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+      <ul className="sf-cat-list -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-5 sm:gap-5 sm:overflow-visible sm:px-0 lg:grid-cols-6">
         {section.categories.map((category) => {
           const image = category.image ?? covers[category.path] ?? null;
           return (
@@ -308,9 +311,9 @@ async function CategoryCircles({
               <Link
                 prefetch={false}
                 href={`/categoria/${category.path}`}
-                className="group flex flex-col items-center gap-2 text-center"
+                className="sf-cat-link group flex flex-col items-center gap-2 text-center"
               >
-                <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-[var(--sf-surface)] ring-1 ring-[var(--sf-border)] motion-safe:transition-shadow group-hover:ring-2 group-hover:ring-[var(--sf-primary)]">
+                <span className="sf-cat-media flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-[var(--sf-surface)] ring-1 ring-[var(--sf-border)] motion-safe:transition-shadow group-hover:ring-2 group-hover:ring-[var(--sf-primary)]">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
                     <img
@@ -333,7 +336,7 @@ async function CategoryCircles({
                     />
                   )}
                 </span>
-                <span className="text-sm font-semibold leading-tight text-balance">
+                <span className="sf-cat-name text-sm font-semibold leading-tight text-balance">
                   {category.name}
                 </span>
               </Link>
@@ -444,7 +447,7 @@ export async function HomeSections({
         return index === 0 && !asPage ? (
           <div
             key={section.id}
-            className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
+            className="sf-hero-group flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
           >
             <Hero section={section} headingLevel={1} shelf={shelf} />
             <GoalTiles goals={goals} />
@@ -487,7 +490,7 @@ export async function HomeSections({
         return index === 0 && !asPage ? (
           <div
             key={section.id}
-            className="flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
+            className="sf-hero-group flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
           >
             <h1 className="sr-only">{storeName}</h1>
             {carousel}
@@ -577,7 +580,7 @@ export async function HomeSections({
           <section
             key={section.id}
             aria-labelledby={headingId}
-            className="grid items-center gap-5 overflow-hidden rounded-[var(--sf-radius-panel)] border-2 border-[var(--sf-fg)] p-5 sm:grid-cols-2 sm:gap-10 sm:p-8"
+            className="sf-story grid items-center gap-5 overflow-hidden rounded-[var(--sf-radius-panel)] border-2 border-[var(--sf-fg)] p-5 sm:grid-cols-2 sm:gap-10 sm:p-8"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
             <img
@@ -589,12 +592,12 @@ export async function HomeSections({
               height={section.image.height ?? 600}
               loading="lazy"
               decoding="async"
-              className={`w-full rounded-[var(--sf-radius-card)] object-cover ${section.image_position === "right" ? "sm:order-last" : ""}`}
+              className={`sf-story-media w-full rounded-[var(--sf-radius-card)] object-cover ${section.image_position === "right" ? "sm:order-last" : ""}`}
             />
-            <div className="space-y-3">
+            <div className="sf-story-body space-y-3">
               <h2
                 id={headingId}
-                className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                className="sf-section-title text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
               >
                 {section.heading}
               </h2>
@@ -602,7 +605,7 @@ export async function HomeSections({
               {section.cta ? (
                 <ThemeLink
                   href={section.cta.link}
-                  className="inline-flex min-h-11 items-center font-bold text-[var(--sf-link)] underline underline-offset-4"
+                  className="sf-story-cta inline-flex min-h-11 items-center font-bold text-[var(--sf-link)] underline underline-offset-4"
                 >
                   {section.cta.label}
                 </ThemeLink>
@@ -685,7 +688,7 @@ export async function HomeSections({
             {section.heading ? (
               <h2
                 id={headingId}
-                className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                className="sf-section-title text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
               >
                 {section.heading}
               </h2>

@@ -12,7 +12,7 @@ import { VideoFacade } from "./video-facade";
  */
 type Block<T extends HomeSectionData["type"]> = Extract<HomeSectionData, { type: T }>;
 
-const HEADING = "text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl";
+const HEADING = "sf-section-title text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl";
 
 /** Íconos de trazo, dibujados aquí (sin imágenes externas ni SVG de la tienda). */
 const ICON_PATHS: Record<BenefitIcon, string> = {
@@ -109,7 +109,9 @@ export function BenefitsBlock({
       ) : null}
       {/* Las columnas siguen al número de beneficios: 3 llenan la fila en lugar de
           quedar pegados a la izquierda; en el celular, uno impar ocupa el ancho. */}
-      <ul className={`grid grid-cols-2 gap-3 ${BENEFIT_COLS[Math.min(section.items.length, 6)]}`}>
+      <ul
+        className={`sf-benefits grid grid-cols-2 gap-3 ${BENEFIT_COLS[Math.min(section.items.length, 6)]}`}
+      >
         {section.items.map((item, i) => (
           <li
             key={i}

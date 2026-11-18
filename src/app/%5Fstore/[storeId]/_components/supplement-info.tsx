@@ -32,7 +32,7 @@ export function SupplementInfo({ info }: { info: ProductRegulatory }) {
   return (
     <section
       aria-labelledby="sf-ficha"
-      className="space-y-4 border-t border-[var(--sf-border)] pt-5"
+      className="sf-regulatory space-y-4 border-t border-[var(--sf-border)] pt-5"
     >
       <h2 id="sf-ficha" className="text-lg font-semibold">
         Información del {info.category_name.toLowerCase()}
