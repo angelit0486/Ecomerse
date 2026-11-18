@@ -245,7 +245,10 @@ export async function checkout(
   formData: FormData,
 ): Promise<CartActionState> {
   const s = await store(storeId);
-  const intent = formData.get("intent") === "place" ? "place" : "quote";
+  // «rate»: el comprador cambió la forma de envío; se guarda para que la base
+  // recalcule el resumen, el total y el botón al momento (no hasta confirmar).
+  const rawIntent = formData.get("intent");
+  const intent = rawIntent === "place" ? "place" : rawIntent === "rate" ? "rate" : "quote";
   const requiresShipping = formData.get("requires_shipping") === "1";
   const email = text(formData, "email", 254).toLowerCase();
   const rate = text(formData, "shipping_rate_id", 40) || undefined;
@@ -282,6 +285,8 @@ export async function checkout(
   }
   refresh();
   if (intent === "quote") return { ok: true, message: "Formas de envío actualizadas." };
+  if (intent === "rate")
+    return { ok: true, message: "Total actualizado con la forma de envío elegida." };
   // Confirmó sin que se hubiera cotizado (clic directo): el comprador ve primero
   // el total con envío y confirma otra vez.
   if (preselected) {

@@ -180,6 +180,19 @@ export function CheckoutForm({
     first?.focus();
   }, [state]);
   const quoteButton = useRef<HTMLButtonElement>(null);
+  const rateButton = useRef<HTMLButtonElement>(null);
+  /**
+   * Al elegir otra forma de envío se guarda en el carrito y la base recalcula el
+   * resumen, el total y el botón (antes seguían con la tarifa anterior —p. ej.
+   * $99 con «Recoger en tienda»— hasta pulsar «Confirmar pedido»). El monto que
+   * se cobra lo sigue calculando la base al confirmar (expected_total).
+   */
+  function saveRate(event: FormEvent<HTMLInputElement>) {
+    const form = event.currentTarget.form;
+    // onSubmit cancela la cotización pendiente: este envío ya guarda la dirección.
+    if (!form || !rateButton.current) return;
+    form.requestSubmit(rateButton.current);
+  }
   const quotedKey = useRef<string | null>(
     a
       ? [a.line1, a.line2 ?? "", a.city, a.region, a.postal_code, a.country]
@@ -422,6 +435,16 @@ export function CheckoutForm({
           >
             Calcular envío
           </button>
+          {/* Lo pulsa saveRate al cambiar la forma de envío (sin JS, «Calcular envío» también la guarda). */}
+          <button
+            ref={rateButton}
+            type="submit"
+            name="intent"
+            value="rate"
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+          />
 
           <div role="group" aria-labelledby="co-shipping" className="space-y-2">
             <p id="co-shipping" className="font-medium">
@@ -449,6 +472,7 @@ export function CheckoutForm({
                     name="shipping_rate_id"
                     value={o.rate_id}
                     defaultChecked={o.rate_id === selectedRate}
+                    onChange={saveRate}
                   />
                   <span className="flex-1">
                     {o.name}
