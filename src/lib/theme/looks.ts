@@ -273,8 +273,6 @@ const NOCTURNO_CSS = [
   // ── Atmósfera, hero, marcas y testimonios (v3) ────────────────────────────
   // Resplandor tenue de la marca arriba de la página: profundidad sin imágenes.
   `${R}{background-image:radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%);background-repeat:no-repeat}`,
-  `${R} .sf-hero-split{background:radial-gradient(70% 90% at 50% 0%,color-mix(in srgb,${N.violet} 26%,transparent),transparent 70%),` +
-    `radial-gradient(55% 70% at 100% 100%,color-mix(in srgb,${N.alien} 16%,transparent),transparent 70%),${N.deep};border:1px solid var(--ad-hair)}`,
   // Tarjeta de producto al pasar: halo verde y la foto se acerca un poco.
   `${R} .sf-card:hover .sf-card-media{outline-color:${N.alien};box-shadow:0 18px 44px -18px color-mix(in srgb,${N.alien} 60%,transparent)}`,
   `@media (prefers-reduced-motion:no-preference){${R} .sf-card-media{transition:outline-color var(--ad-dur) var(--ad-ease),box-shadow .35s var(--ad-ease)}${R} .sf-card:hover .sf-card-img{scale:1.04}}`,
@@ -287,6 +285,35 @@ const NOCTURNO_CSS = [
   `${R} .sf-home figure:has(> blockquote:first-child)::before{content:"“";content:"“" / "";display:block;height:2.25rem;font:700 5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.neon}}`,
   `${R} .sf-home figcaption{color:${N.silver}}`,
   `${R} .sf-home figcaption > span:first-child{color:${N.frost};font:700 1.0625rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em}`,
+
+  // ── Primera impresión: el portal (v4) ─────────────────────────────────────
+  // Un solo momento orquestado: al entrar, el anillo de la marca da una vuelta
+  // detrás del título y el título se enciende como letrero de neón. Después todo
+  // queda quieto (sin movimiento continuo); con «reducir movimiento», nada se anima.
+  "@property --ad-orbit{syntax:'<angle>';inherits:false;initial-value:0deg}",
+  `${R} .sf-hero-split{position:relative;isolation:isolate;border:1px solid var(--ad-hair);` +
+    `background:radial-gradient(1.5px 1.5px at 8% 18%,color-mix(in srgb,${N.frost} 80%,transparent),transparent),radial-gradient(1.5px 1.5px at 17% 62%,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.5px 1.5px at 26% 9%,color-mix(in srgb,${N.frost} 70%,transparent),transparent),radial-gradient(1.5px 1.5px at 34% 78%,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1.5px 1.5px at 43% 30%,color-mix(in srgb,${N.frost} 65%,transparent),transparent),radial-gradient(1.5px 1.5px at 57% 12%,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1.5px 1.5px at 63% 70%,color-mix(in srgb,${N.frost} 75%,transparent),transparent),radial-gradient(1.5px 1.5px at 71% 38%,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.5px 1.5px at 79% 86%,color-mix(in srgb,${N.frost} 60%,transparent),transparent),radial-gradient(1.5px 1.5px at 86% 22%,color-mix(in srgb,${N.frost} 80%,transparent),transparent),radial-gradient(1.5px 1.5px at 92% 55%,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1.5px 1.5px at 4% 88%,color-mix(in srgb,${N.frost} 45%,transparent),transparent),` +
+    `radial-gradient(70% 90% at 50% 0%,color-mix(in srgb,${N.violet} 26%,transparent),transparent 70%),` +
+    `radial-gradient(55% 70% at 100% 100%,color-mix(in srgb,${N.alien} 16%,transparent),transparent 70%),${N.deep}}`,
+  // El portal: anillo cónico verde → morado (máscara de aro) con halo, centrado tras el título.
+  `${R} .sf-hero-split::before{content:"";position:absolute;z-index:-1;left:50%;top:clamp(-9rem,-12vw,-3rem);width:min(118vw,52rem);aspect-ratio:1;translate:-50% 0;border-radius:50%;pointer-events:none;` +
+    `background:conic-gradient(from var(--ad-orbit),${N.alien},${N.glow},${N.violet},transparent 62%,${N.alien});` +
+    `mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2px),black 100%,transparent);` +
+    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.alien} 55%,transparent)) drop-shadow(0 0 42px color-mix(in srgb,${N.violet} 45%,transparent));opacity:.9}`,
+  // Núcleo del portal: un resplandor verde suave detrás del texto.
+  `${R} .sf-hero-split::after{content:"";position:absolute;z-index:-1;left:50%;top:clamp(-4rem,-4vw,0rem);width:min(90vw,36rem);aspect-ratio:1;translate:-50% 0;border-radius:50%;pointer-events:none;` +
+    `background:radial-gradient(closest-side,color-mix(in srgb,${N.alien} 18%,transparent),transparent)}`,
+  `${R} .sf-hero-split > *{position:relative}`,
+  // Título de neón: resplandor del mismo verde (el texto sigue siendo #afff6e, 16:1).
+  `${R} .sf-hero-title{text-shadow:0 0 14px color-mix(in srgb,${N.neon} 45%,transparent),0 0 44px color-mix(in srgb,${N.alien} 40%,transparent)}`,
+  "@keyframes ad-orbit{from{--ad-orbit:-200deg}to{--ad-orbit:0deg}}",
+  "@keyframes ad-portal{from{opacity:0;scale:.82}to{opacity:.9;scale:1}}",
+  // Encendido de letrero: dos parpadeos cortos y queda prendido (menos de 1 s; sin destellos rápidos repetidos).
+  "@keyframes ad-neon{0%{opacity:.15}12%{opacity:1}18%{opacity:.35}30%{opacity:1}36%{opacity:.55}100%{opacity:1}}",
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-hero-group > .sf-hero-split::before,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-split::before{animation:ad-orbit 2.4s cubic-bezier(.16,1,.3,1) both,ad-portal 1.2s var(--ad-ease) both}` +
+    `${R} .sf-hero-group > .sf-hero-split .sf-hero-title,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-title{animation:ad-neon .9s linear .35s both}` +
+    "}",
 
   // ── Movimiento (CSS, sin bibliotecas) ─────────────────────────────────────
   "@keyframes ad-in{from{opacity:.001;transform:translateY(10px)}to{opacity:1;transform:none}}",
