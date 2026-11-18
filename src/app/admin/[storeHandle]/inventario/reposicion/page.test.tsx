@@ -60,6 +60,7 @@ const row = (over: Partial<ReplenishmentRow> = {}): ReplenishmentRow => ({
   coverageDays: 2,
   targetDays: 17,
   suggestedQuantity: 22,
+  quantityBasis: "sales",
   supplier: { id: "s1", name: "Tostadores del Norte", leadDays: 10 },
   ...over,
 });
@@ -128,6 +129,7 @@ describe("Qué pedir", () => {
             unitsSold: 0,
             coverageDays: null,
             suggestedQuantity: null,
+            quantityBasis: null,
             targetDays: 30,
             supplier: null,
           }),
@@ -194,7 +196,13 @@ describe("Qué pedir", () => {
         salesIncluded: false,
         suppliersIncluded: false,
         rows: [
-          row({ unitsSold: null, coverageDays: null, suggestedQuantity: null, supplier: null }),
+          row({
+            unitsSold: null,
+            coverageDays: null,
+            suggestedQuantity: null,
+            quantityBasis: null,
+            supplier: null,
+          }),
         ],
       }),
       ["inventory.read", "products.read"],
@@ -236,5 +244,29 @@ describe("Qué pedir", () => {
   it("recorte con cero variantes leídas no se presenta como «sin inventario»", async () => {
     await renderPage(ok({ rows: [], stockCount: 0, stockTruncated: true }));
     expect(screen.queryByText("Aún no hay inventario que revisar")).toBeNull();
+  });
+
+  it("stock bajo con ventas lentas: pide lo que lo saca del aviso, nunca 0", async () => {
+    await renderPage(
+      ok({
+        rows: [
+          row({
+            available: 3,
+            lowStockThreshold: 5,
+            unitsSold: 1,
+            coverageDays: 90,
+            targetDays: 30,
+            suggestedQuantity: 3,
+            quantityBasis: "threshold",
+          }),
+        ],
+      }),
+    );
+    const [, first] = within(screen.getByRole("table")).getAllByRole("row");
+    const cells = within(first!);
+    expect(cells.getByText("Stock bajo")).toBeTruthy();
+    expect(cells.getByText("3", { selector: "span.font-semibold" })).toBeTruthy();
+    expect(cells.getByText("Para salir del stock bajo (aviso en 5)")).toBeTruthy();
+    expect(cells.queryByText(/^Te alcanza para/)).toBeNull();
   });
 });

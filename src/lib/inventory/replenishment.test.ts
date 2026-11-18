@@ -11,6 +11,7 @@ import {
   salesWindow,
   type StockItem,
   suggestedQuantity,
+  quantityWithThreshold,
   type SupplierOption,
   targetDaysFor,
   unitsByVariant,
@@ -368,5 +369,53 @@ describe("buildReplenishment", () => {
       sales: sales({}),
     });
     expect(rows.map((r) => r.variantId)).toEqual(["z", "a", "b", "c"]);
+  });
+});
+
+describe("cantidad coherente con el aviso de stock bajo", () => {
+  it("en el aviso y con ventas lentas: pide lo que la saca del aviso (antes sugería 0)", () => {
+    // 1 vendida en 30 días, 3 disponibles, aviso en 5: el ritmo pide 0; para salir hacen falta 3
+    expect(suggestedQuantity(3, 1, 30)).toBe(0);
+    const [row] = buildReplenishment({
+      stock: [item({ available: 3, lowStockThreshold: 5 })],
+      sales: sales({ v1: 1 }),
+    });
+    expect(row).toMatchObject({
+      lowStock: true,
+      suggestedQuantity: 3,
+      quantityBasis: "threshold",
+    });
+  });
+
+  it("si el ritmo pide más, manda el ritmo", () => {
+    const [row] = buildReplenishment({
+      stock: [item({ available: 3, lowStockThreshold: 5 })],
+      sales: sales({ v1: 30 }),
+    });
+    expect(row).toMatchObject({ suggestedQuantity: 27, quantityBasis: "sales" });
+  });
+
+  it("fuera del aviso, el 0 del ritmo se respeta (justo en el horizonte)", () => {
+    expect(quantityWithThreshold(30, 5, 0)).toEqual({ quantity: 0, basis: "sales" });
+  });
+
+  it("sin ritmo no inventa cantidad aunque esté en el aviso", () => {
+    expect(quantityWithThreshold(3, 5, null)).toEqual({ quantity: null, basis: null });
+  });
+
+  it("en ninguna fila con stock bajo y ritmo la cantidad es 0", () => {
+    for (let available = -3; available <= 6; available++) {
+      for (const units of [1, 2, 5, 30]) {
+        for (const threshold of [null, 0, 2, 5]) {
+          const rows = buildReplenishment({
+            stock: [item({ available, lowStockThreshold: threshold })],
+            sales: sales({ v1: units }),
+          });
+          for (const r of rows) {
+            if (r.lowStock) expect(r.suggestedQuantity).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
   });
 });

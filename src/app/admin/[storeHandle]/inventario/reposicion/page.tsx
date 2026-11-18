@@ -34,7 +34,7 @@ const linkClass = "inline-flex min-h-11 items-center text-sm underline";
 
 const HOW_IT_WORKS = [
   `Calculamos cuánto vendes de cada variante con los pedidos pagados de los últimos ${WINDOW_DAYS} días (según la zona horaria de tu tienda), divididos entre ${WINDOW_DAYS}, aunque tu tienda tenga menos tiempo vendiendo.`,
-  `La cantidad sugerida alcanza para el tiempo de entrega de tu proveedor más ${SAFETY_DAYS} días de margen, o para ${DEFAULT_TARGET_DAYS} días si no hay proveedor con plazo registrado. También aparecen las variantes en o por debajo de su aviso de stock bajo.`,
+  `La cantidad sugerida alcanza para el tiempo de entrega de tu proveedor más ${SAFETY_DAYS} días de margen, o para ${DEFAULT_TARGET_DAYS} días si no hay proveedor con plazo registrado. También aparecen las variantes en o por debajo de su aviso de stock bajo; a esas te sugerimos, como mínimo, lo necesario para quedar por encima del aviso.`,
   "Es una guía: PRUVA no envía pedidos a tus proveedores.",
 ];
 
@@ -265,9 +265,11 @@ function RowsTable({
                       <>
                         <span className="font-semibold">{r.suggestedQuantity}</span>
                         <span className="block text-fg-muted">
-                          {r.suggestedQuantity === 0
-                            ? `Te alcanza para ${days(r.targetDays)}`
-                            : `Para ${days(r.targetDays)}`}
+                          {r.quantityBasis === "threshold"
+                            ? `Para salir del stock bajo (aviso en ${r.lowStockThreshold ?? 0})`
+                            : r.suggestedQuantity === 0
+                              ? `Te alcanza para ${days(r.targetDays)}`
+                              : `Para ${days(r.targetDays)}`}
                         </span>
                       </>
                     ) : (
