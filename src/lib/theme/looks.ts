@@ -128,7 +128,7 @@ const NOCTURNO_CSS = [
     `--sf-danger:${N.danger};--sf-success:${N.success};--sf-warning:${N.warning};` +
     "--sf-font-heading:var(--font-barlow-condensed);--sf-font-body:var(--font-manrope);" +
     "--sf-shadow-card:none;--sf-section-gap:4rem;--sf-section-gap-lg:7rem;" +
-    `--sf-announce-bg:${N.deep};--sf-announce-fg:${N.silver};` +
+    `--sf-announce-bg:${N.violet};--sf-announce-fg:${N.white};` +
     `--sf-surface:${N.deep};--sf-border:var(--ad-hair);--sf-border-strong:var(--ad-hair-strong);` +
     "--sf-radius-card:14px;--sf-radius-panel:22px;--sf-radius-control:10px;--sf-radius-btn:999px;" +
     "font-family:var(--font-manrope),system-ui,sans-serif;font-size:16px;line-height:1.6}",
@@ -149,7 +149,7 @@ const NOCTURNO_CSS = [
   `${R} .sf-view-all:hover{color:${N.alienHi}}`,
 
   // ── Barra de anuncio y encabezado ─────────────────────────────────────────
-  `${R} aside[aria-label='Aviso de la tienda']{font-weight:600;border-bottom:1px solid var(--ad-hair);padding-block:.625rem}`,
+  `${R} aside[aria-label='Aviso de la tienda']{font-weight:700;letter-spacing:.01em;padding-block:.625rem}`,
   `${R} header.sf-el-header{background:${N.void}}`,
   `${R} .sf-wordmark{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:1.5rem;line-height:.95;color:${N.frost}}`,
   `@media (min-width:640px){${R} .sf-wordmark{font-size:1.75rem}}`,
@@ -190,8 +190,11 @@ const NOCTURNO_CSS = [
   // ── Franja de confianza y beneficios ──────────────────────────────────────
   `${R} .sf-trust{background:transparent;border-block:1px solid var(--ad-hair);border-radius:0;padding-inline:0}`,
   `${R} .sf-trust svg{color:${N.alien}}`,
-  `${R} .sf-benefits > li{background:${N.deep};border:1px solid var(--ad-hair);padding:1.5rem;gap:.75rem}`,
-  `${R} .sf-benefits > li > span:first-child{color:${N.glow}}`,
+  `${R} .sf-benefits > li{background:${N.deep};border:1px solid var(--ad-hair);border-radius:var(--sf-radius-panel);padding:1.5rem;gap:.875rem}`,
+  // Ícono dentro de un círculo con el anillo de la marca (mismo motivo que las categorías).
+  `${R} .sf-benefits > li > span:first-child{display:grid;place-items:center;width:3rem;height:3rem;border-radius:50%;color:${N.alien};border:2px solid transparent;` +
+    `background:linear-gradient(${N.void},${N.void}) padding-box,conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien}) border-box}`,
+  `${R} .sf-benefits > li > span:nth-child(2){font:700 1.25rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
 
   // ── Categorías: círculos con anillo de la marca («portal» verde → morado) ──
   // El anillo es un borde con degradado cónico (fondo en dos capas); la foto queda
@@ -244,7 +247,7 @@ const NOCTURNO_CSS = [
   `${R} .sf-story-cta:hover{color:${N.alienHi}}`,
 
   // ── Pie ───────────────────────────────────────────────────────────────────
-  `${R} .sf-footer{margin-top:7rem;border-top:1px solid var(--ad-hair)}`,
+  `${R} .sf-footer{margin-top:7rem;border-top:0;background-image:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});background-size:100% 2px;background-repeat:no-repeat}`,
   `${R} .sf-footer-name{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;font-size:clamp(3rem,1rem + 8vw,8.5rem);line-height:.85;text-transform:uppercase;color:${N.neon}}`,
   `${R} .sf-footer :is(h2,h3){font:700 1rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.mist}}`,
   `${R} .sf-footer a:hover{color:${N.alienHi}}`,
@@ -266,6 +269,24 @@ const NOCTURNO_CSS = [
   `${R} .sf-pdp-desc :is(strong,b){color:${N.frost}}`,
   // Contenido regulatorio: un panel propio, distinguible y sin adornos.
   `${R} .sf-regulatory{border:1px solid var(--ad-hair);border-left:2px solid ${N.glow};background:${N.deep};border-radius:var(--sf-radius-card);padding:1.25rem 1.25rem 1.5rem}`,
+
+  // ── Atmósfera, hero, marcas y testimonios (v3) ────────────────────────────
+  // Resplandor tenue de la marca arriba de la página: profundidad sin imágenes.
+  `${R}{background-image:radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%);background-repeat:no-repeat}`,
+  `${R} .sf-hero-split{background:radial-gradient(70% 90% at 50% 0%,color-mix(in srgb,${N.violet} 26%,transparent),transparent 70%),` +
+    `radial-gradient(55% 70% at 100% 100%,color-mix(in srgb,${N.alien} 16%,transparent),transparent 70%),${N.deep};border:1px solid var(--ad-hair)}`,
+  // Tarjeta de producto al pasar: halo verde y la foto se acerca un poco.
+  `${R} .sf-card:hover .sf-card-media{outline-color:${N.alien};box-shadow:0 18px 44px -18px color-mix(in srgb,${N.alien} 60%,transparent)}`,
+  `@media (prefers-reduced-motion:no-preference){${R} .sf-card-media{transition:outline-color var(--ad-dur) var(--ad-ease),box-shadow .35s var(--ad-ease)}${R} .sf-card:hover .sf-card-img{scale:1.04}}`,
+  // Marcas: fichas claras para que cualquier logo (oscuro o claro) se lea.
+  `${R} a[href^='/marca/']{background:${N.frost};color:${N.void};border-color:transparent;border-radius:var(--sf-radius-card);transition:box-shadow var(--ad-dur) var(--ad-ease)}`,
+  `${R} a[href^='/marca/']:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.alien}}`,
+  `${R} a[href^='/marca/'] :is(span,[aria-hidden=true]){color:${N.void}}`,
+  // Opiniones y testimonios: paneles con comillas grandes en verde neón.
+  `${R} .sf-home figure{background:${N.deep};border:1px solid var(--ad-hair);border-radius:var(--sf-radius-panel);padding:1.75rem}`,
+  `${R} .sf-home figure:has(> blockquote:first-child)::before{content:"“";content:"“" / "";display:block;height:2.25rem;font:700 5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.neon}}`,
+  `${R} .sf-home figcaption{color:${N.silver}}`,
+  `${R} .sf-home figcaption > span:first-child{color:${N.frost};font:700 1.0625rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em}`,
 
   // ── Movimiento (CSS, sin bibliotecas) ─────────────────────────────────────
   "@keyframes ad-in{from{opacity:.001;transform:translateY(10px)}to{opacity:1;transform:none}}",
