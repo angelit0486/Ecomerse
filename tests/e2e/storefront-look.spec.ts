@@ -66,8 +66,8 @@ test("la clave «base» no cambia nada; «nocturno» enciende el tema solo en su
     heading: getComputedStyle(document.querySelector("h1")!).fontFamily,
     body: getComputedStyle(document.querySelector(".sf-root")!).fontFamily,
   }));
-  expect(fonts.heading).toMatch(/space ?grotesk/i);
-  expect(fonts.body).toMatch(/Inter/i);
+  expect(fonts.heading).toMatch(/barlow ?condensed/i);
+  expect(fonts.body).toMatch(/manrope/i);
   await expect(page.getByRole("link", { name: "Estuche (DEMO)" })).toBeVisible();
   // Los datos son los de la tienda: precio real y botón de compra intactos.
   await expect(page.getByText("$499.00").first()).toBeVisible();
