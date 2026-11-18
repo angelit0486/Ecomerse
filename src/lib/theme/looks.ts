@@ -12,8 +12,12 @@ import type { FontKey } from "./schema";
  *   (es un tema completo); los textos, el menú, la portada y los datos siguen
  *   siendo los de la tienda.
  *
- * «Nocturno» (Alien Demon Exotics, 2026-11-18): oscuro editorial. Negro para la
- * profundidad, plata para la sofisticación y violeta solo como acento.
+ * «Nocturno» (Alien Demon Exotics, 2026-11-18): oscuro editorial con la
+ * colorimetría de la marca (Apariencia de la tienda: verde #00a303 y morado
+ * #b200ff). Negro para la profundidad, verde para la acción (comprar, agregar)
+ * y morado como acento (rótulos, ofertas, foco); la plata queda para el texto
+ * secundario. Los tonos claros de cada color solo se usan donde el original no
+ * llega al contraste AA sobre negro.
  */
 export const STORE_LOOKS = ["nocturno"] as const;
 export type StoreLook = (typeof STORE_LOOKS)[number];
@@ -38,8 +42,11 @@ export const NOCTURNO = {
   silver: "#c8cad3", // acción principal y texto secundario fuerte
   frost: "#f4f5f8", // texto principal
   mist: "#9a9caa", // texto terciario (marca, notas)
-  violet: "#8b5cf6", // acento de relleno (selección, detalles)
-  glow: "#a78bfa", // acento como texto o línea sobre negro (foco, ofertas)
+  alien: "#00a303", // verde de la marca: acción principal (relleno con texto negro)
+  alienHi: "#2fc433", // verde al pasar el cursor
+  violet: "#b200ff", // morado de la marca: relleno con texto blanco (insignias, selección)
+  glow: "#c45cff", // morado legible sobre negro: rótulos, ofertas, foco
+  white: "#ffffff", // texto sobre el morado de la marca
   // Estados legibles sobre negro (los de la plataforma son para fondos claros).
   danger: "#fca5a5",
   success: "#86efac",
@@ -56,17 +63,25 @@ export const NOCTURNO_PAIRS: ReadonlyArray<readonly [string, string, string, num
   ["terciario sobre fondo", NOCTURNO.mist, NOCTURNO.void, 4.5],
   ["terciario sobre superficie", NOCTURNO.mist, NOCTURNO.deep, 4.5],
   ["terciario sobre superficie elevada", NOCTURNO.mist, NOCTURNO.graphite, 4.5],
-  ["botón (negro sobre plata)", NOCTURNO.void, NOCTURNO.silver, 4.5],
-  ["botón al pasar (negro sobre blanco frío)", NOCTURNO.void, NOCTURNO.frost, 4.5],
+  ["botón (negro sobre verde de la marca)", NOCTURNO.void, NOCTURNO.alien, 4.5],
+  ["botón al pasar (negro sobre verde claro)", NOCTURNO.void, NOCTURNO.alienHi, 4.5],
+  ["botón secundario al pasar (negro sobre blanco frío)", NOCTURNO.void, NOCTURNO.frost, 4.5],
   ["oferta y acento sobre fondo", NOCTURNO.glow, NOCTURNO.void, 4.5],
   ["oferta y acento sobre superficie", NOCTURNO.glow, NOCTURNO.deep, 4.5],
-  ["insignia de oferta (negro sobre violeta claro)", NOCTURNO.void, NOCTURNO.glow, 4.5],
+  [
+    "insignia de oferta y carrito (blanco sobre morado de la marca)",
+    NOCTURNO.white,
+    NOCTURNO.violet,
+    4.5,
+  ],
   ["error sobre superficie", NOCTURNO.danger, NOCTURNO.deep, 4.5],
   ["éxito sobre superficie", NOCTURNO.success, NOCTURNO.deep, 4.5],
   ["aviso sobre superficie", NOCTURNO.warning, NOCTURNO.deep, 4.5],
   // Foco: indicador no textual, 3:1 (WCAG 1.4.11 y 2.4.13).
   ["anillo de foco sobre fondo", NOCTURNO.glow, NOCTURNO.void, 3],
-  ["anillo de foco sobre plata", NOCTURNO.void, NOCTURNO.silver, 3],
+  ["anillo de foco sobre superficie elevada", NOCTURNO.glow, NOCTURNO.graphite, 3],
+  // Íconos de la franja de confianza en verde: gráfico, 3:1.
+  ["ícono verde sobre fondo", NOCTURNO.alien, NOCTURNO.void, 3],
 ];
 
 const R = ".sf-root[data-look='nocturno']";
@@ -88,10 +103,10 @@ const NOCTURNO_CSS = [
     `--ad-frost:${N.frost};--ad-mist:${N.mist};--ad-violet:${N.violet};--ad-glow:${N.glow};` +
     `--ad-hair:color-mix(in srgb,${N.silver} 13%,${N.void});--ad-hair-strong:color-mix(in srgb,${N.silver} 34%,${N.void});` +
     `--ad-ease:${EASE};--ad-dur:220ms;` +
-    `--sf-primary:${N.silver};--sf-accent:${N.glow};--sf-bg:${N.void};--sf-fg:${N.frost};--sf-muted:${N.mist};` +
+    `--sf-primary:${N.alien};--sf-accent:${N.glow};--sf-bg:${N.void};--sf-fg:${N.frost};--sf-muted:${N.mist};` +
     `--sf-on-primary:${N.void};--sf-radius:4px;` +
-    `--sf-btn-bg:${N.silver};--sf-btn-fg:${N.void};--sf-btn-border:${N.silver};` +
-    `--sf-sale-bg:${N.glow};--sf-sale-fg:${N.void};--sf-sale-text:${N.glow};` +
+    `--sf-btn-bg:${N.alien};--sf-btn-fg:${N.void};--sf-btn-border:${N.alien};` +
+    `--sf-sale-bg:${N.violet};--sf-sale-fg:${N.white};--sf-sale-text:${N.glow};` +
     `--sf-footer-bg:${N.deep};--sf-footer-fg:${N.frost};--sf-link:${N.silver};--sf-photo-blend:normal;` +
     `--sf-danger:${N.danger};--sf-success:${N.success};--sf-warning:${N.warning};` +
     "--sf-font-heading:var(--font-space-grotesk);--sf-font-body:var(--font-inter);" +
@@ -102,7 +117,7 @@ const NOCTURNO_CSS = [
     "font-family:var(--font-inter),system-ui,sans-serif;font-size:16px;line-height:1.6}",
   // Sin destello blanco al estirar la página en el celular.
   `html:has(${R}){background:${N.void};color-scheme:dark}`,
-  `${R} ::selection{background:${N.violet};color:#fff}`,
+  `${R} ::selection{background:${N.violet};color:${N.white}}`,
   `${R} :focus-visible{outline:2px solid ${N.glow};outline-offset:3px}`,
   `${R} input[type=checkbox],${R} input[type=radio]{accent-color:${N.violet}}`,
   `${R} :is(input,select,textarea){background-color:${N.deep};color:${N.frost};border-color:var(--ad-hair-strong)}`,
@@ -136,11 +151,14 @@ const NOCTURNO_CSS = [
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button):hover{color:${N.frost};text-decoration:none}`,
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button)::after{content:"";position:absolute;left:0;right:0;bottom:.55rem;height:1px;background:${N.glow};transform:scaleX(0);transform-origin:left;transition:transform var(--ad-dur) var(--ad-ease)}`,
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button):is(:hover,[aria-expanded=true])::after{transform:scaleX(1)}`,
-  `${R} header.sf-el-header a[href='/carrito'] span[aria-hidden=true]{background:${N.glow};color:${N.void};box-shadow:0 0 0 2px ${N.void}}`,
+  // Buscador: contorno fino que se enciende en verde al escribir (sin caja verde permanente).
+  `${R} header.sf-el-header form[role=search] > div:first-of-type{border-width:1px;border-color:${N.mist};background:${N.deep};transition:border-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} header.sf-el-header form[role=search] > div:first-of-type:focus-within{border-color:${N.alien}}`,
+  `${R} header.sf-el-header a[href='/carrito'] span[aria-hidden=true]{background:${N.violet};color:${N.white};box-shadow:0 0 0 2px ${N.void}}`,
 
   // ── Botones ───────────────────────────────────────────────────────────────
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']{font-weight:600;letter-spacing:.02em;transition:background-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease),border-color var(--ad-dur) var(--ad-ease),transform 120ms var(--ad-ease)}`,
-  `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):hover{background:${N.frost};border-color:${N.frost}}`,
+  `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):hover{background:${N.alienHi};border-color:${N.alienHi}}`,
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):active{transform:scale(.985)}`,
 
   // ── Hero ──────────────────────────────────────────────────────────────────
@@ -151,12 +169,12 @@ const NOCTURNO_CSS = [
   `${R} .sf-hero-body::before{content:"";display:block;width:3rem;height:1px;background:${N.glow}}`,
   `${R} .sf-hero-title{font-size:clamp(2.5rem,1.3rem + 5.2vw,5.5rem);line-height:.98;font-weight:600;letter-spacing:-.035em;max-width:14ch;color:${N.frost}}`,
   `${R} .sf-hero-sub{font-size:clamp(1rem,.9rem + .4vw,1.1875rem);line-height:1.6;color:${N.silver};max-width:34rem}`,
-  `${R} .sf-hero-cta{background:${N.silver};color:${N.void};border-radius:var(--sf-radius-btn);gap:.75rem;padding-inline:1.75rem;font-weight:600;letter-spacing:.02em;transition:background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} .sf-hero-cta{background:${N.alien};color:${N.void};border-radius:var(--sf-radius-btn);gap:.75rem;padding-inline:1.75rem;font-weight:600;letter-spacing:.02em;transition:background-color var(--ad-dur) var(--ad-ease)}`,
   `${R} .sf-hero-cta::after{content:"→";content:"→" / "";transition:translate var(--ad-dur) var(--ad-ease)}`,
-  `${R} .sf-hero-cta:hover{background:${N.frost}}`,
+  `${R} .sf-hero-cta:hover{background:${N.alienHi}}`,
   `${R} .sf-hero-cta:hover::after{translate:4px 0}`,
   `${R} .sf-hero-split{--sf-primary:${N.deep};--sf-on-primary:${N.frost};background:${N.deep};color:${N.frost};border:1px solid var(--ad-hair)}`,
-  `${R} .sf-hero-split .sf-hero-cta{background:${N.silver};color:${N.void}}`,
+  `${R} .sf-hero-split .sf-hero-cta{background:${N.alien};color:${N.void}}`,
   // En el celular el hero va de orilla a orilla: más presencia sin achicar el texto.
   `@media (max-width:639px){${R} .sf-hero-bg{margin-inline:-1rem;border-radius:0;border-inline:0;min-height:34rem}}`,
 
@@ -165,7 +183,7 @@ const NOCTURNO_CSS = [
   `@media (min-width:640px){${R} .sf-hero-group{gap:2.5rem}}`,
   // ── Franja de confianza y beneficios ──────────────────────────────────────
   `${R} .sf-trust{background:transparent;border-block:1px solid var(--ad-hair);border-radius:0;padding-inline:0}`,
-  `${R} .sf-trust svg{color:${N.glow}}`,
+  `${R} .sf-trust svg{color:${N.alien}}`,
   `${R} .sf-benefits > li{background:${N.deep};border:1px solid var(--ad-hair);padding:1.5rem;gap:.75rem}`,
   `${R} .sf-benefits > li > span:first-child{color:${N.glow}}`,
 
@@ -195,7 +213,7 @@ const NOCTURNO_CSS = [
   `${R} .sf-card-price > span[class*='sf-sale-text']{color:${N.glow}}`,
   // «Agregar» en la tarjeta: contorno fino; se rellena al pasar (la ficha conserva el botón lleno).
   `${R} .sf-card form button{background:transparent;color:${N.frost};border-color:var(--ad-hair-strong);font-weight:500}`,
-  `${R} .sf-card form button:not(:disabled):hover{background:${N.silver};border-color:${N.silver};color:${N.void}}`,
+  `${R} .sf-card form button:not(:disabled):hover{background:${N.alien};border-color:${N.alien};color:${N.void}}`,
   `${R} .sf-card-choose{border-width:1px;border-color:var(--ad-hair-strong);color:${N.frost};font-weight:500}`,
   // Carga: la foto ocupa su lugar desde el inicio (sin saltos); un barrido tenue
   // indica que llega. Se detiene solo, por si la foto tiene transparencia.

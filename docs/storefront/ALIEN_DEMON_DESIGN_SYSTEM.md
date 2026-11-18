@@ -1,56 +1,62 @@
 # Alien Demon Exotics — Sistema de diseño «Nocturno»
 
-> Estado: **propuesta en rama** (`feature/alien-demon-storefront-redesign`), pendiente de aprobación del propietario. No está en producción ni encendido en ninguna tienda real.
+> Estado: rama `feature/alien-demon-trust-storefront` (sobre la propuesta de Grok `feature/alien-demon-storefront-redesign`). El propietario pidió desplegarlo en staging para verlo (2026-11-18). Paleta ajustada a la colorimetría de la marca (§2).
 
 ## 1. Qué es y cómo se enciende
 
 «Nocturno» es un **tema de presentación** de la tienda pública: solo CSS, sin cambiar datos, precios, inventario, checkout ni panel.
 
-- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (23 pruebas).
+- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (26 pruebas).
 - Se enciende **solo** cuando la tienda tiene `store_themes.theme_key = 'nocturno'`. Esa columna ya existía (valor por omisión `'base'`, sin uso en el código) y ya llega a la tienda pública como `store.theme.key` por `storefront.get_store_public`. **No hay migración nueva.**
 - Con cualquier otra clave (todas las tiendas hoy tienen `'base'`), la tienda se ve exactamente igual que antes (ver `ALIEN_DEMON_VISUAL_REGRESSION.md`).
 - Todo el CSS va bajo `.sf-root[data-look='nocturno']`, en la misma etiqueta `<style nonce>` que ya genera el tema (CSP intacta, sin archivos nuevos que descargar).
-- Con Nocturno encendido, los colores de Apariencia y los colores por elemento se ignoran (la paleta es fija); logo, textos, menú, secciones de inicio, productos y fotos siguen saliendo de la tienda.
+- Con Nocturno encendido, los colores de Apariencia y los colores por elemento se ignoran (la paleta es fija, pero toma los dos colores de la marca: verde `#00A303` y morado `#B200FF`); logo, textos, menú, secciones de inicio, productos y fotos siguen saliendo de la tienda.
 - Cambio de clave: tarda hasta 60 s en verse (caché pública `STOREFRONT_TTL_SECONDS`).
 
 ## 2. Paleta (tokens)
 
-| Token                            | Hex                               | Uso                                                     |
-| -------------------------------- | --------------------------------- | ------------------------------------------------------- |
-| `void`                           | `#09090D`                         | Fondo general (profundidad)                             |
-| `deep`                           | `#12121A`                         | Superficies: paneles, pie, franja de confianza          |
-| `graphite`                       | `#20202A`                         | Superficie elevada, bordes marcados                     |
-| `silver`                         | `#C8CAD3`                         | Acción principal (botón plata), texto secundario fuerte |
-| `frost`                          | `#F4F5F8`                         | Texto principal, botón al pasar el cursor               |
-| `mist`                           | `#9A9CAA`                         | Texto terciario (marca, notas, «alt» de fotos)          |
-| `violet`                         | `#8B5CF6`                         | Acento de relleno (selección, filetes)                  |
-| `glow`                           | `#A78BFA`                         | Acento como texto o línea: foco, ofertas, insignias     |
-| `danger` / `success` / `warning` | `#FCA5A5` / `#86EFAC` / `#FCD34D` | Estados legibles sobre negro                            |
+| Token                            | Hex                               | Uso                                                                        |
+| -------------------------------- | --------------------------------- | -------------------------------------------------------------------------- |
+| `void`                           | `#09090D`                         | Fondo general (profundidad)                                                |
+| `deep`                           | `#12121A`                         | Superficies: paneles, pie, franja de confianza                             |
+| `graphite`                       | `#20202A`                         | Superficie elevada, bordes marcados                                        |
+| `silver`                         | `#C8CAD3`                         | Texto secundario fuerte                                                    |
+| `alien`                          | `#00A303`                         | Verde de la marca: acción principal (texto negro)                          |
+| `alienHi`                        | `#2FC433`                         | Verde al pasar el cursor                                                   |
+| `frost`                          | `#F4F5F8`                         | Texto principal, botón al pasar el cursor                                  |
+| `mist`                           | `#9A9CAA`                         | Texto terciario (marca, notas, «alt» de fotos)                             |
+| `violet`                         | `#B200FF`                         | Morado de la marca: relleno con texto blanco (ofertas, carrito, selección) |
+| `glow`                           | `#C45CFF`                         | Morado legible sobre negro: rótulos, foco, precio de oferta                |
+| `white`                          | `#FFFFFF`                         | Texto sobre el morado de la marca                                          |
+| `danger` / `success` / `warning` | `#FCA5A5` / `#86EFAC` / `#FCD34D` | Estados legibles sobre negro                                               |
 
 `mist` (#9A9CAA) se agregó a la paleta del brief porque #C8CAD3 no alcanza para un tercer nivel de texto distinguible; los estados se aclararon porque los de la plataforma están pensados para fondo blanco.
 
 ### Contraste medido (WCAG 2.2, fórmula de luminancia relativa)
 
-| Par                            | Contraste | Mínimo |
-| ------------------------------ | --------- | ------ |
-| frost / void                   | 18.23:1   | 4.5    |
-| frost / deep                   | 17.09:1   | 4.5    |
-| frost / graphite               | 14.80:1   | 4.5    |
-| silver / void                  | 12.16:1   | 4.5    |
-| silver / deep                  | 11.40:1   | 4.5    |
-| mist / void                    | 7.30:1    | 4.5    |
-| mist / deep                    | 6.84:1    | 4.5    |
-| mist / graphite                | 5.92:1    | 4.5    |
-| void sobre silver (botón)      | 12.16:1   | 4.5    |
-| void sobre frost (botón hover) | 18.23:1   | 4.5    |
-| glow / void (oferta, foco)     | 7.30:1    | 4.5    |
-| glow / deep                    | 6.85:1    | 4.5    |
-| void sobre glow (insignia)     | 7.30:1    | 4.5    |
-| danger / deep                  | 9.82:1    | 4.5    |
-| success / deep                 | 13.27:1   | 4.5    |
-| warning / deep                 | 12.92:1   | 4.5    |
+| Par                           | Contraste | Mínimo |
+| ----------------------------- | --------- | ------ |
+| frost / void                  | 18.23:1   | 4.5    |
+| frost / deep                  | 17.09:1   | 4.5    |
+| frost / graphite              | 14.80:1   | 4.5    |
+| silver / void                 | 12.16:1   | 4.5    |
+| silver / deep                 | 11.40:1   | 4.5    |
+| mist / void                   | 7.30:1    | 4.5    |
+| mist / deep                   | 6.84:1    | 4.5    |
+| mist / graphite               | 5.92:1    | 4.5    |
+| void sobre alien (botón)      | 5.91:1    | 4.5    |
+| void sobre alienHi (al pasar) | 8.58:1    | 4.5    |
+| void sobre frost (secundario) | 18.23:1   | 4.5    |
+| glow / void (oferta, foco)    | 5.98:1    | 4.5    |
+| glow / deep                   | 5.61:1    | 4.5    |
+| glow / graphite               | 4.86:1    | 4.5    |
+| white sobre violet (insignia) | 4.84:1    | 4.5    |
+| alien / void (ícono)          | 5.91:1    | 3      |
+| danger / deep                 | 9.82:1    | 4.5    |
+| success / deep                | 13.27:1   | 4.5    |
+| warning / deep                | 12.92:1   | 4.5    |
 
-`violet` (#8B5CF6) mide 4.69:1 sobre `void`: se usa solo como relleno o filete, nunca como texto pequeño. Los pares están en `NOCTURNO_PAIRS` y la prueba unitaria falla si alguno baja del mínimo.
+El morado original `#B200FF` mide 4.11:1 sobre `void`: se usa solo como relleno (con texto blanco), nunca como texto; para texto se usa `glow`. El verde original `#00A303` sí alcanza 5.91:1 con texto negro y se usa tal cual. Los pares están en `NOCTURNO_PAIRS` y la prueba unitaria falla si alguno baja del mínimo.
 
 ## 3. Tipografía
 
@@ -67,12 +73,13 @@
 
 ## 5. Componentes (resumen; detalle en el inventario)
 
-- **Botón principal:** plata con texto negro; al pasar, blanco frío; al presionar, escala 0.98. «Comprar ahora» pasa a contorno para no competir con «Agregar al carrito».
+- **Botón principal:** verde de la marca con texto negro; al pasar, verde claro; al presionar, escala 0.98. «Comprar ahora» pasa a contorno para no competir con «Agregar al carrito».
 - **Tarjeta de producto:** sin caja; foto con filete; marca como «eyebrow»; título de 2 líneas con altura mínima (precios alineados); «Agregar» en contorno; brillo de carga; agotado en opacidad reducida.
-- **Hero:** alto `clamp(32rem, 74svh, 46rem)`, velo degradado para legibilidad, CTA plata con flecha, a sangre en móvil.
+- **Hero:** alto `clamp(32rem, 74svh, 46rem)`, velo degradado para legibilidad, CTA verde con flecha, a sangre en móvil.
 - **Categorías:** mosaicos editoriales 4:5.
 - **Ficha de producto:** rejilla 7/5, galería sin doble marco, título con `clamp`, panel regulatorio (`.sf-regulatory`) con filete `glow` a la izquierda.
 - **Pie:** nombre grande en mayúsculas, chips de pago en contorno.
+- **Buscador:** contorno fino gris (`mist`, 7.3:1) que se enciende en verde al escribir; sin la caja verde de 2 px de la plataforma.
 
 ## 6. Movimiento
 

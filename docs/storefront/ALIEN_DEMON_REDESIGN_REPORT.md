@@ -10,17 +10,17 @@
 
 ## 2. Qué se hizo (fases B–J del brief)
 
-| Fase                   | Entregado                                                                                                                                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| B. Sistema de diseño   | Paleta nocturna, Space Grotesk + Inter, radios 4/6/12, espaciado, foco, estados — `ALIEN_DEMON_DESIGN_SYSTEM.md`                                                                                       |
-| C. Inicio              | Encabezado editorial, hero grande con velo y CTA, franja de confianza, categorías 4:5, novedades, historia, más pedidos, beneficios, pie con nombre grande                                             |
-| D. Catálogo y tarjetas | Tarjetas sin caja con marca, título de 2 líneas, precio alineado, agregar en contorno; estados oferta / últimas piezas / agotado / cargando / sin foto                                                 |
-| E. Ficha               | Rejilla 7/5, galería limpia, título grande, precio y ahorro, jerarquía «Agregar» (plata) > «Comprar ahora» (contorno), **espacio regulatorio** (`.sf-regulatory`) para la información que exija la ley |
-| F. Responsivo          | 360/390/430/768/1024/1440 sin desbordamiento; nombre acotado en tableta para que el encabezado quepa en una fila                                                                                       |
-| G. Movimiento          | Solo CSS; entrada del hero y aparición al desplazarse; desactivado por completo con «reducir movimiento»                                                                                               |
-| H. Rendimiento         | Sin JS nuevo, sin dependencias nuevas, sin fuentes externas; Lighthouse móvil 96–98 con Nocturno                                                                                                       |
-| I. Accesibilidad       | Contrastes ≥ 5.9:1 en todo texto; axe 0 violaciones; Lighthouse Accesibilidad 100                                                                                                                      |
-| J. QA                  | Ver `ALIEN_DEMON_QA_REPORT.md` y `ALIEN_DEMON_VISUAL_REGRESSION.md`                                                                                                                                    |
+| Fase                   | Entregado                                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| B. Sistema de diseño   | Paleta nocturna, Space Grotesk + Inter, radios 4/6/12, espaciado, foco, estados — `ALIEN_DEMON_DESIGN_SYSTEM.md`                                                                                                   |
+| C. Inicio              | Encabezado editorial, hero grande con velo y CTA, franja de confianza, categorías 4:5, novedades, historia, más pedidos, beneficios, pie con nombre grande                                                         |
+| D. Catálogo y tarjetas | Tarjetas sin caja con marca, título de 2 líneas, precio alineado, agregar en contorno; estados oferta / últimas piezas / agotado / cargando / sin foto                                                             |
+| E. Ficha               | Rejilla 7/5, galería limpia, título grande, precio y ahorro, jerarquía «Agregar» (verde de la marca) > «Comprar ahora» (contorno), **espacio regulatorio** (`.sf-regulatory`) para la información que exija la ley |
+| F. Responsivo          | 360/390/430/768/1024/1440 sin desbordamiento; nombre acotado en tableta para que el encabezado quepa en una fila                                                                                                   |
+| G. Movimiento          | Solo CSS; entrada del hero y aparición al desplazarse; desactivado por completo con «reducir movimiento»                                                                                                           |
+| H. Rendimiento         | Sin JS nuevo, sin dependencias nuevas, sin fuentes externas; Lighthouse móvil 96–98 con Nocturno                                                                                                                   |
+| I. Accesibilidad       | Contrastes ≥ 5.9:1 en todo texto; axe 0 violaciones; Lighthouse Accesibilidad 100                                                                                                                                  |
+| J. QA                  | Ver `ALIEN_DEMON_QA_REPORT.md` y `ALIEN_DEMON_VISUAL_REGRESSION.md`                                                                                                                                                |
 
 ## 3. Cómo funciona (sin tocar lo prohibido)
 

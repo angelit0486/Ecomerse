@@ -45,6 +45,17 @@ describe("temas de presentación (looks)", () => {
     }
   });
 
+  it("conserva la colorimetría de Alien Demon: verde para la acción, morado de acento", () => {
+    // Colores de la marca guardados en Apariencia de la tienda (primario y acento).
+    expect(NOCTURNO.alien).toBe("#00a303");
+    expect(NOCTURNO.violet).toBe("#b200ff");
+    const css = lookCss("nocturno");
+    expect(css).toContain(`--sf-btn-bg:${NOCTURNO.alien}`);
+    expect(css).toContain(`--sf-primary:${NOCTURNO.alien}`);
+    expect(css).toContain(`.sf-hero-cta{background:${NOCTURNO.alien}`);
+    expect(css).toContain(`--sf-sale-bg:${NOCTURNO.violet};--sf-sale-fg:${NOCTURNO.white}`);
+  });
+
   it("todo el movimiento respeta «reducir movimiento»", () => {
     const css = lookCss("nocturno");
     const outside = css.replace(/@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}+/g, "");
