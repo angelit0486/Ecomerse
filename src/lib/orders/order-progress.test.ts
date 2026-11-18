@@ -30,3 +30,25 @@ describe("orderProgress", () => {
     expect(orderProgress({ ...axes("paid", "paid"), needs_attention: true })).toBeNull();
   });
 });
+
+describe("orderProgress en «Recoger en tienda»", () => {
+  const labels = (o: ReturnType<typeof axes>) =>
+    orderProgress(o, { pickup: true })?.map((s) => s.label);
+  it("dice «Listo para recoger» y «Recogido» en vez de «Enviado» y «Entregado»", () => {
+    expect(labels(axes("paid", "paid"))).toEqual([
+      "Pedido recibido",
+      "Pago confirmado",
+      "Listo para recoger",
+      "Recogido",
+    ]);
+    expect(
+      orderProgress(axes("paid", "paid", "fulfilled"), { pickup: true })?.find((s) => s.current)
+        ?.label,
+    ).toBe("Recogido");
+  });
+  it("sin pickup, igual que siempre", () => {
+    expect(orderProgress(axes("paid", "paid"), { pickup: false })?.map((s) => s.label)).toContain(
+      "Enviado",
+    );
+  });
+});

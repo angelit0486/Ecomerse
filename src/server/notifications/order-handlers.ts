@@ -145,17 +145,25 @@ export function createOrderNotificationHandlers(
     entity: string,
     template: string,
     message: EmailMessage,
+    options: { storeSubject?: boolean } = {},
   ): Promise<void> {
     if (!isEmail(message.to)) return;
     const dedupeKey = `${job.type}:${entity}:${template}:${recipientHash(message.to)}`;
     if (await alreadyDelivered(deps.db, dedupeKey)) return;
     // Paso 20: asunto y mensaje de la tienda (solo correos del comprador y con el interruptor).
+    // El asunto propio de la tienda se omite cuando no aplica (p. ej. «va en camino»
+    // en un pedido de «Recoger en tienda»); su mensaje sí se agrega.
+    const text = EDITABLE_KEYS.has(template) ? await storeText(n.store.id, template) : null;
     const final = EDITABLE_KEYS.has(template)
-      ? applyStoreText(message, await storeText(n.store.id, template), {
-          nombre: n.order.customer_name,
-          pedido: n.order.display_number,
-          tienda: n.store.name,
-        })
+      ? applyStoreText(
+          message,
+          text && options.storeSubject === false ? { ...text, subject: null } : text,
+          {
+            nombre: n.order.customer_name,
+            pedido: n.order.display_number,
+            tienda: n.store.name,
+          },
+        )
       : message;
     await sendNotification(deps, {
       dedupeKey,
@@ -254,6 +262,7 @@ export function createOrderNotificationHandlers(
       shipmentId,
       "order_shipped",
       orderShippedEmail(emailData(n), n.order.email),
+      { storeSubject: n.order.shipping_type !== "pickup" },
     );
   };
 
@@ -269,6 +278,7 @@ export function createOrderNotificationHandlers(
       orderDeliveredEmail(emailData(n), n.order.email, {
         inviteReview: ["paid", "partially_refunded"].includes(n.order.payment_status),
       }),
+      { storeSubject: n.order.shipping_type !== "pickup" },
     );
   };
 

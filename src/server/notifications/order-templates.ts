@@ -373,7 +373,48 @@ export function paymentFailedEmail(d: OrderEmailData, to: string): EmailMessage 
   );
 }
 
+/**
+ * «Recoger en tienda»: lo que la tienda marcó como enviado en realidad quedó
+ * listo para recoger. Nada de «va en camino» ni de guía; sí dónde y cuándo.
+ */
+function orderReadyForPickupEmail(d: OrderEmailData, to: string): EmailMessage {
+  const partial = d.shipment?.partial === true;
+  const number = d.order.display_number;
+  const subject = partial
+    ? `Parte de tu pedido ${number} está lista para recoger`
+    : `Tu pedido ${number} está listo para recoger`;
+  const box = (d.shipment?.items ?? []).map(
+    (i) => `${i.quantity} × ${i.title}${i.variant ? ` (${i.variant})` : ""}`,
+  );
+  const lead = (n: string) =>
+    partial
+      ? `Una parte de tu pedido ${n} ya está lista para recoger en ${escapeHtml(d.store.name)}. Te avisaremos cuando esté lo demás.`
+      : `Tu pedido ${n} ya está listo para recoger en ${escapeHtml(d.store.name)}.`;
+  const leadText = partial
+    ? `Una parte de tu pedido ${number} ya está lista para recoger en ${d.store.name}. Te avisaremos cuando esté lo demás.`
+    : `Tu pedido ${number} ya está listo para recoger en ${d.store.name}.`;
+  return message(
+    d,
+    to,
+    subject,
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>${lead(`<strong>${escapeHtml(number)}</strong>`)}</p>${
+      box.length
+        ? `<p><strong>Listo para recoger:</strong><br>${box.map(escapeHtml).join("<br>")}</p>`
+        : ""
+    }${pickupHtml(d, "Recoges en:")}${d.orderUrl ? button("Ver mi pedido", d.orderUrl, color(d)) : ""}`,
+    [
+      `Hola, ${d.order.customer_name}:`,
+      "",
+      leadText,
+      ...(box.length ? ["", "Listo para recoger:", ...box] : []),
+      ...pickupText(d, "Recoges en:"),
+      d.orderUrl ?? "",
+    ],
+  );
+}
+
 export function orderShippedEmail(d: OrderEmailData, to: string): EmailMessage {
+  if (isPickup(d)) return orderReadyForPickupEmail(d, to);
   const s = d.shipment;
   const partial = s?.partial === true;
   const subject = partial
@@ -423,7 +464,12 @@ export function orderDeliveredEmail(
   to: string,
   options: { inviteReview: boolean } = { inviteReview: true },
 ): EmailMessage {
-  const subject = `Tu pedido ${d.order.display_number} fue entregado`;
+  const pickup = isPickup(d);
+  // En «Recoger en tienda» el cliente lo recogió: no hubo entrega a domicilio.
+  const subject = pickup
+    ? `Tu pedido ${d.order.display_number} ya fue recogido`
+    : `Tu pedido ${d.order.display_number} fue entregado`;
+  const done = pickup ? "ya fue recogido" : "fue entregado";
   const reviewUrl = options.inviteReview && d.orderUrl ? `${d.orderUrl}#opinar` : null;
   const invite = options.inviteReview
     ? "¿Qué te pareció? Tu opinión ayuda a otros clientes a elegir."
@@ -432,13 +478,13 @@ export function orderDeliveredEmail(
     d,
     to,
     subject,
-    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Tu pedido <strong>${escapeHtml(d.order.display_number)}</strong> fue entregado. ¡Gracias por tu compra!</p>${
+    `<p>Hola, ${escapeHtml(d.order.customer_name)}:</p><p>Tu pedido <strong>${escapeHtml(d.order.display_number)}</strong> ${done}. ¡Gracias por tu compra!</p>${
       invite ? `<p>${invite}</p>` : ""
     }${reviewUrl ? button("Opinar sobre mi compra", reviewUrl, color(d)) : ""}`,
     [
       `Hola, ${d.order.customer_name}:`,
       "",
-      `Tu pedido ${d.order.display_number} fue entregado. ¡Gracias por tu compra!`,
+      `Tu pedido ${d.order.display_number} ${done}. ¡Gracias por tu compra!`,
       invite,
       reviewUrl ?? "",
     ],

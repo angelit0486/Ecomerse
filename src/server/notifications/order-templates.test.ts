@@ -398,6 +398,66 @@ describe("recoger en tienda (shipping_type = pickup)", () => {
     expect(bare.text).not.toContain("Calle del comprador 9");
   });
 
+  const box = {
+    carrier: null,
+    tracking_number: null,
+    tracking_url: null,
+    items: [{ title: "Taza", variant: "Azul", quantity: 2 }],
+  };
+
+  it("«enviado» de un retiro: listo para recoger, con dirección y horario, sin «va en camino» ni guía", () => {
+    const m = orderShippedEmail({ ...pickup, shipment: box }, "c@x.test");
+    expect(m.subject).toBe("Tu pedido #1001 está listo para recoger");
+    expect(m.html).toContain("ya está listo para recoger en");
+    expect(m.html).toContain("<strong>Listo para recoger:</strong><br>2 × Taza (Azul)");
+    expect(m.html).toContain(
+      "<strong>Recoges en:</strong><br>Av. Juárez 10 &lt;b&gt;<br>Centro, Puebla<br><strong>Horario:</strong> L-V 9 a 18 &amp; S 10 a 14",
+    );
+    expect(m.text).toContain("Recoges en:\nAv. Juárez 10 <b>\nCentro, Puebla\nHorario:");
+    for (const body of [m.subject, m.html, m.text]) {
+      expect(body).not.toContain("camino");
+      expect(body).not.toContain("Enviamos");
+      expect(body).not.toContain("Rastrear");
+      expect(body).not.toContain("Guía");
+      expect(body).not.toContain("Calle del comprador 9");
+    }
+  });
+
+  it("retiro parcial: parte lista para recoger y aviso de lo demás", () => {
+    const m = orderShippedEmail({ ...pickup, shipment: { ...box, partial: true } }, "c@x.test");
+    expect(m.subject).toBe("Parte de tu pedido #1001 está lista para recoger");
+    expect(m.text).toContain("Una parte de tu pedido #1001 ya está lista para recoger");
+    expect(m.text).toContain("Te avisaremos cuando esté lo demás.");
+  });
+
+  it("retiro sin dirección declarada: listo para recoger, sin inventar dónde", () => {
+    const m = orderShippedEmail({ ...noAddress, shipment: box }, "c@x.test");
+    expect(m.subject).toBe("Tu pedido #1001 está listo para recoger");
+    expect(m.text).not.toContain("Recoges en");
+    expect(m.text).not.toContain("Horario");
+    expect(m.text).not.toContain("camino");
+  });
+
+  it("entregado de un retiro: «ya fue recogido» y sigue invitando a opinar", () => {
+    const m = orderDeliveredEmail({ ...pickup, shipment: box }, "c@x.test");
+    expect(m.subject).toBe("Tu pedido #1001 ya fue recogido");
+    expect(m.text).toContain("Tu pedido #1001 ya fue recogido. ¡Gracias por tu compra!");
+    expect(m.html).toContain("ya fue recogido");
+    expect(m.html).not.toContain("fue entregado");
+    expect(m.html).toContain("Opinar sobre mi compra");
+  });
+
+  it("envío normal: «va en camino» y «fue entregado» como siempre", () => {
+    const flat: OrderEmailData = {
+      ...pickup,
+      order: { ...pickup.order, shipping_type: "flat" },
+      shipment: { ...box, carrier: "DHL", tracking_number: "123" },
+    };
+    expect(orderShippedEmail(flat, "c@x.test").subject).toBe("Tu pedido #1001 va en camino");
+    expect(orderShippedEmail(flat, "c@x.test").text).toContain("Guía: DHL: 123");
+    expect(orderDeliveredEmail(flat, "c@x.test").subject).toBe("Tu pedido #1001 fue entregado");
+  });
+
   it("envío normal: sin cambios (aunque la tienda haya declarado dirección)", () => {
     const shipped: OrderEmailData = {
       ...pickup,
