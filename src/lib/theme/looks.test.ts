@@ -77,7 +77,8 @@ describe("temas de presentación (looks)", () => {
     const css = lookCss("nocturno");
     expect(css).toContain("--sf-font-heading:var(--font-barlow-condensed)");
     expect(css).toMatch(/\.sf-cat-media\{aspect-ratio:1;border-radius:50%/);
-    expect(css).not.toContain("counter(");
+    // Sin numeración decorativa de secciones (solo los pasos de un aviso, que sí son secuencia).
+    expect(css).not.toContain("ad-sec");
     expect(css).not.toContain("→");
     expect(css).not.toContain("space-grotesk");
   });

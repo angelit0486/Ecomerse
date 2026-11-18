@@ -316,6 +316,22 @@ const NOCTURNO_CSS = [
     `${R} .sf-hero-group > .sf-hero-split .sf-hero-title,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-title{animation:ad-neon .9s linear .35s both}` +
     "}",
 
+  // ── Avisos de la tienda (bloque «Texto» de la portada) ────────────────────
+  // Panel con filete de la marca; una lista numerada se lee como pasos con
+  // números grandes en círculos verdes (la lista ya es una secuencia).
+  `${R} .sf-home > section:has(> .sf-prose){max-width:none;position:relative;padding:clamp(1.5rem,4vw,3rem);border-radius:var(--sf-radius-panel);border:2px solid transparent;` +
+    `background:radial-gradient(60% 120% at 0% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
+    `linear-gradient(120deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} .sf-home > section:has(> .sf-prose) .sf-section-title{color:${N.frost};max-width:22ch}`,
+  `${R} .sf-home .sf-prose{color:${N.silver};font-size:1.0625rem;line-height:1.65;max-width:none}`,
+  `${R} .sf-home .sf-prose > p{max-width:62ch}`,
+  `${R} .sf-home .sf-prose strong{color:${N.frost}}`,
+  `${R} .sf-home .sf-prose ol{list-style:none;counter-reset:ad-step;padding:0;margin-block:1.5rem;display:grid;gap:1rem}`,
+  `@media (min-width:768px){${R} .sf-home .sf-prose ol{grid-template-columns:repeat(3,minmax(0,1fr))}}`,
+  `${R} .sf-home .sf-prose ol > li{counter-increment:ad-step;margin:0;padding:1.25rem;border-radius:var(--sf-radius-card);background:${N.void};border:1px solid var(--ad-hair);color:${N.silver}}`,
+  `${R} .sf-home .sf-prose ol > li::before{content:counter(ad-step);display:grid;place-items:center;width:2.5rem;height:2.5rem;margin-bottom:.75rem;border-radius:50%;` +
+    `font:700 1.375rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.void};background:${N.alien};box-shadow:0 0 22px -4px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
