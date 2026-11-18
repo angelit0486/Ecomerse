@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { visibleStatus } from "./visible-status";
+import { buyerStatus, visibleStatus } from "./visible-status";
 
 const o = (
   status: string,
@@ -28,5 +28,30 @@ describe("estado visible del pedido (§16.4)", () => {
     [o("open", "paid", "unfulfilled", true), "Requiere atención"],
   ] as const)("%o → %s", (axes, label) => {
     expect(visibleStatus(axes)).toBe(label);
+  });
+});
+
+describe("buyerStatus (comprador)", () => {
+  const o = (status: string, payment_status: string, fulfillment_status: string) => ({
+    status,
+    payment_status,
+    fulfillment_status,
+  });
+  it("retiro: «Listo para recoger» en vez de «Enviado»", () => {
+    expect(buyerStatus(o("paid", "paid", "fulfilled"), { pickup: true })).toBe(
+      "Listo para recoger",
+    );
+    expect(buyerStatus(o("paid", "paid", "partially_fulfilled"), { pickup: true })).toBe(
+      "Listo para recoger en parte",
+    );
+    expect(buyerStatus(o("paid", "paid", "unfulfilled"), { pickup: true })).toBe(
+      "Pagado — por preparar",
+    );
+    expect(buyerStatus(o("completed", "paid", "fulfilled"), { pickup: true })).toBe("Completado");
+  });
+  it("envío normal o sin dato: igual que visibleStatus", () => {
+    const sent = o("paid", "paid", "fulfilled");
+    expect(buyerStatus(sent)).toBe(visibleStatus(sent));
+    expect(buyerStatus(sent, { pickup: false })).toBe("Enviado");
   });
 });

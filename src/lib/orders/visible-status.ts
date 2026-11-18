@@ -34,3 +34,16 @@ export function visibleStatus(o: OrderAxes): VisibleStatus {
     return "Entregado";
   return "Pagado — por preparar";
 }
+
+/**
+ * Etiqueta para el comprador. En «Recoger en tienda» (forma de envío copiada al
+ * pedido) no hay paquete en camino: lo «enviado» está listo para recoger. El
+ * panel sigue usando `visibleStatus` tal cual.
+ */
+export function buyerStatus(o: OrderAxes, options: { pickup?: boolean } = {}): string {
+  const label = visibleStatus(o);
+  if (!options.pickup) return label;
+  if (label === "Enviado") return "Listo para recoger";
+  if (label === "Enviado parcialmente") return "Listo para recoger en parte";
+  return label;
+}

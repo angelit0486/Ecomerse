@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { orderPickupInfo } from "@/lib/checkout/pickup";
 import { deliveryEstimate } from "@/lib/orders/delivery-estimate";
 import { orderProgress } from "@/lib/orders/order-progress";
-import { visibleStatus } from "@/lib/orders/visible-status";
+import { buyerStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { holdLeftLabel } from "@/lib/orders/hold-left";
 import { proofMessage, whatsappChatUrl, whatsappNumber } from "@/lib/whatsapp/order-messages";
@@ -62,8 +62,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
     orderReviewables(store.id, order.id, t).catch(() => []),
     returnOptions(store.id, order.id, t).catch(() => null),
   ]);
-  const label = visibleStatus(order);
-  const steps = orderProgress(order);
+  // «Recoger en tienda» (snapshot del pedido): «Listo para recoger» en vez de «Enviado».
+  const isPickupOrder = order.shipping?.type === "pickup";
+  const label = buyerStatus(order, { pickup: isPickupOrder });
+  const steps = orderProgress(order, { pickup: isPickupOrder });
   const settings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const whatsapp = settings.success ? settings.data.contact?.whatsapp : undefined;
   const pickup = orderPickupInfo(order, settings.success ? settings.data.contact : undefined);
