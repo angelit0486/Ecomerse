@@ -150,7 +150,8 @@ const NOCTURNO_CSS = [
 
   // ── Barra de anuncio y encabezado ─────────────────────────────────────────
   `${R} aside[aria-label='Aviso de la tienda']{font-weight:700;letter-spacing:.01em;padding-block:.625rem}`,
-  `${R} header.sf-el-header{background:${N.void}}`,
+  // Encabezado de vidrio: deja ver el contenido difuminado al desplazarse (texto ≥ 10:1 aun sobre blanco).
+  `${R} header.sf-el-header{background:color-mix(in srgb,${N.void} 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
   `${R} .sf-wordmark{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:1.5rem;line-height:.95;color:${N.frost}}`,
   `@media (min-width:640px){${R} .sf-wordmark{font-size:1.75rem}}`,
   // Tableta (640–1023 px): el nombre en dos renglones deja al carrito en la misma fila.
@@ -313,6 +314,27 @@ const NOCTURNO_CSS = [
   "@media (prefers-reduced-motion:no-preference){" +
     `${R} .sf-hero-group > .sf-hero-split::before,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-split::before{animation:ad-orbit 2.4s cubic-bezier(.16,1,.3,1) both,ad-portal 1.2s var(--ad-ease) both}` +
     `${R} .sf-hero-group > .sf-hero-split .sf-hero-title,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-title{animation:ad-neon .9s linear .35s both}` +
+    "}",
+
+  // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
+  // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
+  // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
+  `${R} .sf-card-media::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;` +
+    `background:linear-gradient(115deg,transparent 18%,color-mix(in srgb,${N.neon} 55%,transparent) 34%,color-mix(in srgb,${N.glow} 55%,transparent) 44%,color-mix(in srgb,${N.frost} 60%,transparent) 50%,color-mix(in srgb,${N.violet} 55%,transparent) 57%,color-mix(in srgb,${N.alien} 50%,transparent) 67%,transparent 82%);background-size:260% 260%;background-position:100% 100%;mix-blend-mode:color-dodge;opacity:0}`,
+  `${R} .sf-card:hover .sf-card-media::after{opacity:.6;background-position:0% 0%}`,
+  // CTA del hero: halo verde al pasar, como si el portal lo iluminara.
+  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.neon},0 12px 40px -8px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+  // Precios con cifras de ancho fijo: no «bailan» entre tarjetas.
+  `${R} :is(.sf-card-price,.sf-pdp-price){font-variant-numeric:tabular-nums}`,
+  // Barra de avance de lectura en el encabezado, ligada al desplazamiento
+  // (animación por desplazamiento, sin JS). Solo donde el navegador la soporta.
+  "@keyframes ad-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}",
+  "@media (prefers-reduced-motion:no-preference){@supports (animation-timeline:scroll()){" +
+    `${R} header.sf-el-header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;transform-origin:left;pointer-events:none;` +
+    `background:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});animation:ad-progress linear both;animation-timeline:scroll(root)}` +
+    "}}",
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-card-media::after{transition:opacity .35s var(--ad-ease),background-position .9s var(--ad-ease)}` +
     "}",
 
   // ── Movimiento (CSS, sin bibliotecas) ─────────────────────────────────────
