@@ -71,6 +71,9 @@ test("transferencia: comprobante por WhatsApp y avisos con un toque desde el pan
 
   // Página del pedido: instrucciones, 24 horas de apartado y el comprobante por WhatsApp.
   await expect(page.getByText("BBVA · CLABE 012 180 0012 3456 7890")).toBeVisible();
+  // Sin el interruptor de la ficha, ni la marca de «recién confirmado» ni la ficha.
+  await expect(page).not.toHaveURL(/nuevo=/);
+  await expect(page.getByRole("heading", { name: "Envía tu pedido por WhatsApp" })).toHaveCount(0);
   await expect(page.getByText(/quedan apartados (23|24) horas más/)).toBeVisible();
   const proof = page.getByRole("link", { name: "Enviar comprobante por WhatsApp" });
   await expect(proof).toBeVisible();

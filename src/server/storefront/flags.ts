@@ -19,7 +19,9 @@ export type StorefrontFlag =
   | "checkout_shipping_messages"
   | "mobile_input_size"
   // Tema v5 (ADR-063): sin él, la personalidad guardada no se dibuja.
-  | "theme_personality";
+  | "theme_personality"
+  // Al confirmar, la página del pedido abre WhatsApp con la ficha del pedido.
+  | "order_whatsapp_handoff";
 
 export async function readStoreFlags(
   query: () => Promise<ReadonlyArray<{ key: string; enabled: boolean }>>,

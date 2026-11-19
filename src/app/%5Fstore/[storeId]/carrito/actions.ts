@@ -7,6 +7,7 @@ import { z } from "zod";
 import { normalizePhone } from "@/lib/checkout/phone";
 import { noShippingMessage, preferredRate } from "@/lib/checkout/shipping";
 import { formatMoney } from "@/lib/money/format";
+import { justPlacedTarget } from "@/lib/orders/just-placed";
 import { processQueueSoon } from "@/server/jobs/run-now";
 import { reportActionError } from "@/server/actions/report";
 import { toAppError } from "@/server/db/errors";
@@ -335,7 +336,10 @@ export async function checkout(
   }
   // Correos y avisos del pedido sin esperar al cron (auditoría DIN-04).
   processQueueSoon("checkout.placed");
-  redirect(target);
+  // Primera visita a la página del pedido: con su interruptor, abre la ficha en
+  // WhatsApp. Sin él, la dirección queda exactamente como antes.
+  const handoff = (await storeFlags(s.id)).has("order_whatsapp_handoff");
+  redirect(handoff ? justPlacedTarget(target) : target);
 }
 
 export async function retry(

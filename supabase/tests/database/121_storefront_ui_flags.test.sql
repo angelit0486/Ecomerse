@@ -3,7 +3,7 @@
 -- en una tienda no los enciende en otra.
 -- =============================================================================
 begin;
-select plan(9);
+select plan(12);
 
 select tests.create_user('owner_a', 'owner@a.io');
 select tests.create_user('owner_b', 'owner@b.io');
@@ -53,6 +53,17 @@ values ('mobile_input_size', 'store', tests.fx('store_a'), true, 'Tienda de prue
 select ok(pg_temp.gateway_flag(tests.fx('store_a'), 'mobile_input_size')
           and not pg_temp.gateway_flag(tests.fx('store_b'), 'mobile_input_size'),
           'campos de 16 px: encendido en A, apagado en B (aislamiento)');
+
+-- Ficha del pedido por WhatsApp al confirmar (20261119000100).
+select is((select default_enabled from public.feature_flags where key = 'order_whatsapp_handoff'), false,
+          'el interruptor de la ficha por WhatsApp nace apagado');
+select is(pg_temp.gateway_flag(tests.fx('store_b'), 'order_whatsapp_handoff'), false,
+          'la tienda lo lee apagado');
+insert into public.feature_flag_overrides (flag_key, scope, scope_id, enabled, reason)
+values ('order_whatsapp_handoff', 'store', tests.fx('store_a'), true, 'Tienda de pruebas de WhatsApp');
+select ok(pg_temp.gateway_flag(tests.fx('store_a'), 'order_whatsapp_handoff')
+          and not pg_temp.gateway_flag(tests.fx('store_b'), 'order_whatsapp_handoff'),
+          'ficha por WhatsApp: encendida en A, apagada en B (aislamiento)');
 
 select * from finish();
 rollback;

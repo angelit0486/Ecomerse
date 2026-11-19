@@ -8,12 +8,19 @@ import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { holdLeftLabel } from "@/lib/orders/hold-left";
-import { proofMessage, whatsappChatUrl, whatsappNumber } from "@/lib/whatsapp/order-messages";
+import { JUST_PLACED_PARAM } from "@/lib/orders/just-placed";
+import {
+  orderTicketMessage,
+  proofMessage,
+  whatsappChatUrl,
+  whatsappNumber,
+} from "@/lib/whatsapp/order-messages";
 import { isGuestTokenShape } from "@/server/payments/order-links";
 import { guestLinkState, guestOrder } from "@/server/storefront/checkout";
 import { returnOptions } from "@/server/storefront/returns";
 import { mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
+import { storeFlags } from "@/server/storefront/flags";
 import { orderReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../_components/format";
@@ -24,6 +31,7 @@ import { sendReturn } from "./return-actions";
 import { sendReview } from "./review-actions";
 import { OrderReturn } from "./order-return";
 import { OrderReviews } from "./order-reviews";
+import { WhatsAppHandoff } from "./whatsapp-handoff";
 
 export const metadata: Metadata = {
   title: "Tu pedido",
@@ -42,7 +50,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export default async function OrderPage({ params, searchParams }: Props) {
   const { storeId, orderId } = await params;
   const { store } = await getStorefront(storeId);
-  const t = (await searchParams).t;
+  const query = await searchParams;
+  const t = query.t;
   if (!UUID_RE.test(orderId) || typeof t !== "string" || !isGuestTokenShape(t)) notFound();
   const order = await guestOrder(store.id, orderId, t);
   if (!order) {
@@ -58,9 +67,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
   // Solo pedidos pagados y entregados ofrecen opinar (lo decide la base, ADR-029).
   // Un fallo al leer las opiniones no tumba la página del pedido.
   // Devoluciones (ADR-061): null si la tienda no las ofrece; un fallo no tumba la página.
-  const [reviewables, returns] = await Promise.all([
+  const [reviewables, returns, flags] = await Promise.all([
     orderReviewables(store.id, order.id, t).catch(() => []),
     returnOptions(store.id, order.id, t).catch(() => null),
+    storeFlags(store.id),
   ]);
   const label = visibleStatus(order);
   const steps = orderProgress(order);
@@ -84,6 +94,81 @@ export default async function OrderPage({ params, searchParams }: Props) {
       )
     : null;
   const payment = order.payment;
+  // Ficha del pedido por WhatsApp (interruptor por tienda): el comprador manda su
+  // pedido completo a la tienda. El enlace lleva datos personales: solo vive en
+  // esta página (sin índice ni referer) y nunca se registra.
+  const address = order.shipping_address;
+  const isPickup = order.shipping?.type === "pickup";
+  // El celular como lo escribió el comprador («662 555 0101»), con lada para la ficha.
+  const buyerWa = whatsappNumber(address?.phone, address?.country || store.country);
+  const handoffUrl =
+    storeWa && flags.has("order_whatsapp_handoff") && order.status !== "cancelled"
+      ? whatsappChatUrl(
+          storeWa,
+          orderTicketMessage({
+            storeName: store.name,
+            displayNumber: order.display_number,
+            placedAt: new Date(order.placed_at).toLocaleString("es-MX", {
+              timeZone: store.timezone ?? "America/Mexico_City",
+              dateStyle: "long",
+              timeStyle: "short",
+            }),
+            items: order.items.map((item) => ({
+              quantity: item.quantity,
+              title: item.product_title,
+              variant: item.variant_title,
+              lineTotal: money(item.line_total, store),
+            })),
+            subtotal: money(order.subtotal, store),
+            discount:
+              order.discount_total > 0
+                ? { code: order.discount?.code ?? null, amount: money(order.discount_total, store) }
+                : null,
+            shipping:
+              isPickup || (!order.shipping && order.shipping_total === 0)
+                ? null
+                : {
+                    name: order.shipping?.name ?? null,
+                    amount:
+                      order.shipping_total === 0 ? "Gratis" : money(order.shipping_total, store),
+                  },
+            tax:
+              order.tax_total > 0
+                ? {
+                    label: order.prices_include_tax ? "Impuestos incluidos" : "Impuestos",
+                    amount: money(order.tax_total, store),
+                  }
+                : null,
+            total: money(order.total, store),
+            delivery: isPickup
+              ? { kind: "pickup", address: pickup?.address ?? null }
+              : address
+                ? {
+                    kind: "address",
+                    recipient: address.recipient_name || order.customer_name,
+                    line1: address.line1 ?? "",
+                    line2: address.line2,
+                    postalCode: address.postal_code ?? "",
+                    city: address.city ?? "",
+                    region: address.region ?? "",
+                    country: address.country ?? "",
+                  }
+                : null,
+            contact: {
+              name: order.customer_name,
+              phone: buyerWa ? `+${buyerWa}` : (address?.phone ?? null),
+              email: order.email,
+            },
+            payment: payment
+              ? {
+                  name: payment.display_name,
+                  manual: payment.provider === "manual",
+                  paid: order.payment_status === "paid",
+                }
+              : null,
+          }),
+        )
+      : null;
   const canRetry =
     order.status === "pending_payment" &&
     payment &&
@@ -122,6 +207,10 @@ export default async function OrderPage({ params, searchParams }: Props) {
           Guarda esta página: el enlace es tu acceso al pedido.
         </p>
       </header>
+
+      {handoffUrl ? (
+        <WhatsAppHandoff url={handoffUrl} autoOpen={query[JUST_PLACED_PARAM] === "1"} />
+      ) : null}
 
       {steps ? (
         <ol aria-label="Avance del pedido" className="grid grid-cols-4 gap-2 text-xs sm:text-sm">

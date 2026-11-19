@@ -2090,3 +2090,18 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   - **Alternativas descartadas:** bandera nueva (requiere migración), preset nuevo (visible en el panel y compartido), detectar la tienda por colores (frágil).
   - **Efecto en otras tiendas:** ninguno; solo clases «gancho» sin estilo en el HTML. Comprobado píxel a píxel y con E2E `storefront-look.spec.ts`.
   - **Pruebas:** unitarias `looks.test.ts` (23), E2E `storefront-look.spec.ts` (8). Detalle en `docs/storefront/`.
+- **D-INT-04. Ficha del pedido por WhatsApp al confirmar (interruptor `order_whatsapp_handoff`, 2026-11-19).**
+  - **Pedido del propietario:** al confirmar el pedido, abrir WhatsApp con un mensaje pre-escrito y profesional: número de pedido, productos, dirección completa y datos de contacto.
+  - **Cómo funciona:**
+    - el checkout redirige a la página del pedido con la marca `nuevo=1` (solo si la tienda tiene el interruptor; `src/lib/orders/just-placed.ts`);
+    - la página muestra «Envía tu pedido por WhatsApp» y, en esa primera visita, cuenta 3 s y abre `wa.me` con la ficha; «Quedarme aquí» lo detiene;
+    - al cargar se quita la marca de la dirección, así que volver o recargar no lo reabre. El botón queda siempre;
+    - la ficha (`orderTicketMessage`, función pura) incluye número, fecha, productos con variante y total de línea, subtotal, descuento, envío, impuestos, total, entrega (domicilio o recoger en tienda), contacto (celular con lada, correo) y forma de pago. Usa las negritas de WhatsApp (entre asteriscos) y un máximo de 25 renglones de productos.
+  - **Por qué no se va directo a WhatsApp desde el checkout:** el comprador perdería la página de su pedido (su enlace de acceso y los datos de la transferencia). Se abre desde la página del pedido, que queda en el historial.
+  - **Datos personales:** el enlace con la ficha solo vive en la página del pedido (sin índice, `no-referrer`) y nunca se registra. Lo manda el propio comprador a la tienda. El enlace de acceso al pedido (token) no va en el mensaje.
+  - **Interruptor:** migración `20261119000100` (solo agrega la bandera, apagada). Sin él, la página y la dirección quedan exactamente como antes; el «Enviar comprobante por WhatsApp» de D-INT-03 no cambia.
+  - **Pruebas:**
+    - unitarias: ficha (4) y marca de recién confirmado (2);
+    - pgTAP `121_storefront_ui_flags`: nace apagado y encender una tienda no enciende otra;
+    - E2E `whatsapp-order-ticket.spec.ts`: compra con envío, la ficha completa y la apertura sola; «Quedarme aquí» y recargar no la repiten; con el interruptor apagado, como antes;
+    - `whatsapp-orders.spec.ts`: sin el interruptor no hay marca ni ficha.

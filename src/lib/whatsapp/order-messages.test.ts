@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   orderReceivedMessage,
+  orderTicketMessage,
+  type OrderTicketData,
   paymentConfirmedMessage,
+  prettyPhone,
   proofMessage,
   readyForPickupMessage,
   shippedMessage,
@@ -90,5 +93,104 @@ describe("mensajes", () => {
     expect(readyForPickupMessage({ ...d, pickup: "Av. Juárez 10, Centro. L-V 10 a 18 h" })).toBe(
       "Hola, Ana. Tu pedido #1042 está listo para recoger en Velas Luna.\nAv. Juárez 10, Centro. L-V 10 a 18 h",
     );
+  });
+});
+
+describe("ficha del pedido para mandar a la tienda", () => {
+  const ticket: OrderTicketData = {
+    storeName: "𝓐𝓛𝓘𝓔𝓝 𝓓𝓔𝓜𝓞𝓝 |",
+    displayNumber: "#1024",
+    placedAt: "19 de noviembre de 2026, 2:14 p.m.",
+    items: [
+      { quantity: 2, title: "Vela de soya", variant: "Lavanda", lineTotal: "$500.00" },
+      { quantity: 1, title: "Difusor\n  de varillas", variant: null, lineTotal: "$320.00" },
+    ],
+    subtotal: "$820.00",
+    discount: { code: "BIENVENIDA", amount: "$50.00" },
+    shipping: { name: "Estándar", amount: "$200.00" },
+    tax: null,
+    total: "$970.00",
+    delivery: {
+      kind: "address",
+      recipient: "Ana María López",
+      line1: "Av. Reforma 123",
+      line2: "Col. Centro",
+      postalCode: "83000",
+      city: "Hermosillo",
+      region: "Sonora",
+      country: "MX",
+    },
+    contact: { name: "Ana María López", phone: "+526621234567", email: "ana@example.com" },
+    payment: { name: "Transferencia", manual: true, paid: false },
+  };
+
+  it("arma la ficha completa: número, productos, totales, entrega, contacto y pago", () => {
+    expect(orderTicketMessage(ticket)).toBe(
+      [
+        "*Pedido #1024 · ALIEN DEMON*",
+        "Fecha: 19 de noviembre de 2026, 2:14 p.m.",
+        "",
+        "Hola, acabo de hacer este pedido en su tienda en línea.",
+        "",
+        "*Productos*",
+        "• 2 × Vela de soya (Lavanda): $500.00",
+        "• 1 × Difusor de varillas: $320.00",
+        "",
+        "Subtotal: $820.00",
+        "Descuento (BIENVENIDA): −$50.00",
+        "Envío (Estándar): $200.00",
+        "*Total: $970.00*",
+        "",
+        "*Entrega a domicilio*",
+        "Ana María López",
+        "Av. Reforma 123, Col. Centro",
+        "C.P. 83000, Hermosillo, Sonora, México",
+        "",
+        "*Contacto*",
+        "Ana María López",
+        "Cel. +52 662 123 4567",
+        "ana@example.com",
+        "",
+        "*Pago:* Transferencia",
+        "En cuanto pague, les envío mi comprobante por este chat.",
+      ].join("\n"),
+    );
+  });
+
+  it("recoger en tienda, sin celular ni descuento, y un pago ya hecho", () => {
+    const text = orderTicketMessage({
+      ...ticket,
+      discount: null,
+      shipping: { name: null, amount: "Gratis" },
+      delivery: { kind: "pickup", address: "Calle 5 #20, Hermosillo" },
+      contact: { name: "Ana", phone: null, email: "ana@example.com" },
+      payment: { name: "Tarjeta", manual: false, paid: true },
+    });
+    expect(text).toContain("Envío: Gratis");
+    expect(text).toContain("*Entrega:* recoger en tienda\nCalle 5 #20, Hermosillo");
+    expect(text).not.toContain("Descuento");
+    expect(text).not.toContain("Cel.");
+    expect(text).toContain("*Pago:* Tarjeta (pagado)");
+    expect(text).not.toContain("comprobante");
+  });
+
+  it("muchos productos: los primeros 25 y cuántos faltan (el enlace no se vuelve enorme)", () => {
+    const items = Array.from({ length: 27 }, (_, i) => ({
+      quantity: 1,
+      title: `Producto ${i + 1}`,
+      variant: null,
+      lineTotal: "$10.00",
+    }));
+    const text = orderTicketMessage({ ...ticket, items });
+    expect(text).toContain("• 1 × Producto 25: $10.00");
+    expect(text).not.toContain("Producto 26");
+    expect(text).toContain("• y 2 productos más");
+    expect(whatsappChatUrl("16503008656", text).length).toBeLessThan(4000);
+  });
+
+  it("celulares legibles", () => {
+    expect(prettyPhone("+526621234567")).toBe("+52 662 123 4567");
+    expect(prettyPhone("+16503008656")).toBe("+1 650 300 8656");
+    expect(prettyPhone("+447700900123")).toBe("+447700900123");
   });
 });

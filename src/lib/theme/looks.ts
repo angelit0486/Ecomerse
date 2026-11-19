@@ -382,7 +382,7 @@ const NOCTURNO_CSS = [
   `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
   `@media (max-width:639px){${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
   // Títulos de las partes del pedido en la letra condensada.
-  `${R} :is(h2#pago,h2#productos,h2#envio,h2#retiro,h2#ayuda){font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+  `${R} :is(h2#pago,h2#productos,h2#envio,h2#retiro,h2#ayuda,h2#ficha-whatsapp){font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
   // Avance del pedido: pasos hechos en verde con halo; el siguiente, en degradado de la marca.
   `${R} ol[aria-label='Avance del pedido'] > li > span[aria-hidden=true]{height:6px}`,
   `${R} ol[aria-label='Avance del pedido'] > li:not([aria-current]) > span[aria-hidden=true][class*='btn-bg)]']{box-shadow:0 0 14px -2px color-mix(in srgb,${N.alien} 70%,transparent)}`,
@@ -604,6 +604,15 @@ const NOCTURNO_CSS = [
   "@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){" +
     `${R} .sf-cat-link::before{transition:opacity .3s var(--ad-ease),scale .45s var(--ad-ease),rotate .6s var(--ad-ease)}` +
     "}",
+  // Ficha del pedido por WhatsApp (v18): la acción principal tras confirmar, en
+  // verde de la marca; la cuenta regresiva en la letra condensada.
+  `${R} section[aria-labelledby=ficha-whatsapp]{padding:clamp(1.25rem,3vw,2rem);border-radius:var(--sf-radius-panel);` +
+    `border:1px solid color-mix(in srgb,${N.alien} 55%,transparent);background:color-mix(in srgb,${N.alien} 7%,${N.deep})}`,
+  `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']{min-height:3.25rem;padding-inline:1.75rem;font-size:1rem;font-weight:700;` +
+    `transition:background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
+  `${R} section[aria-labelledby=ficha-whatsapp] [data-handoff=counting] .tabular-nums{font-family:var(--sf-font-heading);font-size:1.5rem;color:${N.neon}}`,
+  `@media (max-width:639px){${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };
