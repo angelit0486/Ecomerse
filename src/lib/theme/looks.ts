@@ -467,6 +467,49 @@ const NOCTURNO_CSS = [
     `${R} .sf-hero-body>:nth-child(3){animation-delay:.16s}` +
     `${R} .sf-card-img{transition:scale .6s var(--ad-ease)}` +
     "}",
+  // ── Sobriedad (v12): tus fotos y la portada son las protagonistas ─────────
+  // Las imágenes de la tienda ya traen neón, humo y logos; un marco que brilla
+  // en todos lados compite con ellas y se ve de plantilla. Va al final para
+  // ganar sobre lo anterior: queda un solo resplandor (el portal) y el resto
+  // usa filetes y color, sin halos.
+  `${R}{background-image:radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 9%,transparent),transparent 70%)}`,
+  `${R} .sf-hero-title{text-shadow:0 0 22px color-mix(in srgb,${N.neon} 22%,transparent)}`,
+  `${R} .sf-hero-split::before{filter:drop-shadow(0 0 16px color-mix(in srgb,${N.alien} 35%,transparent))}`,
+  // Con foto en la portada: sin estrellas, la foto ya llena el espacio.
+  `${R} .sf-hero-split:has(img){background:radial-gradient(70% 70% at 50% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%),${N.deep}}`,
+  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.neon}}`,
+  `${R} .sf-cat-link:hover .sf-cat-media{box-shadow:none}`,
+  `${R} .sf-card:hover .sf-card-media{box-shadow:none}`,
+  `${R} .sf-card:hover .sf-card-media::after{opacity:.3}`,
+  // Paneles: el filete de la marca sólo en lo que importa (aviso y pago); los
+  // resúmenes, en un panel liso.
+  `${R} .sf-home > section:has(> .sf-prose),${R} section[aria-labelledby=pago]{background:linear-gradient(${N.deep},${N.deep}) padding-box,linear-gradient(120deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} :is(aside[aria-label='Resumen'],aside[aria-label='Resumen del pedido']){border:1px solid var(--ad-hair-strong);background:${N.deep}}`,
+  `${R} .sf-home .sf-prose ol > li::before{box-shadow:none}`,
+  `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{box-shadow:none}`,
+  `${R} ol[aria-label='Avance del pedido'] > li > span[aria-hidden=true]{box-shadow:none}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){box-shadow:0 0 0 1px ${N.alien}}`,
+  `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet}}`,
+  `${R} p[aria-hidden=true][class*='sf-font-heading']{text-shadow:0 0 22px color-mix(in srgb,${N.neon} 22%,transparent)}`,
+  `${R} p[aria-hidden=true][class*='sf-font-heading']::before,${R} section.text-center:has(> h1 + p + a[href='/productos'])::before{filter:none}`,
+  `${R} div[role=dialog][aria-label='Menú']{background:radial-gradient(90% 50% at 0% 0%,color-mix(in srgb,${N.violet} 12%,transparent),transparent 70%),color-mix(in srgb,${N.void} 92%,transparent)}`,
+  `${R} .sf-cutoff{background:${N.deep}}`,
+  `${R} .sf-cutoff-clock{text-shadow:none}`,
+  // Logo: tu logo es JPG con fondo negro; «aclarar» lo funde con el encabezado
+  // (sin rectángulo) y se muestra más grande para que se lea.
+  `${R} header.sf-el-header a[href='/'] > img{mix-blend-mode:lighten;height:3rem;max-width:7.5rem}`,
+  `@media (min-width:640px){${R} header.sf-el-header a[href='/'] > img{height:3.5rem;max-width:9rem}}`,
+  // Emblema + nombre (cuando la tienda tiene logo): el logo en insignia se ve
+  // como emblema y el nombre se lee en la letra de la marca.
+  `${R} header.sf-el-header a[href='/']:has(> .sf-wordmark-lockup){gap:.625rem}`,
+  `${R} header.sf-el-header a[href='/']:has(> .sf-wordmark-lockup) > img{height:2.75rem;max-width:4.25rem}`,
+  `${R} .sf-wordmark-lockup{font-size:1.0625rem;line-height:1;max-width:7rem;color:${N.frost}}`,
+  `@media (min-width:640px){${R} header.sf-el-header a[href='/']:has(> .sf-wordmark-lockup) > img{height:3.25rem;max-width:5rem}${R} .sf-wordmark-lockup{font-size:1.375rem;max-width:none}}`,
+  `@media (min-width:640px) and (max-width:1023px){${R} .sf-wordmark-lockup{max-width:8rem;font-size:1.125rem}}`,
+  // Portada con foto propia: la foto es la protagonista; el título baja un poco
+  // y el anillo se achica para no competir con ella.
+  `${R} .sf-hero-split:has(img) .sf-hero-title{font-size:clamp(2.25rem,1.5rem + 3.2vw,4.5rem);max-width:16ch}`,
+  `${R} .sf-hero-split:has(img)::before{width:min(110vw,40rem);top:clamp(-8rem,-10vw,-3rem)}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };

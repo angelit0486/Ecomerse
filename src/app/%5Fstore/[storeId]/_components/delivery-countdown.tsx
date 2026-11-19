@@ -41,11 +41,15 @@ export function DeliveryCountdown({ config }: { config: CutoffConfig }) {
         <p>Pide y paga antes de las {at} y llega al día siguiente hábil.</p>
       ) : state.beforeCutoff ? (
         <p>
-          Pide y paga antes de las {at} y llega {state.arrival}: quedan{" "}
+          Llega {state.arrival} si pides y pagas en{" "}
           <time className="sf-cutoff-clock tabular-nums">{countdownLabel(state.msLeft)}</time>
+          <span className="sf-cutoff-note max-sm:sr-only"> Corte a las {at}, hora de Sonora.</span>
         </p>
       ) : (
-        <p>Pide hoy y llega {state.arrival}. Sin entregas sábado ni domingo.</p>
+        <p>
+          Pide hoy y llega {state.arrival}.
+          <span className="sf-cutoff-note max-sm:sr-only"> Sin entregas sábado ni domingo.</span>
+        </p>
       )}
     </aside>
   );

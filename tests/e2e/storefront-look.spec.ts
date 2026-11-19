@@ -44,8 +44,15 @@ test.beforeAll(async () => {
     });
   }
   // Antes de la primera visita (la lectura pública de la tienda se guarda en caché).
+  // Logo de insignia (archivo inexistente: basta su registro para el emblema + nombre).
+  const [logo] = await admin<{ id: string }[]>`
+    insert into public.media (store_id, owner_type, status, storage_path, position, width, height)
+    values (${nocturno.storeId}, 'store_branding', 'ready', ${`e2e/${run}/logo.jpg`}, 0, 1168, 784)
+    returning id`;
+  const logoId = logo!.id;
   await admin`update public.store_themes
                  set theme_key = 'nocturno',
+                     logo_media_id = ${logoId},
                      settings = settings || ${admin.json({ contact: { whatsapp: "+526621234567" } })}
                where store_id = ${nocturno.storeId}`;
 });
@@ -101,7 +108,7 @@ test("nocturno: cuenta regresiva al corte de envío (4:20 pm, Hermosillo); «bas
   await page.goto(url(nocturno, "/"));
   const cutoff = page.getByRole("complementary", { name: "Hora de corte de envío" });
   await expect(cutoff).toContainText(
-    "Pide y paga antes de las 4:20 pm y llega mañana: quedan 2:20:00",
+    "Llega mañana si pides y pagas en 2:20:00 Corte a las 4:20 pm, hora de Sonora.",
   );
   // Viernes después del corte: no hay entregas el fin de semana.
   await page.clock.setFixedTime(new Date("2026-11-21T00:30:00Z"));
@@ -121,6 +128,19 @@ test("nocturno: sin violaciones de accesibilidad, ni moderadas, en inicio y 404"
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page, { includeModerate: true });
   }
+});
+
+test("nocturno: con logo, el encabezado muestra emblema + nombre; «base» no cambia", async ({
+  page,
+}) => {
+  await page.goto(url(nocturno, "/"));
+  const home = page.locator("header.sf-el-header a[href='/']").first();
+  await expect(home.locator(".sf-wordmark-lockup")).toHaveText(
+    `Tienda ${`ln${run}`.toUpperCase()}`,
+  );
+  await expect(home.locator("img")).toHaveAttribute("alt", "");
+  await page.goto(url(base, "/"));
+  await expect(page.locator(".sf-wordmark-lockup")).toHaveCount(0);
 });
 
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {

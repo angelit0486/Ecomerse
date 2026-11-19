@@ -241,6 +241,7 @@ export default async function StoreLayout({ children, params }: Props) {
               whatsapp={settings.contact?.whatsapp}
               thumbs={thumbs}
               below={navSticky ? navBar : null}
+              nameWithLogo={look !== null}
             />
             {navSticky ? null : navBar}
           </>

@@ -109,6 +109,7 @@ export function StoreHeader({
   whatsapp,
   thumbs,
   below,
+  nameWithLogo = false,
 }: {
   store: StorePublic;
   menu: MenuEntry[];
@@ -122,6 +123,11 @@ export function StoreHeader({
   thumbs?: Record<string, string>;
   /** Barra de categorías fija (tema v4): va dentro del encabezado. */
   below?: ReactNode;
+  /**
+   * El nombre junto al logo (lo pide un look): un logo de insignia con letras
+   * pequeñas no se lee a 48 px; emblema + nombre sí. Sin esto, igual que antes.
+   */
+  nameWithLogo?: boolean;
 }) {
   const centered = logoPosition === "center";
   return (
@@ -137,14 +143,21 @@ export function StoreHeader({
             }`}
           >
             {store.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
-              <img
-                src={mediaUrl(store.logo.path)}
-                alt={store.name}
-                width={store.logo.width ?? 160}
-                height={store.logo.height ?? 48}
-                className="h-9 w-auto max-w-36 object-contain sm:h-11 sm:max-w-44"
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage */}
+                <img
+                  src={mediaUrl(store.logo.path)}
+                  alt={nameWithLogo ? "" : store.name}
+                  width={store.logo.width ?? 160}
+                  height={store.logo.height ?? 48}
+                  className="h-9 w-auto max-w-36 object-contain sm:h-11 sm:max-w-44"
+                />
+                {nameWithLogo ? (
+                  <span className="sf-wordmark sf-wordmark-lockup line-clamp-2 text-lg font-extrabold leading-[1.05] tracking-tight [font-family:var(--sf-font-heading),system-ui,sans-serif]">
+                    {store.name}
+                  </span>
+                ) : null}
+              </>
             ) : (
               // Sin logo, el nombre funciona como logotipo: fuente de títulos del tema,
               // en el color de compra. Un nombre largo pasa a 2 líneas en lugar de cortarse.
