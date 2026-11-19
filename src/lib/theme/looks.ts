@@ -356,6 +356,37 @@ const NOCTURNO_CSS = [
   `${R} div:has(> input.sf-qty) > button:not(:disabled):hover{background:${N.alien};color:${N.void}}`,
   `${R} input.sf-qty{background:transparent;border-color:var(--ad-hair-strong);font-weight:700}`,
 
+  // ── Pedido, vacíos y 404 (v8, fase 1 del plan) ────────────────────────────
+  // Pago pendiente: lo más importante de la página. Panel con filete de la marca,
+  // los datos de la cuenta en una caja propia y el botón de WhatsApp grande.
+  `${R} section[aria-labelledby=pago]{padding:clamp(1.25rem,3vw,2rem);border:2px solid transparent;border-radius:var(--sf-radius-panel);` +
+    `background:radial-gradient(70% 90% at 100% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
+    `linear-gradient(130deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} section[aria-labelledby=pago] > p.whitespace-pre-line{font-size:1.0625rem;line-height:1.7;color:${N.frost};font-variant-numeric:tabular-nums;letter-spacing:.01em;` +
+    `padding:1rem 1.25rem;border-radius:var(--sf-radius-control);background:${N.void};border:1px solid var(--ad-hair-strong)}`,
+  `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{min-height:3.25rem;padding-inline:1.75rem;font-size:1rem;font-weight:700;` +
+    `box-shadow:0 12px 36px -12px color-mix(in srgb,${N.alien} 70%,transparent);transition:background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
+  `@media (max-width:639px){${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
+  // Títulos de las partes del pedido en la letra condensada.
+  `${R} :is(h2#pago,h2#productos,h2#envio,h2#retiro,h2#ayuda){font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+  // Avance del pedido: pasos hechos en verde con halo; el siguiente, en degradado de la marca.
+  `${R} ol[aria-label='Avance del pedido'] > li > span[aria-hidden=true]{height:6px}`,
+  `${R} ol[aria-label='Avance del pedido'] > li:not([aria-current]) > span[aria-hidden=true][class*='btn-bg)]']{box-shadow:0 0 14px -2px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+  `${R} ol[aria-label='Avance del pedido'] > li[aria-current=step] > span[aria-hidden=true]{background:linear-gradient(90deg,${N.alien},${N.glow})}`,
+  // 404: el número como letrero de neón dentro de un anillo de la marca.
+  `${R} p[aria-hidden=true][class*='sf-font-heading']{position:relative;isolation:isolate;display:inline-block;padding:.12em .3em;font-weight:700;color:${N.neon};` +
+    `text-shadow:0 0 14px color-mix(in srgb,${N.neon} 45%,transparent),0 0 44px color-mix(in srgb,${N.alien} 40%,transparent)}`,
+  `${R} p[aria-hidden=true][class*='sf-font-heading']::before{content:"";position:absolute;z-index:-1;inset:50% auto auto 50%;width:1.75em;aspect-ratio:1;translate:-50% -50%;border-radius:50%;` +
+    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien});mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2px),black 100%,transparent);opacity:.85;` +
+    `filter:drop-shadow(0 0 16px color-mix(in srgb,${N.violet} 55%,transparent))}`,
+  // Carrito vacío: el anillo de la marca, vacío, encima del título.
+  `${R} section.text-center:has(> h1 + p + a[href='/productos'])::before{content:"";display:block;width:6rem;aspect-ratio:1;margin:0 auto 1.5rem;border-radius:50%;` +
+    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien});mask:radial-gradient(closest-side,transparent calc(100% - 4px),black calc(100% - 3px),black 100%,transparent);` +
+    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.alien} 50%,transparent))}`,
+  // Botón flotante de WhatsApp (fase 3): anillo de la marca alrededor del verde de WhatsApp.
+  `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet},0 10px 30px -6px color-mix(in srgb,${N.alien} 60%,transparent)}`,
+
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
