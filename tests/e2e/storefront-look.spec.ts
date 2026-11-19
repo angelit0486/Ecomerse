@@ -44,7 +44,10 @@ test.beforeAll(async () => {
     });
   }
   // Antes de la primera visita (la lectura pública de la tienda se guarda en caché).
-  await admin`update public.store_themes set theme_key = 'nocturno' where store_id = ${nocturno.storeId}`;
+  await admin`update public.store_themes
+                 set theme_key = 'nocturno',
+                     settings = settings || ${admin.json({ contact: { whatsapp: "+526621234567" } })}
+               where store_id = ${nocturno.storeId}`;
 });
 
 test("la clave «base» no cambia nada; «nocturno» enciende el tema solo en su tienda", async ({
@@ -106,6 +109,18 @@ test("nocturno: cuenta regresiva al corte de envío (4:20 pm, Hermosillo); «bas
   await expect(cutoff).toContainText("Pide hoy y llega el martes. Sin entregas sábado ni domingo.");
   await page.goto(url(base, "/"));
   await expect(page.getByRole("complementary", { name: "Hora de corte de envío" })).toHaveCount(0);
+});
+
+test("nocturno: sin violaciones de accesibilidad, ni moderadas, en inicio y 404", async ({
+  page,
+}) => {
+  for (const path of ["/", "/no-existe-esta-pagina"]) {
+    await page.goto(url(nocturno, path));
+    await expect(
+      page.getByRole("complementary", { name: "Contacto por WhatsApp" }).getByRole("link"),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page, { includeModerate: true });
+  }
 });
 
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {

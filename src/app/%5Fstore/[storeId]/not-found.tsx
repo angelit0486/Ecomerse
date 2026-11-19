@@ -20,7 +20,14 @@ export default function StoreNotFound() {
         Puede que el producto ya no esté disponible o que el enlace haya cambiado.
       </p>
       {/* Búsqueda sin JS (GET a /buscar): la salida más corta a lo que se buscaba. */}
-      <form action="/buscar" method="get" role="search" className="flex max-w-md gap-2">
+      <form
+        action="/buscar"
+        method="get"
+        role="search"
+        // Nombre propio: el encabezado ya tiene otra búsqueda (axe «landmark-unique»).
+        aria-label="Buscar desde esta página"
+        className="flex max-w-md gap-2"
+      >
         <label htmlFor="nf-q" className="sr-only">
           Buscar en la tienda
         </label>
