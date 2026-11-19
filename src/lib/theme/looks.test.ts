@@ -83,6 +83,11 @@ describe("temas de presentación (looks)", () => {
     expect(css).not.toContain("space-grotesk");
   });
 
+  it("en el checkout, la forma de pago elegida se enciende (regla :checked propia)", () => {
+    const css = lookCss("nocturno");
+    expect(css).toContain("[name=shipping_rate_id]):checked){border-color:");
+  });
+
   it("ningún filtro en el encabezado atrapa al menú fijo del celular", () => {
     // backdrop-filter, filter o transform en un ancestro vuelven a ese ancestro el
     // contenedor de sus hijos «fixed»: el menú del celular quedaba encerrado en el

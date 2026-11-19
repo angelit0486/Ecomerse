@@ -408,6 +408,21 @@ const NOCTURNO_CSS = [
     `@starting-style{${R} div[role=dialog][aria-label='Menú']{opacity:0;translate:-16px 0}}` +
     "}",
 
+  // ── Checkout (v10) ────────────────────────────────────────────────────────
+  // Secciones en la letra condensada; envío y forma de pago como tarjetas que se
+  // encienden en verde al elegirlas; resumen con el filete de la marca.
+  `${R} form fieldset > legend.text-lg{font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em;margin-bottom:.25rem}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id])){padding:1rem 1.125rem;border-color:${N.mist};border-radius:var(--sf-radius-control);background:${N.deep};font-size:1rem;font-weight:600;cursor:pointer;` +
+    `transition:border-color var(--ad-dur) var(--ad-ease),box-shadow var(--ad-dur) var(--ad-ease),background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){border-color:${N.alien};background:color-mix(in srgb,${N.alien} 10%,${N.deep});box-shadow:0 0 0 1px ${N.alien},0 10px 30px -14px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id])) > input{accent-color:${N.alien};width:1.125rem;height:1.125rem}`,
+  `${R} aside[aria-label='Resumen del pedido']{border:2px solid transparent;border-radius:var(--sf-radius-panel);padding:1.5rem;` +
+    `background:radial-gradient(80% 60% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
+    `linear-gradient(140deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} aside[aria-label='Resumen del pedido'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+  // En el celular, durante el pago, el botón flotante de WhatsApp tapaba campos del formulario.
+  `@media (max-width:639px){${R}:has(input[name=payment_account_id]) .sf-whatsapp{display:none}}`,
+
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
