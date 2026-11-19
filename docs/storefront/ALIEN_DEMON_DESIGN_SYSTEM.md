@@ -6,7 +6,7 @@
 
 «Nocturno» es un **tema de presentación** de la tienda pública: solo CSS, sin cambiar datos, precios, inventario, checkout ni panel.
 
-- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (29 pruebas).
+- Código: `src/lib/theme/looks.ts` (paleta, fuentes, CSS) y `src/lib/theme/looks.test.ts` (32 pruebas).
 - Se enciende **solo** cuando la tienda tiene `store_themes.theme_key = 'nocturno'`. Esa columna ya existía (valor por omisión `'base'`, sin uso en el código) y ya llega a la tienda pública como `store.theme.key` por `storefront.get_store_public`. **No hay migración nueva.**
 - Con cualquier otra clave (todas las tiendas hoy tienen `'base'`), la tienda se ve exactamente igual que antes (ver `ALIEN_DEMON_VISUAL_REGRESSION.md`).
 - Todo el CSS va bajo `.sf-root[data-look='nocturno']`, en la misma etiqueta `<style nonce>` que ya genera el tema (CSP intacta, sin archivos nuevos que descargar).
@@ -92,3 +92,14 @@ El morado original `#B200FF` mide 4.11:1 sobre `void`: se usa solo como relleno 
 
 - Anillo de foco `glow` de 2 px con 3 px de separación (7.30:1 sobre el fondo; WCAG 2.4.13 pide 3:1).
 - Contrastes de la tabla 2. axe 0 violaciones (WCAG 2.0/2.1/2.2 A y AA) en 390 y 1440 px; Lighthouse Accesibilidad 100 (ver QA).
+
+## 8. «De otro mundo» (v17, 2026-11-19)
+
+Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imágenes nuevas:
+
+- **Cielo:** dos capas de estrellas en mosaico (gradientes radiales de 1–1.6 px en `frost` translúcido) sobre toda la tienda. Con mouse, la capa lejana queda fija y la cercana se mueve con la página (paralaje sin JavaScript); en celular, ambas se desplazan normal.
+- **Rayo de abducción:** el `::after` del portal del hero es un haz verde en trapecio que baja sobre el título y el botón; en la primera portada, una franja neón lo recorre una vez al cargar (`ad-beam`, 2.2 s).
+- **Cartas coleccionables:** con mouse, la foto del producto se inclina en 3D y se eleva al pasar el cursor.
+- **Planetas:** con mouse o teclado (`:focus-visible`), un anillo orbital inclinado rodea el círculo de la categoría (unidades de contenedor `cqi`, arco inferior visible).
+- Los efectos de mouse viven en `@media (hover:hover) and (pointer:fine)` (no se quedan «pegados» en pantallas táctiles) y todo el movimiento sigue dentro de «reducir movimiento». Prueba unitaria: `looks.test.ts` («de otro mundo…»).
+- Sin contadores falsos, reseñas inventadas ni escasez simulada: la urgencia real es la hora de corte (§ cuenta regresiva).

@@ -98,6 +98,16 @@ describe("temas de presentación (looks)", () => {
     );
   });
 
+  it("de otro mundo: la inclinación de cartas y el anillo de planeta solo existen con mouse", () => {
+    const css = lookCss("nocturno");
+    expect(css).toContain("@keyframes ad-beam");
+    // En pantallas táctiles no hay «hover»: un efecto fuera de este bloque se quedaría pegado.
+    const touch = css.replace(/@media \(hover:hover\) and \(pointer:fine\)[^{]*\{.*?\}\}/g, "");
+    expect(touch).not.toContain("perspective(");
+    expect(touch).not.toContain(".sf-cat-link::before");
+    expect(touch).not.toContain("background-attachment:fixed");
+  });
+
   it("todo el movimiento respeta «reducir movimiento»", () => {
     const css = lookCss("nocturno");
     const outside = css.replace(/@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}+/g, "");

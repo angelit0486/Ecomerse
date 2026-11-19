@@ -570,6 +570,40 @@ const NOCTURNO_CSS = [
   // Datos de compra de la ficha (envío, pago, WhatsApp): filas con la letra condensada en lo importante.
   `${R} .sf-pdp-facts{border-radius:var(--sf-radius-card)}`,
   `${R} .sf-pdp-facts > li > span.font-semibold{color:${N.frost}}`,
+  // ── De otro mundo: la abducción (v17) ─────────────────────────────────────
+  // Un solo concepto, de la propia marca (alien, OVNI, portal): cielo estrellado
+  // en toda la tienda, rayo de abducción bajo el portal, productos como cartas
+  // coleccionables y categorías como planetas.
+  // Cielo: dos capas de estrellas en mosaico; en computadora la lejana queda fija
+  // y la cercana se mueve con la página (paralaje sin JavaScript).
+  `${R}{background-image:radial-gradient(1.2px 1.2px at 24px 40px,color-mix(in srgb,${N.frost} 70%,transparent),transparent),radial-gradient(1.2px 1.2px at 130px 92px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1.2px 1.2px at 210px 18px,color-mix(in srgb,${N.frost} 60%,transparent),transparent),radial-gradient(1.2px 1.2px at 290px 170px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(1.2px 1.2px at 70px 250px,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.2px 1.2px at 180px 300px,color-mix(in srgb,${N.frost} 35%,transparent),transparent),radial-gradient(1.6px 1.6px at 60px 120px,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1px 1px at 310px 60px,color-mix(in srgb,${N.frost} 35%,transparent),transparent),radial-gradient(1.4px 1.4px at 450px 260px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1px 1px at 200px 430px,color-mix(in srgb,${N.frost} 30%,transparent),transparent),radial-gradient(1.2px 1.2px at 520px 500px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 9%,transparent),transparent 70%);background-size:340px 340px,340px 340px,340px 340px,340px 340px,340px 340px,340px 340px,560px 560px,560px 560px,560px 560px,560px 560px,560px 560px,auto;background-repeat:repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,no-repeat}`,
+  `@media (hover:hover) and (pointer:fine){${R}{background-attachment:fixed,fixed,fixed,fixed,fixed,fixed,scroll,scroll,scroll,scroll,scroll,scroll}}`,
+  // Rayo de abducción: haz verde que baja del portal sobre el título y el botón.
+  `${R} .sf-hero-split::after{top:0;height:100%;width:min(78vw,32rem);aspect-ratio:auto;border-radius:0;translate:-50% 0;filter:blur(4px);` +
+    `clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);` +
+    `background:linear-gradient(180deg,color-mix(in srgb,${N.alien} 24%,transparent),color-mix(in srgb,${N.alien} 7%,transparent) 65%,transparent)}`,
+  "@keyframes ad-beam{from{background-position:0 0,0 -40%}to{background-position:0 0,0 140%}}",
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-hero-group > .sf-hero-split::after,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-split::after{` +
+    `background:linear-gradient(180deg,color-mix(in srgb,${N.alien} 24%,transparent),color-mix(in srgb,${N.alien} 7%,transparent) 65%,transparent),` +
+    `linear-gradient(180deg,transparent,color-mix(in srgb,${N.neon} 30%,transparent),transparent);background-size:100% 100%,100% 28%;background-repeat:no-repeat;` +
+    `animation:ad-beam 2.2s cubic-bezier(.3,.6,.2,1) .6s both}` +
+    "}",
+  // Cartas coleccionables: con mouse, la foto se inclina en 3D y se eleva al pasar.
+  "@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-card-media{transition:transform .45s var(--ad-ease),outline-color var(--ad-dur) var(--ad-ease)}` +
+    `${R} .sf-card:hover .sf-card-media{transform:perspective(900px) rotateX(5deg) rotateY(-6deg) translateY(-6px)}` +
+    "}",
+  // Planetas: con mouse, un anillo orbital inclinado rodea la categoría.
+  "@media (hover:hover) and (pointer:fine){" +
+    `${R} .sf-cat-link{position:relative;container-type:inline-size}` +
+    `${R} .sf-cat-link::before{content:"";position:absolute;z-index:1;left:-14cqi;top:32cqi;width:128cqi;height:36cqi;border-radius:50%;pointer-events:none;` +
+    `border:2.5px solid ${N.frost};filter:drop-shadow(0 0 6px ${N.violet});mask:linear-gradient(180deg,transparent 0 44%,black 54%);rotate:-16deg;scale:.8;opacity:0}` +
+    `${R} .sf-cat-link:is(:hover,:focus-visible)::before{opacity:1;scale:1;rotate:-9deg}` +
+    "}",
+  "@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-cat-link::before{transition:opacity .3s var(--ad-ease),scale .45s var(--ad-ease),rotate .6s var(--ad-ease)}` +
+    "}",
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };
