@@ -344,6 +344,18 @@ const NOCTURNO_CSS = [
     `linear-gradient(140deg,${N.alien},${N.glow},${N.violet}) border-box}`,
   `${R} aside[aria-label='Resumen'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
 
+  // ── Catálogo (v7) ─────────────────────────────────────────────────────────
+  // Ordenar y «Solo disponibles» como píldoras; la casilla marcada se enciende en verde.
+  `${R} select[name=orden]{border-radius:999px;padding-inline:1rem 2.25rem;border-color:${N.mist};background-color:${N.deep};font-weight:600}`,
+  `${R} label:has(> input[name=disponible]){padding-inline:.875rem 1rem;border:1px solid ${N.mist};border-radius:999px;background:${N.deep};font-weight:600;cursor:pointer;transition:border-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease)}`,
+  `${R} label:has(> input[name=disponible]:checked){border-color:${N.alien};color:${N.alienHi}}`,
+  `${R} input[name=disponible]{accent-color:${N.alien}}`,
+  // Cantidad (−/+): píldora con los botones que se encienden en verde al pasar.
+  `${R} div:has(> input.sf-qty){border-radius:999px;overflow:hidden;border-color:${N.mist};background:${N.deep}}`,
+  `${R} div:has(> input.sf-qty) > button{transition:background-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease)}`,
+  `${R} div:has(> input.sf-qty) > button:not(:disabled):hover{background:${N.alien};color:${N.void}}`,
+  `${R} input.sf-qty{background:transparent;border-color:var(--ad-hair-strong);font-weight:700}`,
+
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
