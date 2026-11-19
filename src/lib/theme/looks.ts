@@ -510,6 +510,16 @@ const NOCTURNO_CSS = [
   // y el anillo se achica para no competir con ella.
   `${R} .sf-hero-split:has(img) .sf-hero-title{font-size:clamp(2.25rem,1.5rem + 3.2vw,4.5rem);max-width:16ch}`,
   `${R} .sf-hero-split:has(img)::before{width:min(110vw,40rem);top:clamp(-8rem,-10vw,-3rem)}`,
+  // Aviso en el celular: pasos en fila (número a la izquierda) y título más corto
+  // de alto; el aviso pasa de pantalla y media a menos de una.
+  "@media (max-width:767px){" +
+    `${R} .sf-home > section:has(> .sf-prose) .sf-section-title{font-size:clamp(1.75rem,1.3rem + 2vw,2.25rem)}` +
+    `${R} .sf-home .sf-prose ol{gap:.625rem;margin-block:1.25rem}` +
+    `${R} .sf-home .sf-prose ol > li{position:relative;min-height:4rem;padding:.875rem 1rem .875rem 4rem}` +
+    `${R} .sf-home .sf-prose ol > li::before{position:absolute;left:1rem;top:.875rem;width:2.25rem;height:2.25rem;margin:0;font-size:1.125rem}` +
+    "}",
+  // Vidrio un poco más opaco: el negro del logo JPG se funde sin dejar recuadro.
+  `${R} header.sf-el-header::before{background:color-mix(in srgb,${N.void} 92%,transparent)}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };
