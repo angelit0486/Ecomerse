@@ -561,6 +561,15 @@ const NOCTURNO_CSS = [
     `${R} .sf-home figure:has(> blockquote:first-child){padding:1.125rem 1.25rem;gap:.625rem}` +
     `${R} .sf-home figure:has(> blockquote:first-child)::before{display:none}` +
     "}",
+  // ── Confianza junto a la compra (v16) ─────────────────────────────────────
+  // Cuándo llega si compra ahora (hora de corte real), en la ficha y el pago:
+  // una línea con reloj, sin cajas extra.
+  `${R} .sf-cutoff-inline{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;padding:.75rem 1rem;border-radius:var(--sf-radius-control);` +
+    `background:color-mix(in srgb,${N.alien} 8%,${N.deep});border:1px solid color-mix(in srgb,${N.alien} 35%,transparent);color:${N.frost};font-weight:600}`,
+  `${R} .sf-cutoff-inline .sf-cutoff-note{flex-basis:100%;color:${N.silver};font-weight:500;font-size:.8125rem}`,
+  // Datos de compra de la ficha (envío, pago, WhatsApp): filas con la letra condensada en lo importante.
+  `${R} .sf-pdp-facts{border-radius:var(--sf-radius-card)}`,
+  `${R} .sf-pdp-facts > li > span.font-semibold{color:${N.frost}}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };

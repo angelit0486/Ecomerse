@@ -9,8 +9,10 @@ import { getPolicyLinks, getShippingPromo } from "@/server/storefront/catalog";
 import { newCheckoutKey } from "@/server/storefront/checkout";
 import { getStorefront } from "@/server/storefront/context";
 import { storeFlags } from "@/server/storefront/flags";
+import { LOOK_CUTOFF, storeLook } from "@/lib/theme/looks";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 
+import { DeliveryCountdown } from "../_components/delivery-countdown";
 import { money } from "../_components/format";
 import { PurchaseLegends } from "../_components/supplement-info";
 import { Totals } from "../_components/totals";
@@ -31,6 +33,8 @@ type Props = { params: Promise<{ storeId: string }> };
 export default async function CheckoutPage({ params }: Props) {
   const { store } = await getStorefront((await params).storeId);
   const parsedSettings = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
+  const look = storeLook(store.theme?.key);
+  const cutoff = look ? LOOK_CUTOFF[look] : undefined;
   const pickup = pickupInfo(parsedSettings.success ? parsedSettings.data.contact : undefined);
   const [cart, methods, legends, promo, policies] = await Promise.all([
     getCart(store.id),
@@ -150,6 +154,8 @@ export default async function CheckoutPage({ params }: Props) {
           store={store}
           shippingNote={shippingEstimate(promo, cart, (c) => money(c, store))}
         />
+        {/* Cuándo llega si paga ahora (hora de corte real del look). */}
+        {cutoff ? <DeliveryCountdown config={cutoff} variant="inline" /> : null}
         <PurchaseLegends legends={legends} />
         <Link
           prefetch={false}

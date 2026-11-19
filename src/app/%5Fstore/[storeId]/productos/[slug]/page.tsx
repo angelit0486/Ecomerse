@@ -23,11 +23,13 @@ import { getStorefront } from "@/server/storefront/context";
 import { srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
+import { LOOK_CUTOFF, storeLook } from "@/lib/theme/looks";
 import { ThemeSettingsV2, type PaymentMethod } from "@/lib/theme/schema";
 import { SafeHtml } from "@/ui/safe-html";
 
 import { Badges } from "../../_components/badges";
 import { Breadcrumb } from "../../_components/breadcrumb";
+import { DeliveryCountdown } from "../../_components/delivery-countdown";
 import { AVAILABILITY_LABELS, money } from "../../_components/format";
 import { PAYMENT_LABELS } from "../../_components/header";
 import { JsonLd } from "../../_components/json-ld";
@@ -226,6 +228,8 @@ export default async function ProductPage({ params }: Props) {
   const settings = parsed.success ? parsed.data : {};
   const payments = settings.footer?.payment_methods ?? [];
   const whatsapp = settings.contact?.whatsapp;
+  const look = storeLook(store.theme?.key);
+  const cutoff = look ? LOOK_CUTOFF[look] : undefined;
   const single = product.options.length === 0 ? product.variants[0] : undefined;
   const cheapest = product.variants.reduce<(typeof product.variants)[number] | undefined>(
     (min, v) => (!min || v.price < min.price ? v : min),
@@ -411,6 +415,10 @@ export default async function ProductPage({ params }: Props) {
           ) : (
             <p className="text-sm">{AVAILABILITY_LABELS.out_of_stock}</p>
           )}
+          {/* Cuándo llega si compra ahora (hora de corte real del look), junto a la compra. */}
+          {cutoff && product.availability !== "out_of_stock" && !product.unpublished ? (
+            <DeliveryCountdown config={cutoff} variant="inline" />
+          ) : null}
           <PurchaseInfo
             store={store}
             shipping={shipping}

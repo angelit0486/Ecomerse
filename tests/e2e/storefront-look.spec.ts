@@ -143,6 +143,19 @@ test("nocturno: con logo, el encabezado muestra emblema + nombre; «base» no ca
   await expect(page.locator(".sf-wordmark-lockup")).toHaveCount(0);
 });
 
+test("nocturno: la ficha dice cuándo llega si compras ahora; «base» no", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-16T21:00:00Z")); // lunes 14:00 en Hermosillo
+  await page.goto(url(nocturno, "/productos"));
+  await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+  await expect(page.locator("[data-cutoff=inline]")).toContainText(
+    "Llega mañana si pides y pagas en 2:20:00",
+  );
+  await page.goto(url(base, "/productos"));
+  await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+  await expect(page.getByRole("heading", { name: "Estuche (DEMO)" })).toBeVisible();
+  await expect(page.locator("[data-cutoff=inline]")).toHaveCount(0);
+});
+
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {
   // Un filtro en el encabezado volvía a éste el contenedor del menú «fixed».
   await page.setViewportSize({ width: 390, height: 844 });
