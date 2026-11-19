@@ -540,6 +540,27 @@ const NOCTURNO_CSS = [
     "}",
   // El campo del buscador ya muestra el foco en su contorno verde: sin segundo marco.
   `${R} form[role=search] > div:first-of-type input:focus-visible{outline:none}`,
+  // ── Testimonios con contenido real (v15) ──────────────────────────────────
+  // Nombres y ciudades escritos en minúsculas se ven con mayúscula inicial; las
+  // comillas, más chicas y en morado (los testimonios ya traen ⭐ en emoji).
+  `${R} .sf-home figure:has(> blockquote:first-child) figcaption > span + span{text-transform:capitalize}`,
+  `${R} .sf-home figure:has(> blockquote:first-child)::before{height:1.75rem;font-size:3.5rem;color:${N.glow}}`,
+  `${R} .sf-home figure blockquote{color:${N.frost};font-size:1.0625rem;line-height:1.6}`,
+  // Pie: los textos legales en una columna legible, tono secundario.
+  `${R} .sf-footer p:has(> span + span){max-width:62ch;color:${N.silver};line-height:1.7}`,
+  // Textos escritos en minúscula: primera letra en mayúscula (sin cambiar el dato).
+  `${R} .sf-benefits > li > span:nth-child(3)::first-letter,${R} .sf-home figure blockquote p::first-letter{text-transform:uppercase}`,
+  // Cuatro testimonios: 2 columnas en tableta y 4 en computadora (no uno suelto en otra fila).
+  `@media (min-width:640px){${R} .sf-home section ul:has(> li > figure > blockquote:first-child):has(> li:nth-child(4):last-child){grid-template-columns:repeat(2,minmax(0,1fr))}}`,
+  `@media (min-width:1024px){${R} .sf-home section ul:has(> li > figure > blockquote:first-child):has(> li:nth-child(4):last-child){grid-template-columns:repeat(4,minmax(0,1fr))}}`,
+  // Testimonios en el celular: tarjetas compactas en columna (un carrusel sin
+  // elementos enfocables no se puede recorrer con teclado: axe
+  // «scrollable-region-focusable»).
+  "@media (max-width:639px){" +
+    `${R} .sf-home section ul:has(> li > figure > blockquote:first-child){gap:.625rem}` +
+    `${R} .sf-home figure:has(> blockquote:first-child){padding:1.125rem 1.25rem;gap:.625rem}` +
+    `${R} .sf-home figure:has(> blockquote:first-child)::before{display:none}` +
+    "}",
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };
