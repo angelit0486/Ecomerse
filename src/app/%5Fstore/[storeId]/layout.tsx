@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
-import { LOOK_FONTS, lookCss, lookStoreName, storeLook } from "@/lib/theme/looks";
+import { LOOK_CUTOFF, LOOK_FONTS, lookCss, lookStoreName, storeLook } from "@/lib/theme/looks";
 import { navBarItems } from "@/lib/theme/nav-bar";
 import { DISPLAY_HEADINGS, PERSONALITY_CSS, personalityAttributes } from "@/lib/theme/personality";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
@@ -22,6 +22,7 @@ import { iconVersion } from "@/server/storefront/icons";
 
 import { fontVariableClasses } from "./_components/fonts";
 import { CheckoutChrome } from "./_components/checkout-chrome";
+import { DeliveryCountdown } from "./_components/delivery-countdown";
 import {
   AnnouncementBar,
   CheckoutFooter,
@@ -229,6 +230,8 @@ export default async function StoreLayout({ children, params }: Props) {
         regular={
           <>
             <AnnouncementBar announcement={theme.announcement} />
+            {/* Cuenta regresiva al corte de envío: solo si el look la define. */}
+            {look && LOOK_CUTOFF[look] ? <DeliveryCountdown config={LOOK_CUTOFF[look]} /> : null}
             <StoreHeader
               store={shownStore}
               menu={menus.main}

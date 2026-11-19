@@ -1,3 +1,4 @@
+import { ALIEN_DEMON_CUTOFF, type CutoffConfig } from "./delivery-cutoff";
 import type { FontKey } from "./schema";
 
 /**
@@ -43,6 +44,14 @@ export function lookStoreName(name: string): string {
     .trim();
   return shown || name;
 }
+
+/**
+ * Hora de corte de envío que muestra un look (cuenta regresiva bajo el aviso).
+ * Nocturno = Alien Demon: 4:20 pm, Hermosillo, lunes a viernes.
+ */
+export const LOOK_CUTOFF: Partial<Record<StoreLook, CutoffConfig>> = {
+  nocturno: ALIEN_DEMON_CUTOFF,
+};
 
 /** Fuentes que el look necesita cargadas (variables `--font-*`). */
 export const LOOK_FONTS: Record<StoreLook, readonly FontKey[]> = {
@@ -422,6 +431,12 @@ const NOCTURNO_CSS = [
   `${R} aside[aria-label='Resumen del pedido'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
   // En el celular, durante el pago, el botón flotante de WhatsApp tapaba campos del formulario.
   `@media (max-width:639px){${R}:has(input[name=payment_account_id]) .sf-whatsapp{display:none}}`,
+
+  // ── Cuenta regresiva al corte de envío (v11) ──────────────────────────────
+  `${R} .sf-cutoff{background:linear-gradient(90deg,color-mix(in srgb,${N.alien} 14%,${N.deep}),${N.deep} 50%,color-mix(in srgb,${N.violet} 14%,${N.deep}));` +
+    `border-bottom:1px solid var(--ad-hair);color:${N.frost};font-weight:600;letter-spacing:.01em}`,
+  `${R} .sf-cutoff-clock{display:inline-block;min-width:4.5ch;padding:.05rem .5rem;border-radius:999px;background:${N.void};border:1px solid ${N.alien};` +
+    `font:700 1.0625rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.neon};text-shadow:0 0 10px color-mix(in srgb,${N.neon} 45%,transparent)}`,
 
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el

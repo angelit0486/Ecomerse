@@ -90,6 +90,24 @@ for (const width of [360, 390, 430, 768, 1024, 1440]) {
   });
 }
 
+test("nocturno: cuenta regresiva al corte de envío (4:20 pm, Hermosillo); «base» no la muestra", async ({
+  page,
+}) => {
+  // Lunes 2026-11-16 a las 14:00 en Hermosillo (UTC−7).
+  await page.clock.setFixedTime(new Date("2026-11-16T21:00:00Z"));
+  await page.goto(url(nocturno, "/"));
+  const cutoff = page.getByRole("complementary", { name: "Hora de corte de envío" });
+  await expect(cutoff).toContainText(
+    "Pide y paga antes de las 4:20 pm y llega mañana: quedan 2:20:00",
+  );
+  // Viernes después del corte: no hay entregas el fin de semana.
+  await page.clock.setFixedTime(new Date("2026-11-21T00:30:00Z"));
+  await page.reload();
+  await expect(cutoff).toContainText("Pide hoy y llega el martes. Sin entregas sábado ni domingo.");
+  await page.goto(url(base, "/"));
+  await expect(page.getByRole("complementary", { name: "Hora de corte de envío" })).toHaveCount(0);
+});
+
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {
   // Un filtro en el encabezado volvía a éste el contenedor del menú «fixed».
   await page.setViewportSize({ width: 390, height: 844 });
