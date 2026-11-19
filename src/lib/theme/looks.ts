@@ -520,6 +520,26 @@ const NOCTURNO_CSS = [
     "}",
   // Vidrio un poco más opaco: el negro del logo JPG se funde sin dejar recuadro.
   `${R} header.sf-el-header::before{background:color-mix(in srgb,${N.void} 92%,transparent)}`,
+  // ── Buscador y aviso del carrito (v14) ───────────────────────────────────
+  // Sugerencias: panel de vidrio oscuro; la opción activa en verde; fotos con
+  // esquinas suaves; títulos de grupo en la letra condensada.
+  `${R} [role=listbox][aria-label=Sugerencias]{background:color-mix(in srgb,${N.deep} 94%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);` +
+    `border:1px solid var(--ad-hair-strong);border-radius:var(--sf-radius-panel);padding:.5rem;box-shadow:0 24px 60px -24px rgb(0 0 0/.8)}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=group] > div:first-child{font:700 .875rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;color:${N.mist}}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=option]{border-radius:var(--sf-radius-control);padding:.5rem .625rem}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=option][aria-selected=true]{outline:1px solid ${N.alien};background:color-mix(in srgb,${N.alien} 12%,${N.deep})}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=option] img{width:2.75rem;height:2.75rem;border-radius:.625rem}`,
+  // «Se agregó a tu carrito»: panel oscuro con palomita verde, en lugar de la caja blanca.
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{background:${N.deep};color:${N.frost};border:1px solid var(--ad-hair-strong);border-left:3px solid ${N.alien};border-radius:var(--sf-radius-card);box-shadow:0 18px 40px -18px rgb(0 0 0/.8)}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div > svg{color:${N.alien}}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 a{color:${N.alienHi};text-decoration-color:${N.alien}}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div :focus-visible{outline-color:${N.glow}}`,
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{transition:opacity .25s var(--ad-ease),translate .3s var(--ad-ease)}` +
+    `@starting-style{${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{opacity:0;translate:0 12px}}` +
+    "}",
+  // El campo del buscador ya muestra el foco en su contorno verde: sin segundo marco.
+  `${R} form[role=search] > div:first-of-type input:focus-visible{outline:none}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };
