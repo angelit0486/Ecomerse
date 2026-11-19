@@ -90,6 +90,18 @@ for (const width of [360, 390, 430, 768, 1024, 1440]) {
   });
 }
 
+test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {
+  // Un filtro en el encabezado volvía a éste el contenedor del menú «fixed».
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url(nocturno, "/"));
+  await page.getByRole("button", { name: "Menú" }).click();
+  const menu = page.getByRole("dialog", { name: "Menú" });
+  await expect(menu).toBeVisible();
+  const box = await menu.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(840);
+  expect(box?.y ?? 1).toBe(0);
+});
+
 test("nocturno respeta «reducir movimiento»: nada se anima", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();

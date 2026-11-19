@@ -83,6 +83,16 @@ describe("temas de presentación (looks)", () => {
     expect(css).not.toContain("space-grotesk");
   });
 
+  it("ningún filtro en el encabezado atrapa al menú fijo del celular", () => {
+    // backdrop-filter, filter o transform en un ancestro vuelven a ese ancestro el
+    // contenedor de sus hijos «fixed»: el menú del celular quedaba encerrado en el
+    // encabezado en lugar de cubrir la pantalla.
+    const css = lookCss("nocturno");
+    expect(css).not.toMatch(
+      /header\.sf-el-header(:not\(\.sticky\))?\{[^}]*(backdrop-filter|[^-]filter:|transform:)/,
+    );
+  });
+
   it("todo el movimiento respeta «reducir movimiento»", () => {
     const css = lookCss("nocturno");
     const outside = css.replace(/@media \(prefers-reduced-motion:no-preference\)\{.*?\}\}+/g, "");

@@ -151,7 +151,11 @@ const NOCTURNO_CSS = [
   // ── Barra de anuncio y encabezado ─────────────────────────────────────────
   `${R} aside[aria-label='Aviso de la tienda']{font-weight:700;letter-spacing:.01em;padding-block:.625rem}`,
   // Encabezado de vidrio: deja ver el contenido difuminado al desplazarse (texto ≥ 10:1 aun sobre blanco).
-  `${R} header.sf-el-header{background:color-mix(in srgb,${N.void} 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
+  `${R} header.sf-el-header{background:transparent;isolation:isolate}`,
+  `${R} header.sf-el-header:not(.sticky){position:relative}`,
+  // El vidrio va en una capa propia: un backdrop-filter en el <header> lo haría
+  // contenedor de sus hijos fijos y el menú del celular quedaría atrapado en él.
+  `${R} header.sf-el-header::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:color-mix(in srgb,${N.void} 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
   `${R} .sf-wordmark{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:1.5rem;line-height:.95;color:${N.frost}}`,
   `@media (min-width:640px){${R} .sf-wordmark{font-size:1.75rem}}`,
   // Tableta (640–1023 px): el nombre en dos renglones deja al carrito en la misma fila.
@@ -386,6 +390,23 @@ const NOCTURNO_CSS = [
     `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.alien} 50%,transparent))}`,
   // Botón flotante de WhatsApp (fase 3): anillo de la marca alrededor del verde de WhatsApp.
   `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet},0 10px 30px -6px color-mix(in srgb,${N.alien} 60%,transparent)}`,
+
+  // ── Menú del celular (v9, fase 3 del plan) ────────────────────────────────
+  // Vidrio con el resplandor de la marca; secciones en la letra condensada grande;
+  // fotos de categoría en círculo con anillo. Entra deslizándose (@starting-style).
+  `${R} div[role=dialog][aria-label='Menú']{background:radial-gradient(90% 50% at 0% 0%,color-mix(in srgb,${N.violet} 22%,transparent),transparent 70%),` +
+    `radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,${N.alien} 14%,transparent),transparent 70%),color-mix(in srgb,${N.void} 90%,transparent);` +
+    `-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}`,
+  `${R} div[role=dialog][aria-label='Menú'] > div:first-child{background:transparent;border-bottom:0;background-image:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});background-size:100% 2px;background-position:bottom;background-repeat:no-repeat}`,
+  `${R} div[role=dialog][aria-label='Menú'] > div:first-child > p{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase}`,
+  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14{font:700 1.625rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em;gap:.875rem;transition:color var(--ad-dur) var(--ad-ease)}`,
+  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14:hover{color:${N.alienHi}}`,
+  `${R} div[role=dialog][aria-label='Menú'] nav a img{width:2.5rem;height:2.5rem;border-radius:50%;object-fit:cover;padding:2px;` +
+    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien})}`,
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} div[role=dialog][aria-label='Menú']{transition:opacity .25s var(--ad-ease),translate .3s var(--ad-ease)}` +
+    `@starting-style{${R} div[role=dialog][aria-label='Menú']{opacity:0;translate:-16px 0}}` +
+    "}",
 
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
