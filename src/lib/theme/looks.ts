@@ -332,6 +332,18 @@ const NOCTURNO_CSS = [
   `${R} .sf-home .sf-prose ol > li::before{content:counter(ad-step);display:grid;place-items:center;width:2.5rem;height:2.5rem;margin-bottom:.75rem;border-radius:50%;` +
     `font:700 1.375rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.void};background:${N.alien};box-shadow:0 0 22px -4px color-mix(in srgb,${N.alien} 70%,transparent)}`,
 
+  // ── Ficha y carrito (v6) ──────────────────────────────────────────────────
+  // Sin franja blanca al final cuando la barra fija de compra reserva espacio.
+  `body:has(${R}){background:${N.void}}`,
+  // Barra fija de compra en el celular: vidrio con filete de la marca arriba.
+  `${R} .fixed.inset-x-0.bottom-0.z-30{border-top:0;box-shadow:none;background:linear-gradient(90deg,${N.alien},${N.glow},${N.violet}) top/100% 2px no-repeat,color-mix(in srgb,${N.void} 82%,transparent);` +
+    `-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
+  // Resumen del carrito: panel con filete en degradado; título condensado.
+  `${R} aside[aria-label='Resumen']{border:2px solid transparent;border-radius:var(--sf-radius-panel);padding:1.5rem;` +
+    `background:radial-gradient(80% 60% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
+    `linear-gradient(140deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} aside[aria-label='Resumen'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
