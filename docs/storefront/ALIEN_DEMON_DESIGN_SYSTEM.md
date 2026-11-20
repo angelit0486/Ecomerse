@@ -120,6 +120,6 @@ Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imáge
   - logo del encabezado con `srcset` y `sizes` según el ancho real (~84 px): en Alien Demon, 68 KB → 7 KB en cada página;
   - miniaturas del menú y foto redonda de la categoría con la copia de 320 px: 729 KB → 199 KB las 5 de Alien Demon;
   - logos de marcas y fotos de objetivos con `srcset`.
-  Se comprobó en el almacenamiento de staging que las copias existen (logo: 320, 640 y 960 px; categorías: 320 y 640 px).
+    Se comprobó en el almacenamiento de staging que las copias existen (logo: 320, 640 y 960 px; categorías: 320 y 640 px).
 - Encabezado fijo con vidrio al 96 %: el texto grande de atrás ya no se transparenta al desplazarse.
 - WhatsApp con espacios también en la franja de confianza y en la página del pedido.
