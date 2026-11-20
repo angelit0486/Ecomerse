@@ -40,6 +40,15 @@ test.beforeAll(async () => {
           select id from public.product_variants where store_id = ${t.storeId} and sku = ${sku.toUpperCase()}`;
         await sql`select public.inventory_adjust(${t.storeId}, ${v!.id}, 'adjustment', 5, 'Inicial')`;
         await sql`select public.catalog_publish_product(${t.storeId}, ${p!.r.id})`;
+        // Dos fotos para el estuche (archivos inexistentes: basta su registro para la galería).
+        if (title === "Estuche (DEMO)") {
+          await sql`set local role postgres`;
+          for (const n of [0, 1]) {
+            await sql`insert into public.media (store_id, owner_type, product_id, status, storage_path, position, width, height)
+                      values (${t.storeId}, 'product', ${p!.r.id}, 'ready', ${`e2e/${run}/${t.handle}-estuche-${n}.jpg`}, ${n}, 1200, 1200)`;
+          }
+          await sql`set local role authenticated`;
+        }
       }
     });
   }
@@ -214,6 +223,46 @@ test("nocturno: al agregar se abre el carrito lateral; «base» conserva su avis
   await page.getByRole("button", { name: "Agregar al carrito" }).first().click();
   await expect(page.getByRole("status").filter({ hasText: "Agregado al carrito." })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Agregado a tu carrito" })).toHaveCount(0);
+});
+
+test("nocturno: la galería se desliza y la foto se amplía; «base» no cambia", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url(nocturno, "/productos"));
+  await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+  const first = page.getByRole("button", { name: "Ampliar foto 1 de 2" });
+  await expect(first).toBeVisible();
+
+  // Deslizar a la izquierda pasa a la segunda foto, sin abrir la ampliación.
+  const box = (await first.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.getByRole("button", { name: "Ampliar foto 2 de 2" })).toBeVisible();
+  const zoom = page.getByRole("dialog", { name: "Foto ampliada de Estuche (DEMO)" });
+  await expect(zoom).toBeHidden();
+
+  // Tocar la foto la abre ampliada; ← → cambian de foto; Esc cierra.
+  await page.getByRole("button", { name: "Ampliar foto 2 de 2" }).click();
+  await expect(zoom).toBeVisible();
+  await expect(zoom).toContainText("2 de 2");
+  await page.keyboard.press("ArrowRight");
+  await expect(zoom).toContainText("1 de 2");
+  await zoom.getByRole("button", { name: "Acercar la foto" }).click();
+  await expect(zoom.getByRole("button", { name: "Alejar la foto" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expectNoSeriousA11yViolations(page);
+  await page.keyboard.press("Escape");
+  await expect(zoom).toBeHidden();
+  await expect(page.getByRole("button", { name: "Ampliar foto 1 de 2" })).toBeFocused();
+
+  // La tienda base conserva su galería de siempre.
+  await page.goto(url(base, "/productos"));
+  await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+  await expect(page.getByRole("button", { name: "Imagen siguiente" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Ampliar foto/ })).toHaveCount(0);
 });
 
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {

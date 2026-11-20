@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { goodFor } from "@/lib/storefront/goods";
 
+import { GalleryZoom } from "./gallery-zoom";
 import { GoodIcon } from "./goods-art";
 
 /** Evento con el que el selector de variantes muestra su imagen (revisión M5). */
@@ -31,13 +32,22 @@ export function ProductGallery({
   images,
   title,
   dots = false,
+  enhanced = false,
 }: {
   images: GalleryImage[];
   title: string;
   /** Tema v2 (ADR-034): puntos en lugar de miniaturas bajo la imagen. */
   dots?: boolean;
+  /**
+   * Plan de experiencia, fase 2 (solo con un look): deslizar con el dedo para
+   * cambiar de foto y tocarla para verla ampliada.
+   */
+  enhanced?: boolean;
 }) {
   const [index, setIndex] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
   // Imagen de la variante elegida que no está en la galería (revisión de conversión, M5).
   const [extra, setExtra] = useState<string | null>(null);
   useEffect(() => {
@@ -74,24 +84,72 @@ export function ProductGallery({
     setIndex((next + images.length) % images.length);
   };
 
+  const mainImage = (
+    // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage
+    <img
+      src={current.src}
+      srcSet={current.srcSet}
+      // Media pantalla en escritorio (dos columnas); todo el ancho en el celular.
+      sizes="(min-width: 768px) 50vw, 100vw"
+      alt={current.alt}
+      width={current.width}
+      height={current.height}
+      fetchPriority={index === 0 ? "high" : "auto"}
+      decoding="async"
+      className="aspect-square w-full object-contain p-4 [mix-blend-mode:var(--sf-photo-blend,multiply)] sm:p-8"
+    />
+  );
+
   return (
     <div className="space-y-3">
       {/* Anaquel (rediseño A+B): la foto sobre el gris de la tienda; multiplicar quita
           el blanco de fondo de una foto de producto. */}
-      <div className="relative overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)]">
-        {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada servida por Storage */}
-        <img
-          src={current.src}
-          srcSet={current.srcSet}
-          // Media pantalla en escritorio (dos columnas); todo el ancho en el celular.
-          sizes="(min-width: 768px) 50vw, 100vw"
-          alt={current.alt}
-          width={current.width}
-          height={current.height}
-          fetchPriority={index === 0 ? "high" : "auto"}
-          decoding="async"
-          className="aspect-square w-full object-contain p-4 [mix-blend-mode:var(--sf-photo-blend,multiply)] sm:p-8"
-        />
+      <div
+        className={`relative overflow-hidden rounded-[var(--sf-radius-card)] bg-[var(--sf-surface)] ${enhanced && many ? "touch-pan-y" : ""}`}
+        // Deslizar a los lados cambia de foto (fase 2); vertical sigue desplazando la página.
+        onPointerDown={
+          enhanced
+            ? (event) => {
+                swipeStart.current = { x: event.clientX, y: event.clientY };
+                swiped.current = false;
+              }
+            : undefined
+        }
+        onPointerUp={
+          enhanced
+            ? (event) => {
+                const start = swipeStart.current;
+                swipeStart.current = null;
+                if (!start || !many) return;
+                const dx = event.clientX - start.x;
+                const dy = event.clientY - start.y;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                  swiped.current = true;
+                  go(index + (dx < 0 ? 1 : -1));
+                }
+              }
+            : undefined
+        }
+      >
+        {enhanced && !extra ? (
+          <button
+            type="button"
+            onClick={() => {
+              // Un deslizamiento no abre la foto ampliada.
+              if (swiped.current) {
+                swiped.current = false;
+                return;
+              }
+              setZoomOpen(true);
+            }}
+            aria-label={many ? `Ampliar foto ${index + 1} de ${images.length}` : "Ampliar foto"}
+            className="sf-zoom-trigger block w-full cursor-zoom-in"
+          >
+            {mainImage}
+          </button>
+        ) : (
+          mainImage
+        )}
         {many ? (
           <>
             <button
@@ -172,6 +230,16 @@ export function ProductGallery({
             </li>
           ))}
         </ul>
+      ) : null}
+      {enhanced && !extra ? (
+        <GalleryZoom
+          open={zoomOpen}
+          onClose={() => setZoomOpen(false)}
+          images={images}
+          index={index}
+          onIndex={(next) => setIndex(next)}
+          title={title}
+        />
       ) : null}
     </div>
   );

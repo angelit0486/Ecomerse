@@ -300,6 +300,7 @@ export default async function ProductPage({ params }: Props) {
             images={gallery}
             title={product.title}
             dots={pageOptions.gallery === "dots"}
+            enhanced={look !== null}
           />
         </section>
         <section aria-labelledby="sf-producto" className="space-y-5">
@@ -400,6 +401,7 @@ export default async function ProductPage({ params }: Props) {
               title={product.title}
               unpublished={product.unpublished}
               image={cartImage}
+              swatches={look !== null}
               stickyBar={pageOptions.sticky_buy_bar !== false}
               options={product.options}
               variants={product.variants.map((v) => ({

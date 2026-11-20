@@ -129,3 +129,13 @@ Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imáge
 - Decisión del propietario: envío gratis siempre y a todo México. Antes, la tarifa gratuita solo cubría Sinaloa y la de «gratis desde $1,000» solo Baja California Sur: compradores de cualquier otro estado (incluido Sonora) no podían terminar la compra.
 - Datos (staging, autorizados): la zona de la tarifa gratuita pasó a «Todo México» (sin estados); la de Baja California Sur quedó desactivada (no borrada); la portada dice «Envío gratis a todo México» en lugar de «desde $999».
 - Código (todas las tiendas): una regla «gratis desde» con mínimo $0 se anuncia como «Envío gratis a todo México» (o «según destino») en la franja de confianza, la ficha y el carrito, nunca «desde $0.00» ni «te faltan» (`freeShippingReach`). Prueba E2E `free-shipping-everywhere.spec.ts`.
+
+## 12. Plan de experiencia: fases 1 y 2 (v21, 2026-11-20)
+
+Plan completo: «Plan de experiencia única · Alien Demon» (documento compartido con el propietario).
+
+- **Carrito lateral** (`cart-sheet.tsx`): con un look, al agregar desde la ficha o una tarjeta se abre un `<dialog>` modal nativo (foco atrapado, Esc cierra, el foco vuelve) con foto, producto, piezas, el envío gratis real de la tienda, la hora de corte y «Pagar ahora». En el celular sube desde abajo a la medida de su contenido. Sin look, el aviso flotante de siempre; la ficha ya no lo duplica.
+- **Vitrina común**: cada foto de la cuadrícula flota sobre el mismo escenario (halo violeta tenue y sombra propia), aunque las fotos tengan fondos distintos.
+- **Galería de la ficha** (`gallery-zoom.tsx`): deslizar a los lados cambia de foto (vertical sigue desplazando la página); tocarla la abre a pantalla completa con ← →, acercar al doble en el punto tocado y Esc. Sin estilos en línea (CSP): la vista ampliada se recorre con el desplazamiento del contenedor.
+- **Sabores con foto**: si una variante tiene foto propia, su botón la muestra (hoy ninguna de las 244 variantes de Alien Demon tiene foto propia; aparecerán al subirlas).
+- Pruebas: E2E del carrito lateral (1280 y 390 px, accesibilidad, Esc, desde tarjeta) y de la galería (deslizar, ampliar, teclado, foco de regreso, accesibilidad); unitarias de los sabores con foto. La tienda base no cambia (comprobado en las mismas pruebas).

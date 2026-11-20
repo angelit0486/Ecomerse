@@ -36,6 +36,7 @@ export function VariantSelector({
   unpublished = false,
   stickyBar = true,
   image = null,
+  swatches = false,
 }: {
   storeId: string;
   /** Tema v2 (ADR-034): barra fija de compra en el celular. */
@@ -47,6 +48,8 @@ export function VariantSelector({
   unpublished?: boolean;
   /** Foto chica del producto (carrito lateral) si la variante no tiene la suya. */
   image?: string | null;
+  /** Plan de experiencia, fase 2 (solo con un look): cada opción con la foto de su variante. */
+  swatches?: boolean;
 }) {
   const initial = variants.find((v) => v.available) ?? variants[0];
   const [selection, setSelection] = useState<Record<string, string>>(initial?.options ?? {});
@@ -116,6 +119,11 @@ export function VariantSelector({
             {option.values.map((value) => {
               const id = `opt-${option.name}-${value}`.replace(/[^a-zA-Z0-9-]/g, "_");
               const disabled = !exists(option.name, value);
+              // La foto de la primera variante con este valor que tenga la suya.
+              const swatch = swatches
+                ? (variants.find((v) => v.options[option.name] === value && v.imageUrl)?.imageUrl ??
+                  null)
+                : null;
               return (
                 <span key={value}>
                   <input
@@ -132,6 +140,18 @@ export function VariantSelector({
                     htmlFor={id}
                     className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--sf-radius-control)] border border-[var(--sf-border-strong)] px-4 text-sm font-semibold peer-checked:border-2 peer-checked:border-[var(--sf-primary)] peer-checked:bg-[var(--sf-surface)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--sf-primary)] peer-disabled:cursor-not-allowed peer-disabled:line-through peer-disabled:opacity-50"
                   >
+                    {swatch ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- foto de la variante, re-codificada
+                      <img
+                        src={swatch}
+                        alt=""
+                        width={28}
+                        height={28}
+                        loading="lazy"
+                        decoding="async"
+                        className="sf-swatch -ml-2 mr-2 size-7 shrink-0 rounded-full object-cover"
+                      />
+                    ) : null}
                     {value}
                   </label>
                 </span>

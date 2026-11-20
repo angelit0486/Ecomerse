@@ -653,6 +653,10 @@ const NOCTURNO_CSS = [
   `${R} .sf-cart-sheet-ship svg{color:${N.alienHi}}`,
   // En el celular, hoja que sube desde abajo a la medida de su contenido.
   `@media (max-width:639px){${R} .sf-cart-sheet{height:auto;max-height:88dvh;width:100%;max-width:none;margin:0;inset:auto 0 0 0;border-left:0;border-top:1px solid color-mix(in srgb,${N.alien} 45%,transparent);border-radius:var(--sf-radius-panel) var(--sf-radius-panel) 0 0}}`,
+  // Ficha (fase 2): la foto se puede ampliar (aviso discreto) y los sabores llevan su foto.
+  `${R} .sf-zoom-trigger::after{content:"Ampliar";position:absolute;right:.75rem;bottom:.75rem;padding:.25rem .625rem;border-radius:999px;` +
+    `font-size:.75rem;font-weight:600;color:${N.frost};background:color-mix(in srgb,${N.void} 72%,transparent);border:1px solid var(--ad-hair-strong);pointer-events:none}`,
+  `${R} .sf-swatch{outline:1px solid var(--ad-hair-strong)}`,
   "@keyframes ad-sheet-in{from{translate:100% 0}to{translate:0 0}}",
   "@keyframes ad-sheet-up{from{translate:0 100%}to{translate:0 0}}",
   "@media (prefers-reduced-motion:no-preference){" +
