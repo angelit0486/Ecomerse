@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 
 import { addItem, type CartActionState } from "../carrito/actions";
+import { CART_ADDED_EVENT, type CartAdded } from "./quick-add";
 
 const MIN_QTY = 1;
 const MAX_QTY = 999;
@@ -18,6 +19,7 @@ export function AddToCart({
   available,
   title,
   price,
+  image = null,
   stickyBar = true,
 }: {
   storeId: string;
@@ -28,6 +30,8 @@ export function AddToCart({
   /** Para la barra fija de móvil: nombre del producto y precio ya formateado. */
   title?: string;
   price?: string | null;
+  /** Foto chica del producto para el carrito lateral. */
+  image?: string | null;
 }) {
   const [state, action, pending] = useActionState<CartActionState, FormData>(
     addItem.bind(null, storeId),
@@ -56,6 +60,26 @@ export function AddToCart({
     document.documentElement.classList.toggle("sf-buybar", showBar);
     return () => document.documentElement.classList.remove("sf-buybar");
   }, [showBar]);
+
+  // Avisa que se agregó (carrito lateral de un look); el aviso de abajo se queda.
+  useEffect(() => {
+    if (!state.ok) return;
+    const added = Number.parseInt(quantity, 10);
+    window.dispatchEvent(
+      new CustomEvent<CartAdded>(CART_ADDED_EVENT, {
+        detail: {
+          title: title ?? "",
+          count: state.count,
+          price: price ?? null,
+          quantity: Number.isFinite(added) ? added : 1,
+          source: "pdp",
+          image,
+        },
+      }),
+    );
+    // Solo al cambiar el resultado de agregar, no al teclear otra cantidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   const current = Number.parseInt(quantity, 10);
   const step = (delta: number) => {

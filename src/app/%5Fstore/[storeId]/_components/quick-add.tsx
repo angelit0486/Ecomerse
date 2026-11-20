@@ -8,9 +8,16 @@ import { addItem, type CartActionState } from "../carrito/actions";
 /** Evento con el que «Agregar» avisa al aviso flotante del carrito. */
 export const CART_ADDED_EVENT = "sf:cart-added";
 
-interface CartAdded {
+export interface CartAdded {
   title: string;
   count: number | undefined;
+  /** Precio ya formateado (la ficha lo conoce; la tarjeta no). */
+  price?: string | null;
+  quantity?: number;
+  /** «pdp»: la ficha ya muestra su propio aviso; el flotante no lo repite. */
+  source?: "card" | "pdp";
+  /** Foto chica del producto para el carrito lateral. */
+  image?: string | null;
 }
 
 const ICON = {
@@ -32,10 +39,12 @@ export function QuickAdd({
   storeId,
   variantId,
   title,
+  image = null,
 }: {
   storeId: string;
   variantId: string;
   title: string;
+  image?: string | null;
 }) {
   const [state, action, pending] = useActionState<CartActionState, FormData>(
     addItem.bind(null, storeId),
@@ -46,11 +55,13 @@ export function QuickAdd({
   useEffect(() => {
     if (!state.ok) return;
     window.dispatchEvent(
-      new CustomEvent<CartAdded>(CART_ADDED_EVENT, { detail: { title, count: state.count } }),
+      new CustomEvent<CartAdded>(CART_ADDED_EVENT, {
+        detail: { title, count: state.count, image, source: "card" },
+      }),
     );
     const timer = setTimeout(() => setSeen(state), 2000);
     return () => clearTimeout(timer);
-  }, [state, title]);
+  }, [state, title, image]);
   const done = Boolean(state.ok) && seen !== state;
 
   return (
@@ -88,7 +99,9 @@ export function CartToast() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onAdded = (event: Event) => {
-      setItem((event as CustomEvent<CartAdded>).detail);
+      const detail = (event as CustomEvent<CartAdded>).detail;
+      if (detail.source === "pdp") return;
+      setItem(detail);
       clearTimeout(timer);
       timer = setTimeout(() => setItem(null), 5000);
     };

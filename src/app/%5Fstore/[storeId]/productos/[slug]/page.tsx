@@ -21,7 +21,7 @@ import {
   type ProductDetail,
 } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
-import { srcSetFor } from "@/server/storefront/media-variants";
+import { smallMediaUrl, srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
 import { LOOK_CUTOFF, storeLook } from "@/lib/theme/looks";
@@ -231,6 +231,9 @@ export default async function ProductPage({ params }: Props) {
   const whatsapp = settings.contact?.whatsapp;
   const look = storeLook(store.theme?.key);
   const cutoff = look ? LOOK_CUTOFF[look] : undefined;
+  // Foto chica para el carrito lateral del look (la copia de 320 px).
+  const firstImage = product.images.at(0);
+  const cartImage = firstImage ? smallMediaUrl(firstImage.path, firstImage.width) : null;
   const single = product.options.length === 0 ? product.variants[0] : undefined;
   const cheapest = product.variants.reduce<(typeof product.variants)[number] | undefined>(
     (min, v) => (!min || v.price < min.price ? v : min),
@@ -386,6 +389,7 @@ export default async function ProductPage({ params }: Props) {
                   available={single.availability !== "out_of_stock"}
                   title={product.title}
                   price={money(single.price, store)}
+                  image={cartImage}
                   stickyBar={pageOptions.sticky_buy_bar !== false}
                 />
               )}
@@ -395,6 +399,7 @@ export default async function ProductPage({ params }: Props) {
               storeId={store.id}
               title={product.title}
               unpublished={product.unpublished}
+              image={cartImage}
               stickyBar={pageOptions.sticky_buy_bar !== false}
               options={product.options}
               variants={product.variants.map((v) => ({

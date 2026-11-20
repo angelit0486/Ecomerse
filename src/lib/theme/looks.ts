@@ -634,6 +634,33 @@ const NOCTURNO_CSS = [
     `border-radius:var(--sf-radius-panel);border:1px solid var(--ad-hair-strong);` +
     `background:radial-gradient(90% 60% at 50% 0%,color-mix(in srgb,${N.violet} 14%,transparent),transparent 70%),${N.deep}}`,
   `${R} section.max-w-md:has(input:is([name=email],[name=code])) button[type=submit]{width:100%;min-height:3rem}`,
+  // ── Plan de experiencia, fase 1 (v21) ─────────────────────────────────────
+  // Escenario común: cada foto flota sobre el mismo fondo con un halo violeta
+  // tenue y su propia sombra. Fotos con fondos distintos (blanco, azul marino)
+  // se ven como piezas de una misma vitrina.
+  `${R} .sf-card-media{isolation:isolate}`,
+  `${R} .sf-card-media::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;` +
+    `background:radial-gradient(62% 55% at 50% 58%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 74%)}`,
+  `${R} .sf-card-img{padding:9%;filter:drop-shadow(0 10px 14px rgb(0 0 0/.55))}`,
+  // Carrito lateral: panel oscuro con filete verde; en el celular sube desde abajo.
+  `${R} .sf-cart-sheet{background:radial-gradient(120% 40% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%),${N.deep};` +
+    `border-left:1px solid color-mix(in srgb,${N.alien} 45%,transparent);color:${N.frost}}`,
+  `${R} .sf-cart-sheet::backdrop{background:rgb(5 5 9/.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}`,
+  `${R} .sf-cart-sheet h2{font-family:var(--sf-font-heading),system-ui,sans-serif;text-transform:uppercase;font-size:1.75rem;line-height:1;letter-spacing:.01em}`,
+  `${R} .sf-cart-sheet-price{font-family:var(--sf-font-heading),system-ui,sans-serif;font-size:1.75rem;color:${N.neon}}`,
+  `${R} .sf-cart-sheet-ship{padding:.75rem 1rem;border-radius:var(--sf-radius-control);color:${N.frost};` +
+    `background:color-mix(in srgb,${N.alien} 10%,${N.deep});border:1px solid color-mix(in srgb,${N.alien} 35%,transparent)}`,
+  `${R} .sf-cart-sheet-ship svg{color:${N.alienHi}}`,
+  // En el celular, hoja que sube desde abajo a la medida de su contenido.
+  `@media (max-width:639px){${R} .sf-cart-sheet{height:auto;max-height:88dvh;width:100%;max-width:none;margin:0;inset:auto 0 0 0;border-left:0;border-top:1px solid color-mix(in srgb,${N.alien} 45%,transparent);border-radius:var(--sf-radius-panel) var(--sf-radius-panel) 0 0}}`,
+  "@keyframes ad-sheet-in{from{translate:100% 0}to{translate:0 0}}",
+  "@keyframes ad-sheet-up{from{translate:0 100%}to{translate:0 0}}",
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-cart-sheet[open]{animation:ad-sheet-in .38s var(--ad-ease)}` +
+    "}",
+  "@media (prefers-reduced-motion:no-preference){@media (max-width:639px){" +
+    `${R} .sf-cart-sheet[open]{animation:ad-sheet-up .38s var(--ad-ease)}` +
+    "}}",
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };

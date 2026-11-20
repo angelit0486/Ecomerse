@@ -35,6 +35,7 @@ export function VariantSelector({
   variants,
   unpublished = false,
   stickyBar = true,
+  image = null,
 }: {
   storeId: string;
   /** Tema v2 (ADR-034): barra fija de compra en el celular. */
@@ -44,6 +45,8 @@ export function VariantSelector({
   variants: SelectorVariant[];
   /** Borrador en la vista previa (ADR-032): se ven opciones y precios, sin comprar. */
   unpublished?: boolean;
+  /** Foto chica del producto (carrito lateral) si la variante no tiene la suya. */
+  image?: string | null;
 }) {
   const initial = variants.find((v) => v.available) ?? variants[0];
   const [selection, setSelection] = useState<Record<string, string>>(initial?.options ?? {});
@@ -146,6 +149,7 @@ export function VariantSelector({
           available={Boolean(selected?.available)}
           title={title}
           price={selected?.price ?? null}
+          image={selected?.imageUrl ?? image}
           stickyBar={stickyBar}
         />
       )}

@@ -180,6 +180,42 @@ test("nocturno: la franja de la hora de corte no mueve la página al cargar (CLS
   }
 });
 
+test("nocturno: al agregar se abre el carrito lateral; «base» conserva su aviso", async ({
+  page,
+}) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(url(nocturno, "/productos"));
+    await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+    await page.getByRole("button", { name: "Agregar al carrito" }).first().click();
+    const sheet = page.getByRole("dialog", { name: "Agregado a tu carrito" });
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toContainText("Estuche (DEMO)");
+    await expect(sheet.getByRole("link", { name: "Pagar ahora" })).toHaveAttribute(
+      "href",
+      "/checkout",
+    );
+    await expectNoSeriousA11yViolations(page);
+    // Esc cierra y la página vuelve a responder.
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+  }
+  // Desde una tarjeta también, y «Seguir comprando» lo cierra.
+  await page.goto(url(nocturno, "/productos"));
+  await page.getByRole("button", { name: /Agregar Gorra \(DEMO\) al carrito/ }).click();
+  const fromCard = page.getByRole("dialog", { name: "Agregado a tu carrito" });
+  await expect(fromCard).toContainText("Gorra (DEMO)");
+  await fromCard.getByRole("button", { name: "Seguir comprando" }).click();
+  await expect(fromCard).toBeHidden();
+
+  // La tienda base no cambia: aviso en la ficha y ningún panel.
+  await page.goto(url(base, "/productos"));
+  await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
+  await page.getByRole("button", { name: "Agregar al carrito" }).first().click();
+  await expect(page.getByRole("status").filter({ hasText: "Agregado al carrito." })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Agregado a tu carrito" })).toHaveCount(0);
+});
+
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {
   // Un filtro en el encabezado volvía a éste el contenedor del menú «fixed».
   await page.setViewportSize({ width: 390, height: 844 });

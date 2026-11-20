@@ -7,7 +7,7 @@ import {
   type ProductCard as Card,
   type RatingSummaries,
 } from "@/server/storefront/catalog";
-import { srcSetFor } from "@/server/storefront/media-variants";
+import { smallMediaUrl, srcSetFor } from "@/server/storefront/media-variants";
 import { goodFor } from "@/lib/storefront/goods";
 
 import { Badges } from "./badges";
@@ -226,7 +226,12 @@ function ProductCard({
         </p>
       ) : null}
       {product.unpublished || soldOut || variant === undefined || !store.id ? null : variant ? (
-        <QuickAdd storeId={store.id} variantId={variant} title={product.title} />
+        <QuickAdd
+          storeId={store.id}
+          variantId={variant}
+          title={product.title}
+          image={product.image ? smallMediaUrl(product.image.path, product.image.width) : null}
+        />
       ) : (
         // Mismo destino que el enlace de la tarjeta: para el lector de pantalla y el
         // teclado sería un enlace repetido, así que solo es una ayuda visual.

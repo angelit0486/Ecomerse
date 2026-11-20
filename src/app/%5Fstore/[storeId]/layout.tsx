@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
+import { freeShippingReach } from "@/lib/checkout/shipping";
+import { formatMoney } from "@/lib/money/format";
 import { elementCss, resolveTheme, themeCss } from "@/lib/theme/resolve-theme";
 import { LOOK_CUTOFF, LOOK_FONTS, lookCss, lookStoreName, storeLook } from "@/lib/theme/looks";
 import { navBarItems } from "@/lib/theme/nav-bar";
@@ -13,6 +15,7 @@ import {
   getDiscoverySummary,
   getMenus,
   getPolicyLinks,
+  getShippingPromo,
   mediaUrl,
 } from "@/server/storefront/catalog";
 import { smallMediaUrl } from "@/server/storefront/media-variants";
@@ -33,6 +36,7 @@ import {
 } from "./_components/header";
 import { NavBar } from "./_components/nav-bar";
 import { CartToast } from "./_components/quick-add";
+import { CartSheet } from "./_components/cart-sheet";
 
 /**
  * Marco del storefront (F5-T03): tema de la tienda como variables CSS (lista
@@ -113,7 +117,7 @@ export default async function StoreLayout({ children, params }: Props) {
   // Las fotos vienen del almacenamiento (otro dominio): abrir la conexión desde
   // el principio adelanta la imagen principal (LCP) en el celular.
   const mediaOrigin = new URL(mediaUrl("")).origin;
-  const [menus, nonce, cart, discovery, categoryThumbs, policies, methods, flags] =
+  const [menus, nonce, cart, discovery, categoryThumbs, policies, methods, flags, shippingPromo] =
     await Promise.all([
       getMenus(store.id),
       headers().then((h) => h.get("x-nonce") ?? undefined),
@@ -124,6 +128,10 @@ export default async function StoreLayout({ children, params }: Props) {
       getPolicyLinks(store.id),
       paymentMethods(store.id).catch(() => []),
       storeFlags(store.id),
+      // El carrito lateral (solo con un look) dice el envío gratis real de la tienda.
+      storeLook(store.theme?.key)
+        ? getShippingPromo(store.id).catch(() => null)
+        : Promise.resolve(null),
     ]);
   // Foto de cada categoría por enlace (misión Panel, Paso A): menú y barra.
   const thumbs = Object.fromEntries(
@@ -290,7 +298,20 @@ export default async function StoreLayout({ children, params }: Props) {
           </a>
         </aside>
       ) : null}
-      <CartToast />
+      {/* Con un look, al agregar se abre el carrito lateral; si no, el aviso flotante. */}
+      {look ? (
+        <CartSheet
+          shippingNote={
+            shippingPromo
+              ? `Envío gratis ${freeShippingReach(shippingPromo, (c) => formatMoney(c, store.currency, store.locale), store.country)}`
+              : null
+          }
+          cutoff={LOOK_CUTOFF[look]}
+          serverNow={renderedAt}
+        />
+      ) : (
+        <CartToast />
+      )}
     </div>
   );
 }
