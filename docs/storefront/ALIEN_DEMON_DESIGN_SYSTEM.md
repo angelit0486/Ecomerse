@@ -123,3 +123,9 @@ Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imáge
     Se comprobó en el almacenamiento de staging que las copias existen (logo: 320, 640 y 960 px; categorías: 320 y 640 px).
 - Encabezado fijo con vidrio al 96 %: el texto grande de atrás ya no se transparenta al desplazarse.
 - WhatsApp con espacios también en la franja de confianza y en la página del pedido.
+
+## 11. Envío gratis a todo México (2026-11-20)
+
+- Decisión del propietario: envío gratis siempre y a todo México. Antes, la tarifa gratuita solo cubría Sinaloa y la de «gratis desde $1,000» solo Baja California Sur: compradores de cualquier otro estado (incluido Sonora) no podían terminar la compra.
+- Datos (staging, autorizados): la zona de la tarifa gratuita pasó a «Todo México» (sin estados); la de Baja California Sur quedó desactivada (no borrada); la portada dice «Envío gratis a todo México» en lugar de «desde $999».
+- Código (todas las tiendas): una regla «gratis desde» con mínimo $0 se anuncia como «Envío gratis a todo México» (o «según destino») en la franja de confianza, la ficha y el carrito, nunca «desde $0.00» ni «te faltan» (`freeShippingReach`). Prueba E2E `free-shipping-everywhere.spec.ts`.

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { freeShippingProgress } from "@/lib/catalog/merchandising";
-import { shippingEstimate } from "@/lib/checkout/shipping";
+import { freeShippingReach, shippingEstimate } from "@/lib/checkout/shipping";
 import { getCart, getCartLegends } from "@/server/storefront/cart";
 import {
   getShippingPromo,
@@ -217,6 +217,15 @@ function FreeShippingBar({
   discountTotal: number;
   store: StorePublic;
 }) {
+  // Sin mínimo (envío gratis siempre): solo la buena noticia, sin barra.
+  if (promo.free_over === 0) {
+    return (
+      <p className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-4 text-sm font-semibold">
+        Tu pedido tiene envío gratis{" "}
+        {freeShippingReach(promo, (c) => money(c, store), store.country)}.
+      </p>
+    );
+  }
   const progress = freeShippingProgress(subtotal, discountTotal, promo.free_over);
   if (!progress) return null;
   const where = promo.conditional ? " (según destino)" : "";

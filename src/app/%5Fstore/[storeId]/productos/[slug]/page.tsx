@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { pricePerServing, productBadges, savings } from "@/lib/catalog/merchandising";
 import { leadTimeLabel } from "@/lib/catalog/lead-time";
+import { freeShippingReach } from "@/lib/checkout/shipping";
 
 import { centsToInput } from "@/lib/money/format";
 import {
@@ -500,9 +501,11 @@ function PurchaseInfo({
     <ul className="sf-pdp-facts divide-y divide-[var(--sf-border)] rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] px-4 text-sm [&>li]:py-3">
       {shipping ? (
         <li>
-          <span className="font-semibold">Envío gratis</span> en compras desde{" "}
-          {money(shipping.free_over, store)}
-          {shipping.conditional ? " (según destino)" : ""}.
+          <span className="font-semibold">Envío gratis</span>{" "}
+          {shipping.free_over === 0
+            ? freeShippingReach(shipping, (c) => money(c, store), store.country)
+            : `en compras ${freeShippingReach(shipping, (c) => money(c, store), store.country)}`}
+          .
           {/* Costo y tiempo de la misma tarifa (revisión de conversión, M3): datos de la tienda. */}
           {shipping.price > 0 ? ` Si no, ${money(shipping.price, store)}.` : null}
           {shipping.est_days_min != null && shipping.est_days_max != null

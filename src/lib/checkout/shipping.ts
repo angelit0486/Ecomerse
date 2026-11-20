@@ -45,6 +45,33 @@ export interface ShippingPromoLike {
   price: number;
 }
 
+function countryName(code: string | null | undefined): string | null {
+  if (!code) return null;
+  try {
+    return new Intl.DisplayNames(["es-MX"], { type: "region" }).of(code.toUpperCase()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lo que sigue a «Envío gratis» en la tienda (franja de confianza y ficha). Una
+ * tienda que envía gratis siempre guarda su regla con mínimo $0: no se dice
+ * «desde $0.00» sino «a todo México» (o «según destino» si no llega a todo el país).
+ */
+export function freeShippingReach(
+  promo: ShippingPromoLike,
+  format: (cents: number) => string,
+  country: string | null | undefined,
+): string {
+  if (promo.free_over === 0) {
+    const name = countryName(country);
+    if (promo.conditional) return "según destino";
+    return name ? `a todo ${name}` : "en todos los pedidos";
+  }
+  return `desde ${format(promo.free_over)}${promo.conditional ? " (según destino)" : ""}`;
+}
+
 /**
  * Texto del envío antes de tener dirección (carrito y checkout): así el comprador
  * ve el costo desde el principio y el total no «sube» al confirmar. Es solo una
@@ -57,7 +84,10 @@ export function shippingEstimate(
 ): string | undefined {
   if (!promo) return undefined;
   const reached = cart.subtotal - cart.discount_total >= promo.free_over;
-  if (promo.conditional) return `Según tu dirección (gratis desde ${format(promo.free_over)})`;
+  if (promo.conditional)
+    return promo.free_over === 0
+      ? "Gratis según tu dirección"
+      : `Según tu dirección (gratis desde ${format(promo.free_over)})`;
   if (reached || promo.price === 0) return "Gratis";
   return `${format(promo.price)} (gratis desde ${format(promo.free_over)})`;
 }

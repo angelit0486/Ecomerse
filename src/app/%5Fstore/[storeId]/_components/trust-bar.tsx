@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { PaymentMethod } from "@/lib/theme/schema";
+import { freeShippingReach } from "@/lib/checkout/shipping";
 import { prettyPhone } from "@/lib/whatsapp/order-messages";
 import type { ShippingPromo } from "@/server/storefront/catalog";
 
@@ -22,17 +23,23 @@ export function TrustBar({
   shipping: ShippingPromo | null;
   payments: PaymentMethod[];
   whatsapp: string | undefined;
-  store: { currency: string; locale: string };
+  store: { currency: string; locale: string; country?: string };
 }) {
   const items: { key: string; icon: ReactNode; title: string; text: string }[] = [];
   if (shipping) {
     items.push({
       key: "envio",
       icon: <TruckIcon />,
-      title: `Envío gratis desde ${money(shipping.free_over, store)}`,
+      // Sin mínimo: «Envío gratis a todo México» (nunca «desde $0.00»).
+      title:
+        shipping.free_over === 0
+          ? `Envío gratis ${freeShippingReach(shipping, (c) => money(c, store), store.country)}`
+          : `Envío gratis desde ${money(shipping.free_over, store)}`,
       text:
-        (shipping.conditional ? "Según destino. " : "") +
-        (shipping.price > 0 ? `Si no, ${money(shipping.price, store)}.` : ""),
+        shipping.free_over === 0
+          ? ""
+          : (shipping.conditional ? "Según destino. " : "") +
+            (shipping.price > 0 ? `Si no, ${money(shipping.price, store)}.` : ""),
     });
     if (shipping.est_days_min != null && shipping.est_days_max != null) {
       const days =

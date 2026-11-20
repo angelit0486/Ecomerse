@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { MX_STATES, stateForPostalCode } from "./mx-states";
 import {
   effectiveShippingPrice,
+  freeShippingReach,
   noShippingMessage,
   preferredRate,
   shippingEstimate,
@@ -125,5 +126,39 @@ describe("sin envío para la dirección y forma de envío única", () => {
     expect(singleRateId([{ rate_id: "std" }])).toBe("std");
     expect(singleRateId([{ rate_id: "std" }, { rate_id: "express" }])).toBeNull();
     expect(singleRateId([])).toBeNull();
+  });
+});
+
+describe("envío gratis: qué tanto llega", () => {
+  const fmt = (c: number) => "$" + (c / 100).toFixed(2);
+  it("sin mínimo y a todo el país: «a todo México», nunca «desde $0.00»", () => {
+    expect(freeShippingReach({ free_over: 0, conditional: false, price: 0 }, fmt, "MX")).toBe(
+      "a todo México",
+    );
+    expect(freeShippingReach({ free_over: 0, conditional: false, price: 0 }, fmt, null)).toBe(
+      "en todos los pedidos",
+    );
+    expect(freeShippingReach({ free_over: 0, conditional: true, price: 0 }, fmt, "MX")).toBe(
+      "según destino",
+    );
+  });
+
+  it("con mínimo, como siempre", () => {
+    expect(
+      freeShippingReach({ free_over: 99900, conditional: false, price: 9900 }, fmt, "MX"),
+    ).toBe("desde $999.00");
+    expect(freeShippingReach({ free_over: 99900, conditional: true, price: 9900 }, fmt, "MX")).toBe(
+      "desde $999.00 (según destino)",
+    );
+  });
+
+  it("antes de la dirección, sin mínimo y según destino: «Gratis según tu dirección»", () => {
+    const cart = { subtotal: 25000, discount_total: 0 };
+    expect(shippingEstimate({ free_over: 0, conditional: true, price: 0 }, cart, fmt)).toBe(
+      "Gratis según tu dirección",
+    );
+    expect(shippingEstimate({ free_over: 0, conditional: false, price: 0 }, cart, fmt)).toBe(
+      "Gratis",
+    );
   });
 });
