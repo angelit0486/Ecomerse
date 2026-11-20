@@ -162,7 +162,8 @@ test("editar por pestañas, vista previa privada y publicar", async ({ page, bro
   // sello no se muestra aunque esté marcado; SPEI sí.
   await expect(shopper.getByRole("contentinfo").getByText("SPEI", { exact: true })).toBeVisible();
   await expect(shopper.getByRole("contentinfo").getByText("OXXO")).toHaveCount(0);
-  await expect(shopper.getByRole("link", { name: /WhatsApp \+525512345678/ })).toHaveAttribute(
+  // El número se muestra agrupado (CDMX: lada de 2 dígitos); el enlace, en dígitos.
+  await expect(shopper.getByRole("link", { name: /WhatsApp \+52 55 1234 5678/ })).toHaveAttribute(
     "href",
     "https://wa.me/525512345678",
   );

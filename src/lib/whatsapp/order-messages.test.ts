@@ -190,6 +190,8 @@ describe("ficha del pedido para mandar a la tienda", () => {
 
   it("celulares legibles", () => {
     expect(prettyPhone("+526621234567")).toBe("+52 662 123 4567");
+    expect(prettyPhone("+525512345678")).toBe("+52 55 1234 5678");
+    expect(prettyPhone("+523312345678")).toBe("+52 33 1234 5678");
     expect(prettyPhone("+16503008656")).toBe("+1 650 300 8656");
     expect(prettyPhone("+447700900123")).toBe("+447700900123");
   });

@@ -152,9 +152,15 @@ function plainStoreName(name: string): string {
   return shown || name.trim();
 }
 
-/** «+52 662 123 4567» o «+1 650 300 8656»; cualquier otro número, tal cual. */
+/**
+ * «+52 55 1234 5678» (CDMX, Guadalajara y Monterrey, lada de 2 dígitos),
+ * «+52 662 123 4567» (el resto de México) o «+1 650 300 8656»; cualquier otro
+ * número, tal cual.
+ */
 export function prettyPhone(phone: string): string {
   const p = phone.trim();
+  const metro = /^\+52(55|33|81)(\d{4})(\d{4})$/.exec(p);
+  if (metro) return `+52 ${metro[1]} ${metro[2]} ${metro[3]}`;
   const mx = /^\+52(\d{3})(\d{3})(\d{4})$/.exec(p);
   if (mx) return `+52 ${mx[1]} ${mx[2]} ${mx[3]}`;
   const us = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(p);
