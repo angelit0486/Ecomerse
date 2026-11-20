@@ -112,3 +112,14 @@ Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imáge
 - **WhatsApp del pie legible:** «+52 662 123 4567» en lugar de «+526621234567» (todas las tiendas).
 - **Textos neutros** en el carrito vacío y la búsqueda sin resultados («explora el catálogo» en lugar de «por objetivo», que era de suplementos; todas las tiendas).
 - En la página del pedido con la ficha por WhatsApp, la burbuja flotante se oculta en el celular (repetía el mismo WhatsApp y tapaba el panel de pago).
+
+## 10. Más rápida (v20, 2026-11-20)
+
+- **Desplazamiento fluido en computadora.** La capa lejana del cielo usaba `background-attachment: fixed`, que obliga a repintar todo el fondo en cada movimiento. Ahora vive en una capa fija propia (`.sf-root::before`, `position: fixed`) que la tarjeta de video mueve sin repintar; la cercana sigue desplazándose con la página (mismo paralaje). Medido en local (1440 px, CPU 4×, 3 rondas): cuadro promedio 74–78 ms (~13 fps) → 18–23 ms (~50 fps); cuadros lentos (>50 ms) 86–89 de 94 → 0–1 de 94.
+- **Fotos chicas, archivos chicos** (todas las tiendas con copias de sus fotos):
+  - logo del encabezado con `srcset` y `sizes` según el ancho real (~84 px): en Alien Demon, 68 KB → 7 KB en cada página;
+  - miniaturas del menú y foto redonda de la categoría con la copia de 320 px: 729 KB → 199 KB las 5 de Alien Demon;
+  - logos de marcas y fotos de objetivos con `srcset`.
+  Se comprobó en el almacenamiento de staging que las copias existen (logo: 320, 640 y 960 px; categorías: 320 y 640 px).
+- Encabezado fijo con vidrio al 96 %: el texto grande de atrás ya no se transparenta al desplazarse.
+- WhatsApp con espacios también en la franja de confianza y en la página del pedido.

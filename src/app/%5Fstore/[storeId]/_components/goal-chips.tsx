@@ -3,6 +3,7 @@ import Link from "next/link";
 import { GOAL_KEY } from "@/lib/catalog/attributes";
 import { goalColors, type GoalColor } from "@/lib/theme/goal-colors";
 import { mediaUrl, type ImageRef } from "@/server/storefront/catalog";
+import { srcSetFor } from "@/server/storefront/media-variants";
 
 export interface GoalTile {
   key: string;
@@ -86,6 +87,8 @@ export function GoalTiles({
                   {/* eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada */}
                   <img
                     src={mediaUrl(goal.image.path)}
+                    srcSet={srcSetFor(goal.image.path, goal.image.width)}
+                    sizes="144px"
                     alt=""
                     width={goal.image.width ?? 320}
                     height={goal.image.height ?? 320}

@@ -629,6 +629,8 @@ export async function HomeSections({
                       // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado
                       <img
                         src={mediaUrl(brand.logo.path)}
+                        srcSet={srcSetFor(brand.logo.path, brand.logo.width)}
+                        sizes="160px"
                         alt={brand.name}
                         width={brand.logo.width ?? 160}
                         height={brand.logo.height ?? 64}

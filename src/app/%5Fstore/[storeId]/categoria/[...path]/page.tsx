@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getCategory, mediaUrl } from "@/server/storefront/catalog";
 import { getStorefront } from "@/server/storefront/context";
-import { srcSetFor } from "@/server/storefront/media-variants";
+import { smallMediaUrl, srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 
 import { Breadcrumb } from "../../_components/breadcrumb";
@@ -89,7 +89,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {category.image && !category.cover ? (
             // eslint-disable-next-line @next/next/no-img-element -- imagen re-codificada
             <img
-              src={mediaUrl(category.image.path)}
+              src={smallMediaUrl(category.image.path, category.image.width)}
               alt=""
               width={72}
               height={72}

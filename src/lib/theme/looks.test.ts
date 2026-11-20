@@ -114,7 +114,15 @@ describe("temas de presentación (looks)", () => {
     const touch = css.replace(/@media \(hover:hover\) and \(pointer:fine\)[^{]*\{.*?\}\}/g, "");
     expect(touch).not.toContain("perspective(");
     expect(touch).not.toContain(".sf-cat-link::before");
-    expect(touch).not.toContain("background-attachment:fixed");
+  });
+
+  it("el cielo no se repinta al desplazarse: capa fija propia, sin background-attachment:fixed", () => {
+    const css = lookCss("nocturno");
+    // background-attachment:fixed obliga a repintar todo el fondo en cada scroll.
+    expect(css).not.toContain("background-attachment:fixed");
+    expect(css).toMatch(
+      /\.sf-root\[data-look='nocturno'\]::before\{content:"";position:fixed;inset:0;z-index:-1/,
+    );
   });
 
   it("todo el movimiento respeta «reducir movimiento»", () => {

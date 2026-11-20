@@ -530,7 +530,7 @@ const NOCTURNO_CSS = [
     `${R} .sf-home .sf-prose ol > li::before{position:absolute;left:1rem;top:.875rem;width:2.25rem;height:2.25rem;margin:0;font-size:1.125rem}` +
     "}",
   // Vidrio un poco más opaco: el negro del logo JPG se funde sin dejar recuadro.
-  `${R} header.sf-el-header::before{background:color-mix(in srgb,${N.void} 92%,transparent)}`,
+  `${R} header.sf-el-header::before{background:color-mix(in srgb,${N.void} 96%,transparent)}`,
   // ── Buscador y aviso del carrito (v14) ───────────────────────────────────
   // Sugerencias: panel de vidrio oscuro; la opción activa en verde; fotos con
   // esquinas suaves; títulos de grupo en la letra condensada.
@@ -585,10 +585,11 @@ const NOCTURNO_CSS = [
   // Un solo concepto, de la propia marca (alien, OVNI, portal): cielo estrellado
   // en toda la tienda, rayo de abducción bajo el portal, productos como cartas
   // coleccionables y categorías como planetas.
-  // Cielo: dos capas de estrellas en mosaico; en computadora la lejana queda fija
-  // y la cercana se mueve con la página (paralaje sin JavaScript).
-  `${R}{background-image:radial-gradient(1.2px 1.2px at 24px 40px,color-mix(in srgb,${N.frost} 70%,transparent),transparent),radial-gradient(1.2px 1.2px at 130px 92px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1.2px 1.2px at 210px 18px,color-mix(in srgb,${N.frost} 60%,transparent),transparent),radial-gradient(1.2px 1.2px at 290px 170px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(1.2px 1.2px at 70px 250px,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.2px 1.2px at 180px 300px,color-mix(in srgb,${N.frost} 35%,transparent),transparent),radial-gradient(1.6px 1.6px at 60px 120px,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1px 1px at 310px 60px,color-mix(in srgb,${N.frost} 35%,transparent),transparent),radial-gradient(1.4px 1.4px at 450px 260px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1px 1px at 200px 430px,color-mix(in srgb,${N.frost} 30%,transparent),transparent),radial-gradient(1.2px 1.2px at 520px 500px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 9%,transparent),transparent 70%);background-size:340px 340px,340px 340px,340px 340px,340px 340px,340px 340px,340px 340px,560px 560px,560px 560px,560px 560px,560px 560px,560px 560px,auto;background-repeat:repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,no-repeat}`,
-  `@media (hover:hover) and (pointer:fine){${R}{background-attachment:fixed,fixed,fixed,fixed,fixed,fixed,scroll,scroll,scroll,scroll,scroll,scroll}}`,
+  // Cielo: la capa lejana va en una capa fija propia (la mueve la tarjeta de video
+  // sin repintar); la cercana se desplaza con la página: paralaje sin JavaScript.
+  // Antes, background-attachment:fixed repintaba todo el fondo en cada scroll (v20).
+  `${R}{isolation:isolate;background-image:radial-gradient(1.6px 1.6px at 60px 120px,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1px 1px at 310px 60px,color-mix(in srgb,${N.frost} 35%,transparent),transparent),radial-gradient(1.4px 1.4px at 450px 260px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1px 1px at 200px 430px,color-mix(in srgb,${N.frost} 30%,transparent),transparent),radial-gradient(1.2px 1.2px at 520px 500px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 9%,transparent),transparent 70%);background-size:560px 560px,560px 560px,560px 560px,560px 560px,560px 560px,auto;background-repeat:repeat,repeat,repeat,repeat,repeat,no-repeat}`,
+  `${R}::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 24px 40px,color-mix(in srgb,${N.frost} 70%,transparent),transparent),radial-gradient(1.2px 1.2px at 130px 92px,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1.2px 1.2px at 210px 18px,color-mix(in srgb,${N.frost} 60%,transparent),transparent),radial-gradient(1.2px 1.2px at 290px 170px,color-mix(in srgb,${N.frost} 40%,transparent),transparent),radial-gradient(1.2px 1.2px at 70px 250px,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.2px 1.2px at 180px 300px,color-mix(in srgb,${N.frost} 35%,transparent),transparent);background-size:340px 340px;background-repeat:repeat}`,
   // Rayo de abducción: haz verde que baja del portal sobre el título y el botón.
   `${R} .sf-hero-split::after{top:0;height:100%;width:min(78vw,32rem);aspect-ratio:auto;border-radius:0;translate:-50% 0;filter:blur(4px);` +
     `clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);` +

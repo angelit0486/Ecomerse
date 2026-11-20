@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { buildSrcSet } from "@/lib/media/variants";
+import { buildSrcSet, smallVariantPath } from "@/lib/media/variants";
 
 import { mediaUrl } from "./catalog";
 
@@ -15,6 +15,11 @@ const variantsFlag = cache(() => ({ ready: false }));
 
 export function setMediaVariantsReady(ready: boolean): void {
   variantsFlag().ready = ready;
+}
+
+/** URL de la copia de 320 px de una foto que se ve chica; sin copias, la original. */
+export function smallMediaUrl(path: string, width: number | null | undefined): string {
+  return mediaUrl(variantsFlag().ready ? smallVariantPath(path, width) : path);
 }
 
 /** `srcset` de una foto publicada, o undefined si la tienda aún no tiene copias. */

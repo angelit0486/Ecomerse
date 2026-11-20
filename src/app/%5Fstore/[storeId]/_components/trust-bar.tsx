@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { PaymentMethod } from "@/lib/theme/schema";
+import { prettyPhone } from "@/lib/whatsapp/order-messages";
 import type { ShippingPromo } from "@/server/storefront/catalog";
 
 import { money } from "./format";
@@ -59,7 +60,7 @@ export function TrustBar({
       key: "whatsapp",
       icon: <ChatIcon />,
       title: "¿Dudas? Escríbenos",
-      text: `WhatsApp ${whatsapp}`,
+      text: `WhatsApp ${prettyPhone(whatsapp)}`,
     });
   }
   if (items.length === 0) return null;

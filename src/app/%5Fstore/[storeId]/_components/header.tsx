@@ -6,7 +6,9 @@ import type { SocialNetwork } from "@/lib/theme/links";
 import { announcementActive, type ResolvedTheme } from "@/lib/theme/resolve-theme";
 import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
 import { prettyPhone } from "@/lib/whatsapp/order-messages";
+import { logoSizes } from "@/lib/media/variants";
 import { mediaUrl, type MenuEntry, type PolicyLink } from "@/server/storefront/catalog";
+import { srcSetFor } from "@/server/storefront/media-variants";
 import type { StorePublic } from "@/server/storefront/store-public";
 
 import { MainNav, MenuButton, MobileMenu, NavProvider } from "./main-nav";
@@ -68,6 +70,8 @@ export function CheckoutHeader({ store }: { store: StorePublic }) {
             // eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage
             <img
               src={mediaUrl(store.logo.path)}
+              srcSet={srcSetFor(store.logo.path, store.logo.width)}
+              sizes={logoSizes(store.logo.width, store.logo.height)}
               alt={store.name}
               width={store.logo.width ?? 160}
               height={store.logo.height ?? 48}
@@ -148,6 +152,9 @@ export function StoreHeader({
                 {/* eslint-disable-next-line @next/next/no-img-element -- logo re-codificado servido por Storage */}
                 <img
                   src={mediaUrl(store.logo.path)}
+                  // Copias de 320–640 px: el logo se ve de ~84 px y el original pesa mucho más.
+                  srcSet={srcSetFor(store.logo.path, store.logo.width)}
+                  sizes={logoSizes(store.logo.width, store.logo.height)}
                   alt={nameWithLogo ? "" : store.name}
                   width={store.logo.width ?? 160}
                   height={store.logo.height ?? 48}

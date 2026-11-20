@@ -11,6 +11,7 @@ import { holdLeftLabel } from "@/lib/orders/hold-left";
 import { JUST_PLACED_PARAM } from "@/lib/orders/just-placed";
 import {
   orderTicketMessage,
+  prettyPhone,
   proofMessage,
   whatsappChatUrl,
   whatsappNumber,
@@ -376,7 +377,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex min-h-11 items-center underline underline-offset-2"
                 >
-                  WhatsApp {whatsapp}
+                  WhatsApp {prettyPhone(whatsapp)}
                 </a>
               </li>
             ) : null}

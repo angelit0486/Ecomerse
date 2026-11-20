@@ -15,6 +15,7 @@ import {
   getPolicyLinks,
   mediaUrl,
 } from "@/server/storefront/catalog";
+import { smallMediaUrl } from "@/server/storefront/media-variants";
 import { getStorefront } from "@/server/storefront/context";
 import { storeFlags } from "@/server/storefront/flags";
 import { storefrontSchemaStatus } from "@/server/storefront/schema";
@@ -128,7 +129,8 @@ export default async function StoreLayout({ children, params }: Props) {
   const thumbs = Object.fromEntries(
     Object.entries(categoryThumbs).map(([path, image]) => [
       `/categoria/${path}`,
-      mediaUrl(image.path),
+      // Se ven de 28 px: la copia de 320 px, no el original.
+      smallMediaUrl(image.path, image.width),
     ]),
   );
   // «Marcas» con al menos dos (una sola no ayuda a explorar) y «Ofertas» con

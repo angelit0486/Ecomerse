@@ -25,6 +25,28 @@ export function variantWidthsFor(originalWidth: number | null | undefined): numb
 }
 
 /**
+ * Ruta de la copia más chica (320 px) para lo que se ve chico (miniaturas del
+ * menú, foto redonda de la categoría): el original puede pesar 10 veces más.
+ * Sin copias, la original.
+ */
+export function smallVariantPath(path: string, originalWidth: number | null | undefined): string {
+  const [smallest] = variantWidthsFor(originalWidth);
+  return smallest !== undefined && hasVariants(path) ? variantPath(path, smallest) : path;
+}
+
+/**
+ * Ancho en pantalla de un logo para `sizes`: el encabezado lo limita a 56 px de
+ * alto y 176 px de ancho, así que un logo casi cuadrado se ve de ~84 px.
+ */
+export function logoSizes(
+  width: number | null | undefined,
+  height: number | null | undefined,
+): string {
+  const ratio = width && height ? width / height : 3;
+  return `${Math.min(176, Math.ceil(56 * ratio))}px`;
+}
+
+/**
  * `srcset` con las copias y el original. Sin ancho conocido o sin copias, null:
  * el `<img>` queda como antes, con solo `src`.
  */
