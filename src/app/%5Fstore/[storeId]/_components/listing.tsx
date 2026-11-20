@@ -308,7 +308,7 @@ async function NoResults({ store }: { store: StorePublic }) {
       <section className="space-y-2 rounded-[var(--sf-radius-card)] border border-[var(--sf-border)] p-6">
         <h2 className="text-lg font-extrabold">Sin resultados</h2>
         <p className="text-sm text-[var(--sf-muted)]">
-          Revisa la ortografía, prueba con menos palabras o explora por objetivo.
+          Revisa la ortografía, prueba con menos palabras o explora el catálogo.
         </p>
         {goals.length > 0 ? (
           <ul aria-label="Comprar por objetivo" className="flex flex-wrap gap-2 pt-2">

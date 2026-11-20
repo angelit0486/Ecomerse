@@ -103,3 +103,12 @@ Un solo concepto tomado de la marca (alien, OVNI, portal), solo CSS y sin imáge
 - **Planetas:** con mouse o teclado (`:focus-visible`), un anillo orbital inclinado rodea el círculo de la categoría (unidades de contenedor `cqi`, arco inferior visible).
 - Los efectos de mouse viven en `@media (hover:hover) and (pointer:fine)` (no se quedan «pegados» en pantallas táctiles) y todo el movimiento sigue dentro de «reducir movimiento». Prueba unitaria: `looks.test.ts` («de otro mundo…»).
 - Sin contadores falsos, reseñas inventadas ni escasez simulada: la urgencia real es la hora de corte (§ cuenta regresiva).
+
+## 9. Pulido de páginas y estabilidad (v19, 2026-11-20)
+
+- **La página ya no salta al cargar.** La franja «Llega … si pides y pagas en …» se dibujaba primero con la regla fija (dos renglones en el celular) y el navegador la cambiaba por la cuenta regresiva (uno): todo bajaba 16 px. Ahora el servidor la dibuja con su hora (`serverNow`) y el primer texto ya es el definitivo. Medido en local, celular de 390 px con el procesador 4× más lento: CLS de inicio 0.23 → 0.02; catálogo 0.13 → 0.001; ficha 0.13 → 0.003 (bueno: menos de 0.1). Prueba E2E «la franja de la hora de corte no mueve la página al cargar (CLS)»: falla sin el arreglo (0.14) y pasa con él.
+- **Nombre en letras normales en toda la tienda** (`withLookName` en `getStorefront`): título de la pestaña, Mi cuenta, mensajes de WhatsApp; antes solo el encabezado, el pie y el inicio.
+- **Mi cuenta** (entrar con código) en un panel centrado; botón a todo el ancho.
+- **WhatsApp del pie legible:** «+52 662 123 4567» en lugar de «+526621234567» (todas las tiendas).
+- **Textos neutros** en el carrito vacío y la búsqueda sin resultados («explora el catálogo» en lugar de «por objetivo», que era de suplementos; todas las tiendas).
+- En la página del pedido con la ficha por WhatsApp, la burbuja flotante se oculta en el celular (repetía el mismo WhatsApp y tapaba el panel de pago).

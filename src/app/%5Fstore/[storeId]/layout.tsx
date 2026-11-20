@@ -161,6 +161,10 @@ export default async function StoreLayout({ children, params }: Props) {
   // Tema de presentación (looks.ts): solo con una clave de tema conocida; con
   // cualquier otra (hoy todas valen «base») la tienda se ve exactamente igual.
   const look = storeLook(store.theme?.key);
+  // Hora de este request (la página es dinámica: nonce de CSP): la cuenta regresiva
+  // sale del servidor ya con su texto final y no mueve la página al hidratar.
+  // eslint-disable-next-line react-hooks/purity -- componente de servidor: se dibuja una vez por request
+  const renderedAt = Date.now();
   const fonts = fontVariableClasses([
     theme.fonts.heading,
     theme.fonts.body,
@@ -231,7 +235,9 @@ export default async function StoreLayout({ children, params }: Props) {
           <>
             <AnnouncementBar announcement={theme.announcement} />
             {/* Cuenta regresiva al corte de envío: solo si el look la define. */}
-            {look && LOOK_CUTOFF[look] ? <DeliveryCountdown config={LOOK_CUTOFF[look]} /> : null}
+            {look && LOOK_CUTOFF[look] ? (
+              <DeliveryCountdown config={LOOK_CUTOFF[look]} serverNow={renderedAt} />
+            ) : null}
             <StoreHeader
               store={shownStore}
               menu={menus.main}

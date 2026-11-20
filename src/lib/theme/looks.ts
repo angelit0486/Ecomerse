@@ -37,6 +37,17 @@ export function storeLook(key: unknown): StoreLook | null {
  * letras normales para que el look use su tipografía. Quita separadores sueltos
  * al final («Tienda |»). El nombre guardado no cambia.
  */
+/**
+ * La tienda con un look se presenta con su nombre en letras normales en todas
+ * partes (título de la pestaña, Mi cuenta, mensajes de WhatsApp), no solo en el
+ * encabezado. Sin look, la tienda queda tal cual.
+ */
+export function withLookName<
+  T extends { name: string; theme?: { key: string | null } | undefined },
+>(store: T): T {
+  return storeLook(store.theme?.key) ? { ...store, name: lookStoreName(store.name) } : store;
+}
+
 export function lookStoreName(name: string): string {
   const shown = name
     .normalize("NFKC")
@@ -613,6 +624,15 @@ const NOCTURNO_CSS = [
   `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
   `${R} section[aria-labelledby=ficha-whatsapp] [data-handoff=counting] .tabular-nums{font-family:var(--sf-font-heading);font-size:1.5rem;color:${N.neon}}`,
   `@media (max-width:639px){${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
+  // Con la ficha en la página del pedido, la burbuja flotante repite el mismo
+  // WhatsApp y tapa el panel de pago en el celular.
+  `@media (max-width:639px){${R}:has(section[aria-labelledby=ficha-whatsapp]) .sf-whatsapp{display:none}}`,
+  // ── Pulido de páginas (v19) ──────────────────────────────────────────────
+  // Mi cuenta (entrar con código): un panel centrado, como la caja de un pase.
+  `${R} section.max-w-md:has(input:is([name=email],[name=code])){margin-block:clamp(1rem,4vw,3rem);padding:clamp(1.5rem,5vw,2.5rem);` +
+    `border-radius:var(--sf-radius-panel);border:1px solid var(--ad-hair-strong);` +
+    `background:radial-gradient(90% 60% at 50% 0%,color-mix(in srgb,${N.violet} 14%,transparent),transparent 70%),${N.deep}}`,
+  `${R} section.max-w-md:has(input:is([name=email],[name=code])) button[type=submit]{width:100%;min-height:3rem}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };

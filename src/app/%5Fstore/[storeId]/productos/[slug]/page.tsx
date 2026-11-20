@@ -417,7 +417,12 @@ export default async function ProductPage({ params }: Props) {
           )}
           {/* Cuándo llega si compra ahora (hora de corte real del look), junto a la compra. */}
           {cutoff && product.availability !== "out_of_stock" && !product.unpublished ? (
-            <DeliveryCountdown config={cutoff} variant="inline" />
+            <DeliveryCountdown
+              config={cutoff}
+              variant="inline"
+              // eslint-disable-next-line react-hooks/purity -- componente de servidor: una vez por request
+              serverNow={Date.now()}
+            />
           ) : null}
           <PurchaseInfo
             store={store}

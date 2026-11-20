@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
+import { withLookName } from "@/lib/theme/looks";
 import { serverEnv } from "@/server/env";
 
 import { STORE_ROUTE_HEADER, verifyStoreRoute } from "./route-signature";
@@ -29,7 +30,7 @@ export const getStorefront = cache(
     if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
       notFound();
     setMediaVariantsReady(store.media_variants === true);
-    return { store, preview: route.preview };
+    return { store: withLookName(store), preview: route.preview };
   },
 );
 
@@ -47,5 +48,5 @@ export async function storefrontForRoute(
   const store = route.preview ? await getStorePreview(storeId) : await getStorePublic(storeId);
   if (!store || (store.status !== "active" && !(store.status === "draft" && route.preview)))
     return null;
-  return { store, preview: route.preview };
+  return { store: withLookName(store), preview: route.preview };
 }

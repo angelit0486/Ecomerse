@@ -10,6 +10,7 @@ import {
   NOCTURNO_PAIRS,
   STORE_LOOKS,
   storeLook,
+  withLookName,
 } from "./looks";
 import { FONT_KEYS } from "./schema";
 
@@ -70,6 +71,14 @@ describe("temas de presentación (looks)", () => {
     expect(lookStoreName("Tienda — ")).toBe("Tienda");
     // Si solo hubiera separadores, se conserva el nombre guardado.
     expect(lookStoreName("|")).toBe("|");
+  });
+
+  it("con look, el nombre en letras normales llega a toda la tienda; sin look, intacto", () => {
+    const fancy = "𝓐𝓛𝓘𝓔𝓝 𝓓𝓔𝓜𝓞𝓝 |";
+    expect(withLookName({ name: fancy, theme: { key: "nocturno" } }).name).toBe("ALIEN DEMON");
+    const base = { name: fancy, theme: { key: "base" } };
+    expect(withLookName(base)).toBe(base);
+    expect(withLookName({ name: fancy }).name).toBe(fancy);
   });
 
   it("tipografía editorial y categorías redondas, sin numeración ni flechas decorativas", () => {

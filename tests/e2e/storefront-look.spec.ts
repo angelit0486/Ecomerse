@@ -156,6 +156,30 @@ test("nocturno: la ficha dice cuándo llega si compras ahora; «base» no", asyn
   await expect(page.locator("[data-cutoff=inline]")).toHaveCount(0);
 });
 
+test("nocturno: la franja de la hora de corte no mueve la página al cargar (CLS)", async ({
+  page,
+}) => {
+  // Antes, el servidor dibujaba la regla fija (dos renglones en el celular) y el
+  // navegador la cambiaba por la cuenta regresiva (uno): todo subía 16 px.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const w = window as unknown as { __cls: number };
+    w.__cls = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[])
+        if (!e.hadRecentInput) w.__cls += e.value;
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+  for (const path of ["/", "/productos"]) {
+    await page.goto(url(nocturno, path), { waitUntil: "networkidle" });
+    await expect(page.locator(".sf-cutoff time, .sf-cutoff p").first()).toBeVisible();
+    // Dos «tics» del reloj: el texto ya era el del servidor y solo cambian los dígitos.
+    await page.waitForTimeout(2_200);
+    const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+    expect(cls, `CLS en ${path}`).toBeLessThan(0.05);
+  }
+});
+
 test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) => {
   // Un filtro en el encabezado volvía a éste el contenedor del menú «fixed».
   await page.setViewportSize({ width: 390, height: 844 });

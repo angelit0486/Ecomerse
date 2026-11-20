@@ -12,9 +12,11 @@ function cutoffTime(config: CutoffConfig): string {
 
 /**
  * Cuenta regresiva a la hora de corte de envío (solo con un look que la define).
- * En el servidor y sin JavaScript muestra la regla fija; en el navegador, cuánto
- * falta y cuándo llega. Sin aria-live: un lector de pantalla no la repite cada
- * segundo.
+ * El servidor ya la dibuja con su hora (`serverNow`): el primer texto es el
+ * definitivo y la página no salta al cargar (antes, la regla fija ocupaba dos
+ * renglones en el celular y todo bajaba 16 px, CLS 0.13–0.23). Sin `serverNow`
+ * (o sin JavaScript) muestra la regla fija. Sin aria-live: un lector de
+ * pantalla no la repite cada segundo.
  *
  * - «bar»: franja bajo el aviso de la tienda, en todas las páginas.
  * - «inline»: línea junto al botón de compra (ficha) y en el resumen del pago;
@@ -23,11 +25,16 @@ function cutoffTime(config: CutoffConfig): string {
 export function DeliveryCountdown({
   config,
   variant = "bar",
+  serverNow,
 }: {
   config: CutoffConfig;
   variant?: "bar" | "inline";
+  /** Hora del servidor al dibujar (ms): el navegador arranca igual y no hay desajuste. */
+  serverNow?: number;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
+  const [now, setNow] = useState<Date | null>(() =>
+    serverNow === undefined ? null : new Date(serverNow),
+  );
   useEffect(() => {
     // Primer valor fuera del cuerpo del efecto (regla react-hooks) y luego cada segundo.
     const tick = () => setNow(new Date());

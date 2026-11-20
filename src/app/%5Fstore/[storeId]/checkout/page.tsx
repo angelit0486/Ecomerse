@@ -155,7 +155,14 @@ export default async function CheckoutPage({ params }: Props) {
           shippingNote={shippingEstimate(promo, cart, (c) => money(c, store))}
         />
         {/* Cuándo llega si paga ahora (hora de corte real del look). */}
-        {cutoff ? <DeliveryCountdown config={cutoff} variant="inline" /> : null}
+        {cutoff ? (
+          <DeliveryCountdown
+            config={cutoff}
+            variant="inline"
+            // eslint-disable-next-line react-hooks/purity -- componente de servidor: una vez por request
+            serverNow={Date.now()}
+          />
+        ) : null}
         <PurchaseLegends legends={legends} />
         <Link
           prefetch={false}

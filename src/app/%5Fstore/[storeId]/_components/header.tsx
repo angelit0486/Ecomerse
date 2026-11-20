@@ -5,6 +5,7 @@ import { paymentBadges } from "@/lib/checkout/payment-badges";
 import type { SocialNetwork } from "@/lib/theme/links";
 import { announcementActive, type ResolvedTheme } from "@/lib/theme/resolve-theme";
 import type { PaymentMethod, ThemeSettings } from "@/lib/theme/schema";
+import { prettyPhone } from "@/lib/whatsapp/order-messages";
 import { mediaUrl, type MenuEntry, type PolicyLink } from "@/server/storefront/catalog";
 import type { StorePublic } from "@/server/storefront/store-public";
 
@@ -310,7 +311,7 @@ export function StoreFooter({
               </svg>
               <span className="text-sm">
                 <span className="block font-bold">¿Dudas con tu pedido?</span>
-                Escríbenos al WhatsApp {contact.whatsapp}
+                Escríbenos al WhatsApp {prettyPhone(contact.whatsapp)}
               </span>
             </a>
           ) : null}

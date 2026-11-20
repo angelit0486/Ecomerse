@@ -51,7 +51,7 @@ export default async function CartPage({ params }: Props) {
         <h1 className="text-3xl font-extrabold leading-[1.05] tracking-tight text-balance sm:text-5xl">
           Tu carrito está vacío
         </h1>
-        <p className="text-[var(--sf-muted)]">Encuentra lo que necesitas para tu objetivo.</p>
+        <p className="text-[var(--sf-muted)]">Encuentra lo que buscas en el catálogo.</p>
         <Link
           prefetch={false}
           href="/productos"
