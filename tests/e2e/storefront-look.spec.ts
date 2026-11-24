@@ -156,7 +156,8 @@ test("nocturno: la ficha dice cuándo llega si compras ahora; «base» no", asyn
   await page.clock.setFixedTime(new Date("2026-11-16T21:00:00Z")); // lunes 14:00 en Hermosillo
   await page.goto(url(nocturno, "/productos"));
   await page.getByRole("link", { name: "Estuche (DEMO)" }).first().click();
-  await expect(page.locator("[data-cutoff=inline]")).toContainText(
+  // Solo la de la ficha: el carrito lateral (oculto) trae la suya.
+  await expect(page.locator("main [data-cutoff=inline]")).toContainText(
     "Llega mañana si pides y pagas en 2:20:00",
   );
   await page.goto(url(base, "/productos"));
