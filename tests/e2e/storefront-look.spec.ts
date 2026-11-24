@@ -50,6 +50,16 @@ test.beforeAll(async () => {
           await sql`set local role authenticated`;
         }
       }
+      // La misma portada en las dos tiendas: con el look, la nave va sobre su título.
+      await sql`select public.appearance_save_home_draft(${t.storeId}, ${sql.json([
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          type: "hero",
+          enabled: true,
+          props: { heading: "Bienvenida a la tienda (DEMO)", align: "center" },
+        },
+      ])}, 0)`;
+      await sql`select public.appearance_publish_theme(${t.storeId}, 1)`;
     });
   }
   // Antes de la primera visita (la lectura pública de la tienda se guarda en caché).
