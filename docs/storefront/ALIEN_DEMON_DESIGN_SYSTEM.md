@@ -139,3 +139,27 @@ Plan completo: «Plan de experiencia única · Alien Demon» (documento comparti
 - **Galería de la ficha** (`gallery-zoom.tsx`): deslizar a los lados cambia de foto (vertical sigue desplazando la página); tocarla la abre a pantalla completa con ← →, acercar al doble en el punto tocado y Esc. Sin estilos en línea (CSP): la vista ampliada se recorre con el desplazamiento del contenedor.
 - **Sabores con foto**: si una variante tiene foto propia, su botón la muestra (hoy ninguna de las 244 variantes de Alien Demon tiene foto propia; aparecerán al subirlas).
 - Pruebas: E2E del carrito lateral (1280 y 390 px, accesibilidad, Esc, desde tarjeta) y de la galería (deslizar, ampliar, teclado, foco de regreso, accesibilidad); unitarias de los sabores con foto. La tienda base no cambia (comprobado en las mismas pruebas).
+
+## 13. Dirección «Alien Demon Exotics»: cromo y púrpura (v13 del CSS, 2026-11-24)
+
+Directiva del propietario: negro dominante, púrpura como identidad, verde neón como acento limitado, cromo para la profundidad; Space Grotesk para titulares e Inter para la interfaz. Esta sección **reemplaza** la paleta de la §2 y la tipografía de la §3 (el verde dejó de ser el color de acción).
+
+| Token                     | Antes               | Ahora                           | Uso                                                                      |
+| ------------------------- | ------------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `void`                    | `#09090d`           | `#07060b`                       | fondo (negro espacial)                                                   |
+| `deep`                    | `#12121a`           | `#120b1f`                       | superficies con sesgo morado                                             |
+| `graphite`                | `#20202a`           | `#1d1430`                       | superficie elevada                                                       |
+| `action` (antes `alien`)  | `#00a303` verde     | `#8a2bff` púrpura eléctrico     | botones principales, con texto **blanco** (5.43:1)                       |
+| `actionHi`                | `#2fc433`           | `#7a1ff0`                       | botón al pasar (6.40:1)                                                  |
+| `violet`                  | `#b200ff`           | `#8a2bff`                       | insignias, selección, anuncio                                            |
+| `glow`                    | `#c45cff`           | `#b266ff`                       | rótulos, ofertas, foco, enlaces al pasar (6.0:1)                         |
+| `neon`                    | `#afff6e` (títulos) | `#39ff14`                       | **solo estado**: reloj del corte, cuenta del pedido, íconos de confianza |
+| `silver`, `frost`, `mist` | —                   | `#c9c7d4`, `#f6f5fa`, `#9d98ae` | plata cromada, blanco frío, terciario                                    |
+
+- **Un solo gesto audaz:** el título de portada y el nombre del pie en **plata cromada** (degradado recortado al texto, dentro de `@supports`; sin soporte quedan en blanco frío). El título deja el «encendido de neón» y entra con el resto del texto (solo sin «reducir movimiento»).
+- **Filetes y anillos:** púrpura → púrpura luminoso → plata (metal), en lugar de verde → morado.
+- **Tipografía:** Space Grotesk 700 en caja normal con interletraje negativo para titulares; las mayúsculas quedan solo para rótulos de ≤ 1rem (prueba en `looks.test.ts`). Inter para la interfaz. Tamaños recalculados para una letra ancha (antes eran para una condensada).
+- **Encabezado:** al desplazarse gana un filo y una sombra (animación ligada al scroll, sin JS; sin soporte, el filo queda fijo).
+- **Barra de categorías:** la página activa en púrpura luminoso con subrayado (forma + color).
+- **Sin cambios:** catálogo, precios, fotos, textos de la tienda, carrito, checkout, pago y pedidos (solo heredan los colores de los tokens).
+- **Evidencia (local):** recorrido en 360, 375, 390, 430, 768, 1024, 1280, 1440 y 1920 px por inicio, productos, ofertas, ficha, búsqueda vacía, 404, aviso de privacidad y cuenta: sin desplazamiento horizontal; menú del celular cierra con Esc y devuelve el foco; CLS de la portada en 390 px 0.024 → 0.002 (medición local, sin red real).

@@ -66,23 +66,23 @@ export const LOOK_CUTOFF: Partial<Record<StoreLook, CutoffConfig>> = {
 
 /** Fuentes que el look necesita cargadas (variables `--font-*`). */
 export const LOOK_FONTS: Record<StoreLook, readonly FontKey[]> = {
-  nocturno: ["barlow-condensed", "manrope"],
+  nocturno: ["space-grotesk", "inter"],
 };
 
 /** Paleta de Nocturno. Los pares de texto se prueban en looks.test.ts (≥ 4.5:1). */
 export const NOCTURNO = {
-  void: "#09090d", // fondo: profundidad
-  deep: "#12121a", // superficies: paneles, tarjetas, pie
-  graphite: "#20202a", // superficie elevada y bordes marcados
-  silver: "#c8cad3", // acción principal y texto secundario fuerte
-  frost: "#f4f5f8", // texto principal
-  mist: "#9a9caa", // texto terciario (marca, notas)
-  alien: "#00a303", // verde de la marca: acción principal (relleno con texto negro)
-  alienHi: "#2fc433", // verde al pasar el cursor
-  violet: "#b200ff", // morado de la marca: relleno con texto blanco (insignias, selección)
-  glow: "#c45cff", // morado legible sobre negro: rótulos, ofertas, foco
-  white: "#ffffff", // texto sobre el morado de la marca
-  neon: "#afff6e", // verde neón del hero original de la tienda: títulos de portada
+  void: "#07060b", // negro espacial: domina la composición
+  deep: "#120b1f", // superficie oscura con sesgo morado: paneles, tarjetas, pie
+  graphite: "#1d1430", // superficie elevada (menú, campos activos)
+  silver: "#c9c7d4", // plata cromada: texto secundario fuerte y filos metálicos
+  frost: "#f6f5fa", // blanco frío: texto principal
+  mist: "#9d98ae", // texto terciario (notas, rótulos de pie)
+  action: "#8a2bff", // púrpura eléctrico: acción principal (relleno con texto blanco)
+  actionHi: "#7a1ff0", // púrpura al pasar el cursor (más hondo: el blanco gana contraste)
+  violet: "#8a2bff", // identidad: insignias, selección, anuncio
+  glow: "#b266ff", // púrpura luminoso legible sobre negro: rótulos, ofertas, foco, enlaces al pasar
+  white: "#ffffff", // texto sobre el púrpura
+  neon: "#39ff14", // verde neón: acento limitado (estado: corte de envío, íconos de confianza)
   // Estados legibles sobre negro (los de la plataforma son para fondos claros).
   danger: "#fca5a5",
   success: "#86efac",
@@ -99,26 +99,23 @@ export const NOCTURNO_PAIRS: ReadonlyArray<readonly [string, string, string, num
   ["terciario sobre fondo", NOCTURNO.mist, NOCTURNO.void, 4.5],
   ["terciario sobre superficie", NOCTURNO.mist, NOCTURNO.deep, 4.5],
   ["terciario sobre superficie elevada", NOCTURNO.mist, NOCTURNO.graphite, 4.5],
-  ["botón (negro sobre verde de la marca)", NOCTURNO.void, NOCTURNO.alien, 4.5],
-  ["botón al pasar (negro sobre verde claro)", NOCTURNO.void, NOCTURNO.alienHi, 4.5],
+  ["botón (blanco sobre púrpura eléctrico)", NOCTURNO.white, NOCTURNO.action, 4.5],
+  ["botón al pasar (blanco sobre púrpura hondo)", NOCTURNO.white, NOCTURNO.actionHi, 4.5],
   ["botón secundario al pasar (negro sobre blanco frío)", NOCTURNO.void, NOCTURNO.frost, 4.5],
-  ["título neón sobre fondo", NOCTURNO.neon, NOCTURNO.void, 4.5],
-  ["oferta y acento sobre fondo", NOCTURNO.glow, NOCTURNO.void, 4.5],
-  ["oferta y acento sobre superficie", NOCTURNO.glow, NOCTURNO.deep, 4.5],
-  [
-    "insignia de oferta y carrito (blanco sobre morado de la marca)",
-    NOCTURNO.white,
-    NOCTURNO.violet,
-    4.5,
-  ],
+  ["oferta, rótulo y enlace al pasar sobre fondo", NOCTURNO.glow, NOCTURNO.void, 4.5],
+  ["oferta y rótulo sobre superficie", NOCTURNO.glow, NOCTURNO.deep, 4.5],
+  ["rótulo sobre superficie elevada", NOCTURNO.glow, NOCTURNO.graphite, 4.5],
+  ["insignia de oferta y carrito (blanco sobre púrpura)", NOCTURNO.white, NOCTURNO.violet, 4.5],
+  ["reloj del corte (verde neón sobre fondo)", NOCTURNO.neon, NOCTURNO.void, 4.5],
   ["error sobre superficie", NOCTURNO.danger, NOCTURNO.deep, 4.5],
   ["éxito sobre superficie", NOCTURNO.success, NOCTURNO.deep, 4.5],
   ["aviso sobre superficie", NOCTURNO.warning, NOCTURNO.deep, 4.5],
   // Foco: indicador no textual, 3:1 (WCAG 1.4.11 y 2.4.13).
   ["anillo de foco sobre fondo", NOCTURNO.glow, NOCTURNO.void, 3],
   ["anillo de foco sobre superficie elevada", NOCTURNO.glow, NOCTURNO.graphite, 3],
-  // Íconos de la franja de confianza en verde: gráfico, 3:1.
-  ["ícono verde sobre fondo", NOCTURNO.alien, NOCTURNO.void, 3],
+  // Gráficos (filetes, subrayados, íconos): 3:1.
+  ["filete púrpura sobre fondo", NOCTURNO.action, NOCTURNO.void, 3],
+  ["ícono verde neón sobre fondo", NOCTURNO.neon, NOCTURNO.void, 3],
 ];
 
 const R = ".sf-root[data-look='nocturno']";
@@ -140,18 +137,18 @@ const NOCTURNO_CSS = [
     `--ad-frost:${N.frost};--ad-mist:${N.mist};--ad-violet:${N.violet};--ad-glow:${N.glow};` +
     `--ad-hair:color-mix(in srgb,${N.silver} 13%,${N.void});--ad-hair-strong:color-mix(in srgb,${N.silver} 34%,${N.void});` +
     `--ad-ease:${EASE};--ad-dur:220ms;` +
-    `--sf-primary:${N.alien};--sf-accent:${N.glow};--sf-bg:${N.void};--sf-fg:${N.frost};--sf-muted:${N.mist};` +
-    `--sf-on-primary:${N.void};--sf-radius:10px;` +
-    `--sf-btn-bg:${N.alien};--sf-btn-fg:${N.void};--sf-btn-border:${N.alien};` +
+    `--sf-primary:${N.action};--sf-accent:${N.glow};--sf-bg:${N.void};--sf-fg:${N.frost};--sf-muted:${N.mist};` +
+    `--sf-on-primary:${N.white};--sf-radius:10px;` +
+    `--sf-btn-bg:${N.action};--sf-btn-fg:${N.white};--sf-btn-border:${N.action};--sf-nav-active:${N.glow};` +
     `--sf-sale-bg:${N.violet};--sf-sale-fg:${N.white};--sf-sale-text:${N.glow};` +
     `--sf-footer-bg:${N.deep};--sf-footer-fg:${N.frost};--sf-link:${N.silver};--sf-photo-blend:normal;` +
     `--sf-danger:${N.danger};--sf-success:${N.success};--sf-warning:${N.warning};` +
-    "--sf-font-heading:var(--font-barlow-condensed);--sf-font-body:var(--font-manrope);" +
+    "--sf-font-heading:var(--font-space-grotesk);--sf-font-body:var(--font-inter);" +
     "--sf-shadow-card:none;--sf-section-gap:4rem;--sf-section-gap-lg:7rem;" +
     `--sf-announce-bg:${N.violet};--sf-announce-fg:${N.white};` +
     `--sf-surface:${N.deep};--sf-border:var(--ad-hair);--sf-border-strong:var(--ad-hair-strong);` +
     "--sf-radius-card:14px;--sf-radius-panel:22px;--sf-radius-control:10px;--sf-radius-btn:999px;" +
-    "font-family:var(--font-manrope),system-ui,sans-serif;font-size:16px;line-height:1.6}",
+    "font-family:var(--font-inter),system-ui,sans-serif;font-size:16px;line-height:1.6;font-feature-settings:'cv11','ss01'}",
   // Sin destello blanco al estirar la página en el celular.
   `html:has(${R}){background:${N.void};color-scheme:dark}`,
   `${R} ::selection{background:${N.violet};color:${N.white}}`,
@@ -161,12 +158,12 @@ const NOCTURNO_CSS = [
   `${R} ::placeholder{color:${N.mist};opacity:1}`,
 
   // ── Tipografía ────────────────────────────────────────────────────────────
-  `${R} ${DISPLAY}{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;letter-spacing:.005em;text-transform:uppercase;line-height:.95}`,
+  `${R} ${DISPLAY}{font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;letter-spacing:-.025em;line-height:1.02}`,
   // Rótulo: condensada en mayúsculas, como etiqueta de producto (sin espaciado exagerado).
-  `${R} .sf-eyebrow{font:700 .9375rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
-  `${R} .sf-section-title{font-size:clamp(2.25rem,1.5rem + 2.6vw,3.5rem);line-height:.92;font-weight:700}`,
-  `${R} .sf-view-all{font-weight:700;color:${N.frost};text-decoration:underline;text-decoration-color:${N.alien};text-decoration-thickness:2px;text-underline-offset:6px;transition:color var(--ad-dur) var(--ad-ease)}`,
-  `${R} .sf-view-all:hover{color:${N.alienHi}}`,
+  `${R} .sf-eyebrow{font:700 .9375rem/1.1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
+  `${R} .sf-section-title{font-size:clamp(1.75rem,1.35rem + 1.7vw,2.75rem);line-height:1.05;font-weight:700;letter-spacing:-.03em}`,
+  `${R} .sf-view-all{font-weight:700;color:${N.frost};text-decoration:underline;text-decoration-color:${N.action};text-decoration-thickness:2px;text-underline-offset:6px;transition:color var(--ad-dur) var(--ad-ease)}`,
+  `${R} .sf-view-all:hover{color:${N.glow}}`,
 
   // ── Barra de anuncio y encabezado ─────────────────────────────────────────
   `${R} aside[aria-label='Aviso de la tienda']{font-weight:700;letter-spacing:.01em;padding-block:.625rem}`,
@@ -176,36 +173,36 @@ const NOCTURNO_CSS = [
   // El vidrio va en una capa propia: un backdrop-filter en el <header> lo haría
   // contenedor de sus hijos fijos y el menú del celular quedaría atrapado en él.
   `${R} header.sf-el-header::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:color-mix(in srgb,${N.void} 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
-  `${R} .sf-wordmark{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:1.5rem;line-height:.95;color:${N.frost}}`,
-  `@media (min-width:640px){${R} .sf-wordmark{font-size:1.75rem}}`,
+  `${R} .sf-wordmark{font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;letter-spacing:.01em;text-transform:uppercase;font-size:1.0625rem;line-height:1.05;color:${N.frost}}`,
+  `@media (min-width:640px){${R} .sf-wordmark{font-size:1.25rem}}`,
   // Tableta (640–1023 px): el nombre en dos renglones deja al carrito en la misma fila.
-  `@media (min-width:640px) and (max-width:1023px){${R} .sf-wordmark{max-width:9rem;font-size:1.375rem}}`,
+  `@media (min-width:640px) and (max-width:1023px){${R} .sf-wordmark{max-width:10rem;font-size:1.0625rem}}`,
   `${R} nav[aria-label='Principal'] :is(a,button){font-weight:600}`,
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button){position:relative;color:${N.silver}}`,
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button):hover{color:${N.frost};text-decoration:none}`,
-  `${R} nav[aria-label='Principal'] > ul > li > :is(a,button)::after{content:"";position:absolute;left:0;right:0;bottom:.5rem;height:2px;background:${N.alien};transform:scaleX(0);transform-origin:left;transition:transform var(--ad-dur) var(--ad-ease)}`,
+  `${R} nav[aria-label='Principal'] > ul > li > :is(a,button)::after{content:"";position:absolute;left:0;right:0;bottom:.5rem;height:2px;background:${N.action};transform:scaleX(0);transform-origin:left;transition:transform var(--ad-dur) var(--ad-ease)}`,
   `${R} nav[aria-label='Principal'] > ul > li > :is(a,button):is(:hover,[aria-expanded=true])::after{transform:scaleX(1)}`,
   // Buscador: contorno fino que se enciende en verde al escribir (sin caja verde permanente).
   `${R} header.sf-el-header form[role=search] > div:first-of-type{border-width:1px;border-color:${N.mist};background:${N.deep};transition:border-color var(--ad-dur) var(--ad-ease)}`,
-  `${R} header.sf-el-header form[role=search] > div:first-of-type:focus-within{border-color:${N.alien}}`,
+  `${R} header.sf-el-header form[role=search] > div:first-of-type:focus-within{border-color:${N.action}}`,
   `${R} header.sf-el-header a[href='/carrito'] span[aria-hidden=true]{background:${N.violet};color:${N.white};box-shadow:0 0 0 2px ${N.void}}`,
 
   // ── Botones ───────────────────────────────────────────────────────────────
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']{font-weight:700;letter-spacing:.01em;transition:background-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease),border-color var(--ad-dur) var(--ad-ease),transform 120ms var(--ad-ease)}`,
-  `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):hover{background:${N.alienHi};border-color:${N.alienHi}}`,
+  `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):hover{background:${N.actionHi};border-color:${N.actionHi}}`,
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:not(:disabled):active{transform:scale(.985)}`,
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   `${R} .sf-hero-bg{min-height:clamp(32rem,74svh,46rem);border:1px solid var(--ad-hair);border-radius:var(--sf-radius-panel)}`,
-  `${R} .sf-hero-veil{background:linear-gradient(0deg,rgb(9 9 13/.94) 0%,rgb(9 9 13/.78) 42%,rgb(9 9 13/.35) 100%)}`,
-  `@media (min-width:768px){${R} .sf-hero-veil{background:linear-gradient(90deg,rgb(9 9 13/.94) 0%,rgb(9 9 13/.8) 40%,rgb(9 9 13/.2) 78%,rgb(9 9 13/.1) 100%)}}`,
+  `${R} .sf-hero-veil{background:linear-gradient(0deg,rgb(7 6 11/.94) 0%,rgb(7 6 11/.78) 42%,rgb(7 6 11/.35) 100%)}`,
+  `@media (min-width:768px){${R} .sf-hero-veil{background:linear-gradient(90deg,rgb(7 6 11/.94) 0%,rgb(7 6 11/.8) 40%,rgb(7 6 11/.2) 78%,rgb(7 6 11/.1) 100%)}}`,
   `${R} .sf-hero-body{gap:1.25rem;padding:clamp(2rem,6vw,4.5rem) clamp(1.25rem,5vw,4.5rem)}`,
-  `${R} .sf-hero-title{font-size:clamp(3.25rem,1.6rem + 7vw,7.5rem);line-height:.86;font-weight:700;max-width:12ch;color:${N.neon}}`,
+  `${R} .sf-hero-title{font-size:clamp(2.5rem,1.45rem + 4.6vw,5.5rem);line-height:.98;font-weight:700;letter-spacing:-.04em;max-width:14ch;color:${N.frost}}`,
   `${R} .sf-hero-sub{font-size:clamp(1rem,.9rem + .4vw,1.1875rem);line-height:1.6;color:${N.silver};max-width:34rem}`,
-  `${R} .sf-hero-cta{background:${N.alien};color:${N.void};border-radius:var(--sf-radius-btn);gap:.75rem;padding-inline:2rem;font-weight:700;letter-spacing:.01em;transition:background-color var(--ad-dur) var(--ad-ease)}`,
-  `${R} .sf-hero-cta:hover{background:${N.alienHi}}`,
+  `${R} .sf-hero-cta{background:${N.action};color:${N.white};border-radius:var(--sf-radius-btn);gap:.75rem;padding-inline:2rem;font-weight:700;letter-spacing:.01em;transition:background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} .sf-hero-cta:hover{background:${N.actionHi}}`,
   `${R} .sf-hero-split{--sf-primary:${N.deep};--sf-on-primary:${N.frost};background:${N.deep};color:${N.frost};border:1px solid var(--ad-hair)}`,
-  `${R} .sf-hero-split .sf-hero-cta{background:${N.alien};color:${N.void}}`,
+  `${R} .sf-hero-split .sf-hero-cta{background:${N.action};color:${N.white}}`,
   // En el celular el hero va de orilla a orilla: más presencia sin achicar el texto.
   `@media (max-width:639px){${R} .sf-hero-bg{margin-inline:-1rem;border-radius:0;border-inline:0;min-height:34rem}}`,
 
@@ -214,12 +211,12 @@ const NOCTURNO_CSS = [
   `@media (min-width:640px){${R} .sf-hero-group{gap:2.5rem}}`,
   // ── Franja de confianza y beneficios ──────────────────────────────────────
   `${R} .sf-trust{background:transparent;border-block:1px solid var(--ad-hair);border-radius:0;padding-inline:0}`,
-  `${R} .sf-trust svg{color:${N.alien}}`,
+  `${R} .sf-trust svg{color:${N.glow}}`,
   `${R} .sf-benefits > li{background:${N.deep};border:1px solid var(--ad-hair);border-radius:var(--sf-radius-panel);padding:1.5rem;gap:.875rem}`,
   // Ícono dentro de un círculo con el anillo de la marca (mismo motivo que las categorías).
-  `${R} .sf-benefits > li > span:first-child{display:grid;place-items:center;width:3rem;height:3rem;border-radius:50%;color:${N.alien};border:2px solid transparent;` +
-    `background:linear-gradient(${N.void},${N.void}) padding-box,conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien}) border-box}`,
-  `${R} .sf-benefits > li > span:nth-child(2){font:700 1.25rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+  `${R} .sf-benefits > li > span:first-child{display:grid;place-items:center;width:3rem;height:3rem;border-radius:50%;color:${N.action};border:2px solid transparent;` +
+    `background:linear-gradient(${N.void},${N.void}) padding-box,conic-gradient(from 200deg,${N.violet},${N.glow},${N.silver},${N.violet}) border-box}`,
+  `${R} .sf-benefits > li > span:nth-child(2){font:700 1.125rem/1.15 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:-.01em}`,
 
   // ── Categorías: círculos con anillo de la marca («portal» verde → morado) ──
   // El anillo es un borde con degradado cónico (fondo en dos capas); la foto queda
@@ -229,12 +226,12 @@ const NOCTURNO_CSS = [
   `@media (min-width:640px){${R} .sf-cat-list > li{width:auto}${R} .sf-cat-list{gap:2rem 1.5rem}}`,
   `${R} .sf-cat-link{gap:.75rem}`,
   `${R} .sf-cat-media{aspect-ratio:1;border-radius:50%;padding:4px;border:2px solid transparent;box-shadow:none;` +
-    `background:linear-gradient(${N.deep},${N.deep}) padding-box,conic-gradient(from var(--ad-spin),${N.alien},${N.glow},${N.violet},${N.alien}) border-box}`,
+    `background:linear-gradient(${N.deep},${N.deep}) padding-box,conic-gradient(from var(--ad-spin),${N.violet},${N.glow},${N.silver},${N.violet}) border-box}`,
   `${R} .sf-cat-media img{border-radius:50%;object-fit:cover;padding:0;mix-blend-mode:normal}`,
   `${R} .sf-cat-media svg{color:${N.silver}}`,
-  `${R} .sf-cat-link:hover .sf-cat-media{--ad-spin:380deg;box-shadow:0 0 28px -6px color-mix(in srgb,${N.alien} 55%,transparent)}`,
-  `${R} .sf-cat-name{font:700 1rem/1.05 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:${N.frost}}`,
-  `${R} .sf-cat-link:hover .sf-cat-name{color:${N.alienHi}}`,
+  `${R} .sf-cat-link:hover .sf-cat-media{--ad-spin:380deg;box-shadow:0 0 28px -6px color-mix(in srgb,${N.action} 55%,transparent)}`,
+  `${R} .sf-cat-name{font:700 1rem/1.05 var(--font-space-grotesk),system-ui,sans-serif;text-transform:uppercase;letter-spacing:.02em;color:${N.frost}}`,
+  `${R} .sf-cat-link:hover .sf-cat-name{color:${N.glow}}`,
   `@media (prefers-reduced-motion:no-preference){${R} .sf-cat-media{transition:--ad-spin .7s var(--ad-ease),box-shadow var(--ad-dur) var(--ad-ease)}}`,
 
   // ── Tarjeta de producto ───────────────────────────────────────────────────
@@ -242,15 +239,15 @@ const NOCTURNO_CSS = [
   `${R} .sf-card-media{border-radius:var(--sf-radius-card);background:${N.deep};outline:1px solid var(--ad-hair);outline-offset:-1px;transition:outline-color var(--ad-dur) var(--ad-ease)}`,
   `${R} .sf-card:hover .sf-card-media{outline-color:var(--ad-hair-strong)}`,
   `${R} .sf-card-img{object-fit:cover;padding:0;mix-blend-mode:normal}`,
-  `${R} .sf-card-brand{margin-top:.875rem;font:700 .875rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
+  `${R} .sf-card-brand{margin-top:.875rem;font:700 .875rem/1.2 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
   // Dos renglones reservados: los precios quedan alineados en toda la fila.
   `${R} .sf-card-title{font-size:.9375rem;font-weight:600;line-height:1.4;min-height:2.8em;color:${N.frost};text-decoration:none}`,
-  `${R} .sf-card:hover .sf-card-title{text-decoration:underline;text-decoration-color:${N.alien};text-decoration-thickness:2px;text-underline-offset:4px}`,
-  `${R} .sf-card-price > span:first-child{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;font-size:1.375rem;letter-spacing:.01em;color:${N.frost}}`,
+  `${R} .sf-card:hover .sf-card-title{text-decoration:underline;text-decoration-color:${N.action};text-decoration-thickness:2px;text-underline-offset:4px}`,
+  `${R} .sf-card-price > span:first-child{font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;font-size:1.25rem;letter-spacing:-.01em;color:${N.frost}}`,
   `${R} .sf-card-price > span[class*='sf-sale-text']{color:${N.glow}}`,
   // «Agregar» en la tarjeta: contorno fino; se rellena al pasar (la ficha conserva el botón lleno).
   `${R} .sf-card form button{background:transparent;color:${N.frost};border-color:var(--ad-hair-strong);font-weight:700}`,
-  `${R} .sf-card form button:not(:disabled):hover{background:${N.alien};border-color:${N.alien};color:${N.void}}`,
+  `${R} .sf-card form button:not(:disabled):hover{background:${N.action};border-color:${N.action};color:${N.white}}`,
   `${R} .sf-card-choose{border-width:1px;border-color:var(--ad-hair-strong);color:${N.frost};font-weight:700}`,
   // Carga: la foto ocupa su lugar desde el inicio (sin saltos); un barrido tenue
   // indica que llega. Se detiene solo, por si la foto tiene transparencia.
@@ -268,14 +265,14 @@ const NOCTURNO_CSS = [
   `${R} .sf-story-media{border-radius:0;aspect-ratio:1/1;height:100%}`,
   `${R} .sf-story-body{padding:clamp(1.75rem,5vw,4rem);display:flex;flex-direction:column;justify-content:center;gap:1.25rem}`,
   `${R} .sf-story-body p{color:${N.silver};font-size:1.0625rem;line-height:1.7;max-width:34rem}`,
-  `${R} .sf-story-cta{color:${N.frost};font-weight:700;text-decoration:underline;text-decoration-color:${N.alien};text-decoration-thickness:2px;text-underline-offset:6px}`,
-  `${R} .sf-story-cta:hover{color:${N.alienHi}}`,
+  `${R} .sf-story-cta{color:${N.frost};font-weight:700;text-decoration:underline;text-decoration-color:${N.action};text-decoration-thickness:2px;text-underline-offset:6px}`,
+  `${R} .sf-story-cta:hover{color:${N.glow}}`,
 
   // ── Pie ───────────────────────────────────────────────────────────────────
-  `${R} .sf-footer{margin-top:7rem;border-top:0;background-image:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});background-size:100% 2px;background-repeat:no-repeat}`,
-  `${R} .sf-footer-name{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;font-size:clamp(3rem,1rem + 8vw,8.5rem);line-height:.85;text-transform:uppercase;color:${N.neon}}`,
-  `${R} .sf-footer :is(h2,h3){font:700 1rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.mist}}`,
-  `${R} .sf-footer a:hover{color:${N.alienHi}}`,
+  `${R} .sf-footer{margin-top:7rem;border-top:0;background-image:linear-gradient(90deg,${N.violet},${N.glow},${N.silver});background-size:100% 2px;background-repeat:no-repeat}`,
+  `${R} .sf-footer-name{font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;font-size:clamp(2.25rem,.6rem + 6.4vw,6.75rem);line-height:.94;letter-spacing:-.015em;text-transform:uppercase;color:${N.frost}}`,
+  `${R} .sf-footer :is(h2,h3){font:700 1rem/1.1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.mist}}`,
+  `${R} .sf-footer a:hover{color:${N.glow}}`,
   `${R} .sf-footer [aria-labelledby='sf-pagos'] li{background:transparent;color:${N.silver};border:1px solid var(--ad-hair-strong)}`,
 
   // ── Ficha de producto ─────────────────────────────────────────────────────
@@ -286,9 +283,9 @@ const NOCTURNO_CSS = [
   // «Comprar ahora» queda como acción secundaria (contorno); «Agregar» es la principal.
   `${R} form button[class*='bg-[var(--sf-fg)]']{background:transparent;color:${N.frost};border-color:var(--ad-hair-strong);transition:background-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease)}`,
   `${R} form button[class*='bg-[var(--sf-fg)]']:not(:disabled):hover{background:${N.frost};color:${N.void};border-color:${N.frost}}`,
-  `${R} .sf-pdp-brand{font:700 1rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
-  `${R} .sf-pdp-title{font-size:clamp(2.5rem,1.6rem + 3.2vw,4.25rem);line-height:.9;font-weight:700}`,
-  `${R} .sf-pdp-price{font-family:var(--font-barlow-condensed),'Arial Narrow',sans-serif;font-weight:700;font-size:2.25rem;letter-spacing:.01em}`,
+  `${R} .sf-pdp-brand{font:700 1rem/1.1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:${N.glow}}`,
+  `${R} .sf-pdp-title{font-size:clamp(2rem,1.45rem + 2.2vw,3.25rem);line-height:1.04;font-weight:700;letter-spacing:-.03em}`,
+  `${R} .sf-pdp-price{font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;font-size:2rem;letter-spacing:-.02em}`,
   `${R} .sf-pdp-facts{border-color:var(--ad-hair);background:${N.deep}}`,
   `${R} .sf-pdp-desc{color:${N.silver}}`,
   `${R} .sf-pdp-desc :is(strong,b){color:${N.frost}}`,
@@ -299,17 +296,17 @@ const NOCTURNO_CSS = [
   // Resplandor tenue de la marca arriba de la página: profundidad sin imágenes.
   `${R}{background-image:radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%);background-repeat:no-repeat}`,
   // Tarjeta de producto al pasar: halo verde y la foto se acerca un poco.
-  `${R} .sf-card:hover .sf-card-media{outline-color:${N.alien};box-shadow:0 18px 44px -18px color-mix(in srgb,${N.alien} 60%,transparent)}`,
+  `${R} .sf-card:hover .sf-card-media{outline-color:${N.action};box-shadow:0 18px 44px -18px color-mix(in srgb,${N.action} 60%,transparent)}`,
   `@media (prefers-reduced-motion:no-preference){${R} .sf-card-media{transition:outline-color var(--ad-dur) var(--ad-ease),box-shadow .35s var(--ad-ease)}${R} .sf-card:hover .sf-card-img{scale:1.04}}`,
   // Marcas: fichas claras para que cualquier logo (oscuro o claro) se lea.
   `${R} a[href^='/marca/']{background:${N.frost};color:${N.void};border-color:transparent;border-radius:var(--sf-radius-card);transition:box-shadow var(--ad-dur) var(--ad-ease)}`,
-  `${R} a[href^='/marca/']:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.alien}}`,
+  `${R} a[href^='/marca/']:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.action}}`,
   `${R} a[href^='/marca/'] :is(span,[aria-hidden=true]){color:${N.void}}`,
   // Opiniones y testimonios: paneles con comillas grandes en verde neón.
   `${R} .sf-home figure{background:${N.deep};border:1px solid var(--ad-hair);border-radius:var(--sf-radius-panel);padding:1.75rem}`,
-  `${R} .sf-home figure:has(> blockquote:first-child)::before{content:"“";content:"“" / "";display:block;height:2.25rem;font:700 5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.neon}}`,
+  `${R} .sf-home figure:has(> blockquote:first-child)::before{content:"“";content:"“" / "";display:block;height:2.25rem;font:700 5rem/1 var(--font-space-grotesk),system-ui,sans-serif;color:${N.glow}}`,
   `${R} .sf-home figcaption{color:${N.silver}}`,
-  `${R} .sf-home figcaption > span:first-child{color:${N.frost};font:700 1.0625rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em}`,
+  `${R} .sf-home figcaption > span:first-child{color:${N.frost};font:700 1.0625rem/1.2 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.02em}`,
 
   // ── Primera impresión: el portal (v4) ─────────────────────────────────────
   // Un solo momento orquestado: al entrar, el anillo de la marca da una vuelta
@@ -319,18 +316,18 @@ const NOCTURNO_CSS = [
   `${R} .sf-hero-split{position:relative;isolation:isolate;border:1px solid var(--ad-hair);` +
     `background:radial-gradient(1.5px 1.5px at 8% 18%,color-mix(in srgb,${N.frost} 80%,transparent),transparent),radial-gradient(1.5px 1.5px at 17% 62%,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.5px 1.5px at 26% 9%,color-mix(in srgb,${N.frost} 70%,transparent),transparent),radial-gradient(1.5px 1.5px at 34% 78%,color-mix(in srgb,${N.frost} 45%,transparent),transparent),radial-gradient(1.5px 1.5px at 43% 30%,color-mix(in srgb,${N.frost} 65%,transparent),transparent),radial-gradient(1.5px 1.5px at 57% 12%,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1.5px 1.5px at 63% 70%,color-mix(in srgb,${N.frost} 75%,transparent),transparent),radial-gradient(1.5px 1.5px at 71% 38%,color-mix(in srgb,${N.frost} 55%,transparent),transparent),radial-gradient(1.5px 1.5px at 79% 86%,color-mix(in srgb,${N.frost} 60%,transparent),transparent),radial-gradient(1.5px 1.5px at 86% 22%,color-mix(in srgb,${N.frost} 80%,transparent),transparent),radial-gradient(1.5px 1.5px at 92% 55%,color-mix(in srgb,${N.frost} 50%,transparent),transparent),radial-gradient(1.5px 1.5px at 4% 88%,color-mix(in srgb,${N.frost} 45%,transparent),transparent),` +
     `radial-gradient(70% 90% at 50% 0%,color-mix(in srgb,${N.violet} 26%,transparent),transparent 70%),` +
-    `radial-gradient(55% 70% at 100% 100%,color-mix(in srgb,${N.alien} 16%,transparent),transparent 70%),${N.deep}}`,
+    `radial-gradient(55% 70% at 100% 100%,color-mix(in srgb,${N.action} 16%,transparent),transparent 70%),${N.deep}}`,
   // El portal: anillo cónico verde → morado (máscara de aro) con halo, centrado tras el título.
   `${R} .sf-hero-split::before{content:"";position:absolute;z-index:-1;left:50%;top:clamp(-9rem,-12vw,-3rem);width:min(118vw,52rem);aspect-ratio:1;translate:-50% 0;border-radius:50%;pointer-events:none;` +
-    `background:conic-gradient(from var(--ad-orbit),${N.alien},${N.glow},${N.violet},transparent 62%,${N.alien});` +
+    `background:conic-gradient(from var(--ad-orbit),${N.violet},${N.glow},${N.silver},transparent 62%,${N.violet});` +
     `mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2px),black 100%,transparent);` +
-    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.alien} 55%,transparent)) drop-shadow(0 0 42px color-mix(in srgb,${N.violet} 45%,transparent));opacity:.9}`,
+    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.action} 55%,transparent)) drop-shadow(0 0 42px color-mix(in srgb,${N.violet} 45%,transparent));opacity:.9}`,
   // Núcleo del portal: un resplandor verde suave detrás del texto.
   `${R} .sf-hero-split::after{content:"";position:absolute;z-index:-1;left:50%;top:clamp(-4rem,-4vw,0rem);width:min(90vw,36rem);aspect-ratio:1;translate:-50% 0;border-radius:50%;pointer-events:none;` +
-    `background:radial-gradient(closest-side,color-mix(in srgb,${N.alien} 18%,transparent),transparent)}`,
+    `background:radial-gradient(closest-side,color-mix(in srgb,${N.action} 18%,transparent),transparent)}`,
   `${R} .sf-hero-split > *{position:relative}`,
   // Título de neón: resplandor del mismo verde (el texto sigue siendo #afff6e, 16:1).
-  `${R} .sf-hero-title{text-shadow:0 0 14px color-mix(in srgb,${N.neon} 45%,transparent),0 0 44px color-mix(in srgb,${N.alien} 40%,transparent)}`,
+  `${R} .sf-hero-title{text-shadow:0 0 14px color-mix(in srgb,${N.glow} 45%,transparent),0 0 44px color-mix(in srgb,${N.action} 40%,transparent)}`,
   "@keyframes ad-orbit{from{--ad-orbit:-200deg}to{--ad-orbit:0deg}}",
   "@keyframes ad-portal{from{opacity:0;scale:.82}to{opacity:.9;scale:1}}",
   // Encendido de letrero: dos parpadeos cortos y queda prendido (menos de 1 s; sin destellos rápidos repetidos).
@@ -345,7 +342,7 @@ const NOCTURNO_CSS = [
   // números grandes en círculos verdes (la lista ya es una secuencia).
   `${R} .sf-home > section:has(> .sf-prose){max-width:none;position:relative;padding:clamp(1.5rem,4vw,3rem);border-radius:var(--sf-radius-panel);border:2px solid transparent;` +
     `background:radial-gradient(60% 120% at 0% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
-    `linear-gradient(120deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+    `linear-gradient(120deg,${N.violet},${N.glow},${N.silver}) border-box}`,
   `${R} .sf-home > section:has(> .sf-prose) .sf-section-title{color:${N.frost};max-width:22ch}`,
   `${R} .sf-home .sf-prose{color:${N.silver};font-size:1.0625rem;line-height:1.65;max-width:none}`,
   `${R} .sf-home .sf-prose > p{max-width:62ch}`,
@@ -354,30 +351,30 @@ const NOCTURNO_CSS = [
   `@media (min-width:768px){${R} .sf-home .sf-prose ol{grid-template-columns:repeat(3,minmax(0,1fr))}}`,
   `${R} .sf-home .sf-prose ol > li{counter-increment:ad-step;margin:0;padding:1.25rem;border-radius:var(--sf-radius-card);background:${N.void};border:1px solid var(--ad-hair);color:${N.silver}}`,
   `${R} .sf-home .sf-prose ol > li::before{content:counter(ad-step);display:grid;place-items:center;width:2.5rem;height:2.5rem;margin-bottom:.75rem;border-radius:50%;` +
-    `font:700 1.375rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.void};background:${N.alien};box-shadow:0 0 22px -4px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+    `font:700 1.375rem/1 var(--font-space-grotesk),system-ui,sans-serif;color:${N.white};background:${N.action};box-shadow:0 0 22px -4px color-mix(in srgb,${N.action} 70%,transparent)}`,
 
   // ── Ficha y carrito (v6) ──────────────────────────────────────────────────
   // Sin franja blanca al final cuando la barra fija de compra reserva espacio.
   `body:has(${R}){background:${N.void}}`,
   // Barra fija de compra en el celular: vidrio con filete de la marca arriba.
-  `${R} .fixed.inset-x-0.bottom-0.z-30{border-top:0;box-shadow:none;background:linear-gradient(90deg,${N.alien},${N.glow},${N.violet}) top/100% 2px no-repeat,color-mix(in srgb,${N.void} 82%,transparent);` +
+  `${R} .fixed.inset-x-0.bottom-0.z-30{border-top:0;box-shadow:none;background:linear-gradient(90deg,${N.violet},${N.glow},${N.silver}) top/100% 2px no-repeat,color-mix(in srgb,${N.void} 82%,transparent);` +
     `-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}`,
   // Resumen del carrito: panel con filete en degradado; título condensado.
   `${R} aside[aria-label='Resumen']{border:2px solid transparent;border-radius:var(--sf-radius-panel);padding:1.5rem;` +
     `background:radial-gradient(80% 60% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
-    `linear-gradient(140deg,${N.alien},${N.glow},${N.violet}) border-box}`,
-  `${R} aside[aria-label='Resumen'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+    `linear-gradient(140deg,${N.violet},${N.glow},${N.silver}) border-box}`,
+  `${R} aside[aria-label='Resumen'] > h2{font:700 1.75rem/1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.01em}`,
 
   // ── Catálogo (v7) ─────────────────────────────────────────────────────────
   // Ordenar y «Solo disponibles» como píldoras; la casilla marcada se enciende en verde.
   `${R} select[name=orden]{border-radius:999px;padding-inline:1rem 2.25rem;border-color:${N.mist};background-color:${N.deep};font-weight:600}`,
   `${R} label:has(> input[name=disponible]){padding-inline:.875rem 1rem;border:1px solid ${N.mist};border-radius:999px;background:${N.deep};font-weight:600;cursor:pointer;transition:border-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease)}`,
-  `${R} label:has(> input[name=disponible]:checked){border-color:${N.alien};color:${N.alienHi}}`,
-  `${R} input[name=disponible]{accent-color:${N.alien}}`,
+  `${R} label:has(> input[name=disponible]:checked){border-color:${N.action};color:${N.glow}}`,
+  `${R} input[name=disponible]{accent-color:${N.action}}`,
   // Cantidad (−/+): píldora con los botones que se encienden en verde al pasar.
   `${R} div:has(> input.sf-qty){border-radius:999px;overflow:hidden;border-color:${N.mist};background:${N.deep}}`,
   `${R} div:has(> input.sf-qty) > button{transition:background-color var(--ad-dur) var(--ad-ease),color var(--ad-dur) var(--ad-ease)}`,
-  `${R} div:has(> input.sf-qty) > button:not(:disabled):hover{background:${N.alien};color:${N.void}}`,
+  `${R} div:has(> input.sf-qty) > button:not(:disabled):hover{background:${N.action};color:${N.white}}`,
   `${R} input.sf-qty{background:transparent;border-color:var(--ad-hair-strong);font-weight:700}`,
 
   // ── Pedido, vacíos y 404 (v8, fase 1 del plan) ────────────────────────────
@@ -385,44 +382,44 @@ const NOCTURNO_CSS = [
   // los datos de la cuenta en una caja propia y el botón de WhatsApp grande.
   `${R} section[aria-labelledby=pago]{padding:clamp(1.25rem,3vw,2rem);border:2px solid transparent;border-radius:var(--sf-radius-panel);` +
     `background:radial-gradient(70% 90% at 100% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
-    `linear-gradient(130deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+    `linear-gradient(130deg,${N.violet},${N.glow},${N.silver}) border-box}`,
   `${R} section[aria-labelledby=pago] > p.whitespace-pre-line{font-size:1.0625rem;line-height:1.7;color:${N.frost};font-variant-numeric:tabular-nums;letter-spacing:.01em;` +
     `padding:1rem 1.25rem;border-radius:var(--sf-radius-control);background:${N.void};border:1px solid var(--ad-hair-strong)}`,
   `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{min-height:3.25rem;padding-inline:1.75rem;font-size:1rem;font-weight:700;` +
-    `box-shadow:0 12px 36px -12px color-mix(in srgb,${N.alien} 70%,transparent);transition:background-color var(--ad-dur) var(--ad-ease)}`,
-  `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
+    `box-shadow:0 12px 36px -12px color-mix(in srgb,${N.action} 70%,transparent);transition:background-color var(--ad-dur) var(--ad-ease)}`,
+  `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']:hover{background:${N.actionHi}}`,
   `@media (max-width:639px){${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
   // Títulos de las partes del pedido en la letra condensada.
-  `${R} :is(h2#pago,h2#productos,h2#envio,h2#retiro,h2#ayuda,h2#ficha-whatsapp){font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+  `${R} :is(h2#pago,h2#productos,h2#envio,h2#retiro,h2#ayuda,h2#ficha-whatsapp){font:700 1.5rem/1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.01em}`,
   // Avance del pedido: pasos hechos en verde con halo; el siguiente, en degradado de la marca.
   `${R} ol[aria-label='Avance del pedido'] > li > span[aria-hidden=true]{height:6px}`,
-  `${R} ol[aria-label='Avance del pedido'] > li:not([aria-current]) > span[aria-hidden=true][class*='btn-bg)]']{box-shadow:0 0 14px -2px color-mix(in srgb,${N.alien} 70%,transparent)}`,
-  `${R} ol[aria-label='Avance del pedido'] > li[aria-current=step] > span[aria-hidden=true]{background:linear-gradient(90deg,${N.alien},${N.glow})}`,
+  `${R} ol[aria-label='Avance del pedido'] > li:not([aria-current]) > span[aria-hidden=true][class*='btn-bg)]']{box-shadow:0 0 14px -2px color-mix(in srgb,${N.action} 70%,transparent)}`,
+  `${R} ol[aria-label='Avance del pedido'] > li[aria-current=step] > span[aria-hidden=true]{background:linear-gradient(90deg,${N.violet},${N.glow})}`,
   // 404: el número como letrero de neón dentro de un anillo de la marca.
-  `${R} p[aria-hidden=true][class*='sf-font-heading']{position:relative;isolation:isolate;display:inline-block;padding:.12em .3em;font-weight:700;color:${N.neon};` +
-    `text-shadow:0 0 14px color-mix(in srgb,${N.neon} 45%,transparent),0 0 44px color-mix(in srgb,${N.alien} 40%,transparent)}`,
+  `${R} p[aria-hidden=true][class*='sf-font-heading']{position:relative;isolation:isolate;display:inline-block;padding:.12em .3em;font-weight:700;color:${N.glow};` +
+    `text-shadow:0 0 14px color-mix(in srgb,${N.glow} 45%,transparent),0 0 44px color-mix(in srgb,${N.action} 40%,transparent)}`,
   `${R} p[aria-hidden=true][class*='sf-font-heading']::before{content:"";position:absolute;z-index:-1;inset:50% auto auto 50%;width:1.75em;aspect-ratio:1;translate:-50% -50%;border-radius:50%;` +
-    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien});mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2px),black 100%,transparent);opacity:.85;` +
+    `background:conic-gradient(from 200deg,${N.violet},${N.glow},${N.silver},${N.violet});mask:radial-gradient(closest-side,transparent calc(100% - 3px),black calc(100% - 2px),black 100%,transparent);opacity:.85;` +
     `filter:drop-shadow(0 0 16px color-mix(in srgb,${N.violet} 55%,transparent))}`,
   // Carrito vacío: el anillo de la marca, vacío, encima del título.
   `${R} section.text-center:has(> h1 + p + a[href='/productos'])::before{content:"";display:block;width:6rem;aspect-ratio:1;margin:0 auto 1.5rem;border-radius:50%;` +
-    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien});mask:radial-gradient(closest-side,transparent calc(100% - 4px),black calc(100% - 3px),black 100%,transparent);` +
-    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.alien} 50%,transparent))}`,
+    `background:conic-gradient(from 200deg,${N.violet},${N.glow},${N.silver},${N.violet});mask:radial-gradient(closest-side,transparent calc(100% - 4px),black calc(100% - 3px),black 100%,transparent);` +
+    `filter:drop-shadow(0 0 18px color-mix(in srgb,${N.action} 50%,transparent))}`,
   // Botón flotante de WhatsApp (fase 3): anillo de la marca alrededor del verde de WhatsApp.
-  `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet},0 10px 30px -6px color-mix(in srgb,${N.alien} 60%,transparent)}`,
+  `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet},0 10px 30px -6px color-mix(in srgb,${N.action} 60%,transparent)}`,
 
   // ── Menú del celular (v9, fase 3 del plan) ────────────────────────────────
   // Vidrio con el resplandor de la marca; secciones en la letra condensada grande;
   // fotos de categoría en círculo con anillo. Entra deslizándose (@starting-style).
   `${R} div[role=dialog][aria-label='Menú']{background:radial-gradient(90% 50% at 0% 0%,color-mix(in srgb,${N.violet} 22%,transparent),transparent 70%),` +
-    `radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,${N.alien} 14%,transparent),transparent 70%),color-mix(in srgb,${N.void} 90%,transparent);` +
+    `radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,${N.action} 14%,transparent),transparent 70%),color-mix(in srgb,${N.void} 90%,transparent);` +
     `-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}`,
-  `${R} div[role=dialog][aria-label='Menú'] > div:first-child{background:transparent;border-bottom:0;background-image:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});background-size:100% 2px;background-position:bottom;background-repeat:no-repeat}`,
-  `${R} div[role=dialog][aria-label='Menú'] > div:first-child > p{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase}`,
-  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14{font:700 1.625rem/1.1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em;gap:.875rem;transition:color var(--ad-dur) var(--ad-ease)}`,
-  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14:hover{color:${N.alienHi}}`,
+  `${R} div[role=dialog][aria-label='Menú'] > div:first-child{background:transparent;border-bottom:0;background-image:linear-gradient(90deg,${N.violet},${N.glow},${N.silver});background-size:100% 2px;background-position:bottom;background-repeat:no-repeat}`,
+  `${R} div[role=dialog][aria-label='Menú'] > div:first-child > p{font:700 1.75rem/1 var(--font-space-grotesk),system-ui,sans-serif}`,
+  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14{font:600 1.375rem/1.15 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.01em;gap:.875rem;transition:color var(--ad-dur) var(--ad-ease)}`,
+  `${R} div[role=dialog][aria-label='Menú'] nav a.min-h-14:hover{color:${N.glow}}`,
   `${R} div[role=dialog][aria-label='Menú'] nav a img{width:2.5rem;height:2.5rem;border-radius:50%;object-fit:cover;padding:2px;` +
-    `background:conic-gradient(from 200deg,${N.alien},${N.glow},${N.violet},${N.alien})}`,
+    `background:conic-gradient(from 200deg,${N.violet},${N.glow},${N.silver},${N.violet})}`,
   "@media (prefers-reduced-motion:no-preference){" +
     `${R} div[role=dialog][aria-label='Menú']{transition:opacity .25s var(--ad-ease),translate .3s var(--ad-ease)}` +
     `@starting-style{${R} div[role=dialog][aria-label='Menú']{opacity:0;translate:-16px 0}}` +
@@ -431,32 +428,32 @@ const NOCTURNO_CSS = [
   // ── Checkout (v10) ────────────────────────────────────────────────────────
   // Secciones en la letra condensada; envío y forma de pago como tarjetas que se
   // encienden en verde al elegirlas; resumen con el filete de la marca.
-  `${R} form fieldset > legend.text-lg{font:700 1.5rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em;margin-bottom:.25rem}`,
+  `${R} form fieldset > legend.text-lg{font:700 1.5rem/1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.01em;margin-bottom:.25rem}`,
   `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id])){padding:1rem 1.125rem;border-color:${N.mist};border-radius:var(--sf-radius-control);background:${N.deep};font-size:1rem;font-weight:600;cursor:pointer;` +
     `transition:border-color var(--ad-dur) var(--ad-ease),box-shadow var(--ad-dur) var(--ad-ease),background-color var(--ad-dur) var(--ad-ease)}`,
-  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){border-color:${N.alien};background:color-mix(in srgb,${N.alien} 10%,${N.deep});box-shadow:0 0 0 1px ${N.alien},0 10px 30px -14px color-mix(in srgb,${N.alien} 70%,transparent)}`,
-  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id])) > input{accent-color:${N.alien};width:1.125rem;height:1.125rem}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){border-color:${N.action};background:color-mix(in srgb,${N.action} 10%,${N.deep});box-shadow:0 0 0 1px ${N.action},0 10px 30px -14px color-mix(in srgb,${N.action} 70%,transparent)}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id])) > input{accent-color:${N.action};width:1.125rem;height:1.125rem}`,
   `${R} aside[aria-label='Resumen del pedido']{border:2px solid transparent;border-radius:var(--sf-radius-panel);padding:1.5rem;` +
     `background:radial-gradient(80% 60% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%) padding-box,linear-gradient(${N.deep},${N.deep}) padding-box,` +
-    `linear-gradient(140deg,${N.alien},${N.glow},${N.violet}) border-box}`,
-  `${R} aside[aria-label='Resumen del pedido'] > h2{font:700 1.75rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.01em}`,
+    `linear-gradient(140deg,${N.violet},${N.glow},${N.silver}) border-box}`,
+  `${R} aside[aria-label='Resumen del pedido'] > h2{font:700 1.75rem/1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.01em}`,
   // En el celular, durante el pago, el botón flotante de WhatsApp tapaba campos del formulario.
   `@media (max-width:639px){${R}:has(input[name=payment_account_id]) .sf-whatsapp{display:none}}`,
 
   // ── Cuenta regresiva al corte de envío (v11) ──────────────────────────────
-  `${R} .sf-cutoff{background:linear-gradient(90deg,color-mix(in srgb,${N.alien} 14%,${N.deep}),${N.deep} 50%,color-mix(in srgb,${N.violet} 14%,${N.deep}));` +
+  `${R} .sf-cutoff{background:linear-gradient(90deg,color-mix(in srgb,${N.action} 14%,${N.deep}),${N.deep} 50%,color-mix(in srgb,${N.violet} 14%,${N.deep}));` +
     `border-bottom:1px solid var(--ad-hair);color:${N.frost};font-weight:600;letter-spacing:.01em}`,
-  `${R} .sf-cutoff-clock{display:inline-block;min-width:4.5ch;padding:.05rem .5rem;border-radius:999px;background:${N.void};border:1px solid ${N.alien};` +
-    `font:700 1.0625rem/1.2 var(--font-barlow-condensed),'Arial Narrow',sans-serif;color:${N.neon};text-shadow:0 0 10px color-mix(in srgb,${N.neon} 45%,transparent)}`,
+  `${R} .sf-cutoff-clock{display:inline-block;min-width:4.5ch;padding:.05rem .5rem;border-radius:999px;background:${N.void};border:1px solid ${N.action};` +
+    `font:700 1.0625rem/1.2 var(--font-space-grotesk),system-ui,sans-serif;color:${N.neon};text-shadow:0 0 10px color-mix(in srgb,${N.glow} 45%,transparent)}`,
 
   // ── Lo más nuevo de CSS (v5) ──────────────────────────────────────────────
   // Holograma al pasar el cursor: un brillo iridiscente cruza la foto como el
   // foil de un empaque o una carta coleccionable (solo degradados y mezcla de color).
   `${R} .sf-card-media::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;` +
-    `background:linear-gradient(115deg,transparent 18%,color-mix(in srgb,${N.neon} 55%,transparent) 34%,color-mix(in srgb,${N.glow} 55%,transparent) 44%,color-mix(in srgb,${N.frost} 60%,transparent) 50%,color-mix(in srgb,${N.violet} 55%,transparent) 57%,color-mix(in srgb,${N.alien} 50%,transparent) 67%,transparent 82%);background-size:260% 260%;background-position:100% 100%;mix-blend-mode:color-dodge;opacity:0}`,
+    `background:linear-gradient(115deg,transparent 18%,color-mix(in srgb,${N.glow} 55%,transparent) 34%,color-mix(in srgb,${N.glow} 55%,transparent) 44%,color-mix(in srgb,${N.frost} 60%,transparent) 50%,color-mix(in srgb,${N.violet} 55%,transparent) 57%,color-mix(in srgb,${N.action} 50%,transparent) 67%,transparent 82%);background-size:260% 260%;background-position:100% 100%;mix-blend-mode:color-dodge;opacity:0}`,
   `${R} .sf-card:hover .sf-card-media::after{opacity:.6;background-position:0% 0%}`,
   // CTA del hero: halo verde al pasar, como si el portal lo iluminara.
-  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.neon},0 12px 40px -8px color-mix(in srgb,${N.alien} 70%,transparent)}`,
+  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.glow},0 12px 40px -8px color-mix(in srgb,${N.action} 70%,transparent)}`,
   // Precios con cifras de ancho fijo: no «bailan» entre tarjetas.
   `${R} :is(.sf-card-price,.sf-pdp-price){font-variant-numeric:tabular-nums}`,
   // Barra de avance de lectura en el encabezado, ligada al desplazamiento
@@ -464,7 +461,7 @@ const NOCTURNO_CSS = [
   "@keyframes ad-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}",
   "@media (prefers-reduced-motion:no-preference){@supports (animation-timeline:scroll()){" +
     `${R} header.sf-el-header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;transform-origin:left;pointer-events:none;` +
-    `background:linear-gradient(90deg,${N.alien},${N.glow},${N.violet});animation:ad-progress linear both;animation-timeline:scroll(root)}` +
+    `background:linear-gradient(90deg,${N.violet},${N.glow},${N.silver});animation:ad-progress linear both;animation-timeline:scroll(root)}` +
     "}}",
   "@media (prefers-reduced-motion:no-preference){" +
     `${R} .sf-card-media::after{transition:opacity .35s var(--ad-ease),background-position .9s var(--ad-ease)}` +
@@ -484,24 +481,24 @@ const NOCTURNO_CSS = [
   // ganar sobre lo anterior: queda un solo resplandor (el portal) y el resto
   // usa filetes y color, sin halos.
   `${R}{background-image:radial-gradient(70rem 32rem at 50% -12rem,color-mix(in srgb,${N.violet} 9%,transparent),transparent 70%)}`,
-  `${R} .sf-hero-title{text-shadow:0 0 22px color-mix(in srgb,${N.neon} 22%,transparent)}`,
-  `${R} .sf-hero-split::before{filter:drop-shadow(0 0 16px color-mix(in srgb,${N.alien} 35%,transparent))}`,
+  `${R} .sf-hero-title{text-shadow:0 0 22px color-mix(in srgb,${N.glow} 22%,transparent)}`,
+  `${R} .sf-hero-split::before{filter:drop-shadow(0 0 16px color-mix(in srgb,${N.action} 35%,transparent))}`,
   // Con foto en la portada: sin estrellas, la foto ya llena el espacio.
   `${R} .sf-hero-split:has(img){background:radial-gradient(70% 70% at 50% 0%,color-mix(in srgb,${N.violet} 18%,transparent),transparent 70%),${N.deep}}`,
-  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.neon}}`,
+  `${R} .sf-hero-cta:hover{box-shadow:0 0 0 2px ${N.void},0 0 0 4px ${N.glow}}`,
   `${R} .sf-cat-link:hover .sf-cat-media{box-shadow:none}`,
   `${R} .sf-card:hover .sf-card-media{box-shadow:none}`,
   `${R} .sf-card:hover .sf-card-media::after{opacity:.3}`,
   // Paneles: el filete de la marca sólo en lo que importa (aviso y pago); los
   // resúmenes, en un panel liso.
-  `${R} .sf-home > section:has(> .sf-prose),${R} section[aria-labelledby=pago]{background:linear-gradient(${N.deep},${N.deep}) padding-box,linear-gradient(120deg,${N.alien},${N.glow},${N.violet}) border-box}`,
+  `${R} .sf-home > section:has(> .sf-prose),${R} section[aria-labelledby=pago]{background:linear-gradient(${N.deep},${N.deep}) padding-box,linear-gradient(120deg,${N.violet},${N.glow},${N.silver}) border-box}`,
   `${R} :is(aside[aria-label='Resumen'],aside[aria-label='Resumen del pedido']){border:1px solid var(--ad-hair-strong);background:${N.deep}}`,
   `${R} .sf-home .sf-prose ol > li::before{box-shadow:none}`,
   `${R} section[aria-labelledby=pago] > a[href^='https://wa.me']{box-shadow:none}`,
   `${R} ol[aria-label='Avance del pedido'] > li > span[aria-hidden=true]{box-shadow:none}`,
-  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){box-shadow:0 0 0 1px ${N.alien}}`,
+  `${R} label:has(> input:is([name=payment_account_id],[name=shipping_rate_id]):checked){box-shadow:0 0 0 1px ${N.action}}`,
   `${R} .sf-whatsapp{box-shadow:0 0 0 3px ${N.void},0 0 0 5px ${N.violet}}`,
-  `${R} p[aria-hidden=true][class*='sf-font-heading']{text-shadow:0 0 22px color-mix(in srgb,${N.neon} 22%,transparent)}`,
+  `${R} p[aria-hidden=true][class*='sf-font-heading']{text-shadow:0 0 22px color-mix(in srgb,${N.glow} 22%,transparent)}`,
   `${R} p[aria-hidden=true][class*='sf-font-heading']::before,${R} section.text-center:has(> h1 + p + a[href='/productos'])::before{filter:none}`,
   `${R} div[role=dialog][aria-label='Menú']{background:radial-gradient(90% 50% at 0% 0%,color-mix(in srgb,${N.violet} 12%,transparent),transparent 70%),color-mix(in srgb,${N.void} 92%,transparent)}`,
   `${R} .sf-cutoff{background:${N.deep}}`,
@@ -536,14 +533,14 @@ const NOCTURNO_CSS = [
   // esquinas suaves; títulos de grupo en la letra condensada.
   `${R} [role=listbox][aria-label=Sugerencias]{background:color-mix(in srgb,${N.deep} 94%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);` +
     `border:1px solid var(--ad-hair-strong);border-radius:var(--sf-radius-panel);padding:.5rem;box-shadow:0 24px 60px -24px rgb(0 0 0/.8)}`,
-  `${R} [role=listbox][aria-label=Sugerencias] [role=group] > div:first-child{font:700 .875rem/1 var(--font-barlow-condensed),'Arial Narrow',sans-serif;letter-spacing:.04em;color:${N.mist}}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=group] > div:first-child{font:700 .875rem/1 var(--font-space-grotesk),system-ui,sans-serif;letter-spacing:.04em;color:${N.mist}}`,
   `${R} [role=listbox][aria-label=Sugerencias] [role=option]{border-radius:var(--sf-radius-control);padding:.5rem .625rem}`,
-  `${R} [role=listbox][aria-label=Sugerencias] [role=option][aria-selected=true]{outline:1px solid ${N.alien};background:color-mix(in srgb,${N.alien} 12%,${N.deep})}`,
+  `${R} [role=listbox][aria-label=Sugerencias] [role=option][aria-selected=true]{outline:1px solid ${N.action};background:color-mix(in srgb,${N.action} 12%,${N.deep})}`,
   `${R} [role=listbox][aria-label=Sugerencias] [role=option] img{width:2.75rem;height:2.75rem;border-radius:.625rem}`,
   // «Se agregó a tu carrito»: panel oscuro con palomita verde, en lugar de la caja blanca.
-  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{background:${N.deep};color:${N.frost};border:1px solid var(--ad-hair-strong);border-left:3px solid ${N.alien};border-radius:var(--sf-radius-card);box-shadow:0 18px 40px -18px rgb(0 0 0/.8)}`,
-  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div > svg{color:${N.alien}}`,
-  `${R} div[aria-live=polite].fixed.bottom-0.z-40 a{color:${N.alienHi};text-decoration-color:${N.alien}}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{background:${N.deep};color:${N.frost};border:1px solid var(--ad-hair-strong);border-left:3px solid ${N.action};border-radius:var(--sf-radius-card);box-shadow:0 18px 40px -18px rgb(0 0 0/.8)}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div > svg{color:${N.action}}`,
+  `${R} div[aria-live=polite].fixed.bottom-0.z-40 a{color:${N.glow};text-decoration-color:${N.action}}`,
   `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div :focus-visible{outline-color:${N.glow}}`,
   "@media (prefers-reduced-motion:no-preference){" +
     `${R} div[aria-live=polite].fixed.bottom-0.z-40 > div{transition:opacity .25s var(--ad-ease),translate .3s var(--ad-ease)}` +
@@ -576,7 +573,7 @@ const NOCTURNO_CSS = [
   // Cuándo llega si compra ahora (hora de corte real), en la ficha y el pago:
   // una línea con reloj, sin cajas extra.
   `${R} .sf-cutoff-inline{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;padding:.75rem 1rem;border-radius:var(--sf-radius-control);` +
-    `background:color-mix(in srgb,${N.alien} 8%,${N.deep});border:1px solid color-mix(in srgb,${N.alien} 35%,transparent);color:${N.frost};font-weight:600}`,
+    `background:color-mix(in srgb,${N.action} 8%,${N.deep});border:1px solid color-mix(in srgb,${N.action} 35%,transparent);color:${N.frost};font-weight:600}`,
   `${R} .sf-cutoff-inline .sf-cutoff-note{flex-basis:100%;color:${N.silver};font-weight:500;font-size:.8125rem}`,
   // Datos de compra de la ficha (envío, pago, WhatsApp): filas con la letra condensada en lo importante.
   `${R} .sf-pdp-facts{border-radius:var(--sf-radius-card)}`,
@@ -593,12 +590,12 @@ const NOCTURNO_CSS = [
   // Rayo de abducción: haz verde que baja del portal sobre el título y el botón.
   `${R} .sf-hero-split::after{top:0;height:100%;width:min(78vw,32rem);aspect-ratio:auto;border-radius:0;translate:-50% 0;filter:blur(4px);` +
     `clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);` +
-    `background:linear-gradient(180deg,color-mix(in srgb,${N.alien} 24%,transparent),color-mix(in srgb,${N.alien} 7%,transparent) 65%,transparent)}`,
+    `background:linear-gradient(180deg,color-mix(in srgb,${N.action} 24%,transparent),color-mix(in srgb,${N.action} 7%,transparent) 65%,transparent)}`,
   "@keyframes ad-beam{from{background-position:0 0,0 -40%}to{background-position:0 0,0 140%}}",
   "@media (prefers-reduced-motion:no-preference){" +
     `${R} .sf-hero-group > .sf-hero-split::after,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-split::after{` +
-    `background:linear-gradient(180deg,color-mix(in srgb,${N.alien} 24%,transparent),color-mix(in srgb,${N.alien} 7%,transparent) 65%,transparent),` +
-    `linear-gradient(180deg,transparent,color-mix(in srgb,${N.neon} 30%,transparent),transparent);background-size:100% 100%,100% 28%;background-repeat:no-repeat;` +
+    `background:linear-gradient(180deg,color-mix(in srgb,${N.action} 24%,transparent),color-mix(in srgb,${N.action} 7%,transparent) 65%,transparent),` +
+    `linear-gradient(180deg,transparent,color-mix(in srgb,${N.glow} 30%,transparent),transparent);background-size:100% 100%,100% 28%;background-repeat:no-repeat;` +
     `animation:ad-beam 2.2s cubic-bezier(.3,.6,.2,1) .6s both}` +
     "}",
   // Cartas coleccionables: con mouse, la foto se inclina en 3D y se eleva al pasar.
@@ -619,10 +616,10 @@ const NOCTURNO_CSS = [
   // Ficha del pedido por WhatsApp (v18): la acción principal tras confirmar, en
   // verde de la marca; la cuenta regresiva en la letra condensada.
   `${R} section[aria-labelledby=ficha-whatsapp]{padding:clamp(1.25rem,3vw,2rem);border-radius:var(--sf-radius-panel);` +
-    `border:1px solid color-mix(in srgb,${N.alien} 55%,transparent);background:color-mix(in srgb,${N.alien} 7%,${N.deep})}`,
+    `border:1px solid color-mix(in srgb,${N.action} 55%,transparent);background:color-mix(in srgb,${N.action} 7%,${N.deep})}`,
   `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']{min-height:3.25rem;padding-inline:1.75rem;font-size:1rem;font-weight:700;` +
     `transition:background-color var(--ad-dur) var(--ad-ease)}`,
-  `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']:hover{background:${N.alienHi}}`,
+  `${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']:hover{background:${N.actionHi}}`,
   `${R} section[aria-labelledby=ficha-whatsapp] [data-handoff=counting] .tabular-nums{font-family:var(--sf-font-heading);font-size:1.5rem;color:${N.neon}}`,
   `@media (max-width:639px){${R} section[aria-labelledby=ficha-whatsapp] > a[href^='https://wa.me']{display:flex;width:100%;text-align:center;padding-block:.625rem}}`,
   // Con la ficha en la página del pedido, la burbuja flotante repite el mismo
@@ -644,15 +641,15 @@ const NOCTURNO_CSS = [
   `${R} .sf-card-img{padding:9%;filter:drop-shadow(0 10px 14px rgb(0 0 0/.55))}`,
   // Carrito lateral: panel oscuro con filete verde; en el celular sube desde abajo.
   `${R} .sf-cart-sheet{background:radial-gradient(120% 40% at 100% 0%,color-mix(in srgb,${N.violet} 16%,transparent),transparent 70%),${N.deep};` +
-    `border-left:1px solid color-mix(in srgb,${N.alien} 45%,transparent);color:${N.frost}}`,
+    `border-left:1px solid color-mix(in srgb,${N.action} 45%,transparent);color:${N.frost}}`,
   `${R} .sf-cart-sheet::backdrop{background:rgb(5 5 9/.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}`,
-  `${R} .sf-cart-sheet h2{font-family:var(--sf-font-heading),system-ui,sans-serif;text-transform:uppercase;font-size:1.75rem;line-height:1;letter-spacing:.01em}`,
-  `${R} .sf-cart-sheet-price{font-family:var(--sf-font-heading),system-ui,sans-serif;font-size:1.75rem;color:${N.neon}}`,
+  `${R} .sf-cart-sheet h2{font-family:var(--sf-font-heading),system-ui,sans-serif;font-size:1.75rem;line-height:1;letter-spacing:.01em}`,
+  `${R} .sf-cart-sheet-price{font-family:var(--sf-font-heading),system-ui,sans-serif;font-size:1.75rem;color:${N.frost}}`,
   `${R} .sf-cart-sheet-ship{padding:.75rem 1rem;border-radius:var(--sf-radius-control);color:${N.frost};` +
-    `background:color-mix(in srgb,${N.alien} 10%,${N.deep});border:1px solid color-mix(in srgb,${N.alien} 35%,transparent)}`,
-  `${R} .sf-cart-sheet-ship svg{color:${N.alienHi}}`,
+    `background:color-mix(in srgb,${N.action} 10%,${N.deep});border:1px solid color-mix(in srgb,${N.action} 35%,transparent)}`,
+  `${R} .sf-cart-sheet-ship svg{color:${N.glow}}`,
   // En el celular, hoja que sube desde abajo a la medida de su contenido.
-  `@media (max-width:639px){${R} .sf-cart-sheet{height:auto;max-height:88dvh;width:100%;max-width:none;margin:0;inset:auto 0 0 0;border-left:0;border-top:1px solid color-mix(in srgb,${N.alien} 45%,transparent);border-radius:var(--sf-radius-panel) var(--sf-radius-panel) 0 0}}`,
+  `@media (max-width:639px){${R} .sf-cart-sheet{height:auto;max-height:88dvh;width:100%;max-width:none;margin:0;inset:auto 0 0 0;border-left:0;border-top:1px solid color-mix(in srgb,${N.action} 45%,transparent);border-radius:var(--sf-radius-panel) var(--sf-radius-panel) 0 0}}`,
   // Ficha (fase 2): la foto se puede ampliar (aviso discreto) y los sabores llevan su foto.
   `${R} .sf-zoom-trigger::after{content:"Ampliar";position:absolute;right:.75rem;bottom:.75rem;padding:.25rem .625rem;border-radius:999px;` +
     `font-size:.75rem;font-weight:600;color:${N.frost};background:color-mix(in srgb,${N.void} 72%,transparent);border:1px solid var(--ad-hair-strong);pointer-events:none}`,
@@ -665,6 +662,36 @@ const NOCTURNO_CSS = [
   "@media (prefers-reduced-motion:no-preference){@media (max-width:639px){" +
     `${R} .sf-cart-sheet[open]{animation:ad-sheet-up .38s var(--ad-ease)}` +
     "}}",
+
+  // ── Cromo y púrpura (v13, dirección «Alien Demon Exotics», 2026-11-24) ─────
+  // Un solo gesto audaz: los dos letreros de la marca (título de portada y
+  // nombre del pie) en plata cromada; todo lo demás, negro, blanco frío y
+  // púrpura. Sin soporte de texto recortado, quedan en blanco frío (legibles).
+  "@supports ((-webkit-background-clip:text) or (background-clip:text)){" +
+    `${R} :is(.sf-hero-title,.sf-footer-name){background:linear-gradient(180deg,${N.frost} 6%,${N.silver} 44%,${N.mist} 56%,${N.frost} 94%);` +
+    "-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none}" +
+    "}",
+  // Profundidad del título: un halo púrpura detrás del metal (filtro en el título, no en el encabezado).
+  `${R} .sf-hero-title{filter:drop-shadow(0 6px 26px color-mix(in srgb,${N.violet} 38%,transparent))}`,
+  // El encendido de neón ya no aplica al metal: el título entra con el resto del texto.
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-hero-group > .sf-hero-split .sf-hero-title,${R} .sf-hero-group [aria-roledescription=portada]:first-child .sf-hero-title{animation:ad-in .8s var(--ad-ease) .2s both}` +
+    "}",
+  // Rótulos de sección con su propio aire: titular ancho y apretado, rótulo chico espaciado.
+  `${R} .sf-eyebrow{font-weight:600;font-size:.8125rem;letter-spacing:.12em}`,
+  // Encabezado: al desplazarse gana un filo y una sombra (animación ligada al scroll, sin JS).
+  "@keyframes ad-header-edge{from{box-shadow:0 1px 0 transparent}to{box-shadow:0 1px 0 var(--ad-hair-strong),0 18px 40px -28px rgb(0 0 0/.95)}}",
+  "@media (prefers-reduced-motion:no-preference){@supports (animation-timeline:scroll()){" +
+    `${R} header.sf-el-header.sticky{animation:ad-header-edge linear both;animation-timeline:scroll(root);animation-range:0 160px}` +
+    "}}",
+  // Sin movimiento (o sin soporte), el filo queda fijo: el encabezado nunca se funde con el contenido.
+  `${R} header.sf-el-header.sticky{box-shadow:0 1px 0 var(--ad-hair)}`,
+  // Barra de categorías: página activa en púrpura luminoso con subrayado; las demás en plata.
+  `${R} nav[aria-label='Categorías'] a{color:${N.silver};transition:color var(--ad-dur) var(--ad-ease)}`,
+  `${R} nav[aria-label='Categorías'] a:hover{color:${N.frost}}`,
+  `${R} nav[aria-label='Categorías'] a[aria-current=page]{color:${N.glow};text-decoration-color:${N.violet}}`,
+  // Botón principal: al enfocarlo con teclado, un aro doble que se lee sobre el púrpura.
+  `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:focus-visible{outline:2px solid ${N.glow};outline-offset:3px}`,
 ].join("");
 
 const LOOK_CSS: Record<StoreLook, string> = { nocturno: NOCTURNO_CSS };

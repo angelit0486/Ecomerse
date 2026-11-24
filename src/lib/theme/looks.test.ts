@@ -54,15 +54,43 @@ describe("temas de presentación (looks)", () => {
     }
   });
 
-  it("conserva la colorimetría de Alien Demon: verde para la acción, morado de acento", () => {
-    // Colores de la marca guardados en Apariencia de la tienda (primario y acento).
-    expect(NOCTURNO.alien).toBe("#00a303");
-    expect(NOCTURNO.violet).toBe("#b200ff");
+  it("dirección «Alien Demon Exotics»: púrpura para la acción, verde neón solo como estado", () => {
+    // Paleta de la dirección creativa (2026-11-24): negro espacial domina, púrpura
+    // eléctrico da identidad y acción, verde neón como acento limitado.
+    expect(NOCTURNO.void).toBe("#07060b");
+    expect(NOCTURNO.deep).toBe("#120b1f");
+    expect(NOCTURNO.action).toBe("#8a2bff");
+    expect(NOCTURNO.glow).toBe("#b266ff");
+    expect(NOCTURNO.neon).toBe("#39ff14");
+    expect(NOCTURNO.frost).toBe("#f6f5fa");
     const css = lookCss("nocturno");
-    expect(css).toContain(`--sf-btn-bg:${NOCTURNO.alien}`);
-    expect(css).toContain(`--sf-primary:${NOCTURNO.alien}`);
-    expect(css).toContain(`.sf-hero-cta{background:${NOCTURNO.alien}`);
+    expect(css).toContain(`--sf-btn-bg:${NOCTURNO.action};--sf-btn-fg:${NOCTURNO.white}`);
+    expect(css).toContain(`--sf-primary:${NOCTURNO.action}`);
+    expect(css).toContain(`.sf-hero-cta{background:${NOCTURNO.action};color:${NOCTURNO.white}`);
     expect(css).toContain(`--sf-sale-bg:${NOCTURNO.violet};--sf-sale-fg:${NOCTURNO.white}`);
+    // El verde neón aparece en pocos lugares, todos de estado (reloj del corte,
+    // cuenta del pedido, íconos de confianza): nunca como relleno de botón.
+    const neon = css.split(NOCTURNO.neon).length - 1;
+    expect(neon).toBeGreaterThan(0);
+    expect(neon).toBeLessThanOrEqual(4);
+    expect(css).not.toMatch(new RegExp(`background:${NOCTURNO.neon}`));
+  });
+
+  it("los letreros de la marca van en cromo, con respaldo legible sin soporte", () => {
+    const css = lookCss("nocturno");
+    expect(css).toMatch(
+      /@supports \(\(-webkit-background-clip:text\) or \(background-clip:text\)\)\{[^}]*:is\(\.sf-hero-title,\.sf-footer-name\)\{background:linear-gradient\(/,
+    );
+    // Fuera del @supports, título y nombre del pie tienen color sólido (blanco frío).
+    expect(css).toContain(`max-width:14ch;color:${NOCTURNO.frost}}`);
+    expect(css).toMatch(new RegExp(`\\.sf-footer-name\\{[^}]*color:${NOCTURNO.frost}\\}`));
+  });
+
+  it("la página activa de la barra de categorías se distingue sin depender solo del color", () => {
+    const css = lookCss("nocturno");
+    expect(css).toContain("--sf-nav-active:");
+    // El subrayado (forma) acompaña al color.
+    expect(css).toContain("nav[aria-label='Categorías'] a[aria-current=page]{color:");
   });
 
   it("el nombre con letras decorativas de Unicode se dibuja con letras normales", () => {
@@ -82,14 +110,18 @@ describe("temas de presentación (looks)", () => {
   });
 
   it("tipografía editorial y categorías redondas, sin numeración ni flechas decorativas", () => {
-    expect(LOOK_FONTS.nocturno).toEqual(["barlow-condensed", "manrope"]);
+    expect(LOOK_FONTS.nocturno).toEqual(["space-grotesk", "inter"]);
     const css = lookCss("nocturno");
-    expect(css).toContain("--sf-font-heading:var(--font-barlow-condensed)");
+    expect(css).toContain("--sf-font-heading:var(--font-space-grotesk)");
+    expect(css).not.toMatch(/barlow|manrope/);
+    // Titulares en caja normal: las mayúsculas quedan para rótulos chicos (≤ 1rem).
+    for (const m of css.matchAll(/font:\d{3} ([\d.]+)rem[^}]*text-transform:uppercase/g)) {
+      expect(Number(m[1])).toBeLessThanOrEqual(1);
+    }
     expect(css).toMatch(/\.sf-cat-media\{aspect-ratio:1;border-radius:50%/);
     // Sin numeración decorativa de secciones (solo los pasos de un aviso, que sí son secuencia).
     expect(css).not.toContain("ad-sec");
     expect(css).not.toContain("→");
-    expect(css).not.toContain("space-grotesk");
   });
 
   it("en el checkout, la forma de pago elegida se enciende (regla :checked propia)", () => {
