@@ -8,6 +8,7 @@ import { orderProgress } from "@/lib/orders/order-progress";
 import { visibleStatus } from "@/lib/orders/visible-status";
 import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { holdLeftLabel } from "@/lib/orders/hold-left";
+import { clabeFrom, groupClabe } from "@/lib/payments/clabe";
 import { JUST_PLACED_PARAM } from "@/lib/orders/just-placed";
 import {
   orderTicketMessage,
@@ -33,6 +34,7 @@ import { sendReview } from "./review-actions";
 import { OrderReturn } from "./order-return";
 import { OrderReviews } from "./order-reviews";
 import { WhatsAppHandoff } from "./whatsapp-handoff";
+import { CopyField } from "./copy-field";
 
 export const metadata: Metadata = {
   title: "Tu pedido",
@@ -95,6 +97,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
       )
     : null;
   const payment = order.payment;
+  const clabe = payment?.provider === "manual" ? clabeFrom(payment.instructions) : null;
   // Ficha del pedido por WhatsApp (interruptor por tienda): el comprador manda su
   // pedido completo a la tienda. El enlace lleva datos personales: solo vive en
   // esta página (sin índice ni referer) y nunca se registra.
@@ -253,6 +256,29 @@ export default async function OrderPage({ params, searchParams }: Props) {
           {payment.status === "failed" ? <p>El pago no se completó.</p> : null}
           {payment.provider === "manual" && payment.instructions ? (
             <p className="whitespace-pre-line text-sm">{payment.instructions}</p>
+          ) : null}
+          {/* Copiar de un toque lo que se teclea en la app del banco: la CLABE (solo
+              si el texto trae una con dígito de control válido) y el número de pedido
+              para el concepto. */}
+          {payment.provider === "manual" ? (
+            <div className="space-y-2" data-pay-copy="">
+              {clabe ? (
+                <CopyField
+                  label="CLABE"
+                  value={clabe}
+                  display={groupClabe(clabe)}
+                  copied="Copiada"
+                />
+              ) : null}
+              {clabe ? (
+                // Sin «#»: algunos bancos no lo aceptan en el concepto.
+                <CopyField
+                  label="Número de pedido"
+                  value={order.display_number.replace(/^#/, "")}
+                  display={order.display_number}
+                />
+              ) : null}
+            </div>
           ) : null}
           {payment.provider === "manual" ? (
             <p className="text-sm">
