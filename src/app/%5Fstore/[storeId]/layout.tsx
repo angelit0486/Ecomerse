@@ -45,6 +45,15 @@ import { CartSheet } from "./_components/cart-sheet";
  */
 type Props = { children: ReactNode; params: Promise<{ storeId: string }> };
 
+/**
+ * Tiempo máximo de cada página de la tienda. Sin esto Vercel espera 300 s: si la
+ * conexión con la base se atora un momento, el comprador se quedaba 5 minutos
+ * viendo la página cargar (13 casos en 7 días, auditoría 2026-11-24). Con 30 s el
+ * error llega pronto y reintentar funciona. El pago y el pago simulado conservan
+ * su propio límite de 60 s (corren la cola de correos al terminar).
+ */
+export const maxDuration = 30;
+
 // Derivados fijos de la paleta (no editables): superficies, bordes y radios.
 const BASE_CSS = [
   "--sf-surface:color-mix(in srgb,var(--sf-fg) 5%,var(--sf-bg))",
