@@ -79,14 +79,14 @@ test("la clave «base» no cambia nada; «nocturno» enciende el tema solo en su
   await page.goto(url(nocturno, "/productos"));
   const dark = page.locator(".sf-root");
   await expect(dark).toHaveAttribute("data-look", "nocturno");
-  expect(await dark.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(9, 9, 13)");
+  expect(await dark.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(7, 6, 11)");
   // Títulos en Space Grotesk y texto en Inter (fuentes autoalojadas de la lista curada).
   const fonts = await page.evaluate(() => ({
     heading: getComputedStyle(document.querySelector("h1")!).fontFamily,
     body: getComputedStyle(document.querySelector(".sf-root")!).fontFamily,
   }));
-  expect(fonts.heading).toMatch(/barlow ?condensed/i);
-  expect(fonts.body).toMatch(/manrope/i);
+  expect(fonts.heading).toMatch(/space ?grotesk/i);
+  expect(fonts.body).toMatch(/inter/i);
   await expect(page.getByRole("link", { name: "Estuche (DEMO)" })).toBeVisible();
   // Los datos son los de la tienda: precio real y botón de compra intactos.
   await expect(page.getByText("$499.00").first()).toBeVisible();
@@ -276,6 +276,46 @@ test("nocturno: el menú del celular cubre toda la pantalla", async ({ page }) =
   const box = await menu.boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(840);
   expect(box?.y ?? 1).toBe(0);
+});
+
+test("nocturno: la nave sobre el título de la portada es decorativa y no mueve la página; «base» no la tiene", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url(nocturno, "/"));
+  const ship = page.locator("svg.sf-ship");
+  await expect(ship).toHaveCount(1);
+  await expect(ship).toHaveAttribute("aria-hidden", "true");
+  await expect(ship).toBeVisible();
+  // Va justo antes del título, dentro de la portada.
+  const order = await page.evaluate(() => {
+    const s = document.querySelector("svg.sf-ship")!;
+    const h = document.querySelector(".sf-hero-title")!;
+    return {
+      inHero: Boolean(s.closest(".sf-hero")),
+      before: Boolean(s.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING),
+    };
+  });
+  expect(order).toEqual({ inHero: true, before: true });
+  // Sin saltos de diseño al cargar (la nave tiene su tamaño desde el HTML).
+  const cls = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        let total = 0;
+        new PerformanceObserver((list) => {
+          for (const e of list.getEntries() as unknown as {
+            value: number;
+            hadRecentInput: boolean;
+          }[])
+            if (!e.hadRecentInput) total += e.value;
+        }).observe({ type: "layout-shift", buffered: true });
+        setTimeout(() => resolve(total), 1500);
+      }),
+  );
+  expect(cls).toBeLessThan(0.1);
+
+  await page.goto(url(base, "/"));
+  await expect(page.locator("svg.sf-ship")).toHaveCount(0);
 });
 
 test("nocturno respeta «reducir movimiento»: nada se anima", async ({ browser }) => {

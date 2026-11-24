@@ -690,6 +690,32 @@ const NOCTURNO_CSS = [
   `${R} nav[aria-label='Categorías'] a{color:${N.silver};transition:color var(--ad-dur) var(--ad-ease)}`,
   `${R} nav[aria-label='Categorías'] a:hover{color:${N.frost}}`,
   `${R} nav[aria-label='Categorías'] a[aria-current=page]{color:${N.glow};text-decoration-color:${N.violet}}`,
+  // Nave sobre el título de la portada (starship.tsx): colores de la paleta por
+  // clase; solo transform y opacity se animan (sin repintar ni mover el título).
+  `${R} .sf-ship{display:block;width:clamp(6.75rem,5.25rem + 4.5vw,9.75rem);height:auto;overflow:visible;margin-bottom:-.875rem;pointer-events:none}`,
+  `${R} .sf-ship-c1{stop-color:${N.frost}}${R} .sf-ship-c2{stop-color:${N.silver}}${R} .sf-ship-c3{stop-color:${N.mist}}${R} .sf-ship-c4{stop-color:${N.graphite}}`,
+  `${R} .sf-ship-g1{stop-color:${N.glow};stop-opacity:.9}${R} .sf-ship-g2{stop-color:${N.violet};stop-opacity:.5}`,
+  `${R} .sf-ship-r1{stop-color:${N.glow};stop-opacity:.5}${R} .sf-ship-r2{stop-color:${N.violet};stop-opacity:0}`,
+  `${R} .sf-ship-belly{fill:${N.deep}}${R} .sf-ship-engine{fill:${N.glow}}${R} .sf-ship-pilot{fill:${N.deep}}${R} .sf-ship-eye{fill:${N.neon}}`,
+  `${R} .sf-ship-rim{fill:none;stroke:${N.frost};stroke-opacity:.55;stroke-width:.8}`,
+  `${R} .sf-ship-panel{fill:none;stroke:${N.graphite};stroke-width:1;stroke-linecap:round}`,
+  `${R} .sf-ship-glint{fill:none;stroke:${N.frost};stroke-opacity:.7;stroke-width:1.6;stroke-linecap:round}`,
+  `${R} .sf-ship-light{fill:${N.glow}}${R} .sf-ship-light:nth-of-type(even){fill:${N.frost}}`,
+  `${R} .sf-ship-beam{opacity:.4}`,
+  `${R} .sf-ship-craft{transform-box:fill-box;transform-origin:50% 60%}`,
+  "@keyframes ad-ship-in{from{opacity:0;transform:translate(-42%,-38%) rotate(-12deg) scale(.6)}to{opacity:1;transform:none}}",
+  "@keyframes ad-ship-hover{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-5px) rotate(1.5deg)}}",
+  "@keyframes ad-ship-light{0%,100%{opacity:.3}50%{opacity:1}}",
+  "@keyframes ad-ship-beam{0%,100%{opacity:.22}50%{opacity:.5}}",
+  "@media (prefers-reduced-motion:no-preference){" +
+    `${R} .sf-ship{animation:ad-ship-in 1.4s cubic-bezier(.16,1,.3,1) .1s both}` +
+    `${R} .sf-ship-craft{animation:ad-ship-hover 5.6s ease-in-out 1.5s infinite}` +
+    `${R} .sf-ship-light{animation:ad-ship-light 2.1s ease-in-out infinite}` +
+    `${R} .sf-ship-light:nth-of-type(2){animation-delay:.3s}${R} .sf-ship-light:nth-of-type(3){animation-delay:.6s}` +
+    `${R} .sf-ship-light:nth-of-type(4){animation-delay:.9s}${R} .sf-ship-light:nth-of-type(5){animation-delay:1.2s}` +
+    `${R} .sf-ship-light:nth-of-type(6){animation-delay:1.5s}${R} .sf-ship-light:nth-of-type(7){animation-delay:1.8s}` +
+    `${R} .sf-ship-beam{animation:ad-ship-beam 3.4s ease-in-out 1.5s infinite}` +
+    "}",
   // Botón principal: al enfocarlo con teclado, un aro doble que se lee sobre el púrpura.
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:focus-visible{outline:2px solid ${N.glow};outline-offset:3px}`,
 ].join("");

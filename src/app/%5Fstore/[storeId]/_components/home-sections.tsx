@@ -11,6 +11,7 @@ import {
 import { srcSetFor } from "@/server/storefront/media-variants";
 import { brandInitialsOf } from "@/lib/catalog/brand-initials";
 import { goodFor, shelfFor, type Good } from "@/lib/storefront/goods";
+import { storeLook } from "@/lib/theme/looks";
 import { sectionCss } from "@/lib/theme/resolve-theme";
 import { SafeHtml } from "@/ui/safe-html";
 
@@ -27,6 +28,7 @@ import {
 import { ProductGrid } from "./rated-product-grid";
 import { HeroCarousel } from "./hero-carousel";
 import { ImageCarousel } from "./image-carousel";
+import { Starship } from "./starship";
 import { ThemeLink } from "./theme-link";
 
 /**
@@ -35,7 +37,14 @@ import { ThemeLink } from "./theme-link";
  * `SafeHtml`. Los enlaces se revalidan al mostrar (ThemeLink). Testimonios sin
  * estrellas ni JSON-LD de reseñas (D-F9-04).
  */
-type Store = { id: string; currency: string; locale: string; launched_at?: string | null };
+type Store = {
+  id: string;
+  currency: string;
+  locale: string;
+  launched_at?: string | null;
+  /** Clave de tema: con un look, la portada lleva su ilustración. */
+  theme?: { key: string | null } | null;
+};
 
 const BUTTON =
   "inline-flex min-h-12 items-center justify-center rounded-[var(--sf-radius-btn)] border border-[var(--sf-btn-border)] bg-[var(--sf-btn-bg)] px-6 font-bold text-[var(--sf-btn-fg)]";
@@ -131,11 +140,14 @@ function Hero({
   section,
   headingLevel,
   shelf,
+  ornament = null,
 }: {
   section: HeroData;
   headingLevel: 1 | 2;
   /** Objetos del giro para el hero sin foto («Anaquel ilustrado»). */
   shelf: readonly Good[];
+  /** Ilustración del look sobre el título (solo en la primera portada). */
+  ornament?: ReactNode;
 }) {
   const slides: HeroSlideData[] = [section, ...(section.slides ?? [])];
   const rendered = slides.map((slide, index) => (
@@ -148,6 +160,7 @@ function Hero({
       headingLevel={index === 0 ? headingLevel : 2}
       eager={index === 0}
       shelf={shelf}
+      ornament={index === 0 ? ornament : null}
     />
   ));
   if (rendered.length === 1) return rendered[0]!;
@@ -202,7 +215,9 @@ function HeroSlide({
   headingLevel,
   eager,
   shelf,
+  ornament,
 }: {
+  ornament: ReactNode;
   slide: HeroSlideData;
   align: "left" | "center";
   layout: "split" | "background";
@@ -216,6 +231,7 @@ function HeroSlide({
   const background = layout === "background" && hasImage;
   const text = (
     <>
+      {ornament}
       <Heading className="sf-hero-title max-w-2xl text-[2.125rem] font-extrabold leading-[1.02] tracking-tight text-balance sm:text-5xl lg:text-6xl">
         {slide.heading}
       </Heading>
@@ -414,6 +430,8 @@ export async function HomeSections({
   const shelf = shelfFor(
     sections.flatMap((s) => (s.type === "category_grid" ? s.categories.map((c) => c.name) : [])),
   );
+  // Nave del look Nocturno sobre el título de la primera portada; otras tiendas no la reciben.
+  const ship = storeLook(store.theme?.key) === "nocturno" ? <Starship /> : null;
   const colorCss = sectionCss(sections);
   const focalCss = carouselFocalCss(sections);
   const nonce = colorCss || focalCss ? ((await headers()).get("x-nonce") ?? undefined) : undefined;
@@ -449,7 +467,7 @@ export async function HomeSections({
             key={section.id}
             className="sf-hero-group flex flex-col gap-[var(--sf-section-gap)] sm:gap-[var(--sf-section-gap-lg)]"
           >
-            <Hero section={section} headingLevel={1} shelf={shelf} />
+            <Hero section={section} headingLevel={1} shelf={shelf} ornament={ship} />
             <GoalTiles goals={goals} />
             {trust}
           </div>
