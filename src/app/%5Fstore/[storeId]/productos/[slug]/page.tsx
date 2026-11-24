@@ -407,6 +407,7 @@ export default async function ProductPage({ params }: Props) {
               variants={product.variants.map((v) => ({
                 id: v.id,
                 options: parseSignature(v.signature),
+                priceCents: v.price,
                 price: money(v.price, store),
                 compareAt:
                   v.compare_at_price && v.compare_at_price > v.price

@@ -56,6 +56,16 @@ describe("tarjeta de producto (revisión de conversión, A6)", () => {
     expect(markup).not.toContain("por porción");
     expect(markup).not.toContain("−");
   });
+
+  it("con varios precios no tacha el precio anterior de un solo sabor", () => {
+    const ranged = card({ max_price: 99900, compare_at_price: 104900 });
+    expect(ranged).toContain("Desde");
+    expect(ranged).not.toContain("<s ");
+    expect(ranged).not.toContain("Antes");
+    // Con un precio único sí se tacha, como siempre.
+    const single = card({ compare_at_price: 104900 });
+    expect(single).toContain("<s ");
+  });
 });
 
 describe("«Agregar» desde la tarjeta (rediseño A+B)", () => {

@@ -207,7 +207,8 @@ function ProductCard({
             {ranged ? <span className="text-sm font-semibold">Desde </span> : null}
             {money(product.min_price, store)}
           </span>
-          {product.compare_at_price ? (
+          {/* Con varios precios (sabores) el tachado sería de un solo sabor: no se muestra. */}
+          {product.compare_at_price && !ranged ? (
             <s className="text-xs text-[var(--sf-muted)]">
               <span className="sr-only">Antes </span>
               {money(product.compare_at_price, store)}

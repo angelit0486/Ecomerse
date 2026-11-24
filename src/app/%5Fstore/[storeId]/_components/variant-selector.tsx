@@ -14,6 +14,8 @@ import { VARIANT_IMAGE_EVENT } from "./product-gallery";
  */
 export interface SelectorVariant {
   id: string;
+  /** Precio en centavos: la ficha abre con el sabor disponible más barato. */
+  priceCents?: number;
   options: Record<string, string>;
   price: string;
   compareAt: string | null;
@@ -26,6 +28,23 @@ export interface SelectorVariant {
   imageUrl: string | null;
   /** Contenido y precio por porción de esta presentación (ADR-026); null sin datos. */
   serving?: string | null;
+}
+
+/**
+ * Con qué variante abre la ficha: la disponible más barata (la que anunció la
+ * tarjeta con «Desde $X»), y a igual precio la primera. Antes abría con la
+ * primera disponible y el comprador veía otro precio que en el inicio.
+ */
+export function initialVariant<T extends { available: boolean; priceCents?: number }>(
+  variants: T[],
+): T | undefined {
+  const available = variants.filter((v) => v.available);
+  const pool = available.length > 0 ? available : variants;
+  return pool.reduce<T | undefined>(
+    (best, v) =>
+      best === undefined || (v.priceCents ?? Infinity) < (best.priceCents ?? Infinity) ? v : best,
+    undefined,
+  );
 }
 
 export function VariantSelector({
@@ -51,7 +70,7 @@ export function VariantSelector({
   /** Plan de experiencia, fase 2 (solo con un look): cada opción con la foto de su variante. */
   swatches?: boolean;
 }) {
-  const initial = variants.find((v) => v.available) ?? variants[0];
+  const initial = initialVariant(variants);
   const [selection, setSelection] = useState<Record<string, string>>(initial?.options ?? {});
   const selected = useMemo(
     () =>
