@@ -43,6 +43,7 @@ test("la plataforma crea un plan, lo asigna y registra el pago", async ({ page }
   await form.getByLabel("Personas del equipo").fill("5");
   await form.getByLabel("Almacenes").fill("1");
   await form.getByLabel("Dominios propios").fill("1");
+  await form.getByLabel("Promociones activas").fill("5");
   // Falta el espacio para fotos: no se envía (un límite ausente valdría 0 y bloquearía).
   await form.getByRole("button", { name: "Crear plan" }).click();
   await expect(form.getByLabel("Espacio para fotos (MB)")).toBeFocused();
