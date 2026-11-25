@@ -58,6 +58,9 @@ MANIFEST=(
   "20261117000600_manual_payment_hold.sql 094f824cc2e3a066a27dd056524035c67f1952ade194dee042d08e41f1bc9cbc"
   # D-INT-04: ficha del pedido por WhatsApp al confirmar (solo agrega la bandera, apagada).
   "20261119000100_order_whatsapp_handoff_flag.sql 08e17f7d0a79485d5d46aa3bd3a4f4ec5484f39dd9bb0eb5d19c804448f1e895"
+  # ADR-070 (PR #37): promociones automáticas y mayoreo (tablas nuevas, place_order con promociones).
+  "20261125000100_promotions.sql 73d3b27687cc0e77508510a66de1d98c356d48537a4fedd69686d675e02f5fa1"
+  "20261125000200_promotion_engine.sql ac458640605201cf97ee20a4203e4cef08c872c8e7ff836c52e78e6a1f48f675"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -126,7 +129,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261119000100"
+check "versión final" "select public.app_schema_version()" "20261125000200"
 check "1117-0600 (transferencia): place_order aparta 24 horas con pago manual" "select prosrc ~ 'when v_provider = ''manual'' then 24 \* 60' from pg_proc where oid = 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)'::regprocedure" "t"
 check "1117-0600 (transferencia): place_order sigue solo para storefront_gateway" "select has_function_privilege('storefront_gateway', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('anon', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('authenticated', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute')" "t"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"
