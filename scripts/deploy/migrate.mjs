@@ -7,7 +7,9 @@
 // (la misma tabla que usa la CLI de Supabase). Forward-only: nunca revierte ni
 // reescribe una migración ya aplicada; si su contenido cambió, se detiene.
 //
-// Sin MIGRATION_DATABASE_URL no hace nada (builds locales y de CI).
+// Sin MIGRATION_DATABASE_URL no hace nada (builds locales y de CI). En Vercel,
+// solo el despliegue de producción migra; las vistas previas nunca (T-10,
+// migrate-guard.mjs).
 // =============================================================================
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
@@ -15,11 +17,15 @@ import { join } from "node:path";
 
 import postgres from "postgres";
 
-const URL = process.env.MIGRATION_DATABASE_URL;
-if (!URL) {
-  console.log("· Sin MIGRATION_DATABASE_URL: no se aplican migraciones.");
+import { migrationDecision } from "./migrate-guard.mjs";
+
+const decision = migrationDecision(process.env);
+if (!decision.run) {
+  console.log(`· ${decision.reason}`);
   process.exit(0);
 }
+console.log(`· ${decision.reason}`);
+const URL = process.env.MIGRATION_DATABASE_URL;
 
 const DIR = "supabase/migrations";
 const sql = postgres(URL, { max: 1, onnotice: () => {}, prepare: false, connect_timeout: 30 });

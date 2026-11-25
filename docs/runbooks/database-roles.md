@@ -82,7 +82,8 @@ WORKER_DATABASE_URL=postgres://system_worker.<project_ref>:<contraseña>@<region
   `select count(*) from system.jobs` (worker) fallan con `permission denied`; `system.health_check()` responde `{"db": true}`.
 - Migraciones: sin contraseña de la base, la base las bajó del repositorio en un commit fijo (pg_net) y se aplicaron en orden
   verificando el sha256 de cada archivo; quedan registradas en `supabase_migrations.schema_migrations` con su checksum.
-  Con `MIGRATION_DATABASE_URL` configurada, `pnpm build` las aplica con `scripts/deploy/migrate.mjs`.
+  Con `MIGRATION_DATABASE_URL` configurada, `pnpm build` las aplica con `scripts/deploy/migrate.mjs`, solo en el
+  despliegue de producción de Vercel (las vistas previas nunca migran, `migrate-guard.mjs`, T-10).
   Pasos usados el 2026-10-29 (16 migraciones, desde el conector de Supabase):
   1. Ensayo local: base con las migraciones ya aplicadas en staging + las nuevas; el esquema
      resultante es idéntico al de una base creada desde cero (`pg_dump -s`) y un archivo
