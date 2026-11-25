@@ -9,6 +9,7 @@ import {
 } from "@/server/storefront/catalog";
 import { smallMediaUrl, srcSetFor } from "@/server/storefront/media-variants";
 import { goodFor } from "@/lib/storefront/goods";
+import { promotionBadge, type ProductPromotions } from "@/lib/promotions/storefront";
 
 import { Badges } from "./badges";
 import { AVAILABILITY_LABELS, money } from "./format";
@@ -24,12 +25,15 @@ export function ProductGrid({
   carousel = false,
   ratings = {},
   quickAdd = {},
+  promotions = {},
 }: {
   products: Card[];
   /** Calificaciones reales por producto (opiniones publicadas, ADR-029). */
   ratings?: RatingSummaries;
   /** Variante de «Agregar» por producto (rediseño A+B); sin clave, sin botón. */
   quickAdd?: CardVariants;
+  /** Promociones activas por producto (ADR-070): la tarjeta muestra la primera. */
+  promotions?: ProductPromotions;
   store: { id?: string; currency: string; locale: string; launched_at?: string | null };
   /** Cuántas imágenes cargar sin lazy (las de arriba, para el LCP). */
   eager?: number;
@@ -70,6 +74,7 @@ export function ProductGrid({
             now={now}
             rating={ratings[product.id]}
             variant={quickAdd[product.id]}
+            promotion={promotionBadge(promotions[product.id]?.[0] ?? { type: "", rules: null })}
           />
         </li>
       ))}
@@ -90,6 +95,7 @@ function ProductCard({
   now,
   rating,
   variant,
+  promotion,
 }: {
   product: Card;
   store: { id?: string; currency: string; locale: string; launched_at?: string | null };
@@ -98,6 +104,8 @@ function ProductCard({
   rating?: { average: number; count: number } | undefined;
   /** string: se agrega directo; null: hay que elegir opción; undefined: sin botón. */
   variant: string | null | undefined;
+  /** Insignia de promoción («Lleva 3, paga 2»); null sin promoción. */
+  promotion: string | null;
 }) {
   // Las mismas insignias que la ficha (F9-T04): una sola función.
   const badges = productBadges({
@@ -214,6 +222,16 @@ function ProductCard({
               {money(product.compare_at_price, store)}
             </s>
           ) : null}
+        </p>
+      ) : null}
+      {promotion && !product.unpublished ? (
+        // Colores del texto sobre el fondo de la tarjeta (contraste del tema, también
+        // en Nocturno): la promoción se lee sin depender del color de acento.
+        <p className="sf-card-promo mt-1">
+          <span className="inline-block rounded-[min(var(--sf-radius),6px)] border border-[var(--sf-fg)] px-1.5 py-0.5 text-xs font-bold text-[var(--sf-fg)]">
+            <span className="sr-only">Promoción: </span>
+            {promotion}
+          </span>
         </p>
       ) : null}
       {perServing !== null ? (

@@ -105,3 +105,33 @@ describe("borrador en la vista previa (ADR-032)", () => {
     expect(card({ unpublished: false }, { p1: "v1" })).not.toContain("Sin publicar");
   });
 });
+
+describe("tarjeta con promoción (ADR-070, fase 3)", () => {
+  const promo = (type: string, rules: unknown) => ({
+    p1: [{ id: "x", label: "Leyenda", type, rules }],
+  });
+  const render = (promotions: Record<string, unknown[]>, overrides: Record<string, unknown> = {}) =>
+    renderToStaticMarkup(
+      <ProductGrid
+        products={[
+          { ...base, min_price: 10000, max_price: 10000, compare_at_price: null, ...overrides },
+        ]}
+        store={store}
+        promotions={promotions as never}
+      />,
+    );
+
+  it("muestra la insignia de la primera promoción, con texto para el lector de pantalla", () => {
+    const markup = render(promo("buy_n_pay_m", { buy: 3, pay: 2 }));
+    expect(markup).toContain("Promoción: </span>Lleva 3, paga 2");
+    expect(render(promo("nth_percent", { nth: 2, percent_bps: 5000 }))).toContain("2a al 50%");
+  });
+
+  it("sin promoción, con una regla inválida o en un borrador no muestra nada", () => {
+    expect(render({})).not.toContain("Promoción:");
+    expect(render(promo("buy_n_pay_m", { buy: 2, pay: 2 }))).not.toContain("Promoción:");
+    expect(render(promo("buy_n_pay_m", { buy: 3, pay: 2 }), { unpublished: true })).not.toContain(
+      "Promoción:",
+    );
+  });
+});

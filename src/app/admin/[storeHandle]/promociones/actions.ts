@@ -10,6 +10,7 @@ import {
   promotionValuesFromFormData,
 } from "@/lib/promotions/form";
 import { callRpc } from "@/server/db/rpc";
+import { invalidateStore } from "@/server/storefront/cache";
 
 import { failureFrom, storeClient, type FormState } from "../_shared/action-state";
 
@@ -48,6 +49,8 @@ export async function savePromotion(
       p_store_id: storeId,
       p_promotion: parsed.payload,
     });
+    // Las tarjetas y la ficha de la tienda anuncian la promoción (fase 3).
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error, values);
   }
@@ -78,6 +81,7 @@ export async function setPromotionStatus(
       p_promotion_id: parsed.data.id,
       p_status: parsed.data.status,
     });
+    invalidateStore(storeId);
   } catch (error) {
     return failure(error);
   }
