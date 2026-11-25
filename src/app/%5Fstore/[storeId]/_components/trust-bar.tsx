@@ -25,7 +25,7 @@ export function TrustBar({
   whatsapp: string | undefined;
   store: { currency: string; locale: string; country?: string };
 }) {
-  const items: { key: string; icon: ReactNode; title: string; text: string }[] = [];
+  const items: { key: string; icon: ReactNode; title: string; text: ReactNode }[] = [];
   if (shipping) {
     items.push({
       key: "envio",
@@ -67,7 +67,12 @@ export function TrustBar({
       key: "whatsapp",
       icon: <ChatIcon />,
       title: "¿Dudas? Escríbenos",
-      text: `WhatsApp ${prettyPhone(whatsapp)}`,
+      // El número nunca se parte en dos renglones («+52 662 123 / 4567»).
+      text: (
+        <>
+          WhatsApp <span className="whitespace-nowrap">{prettyPhone(whatsapp)}</span>
+        </>
+      ),
     });
   }
   if (items.length === 0) return null;

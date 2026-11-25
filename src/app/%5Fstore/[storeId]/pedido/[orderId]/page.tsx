@@ -403,7 +403,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex min-h-11 items-center underline underline-offset-2"
                 >
-                  WhatsApp {prettyPhone(whatsapp)}
+                  WhatsApp <span className="whitespace-nowrap">{prettyPhone(whatsapp)}</span>
                 </a>
               </li>
             ) : null}

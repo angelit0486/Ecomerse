@@ -716,6 +716,16 @@ const NOCTURNO_CSS = [
     `${R} .sf-ship-light:nth-of-type(6){animation-delay:1.5s}${R} .sf-ship-light:nth-of-type(7){animation-delay:1.8s}` +
     `${R} .sf-ship-beam{animation:ad-ship-beam 3.4s ease-in-out 1.5s infinite}` +
     "}",
+  // ── Detalles (v14) ────────────────────────────────────────────────────────
+  // Texto de búsqueda largo: termina en «…» en lugar de cortarse a media letra.
+  `${R} form[role=search] input{text-overflow:ellipsis}`,
+  // Al tocar en el celular: un destello púrpura tenue en lugar del gris del sistema.
+  `${R}{-webkit-tap-highlight-color:color-mix(in srgb,${N.violet} 22%,transparent)}`,
+  // Texto claro sobre negro: suavizado en escala de grises (sin halo de color en macOS).
+  `${R}{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}`,
+  // Barras de desplazamiento del tono de la tienda (no el gris del sistema).
+  `html:has(${R}){scrollbar-color:${N.graphite} ${N.void}}`,
+  `${R} :is([class*=overflow-x-auto],[class*=overflow-y-auto],dialog){scrollbar-color:${N.graphite} transparent}`,
   // Botón principal: al enfocarlo con teclado, un aro doble que se lee sobre el púrpura.
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:focus-visible{outline:2px solid ${N.glow};outline-offset:3px}`,
 ].join("");

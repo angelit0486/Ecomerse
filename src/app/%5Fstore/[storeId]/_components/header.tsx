@@ -318,7 +318,8 @@ export function StoreFooter({
               </svg>
               <span className="text-sm">
                 <span className="block font-bold">¿Dudas con tu pedido?</span>
-                Escríbenos al WhatsApp {prettyPhone(contact.whatsapp)}
+                Escríbenos al WhatsApp{" "}
+                <span className="whitespace-nowrap">{prettyPhone(contact.whatsapp)}</span>
               </span>
             </a>
           ) : null}
