@@ -23,6 +23,8 @@ export interface DiscountValues {
   ends_at: string;
   usage_limit: string;
   usage_limit_per_customer: string;
+  /** "on" si se suma a las promociones automáticas (ADR-070). */
+  combines_with_promotions: string;
 }
 
 export function DiscountForm({
@@ -110,6 +112,21 @@ export function DiscountForm({
           />
         )}
       </Field>
+      <label className="flex items-start gap-2 text-sm sm:col-span-3">
+        <input
+          type="checkbox"
+          name="combines_with_promotions"
+          defaultChecked={v("combines_with_promotions") === "on"}
+          className="mt-1"
+        />
+        <span>
+          <span className="block font-medium">Se combina con promociones</span>
+          <span className="block text-fg-muted">
+            Si no lo marcas, el cupón no descuenta las piezas que ya tienen una promoción (como un
+            3×2): solo el resto del carrito. El envío gratis se combina siempre.
+          </span>
+        </span>
+      </label>
       <Button
         type="submit"
         size="sm"
