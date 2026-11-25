@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cartLinePromotionNotes } from "@/lib/promotions/storefront";
 import Link from "next/link";
 
 import { GOAL_KEY } from "@/lib/catalog/attributes";
@@ -20,6 +21,7 @@ import { money } from "../_components/format";
 import { GoalTiles } from "../_components/goal-chips";
 import { ProductGrid } from "../_components/rated-product-grid";
 import { PurchaseLegends } from "../_components/supplement-info";
+import { LinePromotions } from "../_components/line-promotions";
 import { Totals } from "../_components/totals";
 import { DiscountForm, LineForm } from "./cart-forms";
 
@@ -130,6 +132,10 @@ export default async function CartPage({ params }: Props) {
                     <p className="text-sm text-[var(--sf-muted)]">
                       {money(line.unit_price, store)} c/u
                     </p>
+                    <LinePromotions
+                      notes={cartLinePromotionNotes(line, cart.promotions)}
+                      store={store}
+                    />
                   </div>
                   <p className="shrink-0 font-extrabold tabular-nums [font-family:var(--sf-font-heading),system-ui,sans-serif]">
                     {money(line.line_subtotal ?? line.unit_price * line.quantity, store)}

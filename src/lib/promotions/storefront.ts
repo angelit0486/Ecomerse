@@ -88,3 +88,31 @@ export function linePromotionSavings(line: { promotion_allocation?: number | nul
   const v = line.promotion_allocation ?? 0;
   return Number.isSafeInteger(v) && v > 0 ? v : 0;
 }
+
+/** Lo que la base dice de una línea del carrito: [{promotion_id, units, amount}]. */
+export interface LinePromotion {
+  promotion_id: string;
+  units: number;
+  amount: number;
+}
+
+/** Promociones aplicadas al carrito completo (para nombrar las de cada línea). */
+export interface AppliedPromotion {
+  promotion_id: string;
+  label: string;
+  amount: number;
+}
+
+/**
+ * «3×2 en playeras: −$100.00» de una línea del carrito: la leyenda sale de las
+ * promociones aplicadas al carrito y el monto, de la línea (calculado por la base).
+ */
+export function cartLinePromotionNotes(
+  line: { promotions?: LinePromotion[] | null },
+  applied: AppliedPromotion[] | null | undefined,
+): { label: string; amount: number }[] {
+  const labels = new Map((applied ?? []).map((p) => [p.promotion_id, p.label]));
+  return (line.promotions ?? [])
+    .filter((p) => Number.isSafeInteger(p.amount) && p.amount > 0)
+    .map((p) => ({ label: labels.get(p.promotion_id) ?? "Promoción", amount: p.amount }));
+}

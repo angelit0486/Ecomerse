@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { linePromotionSavings, promotionBadge, promotionDetails } from "./storefront";
+import {
+  cartLinePromotionNotes,
+  linePromotionSavings,
+  promotionBadge,
+  promotionDetails,
+} from "./storefront";
 
 describe("promotionBadge", () => {
   it("N×M, N-ésima y mayoreo en pocas palabras", () => {
@@ -82,5 +87,26 @@ describe("linePromotionSavings", () => {
     expect(linePromotionSavings({})).toBe(0);
     expect(linePromotionSavings({ promotion_allocation: -5 })).toBe(0);
     expect(linePromotionSavings({ promotion_allocation: 1.5 })).toBe(0);
+  });
+});
+
+describe("cartLinePromotionNotes", () => {
+  it("nombra cada promoción de la línea con su monto", () => {
+    expect(
+      cartLinePromotionNotes(
+        { promotions: [{ promotion_id: "a", units: 1, amount: 10000 }] },
+        [{ promotion_id: "a", label: "3×2 en playeras", amount: 10000 }],
+      ),
+    ).toEqual([{ label: "3×2 en playeras", amount: 10000 }]);
+  });
+
+  it("sin leyenda conocida dice «Promoción»; sin promociones, nada", () => {
+    expect(
+      cartLinePromotionNotes({ promotions: [{ promotion_id: "z", units: 1, amount: 5 }] }, []),
+    ).toEqual([{ label: "Promoción", amount: 5 }]);
+    expect(cartLinePromotionNotes({}, undefined)).toEqual([]);
+    expect(
+      cartLinePromotionNotes({ promotions: [{ promotion_id: "a", units: 1, amount: 0 }] }, []),
+    ).toEqual([]);
   });
 });
