@@ -93,10 +93,9 @@ describe("linePromotionSavings", () => {
 describe("cartLinePromotionNotes", () => {
   it("nombra cada promoción de la línea con su monto", () => {
     expect(
-      cartLinePromotionNotes(
-        { promotions: [{ promotion_id: "a", units: 1, amount: 10000 }] },
-        [{ promotion_id: "a", label: "3×2 en playeras", amount: 10000 }],
-      ),
+      cartLinePromotionNotes({ promotions: [{ promotion_id: "a", units: 1, amount: 10000 }] }, [
+        { promotion_id: "a", label: "3×2 en playeras", amount: 10000 },
+      ]),
     ).toEqual([{ label: "3×2 en playeras", amount: 10000 }]);
   });
 
