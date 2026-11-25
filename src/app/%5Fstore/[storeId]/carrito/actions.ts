@@ -11,6 +11,7 @@ import { justPlacedTarget } from "@/lib/orders/just-placed";
 import { processQueueSoon } from "@/server/jobs/run-now";
 import { reportActionError } from "@/server/actions/report";
 import { toAppError } from "@/server/db/errors";
+import { causedByDeadline } from "@/server/db/query-deadline";
 import { AppError } from "@/server/errors";
 import { serverEnv } from "@/server/env";
 import { isGuestTokenShape, verifyFakePaymentSignature } from "@/server/payments/order-links";
@@ -58,6 +59,10 @@ const ERRORS: Record<string, string> = {
   payment_account_id: "Elige una forma de pago.",
   customer_note: "La nota puede tener hasta 1000 caracteres.",
 };
+
+/** F-08: la base tardó demasiado al confirmar; reintentar es seguro (misma clave). */
+const DEADLINE_MESSAGE =
+  "La tienda tardó en responder. Vuelve a tocar «Confirmar pedido»: si tu pedido ya había entrado, no se duplica.";
 
 const DISCOUNT_ERRORS: Record<string, string> = {
   not_found: "Ese código no existe.",
@@ -323,6 +328,13 @@ export async function checkout(
     if (!Number.isSafeInteger(expected) || expected < 0) throw new AppError("price_changed");
     target = await placeOrder(s.id, input, expected, key);
   } catch (error) {
+    // F-08: la base no respondió a tiempo (Supavisor perdió la respuesta). El
+    // formulario conserva su clave de idempotencia: confirmar otra vez repite el
+    // mismo pedido si ya había entrado, nunca crea otro.
+    if (causedByDeadline(error)) {
+      reportActionError("storefront", error);
+      return { error: DEADLINE_MESSAGE };
+    }
     const e = toAppError(error);
     if (e.code === "price_changed") {
       const total = Number(dbDetail(e));
