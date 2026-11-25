@@ -26,6 +26,7 @@ interface Row {
   times_used: number;
   times_reserved: number;
   status: string;
+  combines_with_promotions: boolean;
 }
 
 const STATUS: Record<string, string> = { active: "Activo", disabled: "Desactivado" };
@@ -44,7 +45,7 @@ export default async function DiscountsPage({ params }: Props) {
   const { data, error } = await supabase
     .from("discounts")
     .select(
-      "id, code, type, value, min_subtotal, starts_at, ends_at, usage_limit, usage_limit_per_customer, times_used, times_reserved, status",
+      "id, code, type, value, min_subtotal, starts_at, ends_at, usage_limit, usage_limit_per_customer, times_used, times_reserved, status, combines_with_promotions",
     )
     .eq("store_id", ctx.store.id)
     .neq("status", "archived")
@@ -83,6 +84,7 @@ export default async function DiscountsPage({ params }: Props) {
                 {r.times_used}
                 {r.usage_limit ? ` de ${r.usage_limit}` : ""}
                 {r.times_reserved ? ` (${r.times_reserved} apartados)` : ""}
+                {r.combines_with_promotions ? " · se combina con promociones" : ""}
               </p>
               {canEdit ? (
                 <>
@@ -104,6 +106,7 @@ export default async function DiscountsPage({ params }: Props) {
                       ends_at: day(r.ends_at, ctx.store.timezone, true),
                       usage_limit: r.usage_limit?.toString() ?? "",
                       usage_limit_per_customer: r.usage_limit_per_customer?.toString() ?? "",
+                      combines_with_promotions: r.combines_with_promotions ? "on" : "",
                     }}
                   />
                   <StatusButtons

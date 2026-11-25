@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { GOAL_KEY, hasSelection, type AttributeSelection } from "@/lib/catalog/attributes";
+import type { ProductPromotions } from "@/lib/promotions/storefront";
 import type { BenefitIcon, VideoProvider, Visibility } from "@/lib/theme/constants";
 import type { SupplementSheet } from "@/server/catalog/regulatory";
 import { gatewayDb, type TransactionSql } from "@/server/db/role-clients";
@@ -533,6 +534,32 @@ export async function getCardVariants(
 const cardVariantsCached = cachedRead("card_variants", (storeId: string, ids: string) =>
   call<CardVariants>(
     gatewayDb()`select storefront.card_variants(${storeId}::uuid, ${ids.split(",")}::uuid[]) as value`,
+  ),
+);
+
+/**
+ * Promociones activas por producto (ADR-070, fase 3) para las insignias de las
+ * tarjetas y la explicación de la ficha. Solo describen: el ahorro lo calcula
+ * la base en el carrito. Si la lectura falla (p. ej. una base sin la migración
+ * 0300), la tienda se ve sin promociones y sigue funcionando.
+ */
+export async function getProductPromotions(
+  storeId: string,
+  productIds: string[],
+): Promise<ProductPromotions> {
+  assertStore(storeId);
+  const ids = [...new Set(productIds.filter((id) => UUID_RE.test(id)))].sort().slice(0, 100);
+  if (ids.length === 0) return {};
+  try {
+    return (await productPromotionsCached(storeId, ids.join(","))) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+const productPromotionsCached = cachedRead("product_promotions", (storeId: string, ids: string) =>
+  call<ProductPromotions>(
+    gatewayDb()`select storefront.product_promotions(${storeId}::uuid, ${ids.split(",")}::uuid[]) as value`,
   ),
 );
 

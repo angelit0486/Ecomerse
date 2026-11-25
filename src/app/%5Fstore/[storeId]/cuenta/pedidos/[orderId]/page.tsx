@@ -8,6 +8,7 @@ import { getStorefront } from "@/server/storefront/context";
 import { accountReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../../_components/format";
+import { LinePromotions, orderItemPromotionNotes } from "../../../_components/line-promotions";
 import { Totals } from "../../../_components/totals";
 import { OrderReviews } from "../../../pedido/[orderId]/order-reviews";
 import { sendAccountReview } from "../../../pedido/[orderId]/review-actions";
@@ -76,10 +77,15 @@ export default async function AccountOrderPage({ params }: Props) {
         <ul className="divide-y divide-[var(--sf-border)]">
           {order.items.map((item, i) => (
             <li key={i} className="flex justify-between gap-4 py-3 text-sm">
-              <span>
+              <div>
                 {item.quantity} × {item.product_title}
                 {item.variant_title ? ` (${item.variant_title})` : ""}
-              </span>
+                <LinePromotions
+                  notes={orderItemPromotionNotes(item)}
+                  store={store}
+                  className="text-xs"
+                />
+              </div>
               <span>{money(item.line_total, store)}</span>
             </li>
           ))}

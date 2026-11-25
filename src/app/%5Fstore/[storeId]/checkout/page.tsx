@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cartLinePromotionNotes } from "@/lib/promotions/storefront";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -15,6 +16,7 @@ import { ThemeSettingsV2 } from "@/lib/theme/schema";
 import { DeliveryCountdown } from "../_components/delivery-countdown";
 import { money } from "../_components/format";
 import { PurchaseLegends } from "../_components/supplement-info";
+import { LinePromotions } from "../_components/line-promotions";
 import { Totals } from "../_components/totals";
 import { CheckoutForm } from "./checkout-form";
 
@@ -70,12 +72,19 @@ export default async function CheckoutPage({ params }: Props) {
   const summaryLines = (
     <ul className="space-y-2 text-sm">
       {cart.lines.map((l) => (
-        <li key={l.variant_id} className="flex justify-between gap-4">
-          <span>
-            {l.quantity} × {l.product_title}
-            {l.variant_title ? ` (${l.variant_title})` : ""}
-          </span>
-          <span>{money(l.line_subtotal ?? l.unit_price * l.quantity, store)}</span>
+        <li key={l.variant_id} className="space-y-0.5">
+          <div className="flex justify-between gap-4">
+            <span>
+              {l.quantity} × {l.product_title}
+              {l.variant_title ? ` (${l.variant_title})` : ""}
+            </span>
+            <span>{money(l.line_subtotal ?? l.unit_price * l.quantity, store)}</span>
+          </div>
+          <LinePromotions
+            notes={cartLinePromotionNotes(l, cart.promotions)}
+            store={store}
+            className="text-xs"
+          />
         </li>
       ))}
     </ul>

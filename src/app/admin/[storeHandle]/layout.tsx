@@ -74,6 +74,11 @@ export default async function StoreLayout({ children, params }: Props) {
           show: hasPermission(ctx, "discounts.read"),
         },
         {
+          href: `${base}/promociones`,
+          label: "Promociones",
+          show: hasPermission(ctx, "discounts.read"),
+        },
+        {
           href: `${base}/rentabilidad`,
           label: "Rentabilidad",
           // Interruptor profit_report; el costo es dato reservado.

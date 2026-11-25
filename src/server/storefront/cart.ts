@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { cookies, headers } from "next/headers";
 
+import type { AppliedPromotion, LinePromotion } from "@/lib/promotions/storefront";
 import { gatewayDb } from "@/server/db/role-clients";
 import { toAppError, type DbErrorLike } from "@/server/db/errors";
 import { AppError } from "@/server/errors";
@@ -29,6 +30,9 @@ export interface CartLine {
   quantity: number;
   line_subtotal?: number;
   discount_allocation?: number;
+  /** Ahorro por promociones en esta línea (ADR-070; lo calcula la base). */
+  promotion_allocation?: number;
+  promotions?: LinePromotion[];
   line_total?: number;
   image: { path: string; alt: string | null } | null;
   state: "ok" | "insufficient_stock" | "unavailable";
@@ -74,6 +78,9 @@ export interface CartView {
   shipping_rate_id: string | null;
   subtotal: number;
   discount_total: number;
+  /** Parte de discount_total que viene de promociones automáticas (ADR-070). */
+  promotion_total?: number;
+  promotions?: AppliedPromotion[];
   shipping_total: number;
   tax_total: number;
   total: number;

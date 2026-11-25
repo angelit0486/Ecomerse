@@ -164,6 +164,10 @@ export interface GuestOrder {
   prices_include_tax: boolean;
   subtotal: number;
   discount_total: number;
+  /** Parte de discount_total por promociones (ADR-070); ausente en una base sin la 0300. */
+  promotion_total?: number;
+  /** Copia de las promociones aplicadas, en el orden de las partidas. */
+  promotions?: { label: string; type: string; units: number; amount: number }[];
   shipping_total: number;
   tax_total: number;
   total: number;
@@ -182,6 +186,8 @@ export interface GuestOrder {
     unit_price: number;
     line_total: number;
     image_path: string | null;
+    promotion_allocation?: number;
+    promotion_labels?: string[];
   }[];
   events: { type: string; to_value: string | null; message: string | null; created_at: string }[];
   payment: {

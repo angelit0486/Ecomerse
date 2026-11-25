@@ -26,6 +26,7 @@ import { storeFlags } from "@/server/storefront/flags";
 import { orderReviewables } from "@/server/storefront/reviews";
 
 import { money } from "../../_components/format";
+import { LinePromotions, orderItemPromotionNotes } from "../../_components/line-promotions";
 import { Totals } from "../../_components/totals";
 import { ExpiredLink } from "./expired-link";
 import { RetryPayment } from "./retry-form";
@@ -322,10 +323,15 @@ export default async function OrderPage({ params, searchParams }: Props) {
                   className="h-14 w-14 rounded object-cover"
                 />
               ) : null}
-              <span className="flex-1">
+              <div className="flex-1">
                 {item.quantity} × {item.product_title}
                 {item.variant_title ? ` (${item.variant_title})` : ""}
-              </span>
+                <LinePromotions
+                  notes={orderItemPromotionNotes(item)}
+                  store={store}
+                  className="text-xs"
+                />
+              </div>
               <span>{money(item.line_total, store)}</span>
             </li>
           ))}

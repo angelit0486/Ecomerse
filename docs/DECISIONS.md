@@ -2031,6 +2031,38 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
 - **Pendiente para cobrar (no es código):** facturación CFDI de la mensualidad (PRUVA aún no emite CFDI), cuenta Stripe México y sus llaves, tasa de IVA en Stripe, términos del servicio y página de precios, aplicar las migraciones con autorización. Detalle y orden en `docs/runbooks/precios-aprobados-2026-11.md` §4.
 - **Nota sobre Mercado Pago:** la mensualidad se cobra con **Stripe** (ADR-044). Mercado Pago es para que cada tienda cobre a sus compradores (ADR-041); no cobra la mensualidad de PRUVA.
 
+### ADR-070 — Promociones automáticas y mayoreo · **DECIDIDO por el propietario el 2026-11-25; fases 1 a 4 en el PR #37 (borrador), sin aplicar**
+
+> **Número.** ADR-069 no se usa en ninguna rama; se deja libre por si otro trabajo en curso lo toma. Diseño completo: [`docs/plan/PROPUESTA-PROMOCIONES-MAYOREO.md`](plan/PROPUESTA-PROMOCIONES-MAYOREO.md).
+
+- **Pedido del propietario:** ofertas que ayuden a vender más: 3×2, mayoreo desde N piezas, la segunda al 50 %, etc.
+- **Decisiones (2026-11-25):**
+  1. Tipos v1: **mayoreo por escalones** (precio por pieza o porcentaje), **lleva N paga M** y **la N-ésima al X %**.
+  2. No se combinan con cupones, salvo los cupones marcados «se combina con promociones». **Envío gratis siempre se combina.**
+  3. El mayoreo aplica a **cualquier comprador** que lleve la cantidad.
+  4. Planes: **Tienda hasta 5 activas; Tienda Plus sin tope** y con el reporte completo.
+  5. Las **presentaciones del mismo producto cuentan juntas** y el descuento cae en la **pieza más barata**.
+  6. Por omisión **no aplica a productos con precio de oferta** (la promoción puede permitirlo).
+- **Cómo se calcula (la base es la autoridad):**
+  - una sola promoción por pieza; entre varias gana la que **más ahorra** al comprador (empate: la de alcance más específico, producto > categoría > tienda; luego la más antigua). Se eligen de una en una sobre las piezas libres;
+  - 3×2 y N-ésima agrupan las piezas elegibles (aunque sean productos distintos dentro del alcance) y descuentan las más baratas;
+  - el cupón que no se combina **no descuenta las piezas que usó una promoción**; el combinable descuenta lo que queda;
+  - `app.calculate_cart` y `storefront.place_order` (mismas firmas): el navegador no manda precios ni descuentos; un total distinto se rechaza con `price_changed`.
+- **Datos (migraciones `20261125000100_promotions.sql` y `20261125000200_promotion_engine.sql`):**
+  - `promotions` y `promotion_targets` (productos o categorías; las categorías incluyen sus subcategorías), con RLS forzada y escritura solo por RPC (`promotions_upsert`, `promotions_set_status`, `promotions_preview`), con bitácora;
+  - en el pedido: `orders.promotion_total`, `order_items.promotion_allocation` y `order_promotions` (copia inmutable de la regla, piezas y monto). `discount_total` sigue siendo el total de descuentos (promoción + cupón); `discount_snapshot` guarda solo el cupón. `snapshot_version` = 2 si hubo promoción;
+  - una promoción usada en un pedido ya no cambia de regla ni de alcance (solo nombre, leyenda, fechas y estado); archivar es definitivo;
+  - `discounts.combines_with_promotions` (apagado por omisión).
+- **Permisos:** se reutilizan `discounts.read` / `discounts.manage` (los tienen exactamente los mismos roles que deberían ver y manejar promociones: administrador y marketing). Evita tocar el catálogo de permisos y su espejo en TS. Si el propietario prefiere permisos propios (`promotions.*`), es una migración pequeña.
+- **Límite del plan:** clave nueva `max_active_promotions` (contada por organización al **activar**) y función `promotion_reports`. **Cerrado por omisión:** mientras la consola no tenga el valor, ninguna tienda puede activar promociones (en la base una clave ausente vale 0).
+- **Fase 2 · panel:** «Promociones» (después de «Descuentos»): lista, alta con vista previa en vivo, edición, activar, pausar y archivar; productos o categorías; aviso del límite del plan. En «Descuentos», la casilla «Se combina con promociones». Sin migración.
+- **Fase 3 · tienda (migración `20261125000300_storefront_promotions.sql`, solo funciones):** insignias en las tarjetas, recuadro «Promoción» con escalones en la ficha, ahorro por línea y en el resumen del carrito y del checkout, y en la página del pedido y los correos. El carrito usa lo que calcula `app.calculate_cart`; el pedido y los correos leen la copia (`order_promotions`), nunca la promoción de hoy. `storefront.product_promotions` usa el mismo alcance que el cobro y no anuncia una regla que no aplica a ofertas en un producto con todas sus presentaciones en oferta. El panel invalida la caché de la tienda al cambiar una promoción.
+- **Fase 4 · reporte (migración `20261125000400_promotions_report.sql`, una función de solo lectura):** `public.promotions_report(store, from, to)` con permiso `discounts.read` y la función de plan `promotion_reports` (Tienda Plus); por promoción: pedidos, piezas de las partidas con la promoción, ahorro y venta, de pedidos **pagados** del periodo (zona horaria de la tienda, máx. 366 días, sin cancelados, sin restar devoluciones). Sin la función: `not_found`/`feature` y el panel muestra la invitación a Tienda Plus.
+- **Gancho regulatorio: documentado, no construido (decisión pendiente del propietario).** Hoy ningún perfil regulatorio prohíbe promociones y el modelo (`regulatory_rules.kind`: `required_field`, `required_legend`, `forbidden_term`) no tiene cómo decirlo. Hacerlo no es pequeño: un tipo de regla nuevo (`promotion_block`) cambia la restricción `kind` y la consola de cumplimiento, y obliga a redefinir `app.cart_promotions` (cobro) y `storefront.product_promotions` (tienda) para excluir los productos de categorías con ese perfil, con su pgTAP. Mientras tanto las promociones solo aplican a productos publicables (que ya pasaron cumplimiento) y la dueña elige a qué productos o categorías aplican. Si el propietario decide qué perfiles (p. ej. sucedáneos de leche materna, alcohol) no admiten promociones, es una migración de ≈1 día.
+- **Migraciones, en orden:** `20261125000100` → `0200` → `0300` → `0400`. Primero las migraciones, después el código (el código exige `20261125000400`). Reversas de la más nueva a la más vieja (`comprobar-0400.sh`, lista `NEWER`).
+- **Liberación:** fases 2, 3 y 4 juntas; procedimiento, valores de los planes, verificación en staging y vuelta atrás en [`docs/runbooks/promociones-lanzamiento.md`](runbooks/promociones-lanzamiento.md).
+- **Reversa:** `scripts/ops/reversa/20261125000200_promotion_engine.reversa.sql` (sin pérdida) y `…000100_promotions.reversa.sql` (se rechaza si ya hay promociones o pedidos con promoción). Comprobadas en local con `comprobar-0400.sh`.
+
 ## 44. Integración del issue #18 y venta por transferencia (2026-11-17)
 
 - **D-INT-01. Integración de los 19 PRs de Grok en `producto/orden-10`.**

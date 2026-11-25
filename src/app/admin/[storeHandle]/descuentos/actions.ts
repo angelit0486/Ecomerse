@@ -46,6 +46,7 @@ export async function saveDiscount(
     "ends_at",
     "usage_limit",
     "usage_limit_per_customer",
+    "combines_with_promotions",
   ];
   const values = formValues(formData, keys);
   const type = values.type;
@@ -78,6 +79,7 @@ export async function saveDiscount(
         ends_on: days[1],
         usage_limit: limits[0],
         usage_limit_per_customer: limits[1],
+        combines_with_promotions: values.combines_with_promotions === "on",
       },
     });
   } catch (error) {

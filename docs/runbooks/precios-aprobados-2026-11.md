@@ -16,25 +16,27 @@ $2,900; **Tienda Plus** $1,299/mes o $12,990/año, cuota de arranque $5,900; pru
 
 ## 2. Crear los dos planes (Consola → Planes → «Nuevo plan»)
 
-| Campo de la consola           | Tienda   | Tienda Plus   | Origen                                                                         |
-| ----------------------------- | -------- | ------------- | ------------------------------------------------------------------------------ |
-| Clave                         | `tienda` | `tienda_plus` | sugerida (minúsculas, sin espacios)                                            |
-| Nombre                        | Tienda   | Tienda Plus   | aprobado                                                                       |
-| Estado                        | Activo   | Activo        | —                                                                              |
-| Orden en la lista             | 10       | 20            | —                                                                              |
-| Tiendas                       | 1        | 2             | análisis, opción B                                                             |
-| Productos                     | 1000     | 10000         | análisis, opción B                                                             |
-| Presentaciones por producto   | 100      | 100           | **propuesta** (el análisis no lo fija; 100 es el valor por omisión de la base) |
-| Personas del equipo           | 3        | 10            | análisis, opción B                                                             |
-| Almacenes                     | 1        | 3             | análisis, opción B                                                             |
-| Dominios propios              | 1        | 2             | Tienda: análisis; Plus: **propuesta** (uno por tienda)                         |
-| Espacio para fotos (MB)       | 2048     | 20480         | análisis (2 GB / 20 GB)                                                        |
-| Dominio propio (función)      | sí       | sí            | análisis                                                                       |
-| Sin la marca de la plataforma | no       | sí            | análisis                                                                       |
-| Estadísticas avanzadas        | no       | sí            | análisis                                                                       |
-| Carritos abandonados          | no       | sí            | análisis                                                                       |
-| Roles a la medida             | no       | sí            | análisis                                                                       |
-| Acceso por API                | no       | no            | **propuesta** (no se vende ni se anuncia hoy)                                  |
+| Campo de la consola           | Tienda   | Tienda Plus   | Origen                                                                                                                |
+| ----------------------------- | -------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Clave                         | `tienda` | `tienda_plus` | sugerida (minúsculas, sin espacios)                                                                                   |
+| Nombre                        | Tienda   | Tienda Plus   | aprobado                                                                                                              |
+| Estado                        | Activo   | Activo        | —                                                                                                                     |
+| Orden en la lista             | 10       | 20            | —                                                                                                                     |
+| Tiendas                       | 1        | 2             | análisis, opción B                                                                                                    |
+| Productos                     | 1000     | 10000         | análisis, opción B                                                                                                    |
+| Presentaciones por producto   | 100      | 100           | **propuesta** (el análisis no lo fija; 100 es el valor por omisión de la base)                                        |
+| Personas del equipo           | 3        | 10            | análisis, opción B                                                                                                    |
+| Almacenes                     | 1        | 3             | análisis, opción B                                                                                                    |
+| Dominios propios              | 1        | 2             | Tienda: análisis; Plus: **propuesta** (uno por tienda)                                                                |
+| Espacio para fotos (MB)       | 2048     | 20480         | análisis (2 GB / 20 GB)                                                                                               |
+| Promociones activas           | 5        | 1000          | **decidido 2026-11-25 (ADR-070)**: Tienda hasta 5; Plus sin tope práctico. Sin este valor no se puede activar ninguna |
+| Dominio propio (función)      | sí       | sí            | análisis                                                                                                              |
+| Sin la marca de la plataforma | no       | sí            | análisis                                                                                                              |
+| Estadísticas avanzadas        | no       | sí            | análisis                                                                                                              |
+| Carritos abandonados          | no       | sí            | análisis                                                                                                              |
+| Roles a la medida             | no       | sí            | análisis                                                                                                              |
+| Acceso por API                | no       | no            | **propuesta** (no se vende ni se anuncia hoy)                                                                         |
+| Reporte de promociones        | no       | sí            | **decidido 2026-11-25 (ADR-070)**; panel → Promociones → Reporte                                                      |
 
 Guardar cada plan con «Guardar plan».
 
