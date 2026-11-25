@@ -10,6 +10,7 @@ import { centsToInput } from "@/lib/money/format";
 import {
   getProduct,
   getProductAttributes,
+  getProductPromotions,
   getProductRegulatory,
   getProductReviews,
   getRelatedProducts,
@@ -24,6 +25,7 @@ import { getStorefront } from "@/server/storefront/context";
 import { smallMediaUrl, srcSetFor } from "@/server/storefront/media-variants";
 import { canonicalUrl, excerpt, pageMetadata } from "@/server/storefront/seo";
 import type { StorePublic } from "@/server/storefront/store-public";
+import type { ProductPromotions as ProductPromotionsMap } from "@/lib/promotions/storefront";
 import { LOOK_CUTOFF, storeLook } from "@/lib/theme/looks";
 import { ThemeSettingsV2, type PaymentMethod } from "@/lib/theme/schema";
 import { SafeHtml } from "@/ui/safe-html";
@@ -39,6 +41,7 @@ import { SectionHeading } from "../../_components/home-sections";
 import { Stars } from "../../_components/stars";
 import { ProductGrid } from "../../_components/rated-product-grid";
 import { ProductAttributes } from "../../_components/product-attributes";
+import { ProductPromotions } from "../../_components/product-promotions";
 import { ProductReviews } from "../../_components/product-reviews";
 import { SupplementInfo } from "../../_components/supplement-info";
 import { AddToCart } from "../../_components/add-to-cart";
@@ -218,12 +221,16 @@ function PendingContent({ title, text }: { title: string; text: string }) {
 
 export default async function ProductPage({ params }: Props) {
   const { store, preview, product } = await load(params);
-  const [regulatory, attributes, related, shipping, reviews] = await Promise.all([
+  const [regulatory, attributes, related, shipping, reviews, promotions] = await Promise.all([
     getProductRegulatory(store.id, product.slug),
     getProductAttributes(store.id, product.slug),
     getRelatedProducts(store.id, product.slug),
     getShippingPromo(store.id),
     getProductReviews(store.id, product.id),
+    // Promociones activas (ADR-070): solo explican; el carrito calcula el ahorro.
+    product.unpublished
+      ? Promise.resolve<ProductPromotionsMap>({})
+      : getProductPromotions(store.id, [product.id]),
   ]);
   const parsed = ThemeSettingsV2.safeParse(store.theme?.settings ?? {});
   const settings = parsed.success ? parsed.data : {};
@@ -343,6 +350,7 @@ export default async function ProductPage({ params }: Props) {
               </a>
             ) : null}
           </header>
+          <ProductPromotions promotions={promotions[product.id]} currency={store.currency} />
           {single ? (
             <div className="space-y-4">
               <div className="space-y-1">
