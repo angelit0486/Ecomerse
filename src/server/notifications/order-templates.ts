@@ -24,6 +24,9 @@ export interface OrderEmailData {
     customer_name: string;
     subtotal: number;
     discount_total: number;
+    /** Parte de discount_total por promociones automáticas (ADR-070, copia del pedido). */
+    promotion_total?: number | null;
+    promotions?: { label: string; amount: number }[] | null;
     shipping_total: number;
     tax_total: number;
     total: number;
@@ -47,6 +50,9 @@ export interface OrderEmailData {
     quantity: number;
     line_total: number;
     unit_price?: number;
+    /** Ahorro por promociones de la partida y sus leyendas (copia del pedido). */
+    promotion_allocation?: number | null;
+    promotion_labels?: string[] | null;
     /** Miniatura: solo URLs https del almacenamiento público (las resuelve el handler). */
     image_url?: string | null;
   }[];
@@ -199,21 +205,52 @@ function thumb(url: string | null | undefined): string {
     : "";
 }
 
+/** Ahorro por promociones de una partida: «3×2 en playeras: −$100.00»; null sin promoción. */
+function itemPromotion(i: OrderEmailData["items"][number], d: OrderEmailData): string | null {
+  const amount = i.promotion_allocation ?? 0;
+  if (!Number.isSafeInteger(amount) || amount <= 0) return null;
+  const labels = (i.promotion_labels ?? []).filter(Boolean);
+  return `${labels.length > 0 ? labels.join(" + ") : "Promoción"}: −${money(amount, d)}`;
+}
+
+/** Promociones y cupón por separado (discount_total incluye ambos). */
+function discountParts(d: OrderEmailData): {
+  promotions: { label: string; amount: number }[];
+  coupon: number;
+} {
+  const total = Math.max(0, Math.min(d.order.promotion_total ?? 0, d.order.discount_total));
+  const detail = (d.order.promotions ?? []).filter((p) => p.amount > 0);
+  const promotions =
+    total === 0
+      ? []
+      : detail.length > 0 && detail.reduce((n, p) => n + p.amount, 0) === total
+        ? detail.map((p) => ({ label: `Promoción: ${p.label}`, amount: p.amount }))
+        : [{ label: "Promociones", amount: total }];
+  return { promotions, coupon: d.order.discount_total - total };
+}
+
 function itemsHtml(d: OrderEmailData): string {
   const rows = d.items
-    .map(
-      (i) =>
-        `<tr><td style="padding:6px 0">${thumb(i.image_url)}${i.quantity} × ${escapeHtml(i.title)}${i.variant ? ` (${escapeHtml(i.variant)})` : ""}${
-          i.unit_price !== undefined && i.quantity > 1
-            ? `<br><span style="color:#555;font-size:12px">${escapeHtml(money(i.unit_price, d))} c/u</span>`
-            : ""
-        }</td><td style="text-align:right;vertical-align:top;padding:6px 0">${escapeHtml(money(i.line_total, d))}</td></tr>`,
-    )
+    .map((i) => {
+      const promo = itemPromotion(i, d);
+      return `<tr><td style="padding:6px 0">${thumb(i.image_url)}${i.quantity} × ${escapeHtml(i.title)}${i.variant ? ` (${escapeHtml(i.variant)})` : ""}${
+        i.unit_price !== undefined && i.quantity > 1
+          ? `<br><span style="color:#555;font-size:12px">${escapeHtml(money(i.unit_price, d))} c/u</span>`
+          : ""
+      }${
+        promo
+          ? `<br><span style="color:#1a7f37;font-size:12px;font-weight:600">${escapeHtml(promo)}</span>`
+          : ""
+      }</td><td style="text-align:right;vertical-align:top;padding:6px 0">${escapeHtml(money(i.line_total, d))}</td></tr>`;
+    })
     .join("");
   const line = (label: string, value: string, strong = false) =>
     `<tr><td style="padding:4px 0${strong ? ";font-weight:600" : ""}">${escapeHtml(label)}</td><td style="text-align:right${strong ? ";font-weight:600" : ""}">${escapeHtml(value)}</td></tr>`;
-  return `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}${line("Subtotal", money(d.order.subtotal, d))}${
-    d.order.discount_total > 0 ? line("Descuento", `−${money(d.order.discount_total, d)}`) : ""
+  const parts = discountParts(d);
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}${line("Subtotal", money(d.order.subtotal, d))}${parts.promotions
+    .map((p) => line(p.label, `−${money(p.amount, d)}`))
+    .join("")}${
+    parts.coupon > 0 ? line("Descuento", `−${money(parts.coupon, d)}`) : ""
   }${line(`Envío${d.order.shipping_name ? ` (${d.order.shipping_name})` : ""}`, money(d.order.shipping_total, d))}${
     d.order.tax_total > 0
       ? line(
@@ -225,11 +262,15 @@ function itemsHtml(d: OrderEmailData): string {
 }
 
 function itemsText(d: OrderEmailData): string {
+  const parts = discountParts(d);
   return [
-    ...d.items.map(
-      (i) =>
-        `${i.quantity} × ${i.title}${i.variant ? ` (${i.variant})` : ""}: ${money(i.line_total, d)}`,
-    ),
+    ...d.items.map((i) => {
+      const promo = itemPromotion(i, d);
+      return `${i.quantity} × ${i.title}${i.variant ? ` (${i.variant})` : ""}: ${money(i.line_total, d)}${
+        promo ? ` (${promo})` : ""
+      }`;
+    }),
+    ...parts.promotions.map((p) => `${p.label}: −${money(p.amount, d)}`),
     `Total: ${money(d.order.total, d)}`,
   ].join("\n");
 }

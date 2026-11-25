@@ -485,3 +485,55 @@ describe("enlace nuevo del pedido (ADR-062)", () => {
     expect(m.text).toContain("Si no lo pediste tú");
   });
 });
+
+describe("promociones en los correos del pedido (ADR-070, fase 3)", () => {
+  const promo: OrderEmailData = {
+    ...base,
+    order: {
+      ...base.order,
+      subtotal: 32000,
+      discount_total: 11000,
+      promotion_total: 10000,
+      promotions: [{ label: "3×2 <en> playeras", amount: 10000 }],
+      total: 21000,
+    },
+    items: [
+      {
+        title: "Playera",
+        variant: "CH",
+        quantity: 2,
+        line_total: 9000,
+        unit_price: 10000,
+        promotion_allocation: 10000,
+        promotion_labels: ["3×2 <en> playeras"],
+      },
+      { title: "Playera", variant: "G", quantity: 1, line_total: 11000, promotion_allocation: 0 },
+    ],
+  };
+
+  it("cada partida dice su ahorro y los totales separan promoción y cupón", () => {
+    const m = orderConfirmationEmail(promo, "c@x.test");
+    expect(m.html).toContain("3×2 &lt;en&gt; playeras: −$100.00");
+    expect(m.html).toContain("Promoción: 3×2 &lt;en&gt; playeras");
+    expect(m.html).toContain('>Descuento</td><td style="text-align:right">−$10.00');
+    expect(m.html).not.toContain("<en>");
+    expect(m.text).toContain("2 × Playera (CH): $90.00 (3×2 <en> playeras: −$100.00)");
+    expect(m.text).toContain("Promoción: 3×2 <en> playeras: −$100.00");
+  });
+
+  it("también en el correo de pedido recibido y en el de la tienda", () => {
+    expect(orderReceivedEmail(promo, "c@x.test").html).toContain("−$100.00");
+    expect(staffOrderEmail(promo, "s@x.test", "new", "https://panel.test/p").html).toContain(
+      "Promoción: 3×2",
+    );
+  });
+
+  it("sin promociones, el correo no cambia", () => {
+    const m = orderConfirmationEmail(
+      { ...base, order: { ...base.order, discount_total: 1000, total: 9000 } },
+      "c@x.test",
+    );
+    expect(m.html).toContain(">Descuento<");
+    expect(m.html).not.toContain("Promoci");
+  });
+});
