@@ -216,7 +216,7 @@ select tests.login('owner_b');
 select is((select count(*)::int from public.order_promotions), 0, 'la otra tienda no ve el detalle de promociones');
 select tests.logout();
 
-select is(public.app_schema_version(), '20261125000200', 'versión de la base');
+select is(public.app_schema_version(), '20261125000300', 'versión de la base');
 
 select * from finish();
 rollback;
