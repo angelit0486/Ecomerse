@@ -150,7 +150,7 @@ test("crear, activar, límite del plan, pausar y editar una promoción; cupón c
   // 7. Reporte (fase 4): sin «Reporte de promociones» en el plan, la invitación;
   //    con la función, el reporte del periodo (aún sin pedidos pagados).
   await page.goto(`/admin/${tenant.handle}/promociones`);
-  await page.getByRole("link", { name: "Reporte" }).click();
+  await page.getByRole("link", { name: "Reporte", exact: true }).click();
   await expect(
     page.getByRole("heading", { level: 1, name: "Reporte de promociones" }),
   ).toBeVisible();
