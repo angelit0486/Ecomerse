@@ -13,6 +13,7 @@ export const LIMIT_KEYS = [
   "max_locations",
   "max_custom_domains",
   "storage_mb",
+  "max_active_promotions",
 ] as const;
 
 export const FEATURE_KEYS = [
@@ -22,6 +23,7 @@ export const FEATURE_KEYS = [
   "abandoned_cart",
   "custom_roles",
   "api_access",
+  "promotion_reports",
 ] as const;
 
 export type LimitKey = (typeof LIMIT_KEYS)[number];
@@ -35,6 +37,7 @@ export const LIMIT_LABELS: Record<LimitKey, string> = {
   max_locations: "Almacenes",
   max_custom_domains: "Dominios propios",
   storage_mb: "Espacio para fotos (MB)",
+  max_active_promotions: "Promociones activas",
 };
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -44,6 +47,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   abandoned_cart: "Carritos abandonados",
   custom_roles: "Roles a la medida",
   api_access: "Acceso por API",
+  promotion_reports: "Reporte de promociones",
 };
 
 /** Límites con uso medido en vivo (`app.current_usage`). */
@@ -52,6 +56,7 @@ export const MEASURED_KEYS: readonly LimitKey[] = [
   "max_products",
   "max_staff",
   "storage_mb",
+  "max_active_promotions",
 ];
 
 export const SUBSCRIPTION_STATUS: Record<string, string> = {

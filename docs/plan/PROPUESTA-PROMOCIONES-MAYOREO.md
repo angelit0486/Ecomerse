@@ -1,7 +1,8 @@
 # Promociones y mayoreo en el panel — propuesta de diseño (Fase 1)
 
-**Estado: PROPUESTO — esperando decisiones del propietario (§14).** Solo diseño: sin migraciones, sin código, sin
-cambios de datos, sin merge ni despliegue.
+**Estado: DECIDIDO por el propietario el 2026-11-25 (§14) — fase 1 (motor y datos, sin pantallas) en el PR #37,
+sin aplicar.** Registro: ADR-070 en `docs/DECISIONS.md`. Lo que cambió respecto a este bosquejo al implementarlo está
+en §14.1.
 
 - Pedido del propietario (2026-11-25): «Quiero también añadir ventas a mayoreo al panel… ofertas como 3×2, mayoreo a
   partir de 5, paga 1 y la segunda al 50 % de descuento, etc. Todas las ofertas que ayuden a mis clientes a tener más
@@ -454,27 +455,36 @@ Migraciones a staging solo en ventana aprobada, con su reversa probada.
 
 ---
 
-## 14. Decisiones del propietario (con recomendación)
+## 14. Decisiones del propietario (DECIDIDO el 2026-11-25)
 
-1. **Alcance de la v1.**
-   _Recomendado:_ **mayoreo por cantidad, 3×2 (lleva N paga M) y 2.ª pieza al X %**. Monto mínimo automático y
-   paquetes en v2.
-2. **¿Las promociones se suman con los cupones?**
-   _Recomendado:_ **No, por omisión.** Cada cupón tendrá la casilla «Se combina con promociones»; si no está marcada,
-   el cupón solo descuenta piezas sin promoción. El envío gratis sí se combina siempre. Protege el margen de la tienda.
-3. **Mayoreo: ¿para cualquiera que compre la cantidad, o solo para clientes mayoristas registrados?**
-   _Recomendado:_ **para cualquiera que compre la cantidad** (por pedido) en v1. Listas de precio para clientes
-   mayoristas aprobados en una fase posterior (requiere cuentas de cliente y aprobación).
-4. **Planes y ofertas encimadas.**
-   _Recomendado:_ los 3 tipos en **ambos planes**; Tienda con **5 promociones activas** y reporte resumido; Tienda
-   Plus **ilimitadas**, reporte completo y los tipos v2. Y por omisión **una promoción no aplica a productos que ya
-   tienen precio de oferta** (la tienda puede activarlo por promoción).
-5. **Mezcla de presentaciones.**
-   _Recomendado:_ **sí cuentan juntas** (3 playeras de tallas distintas hacen el 3×2; 5 sabores distintos del mismo
-   producto alcanzan el mayoreo de 5) y el descuento cae en la **pieza más barata**.
+1. **Alcance de la v1 — DECIDIDO:** **mayoreo por escalones, lleva N paga M (3×2) y la N-ésima pieza al X %.**
+   Monto mínimo automático y paquetes quedan para v2.
+2. **Promociones y cupones — DECIDIDO:** **no se combinan**, salvo los cupones marcados «Se combina con promociones».
+   El cupón que no se combina no descuenta las piezas que usó una promoción. **El envío gratis se combina siempre.**
+3. **Mayoreo — DECIDIDO:** aplica a **cualquier comprador** que lleve la cantidad (por pedido).
+4. **Planes — DECIDIDO:** los 3 tipos en **ambos planes**. **Tienda: hasta 5 promociones activas. Tienda Plus: sin
+   tope** y con el reporte completo. **Por omisión no aplican a productos con precio de oferta** (cada promoción
+   puede permitirlo).
+5. **Presentaciones — DECIDIDO:** las presentaciones del mismo producto **cuentan juntas** y el descuento cae en la
+   **pieza más barata**.
 
-Decisión menor (sin respuesta se toma la recomendada): permisos nuevos `promotions.read/manage` asignados a los
-mismos roles que hoy tienen `discounts.read/manage`; renombrar en pantalla «Descuentos» → «Cupones».
+### 14.1 Cambios al implementar la fase 1 (para aprobación)
+
+- **Permisos:** en vez de crear `promotions.read/manage`, la fase 1 **reutiliza `discounts.read/manage`** (hoy los
+  tienen exactamente los mismos roles). Evita tocar el catálogo de permisos y su espejo en TS. Si se prefieren
+  permisos propios, es una migración pequeña.
+- **Reglas:** el mayoreo guarda `{"mode": "unit_price" | "percent", "tiers": [{"min_qty", "value"}]}` (hasta 5
+  escalones; en `unit_price` el valor es el **precio por pieza** del escalón). El alcance vive en una tabla aparte,
+  `promotion_targets` (productos o categorías; las categorías incluyen sus subcategorías).
+- **Varias promociones:** una por pieza; gana la que **más ahorra** (empate: producto > categoría > tienda, luego la
+  más antigua).
+- **«Sin tope» en Plus:** se captura como **1000** en la consola (la clave nueva es `max_active_promotions`, contada
+  por organización al activar). Sin ese valor en el plan **no se puede activar ninguna promoción** (cerrado por
+  omisión).
+- **Pedido:** `discount_total` sigue siendo el total de descuentos; se agregan `promotion_total`,
+  `promotion_allocation` por partida y `order_promotions` (copia inmutable). `snapshot_version` = 2 solo si hubo
+  promoción.
+- **Pospuesto:** el reporte (fase 4) y el gancho regulatorio para productos con reglas especiales (con la fase 3).
 
 ---
 
