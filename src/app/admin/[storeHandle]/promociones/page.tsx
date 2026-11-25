@@ -45,6 +45,9 @@ export default async function PromotionsPage({ params, searchParams }: Props) {
             cupones de «Descuentos» no se suman, salvo los que marques «Se combina con promociones».
           </p>
         </div>
+        <Link href={`${base}/reporte`} className={`${linkButton} border border-border`}>
+          Reporte
+        </Link>
         {canEdit ? (
           <Link
             href={`${base}/nueva`}
