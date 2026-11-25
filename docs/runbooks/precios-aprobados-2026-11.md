@@ -36,7 +36,7 @@ $2,900; **Tienda Plus** $1,299/mes o $12,990/año, cuota de arranque $5,900; pru
 | Carritos abandonados          | no       | sí            | análisis                                                                                                              |
 | Roles a la medida             | no       | sí            | análisis                                                                                                              |
 | Acceso por API                | no       | no            | **propuesta** (no se vende ni se anuncia hoy)                                                                         |
-| Reporte de promociones        | no       | sí            | **decidido 2026-11-25 (ADR-070)**; el reporte llega en la fase 4                                                      |
+| Reporte de promociones        | no       | sí            | **decidido 2026-11-25 (ADR-070)**; panel → Promociones → Reporte                                                      |
 
 Guardar cada plan con «Guardar plan».
 

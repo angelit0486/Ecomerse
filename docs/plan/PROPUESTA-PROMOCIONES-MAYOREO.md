@@ -1,8 +1,8 @@
 # Promociones y mayoreo en el panel — propuesta de diseño (Fase 1)
 
-**Estado: DECIDIDO por el propietario el 2026-11-25 (§14) — fase 1 (motor y datos, sin pantallas) en el PR #37,
-sin aplicar.** Registro: ADR-070 en `docs/DECISIONS.md`. Lo que cambió respecto a este bosquejo al implementarlo está
-en §14.1.
+**Estado: DECIDIDO por el propietario el 2026-11-25 (§14) — fases 1 a 4 construidas en el PR #37 (borrador), sin
+aplicar ni liberar.** Registro: ADR-070 en `docs/DECISIONS.md`. Lo que cambió respecto a este bosquejo al implementarlo
+está en §14.1 y §16; cómo liberarlo, en `docs/runbooks/promociones-lanzamiento.md`.
 
 - Pedido del propietario (2026-11-25): «Quiero también añadir ventas a mayoreo al panel… ofertas como 3×2, mayoreo a
   partir de 5, paga 1 y la segunda al 50 % de descuento, etc. Todas las ofertas que ayuden a mis clientes a tener más
@@ -376,20 +376,20 @@ Permisos: crear/editar con `promotions.manage` (rol `marketing_manager` y dueño
 
 ## 11. Casos límite
 
-| Caso                                                   | Regla                                                                                                                                                                                                               |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mezcla de presentaciones (tallas, sabores)             | Cuentan juntas dentro del **producto** (mayoreo) o de la **promoción** (NxM, N-ésima). El descuento cae en la pieza **más barata**. (Decisión §14-5.)                                                               |
-| Presentaciones con precios distintos en mayoreo        | Escalón por porcentaje: cada una con su precio − %. Escalón por precio fijo: solo si todas las presentaciones tienen el mismo precio base; si no, el panel obliga a usar porcentaje.                                |
-| Escalón que sube el precio                             | Prohibido: el precio de cada escalón debe ser menor que el anterior y que el precio vigente (si el precio vigente baja después, el escalón que ya no ahorra se ignora, como hace Mercado Libre).                    |
-| Stock insuficiente                                     | No cambia: `place_order` reserva inventario y revierte todo si falta (`manual_payment_hold.sql:227-235`). El carrito ya avisa `insufficient_stock`.                                                                 |
-| Promoción termina mientras el comprador paga           | El recálculo da otro total → `price_changed` (flujo existente). Si el pedido ya se creó, conserva su precio.                                                                                                        |
-| Devolución parcial de un 3×2                           | Reembolso proporcional del renglón (`returns.sql:375`): devolver 1 de 3 piezas de $100 en 3×2 devuelve $66.67, no $100. El panel lo explica y la tienda puede ajustar el monto (ya existe).                         |
-| Promoción entre productos distintos (3×2 en categoría) | Al devolver se usa el reparto por línea guardado en `order_promotions`; el monto es editable por la tienda.                                                                                                         |
-| Cancelación o pago vencido                             | No hay contadores que liberar en v1 (sin límite de usos). En v2, como `discount_redemptions`.                                                                                                                       |
-| Cantidad máxima por línea                              | La actual (1–999). Límites de compra regulatorios futuros se aplican **antes** que la promoción.                                                                                                                    |
-| Productos regulados                                    | La promoción no salta ninguna regla de cumplimiento: solo aplica a productos publicables. Si un perfil regulatorio prohíbe promociones para una categoría, el motor la excluye (gancho en `app.active_promotions`). |
-| Total $0                                               | Rechazado como hoy (D-F6-05).                                                                                                                                                                                       |
-| Venta de mostrador (PR #13)                            | Usa la misma `app.promotion_apply`.                                                                                                                                                                                 |
+| Caso                                                   | Regla                                                                                                                                                                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mezcla de presentaciones (tallas, sabores)             | Cuentan juntas dentro del **producto** (mayoreo) o de la **promoción** (NxM, N-ésima). El descuento cae en la pieza **más barata**. (Decisión §14-5.)                                                                |
+| Presentaciones con precios distintos en mayoreo        | Escalón por porcentaje: cada una con su precio − %. Escalón por precio fijo: solo si todas las presentaciones tienen el mismo precio base; si no, el panel obliga a usar porcentaje.                                 |
+| Escalón que sube el precio                             | Prohibido: el precio de cada escalón debe ser menor que el anterior y que el precio vigente (si el precio vigente baja después, el escalón que ya no ahorra se ignora, como hace Mercado Libre).                     |
+| Stock insuficiente                                     | No cambia: `place_order` reserva inventario y revierte todo si falta (`manual_payment_hold.sql:227-235`). El carrito ya avisa `insufficient_stock`.                                                                  |
+| Promoción termina mientras el comprador paga           | El recálculo da otro total → `price_changed` (flujo existente). Si el pedido ya se creó, conserva su precio.                                                                                                         |
+| Devolución parcial de un 3×2                           | Reembolso proporcional del renglón (`returns.sql:375`): devolver 1 de 3 piezas de $100 en 3×2 devuelve $66.67, no $100. El panel lo explica y la tienda puede ajustar el monto (ya existe).                          |
+| Promoción entre productos distintos (3×2 en categoría) | Al devolver se usa el reparto por línea guardado en `order_promotions`; el monto es editable por la tienda.                                                                                                          |
+| Cancelación o pago vencido                             | No hay contadores que liberar en v1 (sin límite de usos). En v2, como `discount_redemptions`.                                                                                                                        |
+| Cantidad máxima por línea                              | La actual (1–999). Límites de compra regulatorios futuros se aplican **antes** que la promoción.                                                                                                                     |
+| Productos regulados                                    | La promoción no salta ninguna regla de cumplimiento: solo aplica a productos publicables. El gancho para que un perfil regulatorio prohíba promociones **no se construyó** (§16.3): no existe hoy ese tipo de regla. |
+| Total $0                                               | Rechazado como hoy (D-F6-05).                                                                                                                                                                                        |
+| Venta de mostrador (PR #13)                            | Usa la misma `app.promotion_apply`.                                                                                                                                                                                  |
 
 ---
 
@@ -497,3 +497,28 @@ Migraciones a staging solo en ventana aprobada, con su reversa probada.
 | Confusión del comprador (Profeco: información de ofertas) | Media     | Regla en palabras, vigencia visible y ahorro por fila en carrito, checkout, correo y pedido.                         |
 | Rendimiento del carrito con muchas promociones            | Baja      | Índices por tienda/estado/vigencia; tope de promociones activas por plan; una sola consulta por carrito.             |
 | Choque con otras ramas que tocan checkout/carrito         | Media     | Fases 1 y 3 se rebasan sobre lo integrado; la migración (b) se redacta sobre la **última** `place_order` vigente.    |
+
+---
+
+## 16. Estado de la entrega (2026-11-25, PR #37)
+
+### 16.1 Qué se construyó
+
+| Fase | Qué                                                                                                                                        | Migración                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| 1    | Motor en la base (`app.promotion_apply`), tablas, RPC con bitácora, copia en el pedido, límite del plan.                                   | `20261125000100`, `20261125000200`           |
+| 2    | Panel «Promociones» (lista, alta con vista previa, edición, activar/pausar/archivar) y «Se combina con promociones» en cupones.            | —                                            |
+| 3    | Tienda: insignias, recuadro en la ficha, ahorro en carrito, checkout, página del pedido y correos (de la copia del pedido).                | `20261125000300` (solo funciones)            |
+| 4    | «Promociones → Reporte»: por promoción, pedidos, piezas, ahorro y venta en un periodo (Tienda Plus); invitación a subir de plan en Tienda. | `20261125000400` (una función, solo lectura) |
+
+### 16.2 Diferencias con este bosquejo
+
+- Insignias: la tarjeta muestra un texto corto generado de la regla («Lleva 3, paga 2», «2a al 50%», «Mayoreo desde 6 pzas»), igual en todas las tiendas; la leyenda que escribe la dueña aparece en la ficha, el carrito, el pedido y los correos.
+- Reporte (§12): «piezas» y «venta» son las de las partidas que recibieron la promoción (lo cobrado, ya con descuentos); no resta devoluciones. La «tasa de uso» se muestra como «N de M pedidos pagados usaron una promoción».
+- Venta de mostrador (PR #13): no está en esta rama; cuando se integre debe usar `app.promotion_apply`.
+
+### 16.3 Pendiente: gancho regulatorio
+
+No se construyó porque no es pequeño y nadie lo pide hoy (ADR-070): requiere un tipo de regla nuevo en cumplimiento
+(`promotion_block`), su captura en la consola y excluir esos productos en `app.cart_promotions` y
+`storefront.product_promotions`, con pgTAP de dos tiendas. Decisión del propietario: qué perfiles no admiten promociones.
