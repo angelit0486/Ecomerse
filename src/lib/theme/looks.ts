@@ -726,6 +726,26 @@ const NOCTURNO_CSS = [
   // Barras de desplazamiento del tono de la tienda (no el gris del sistema).
   `html:has(${R}){scrollbar-color:${N.graphite} ${N.void}}`,
   `${R} :is([class*=overflow-x-auto],[class*=overflow-y-auto],dialog){scrollbar-color:${N.graphite} transparent}`,
+  // ── Lectura y navegación (v15) ────────────────────────────────────────────
+  // Páginas informativas (aviso de privacidad, términos…): columna de lectura,
+  // subtítulos separados por un filo, viñetas y enlaces en púrpura.
+  `${R} article:has(> .sf-prose) > h1::after{content:"";display:block;width:3rem;height:2px;margin-top:1.25rem;border-radius:2px;background:linear-gradient(90deg,${N.violet},${N.glow},${N.silver})}`,
+  `${R} article > .sf-prose{color:${N.silver};font-size:1.0625rem;line-height:1.75}`,
+  `${R} article > .sf-prose > :is(h2,h3){margin-top:2.25rem;padding-top:1.5rem;border-top:1px solid var(--ad-hair);color:${N.frost};font-family:var(--font-space-grotesk),system-ui,sans-serif;font-weight:700;letter-spacing:-.015em;line-height:1.2}`,
+  `${R} article > .sf-prose > h2{font-size:1.375rem}${R} article > .sf-prose > h3{font-size:1.125rem}`,
+  `${R} article > .sf-prose :is(strong,b){color:${N.frost}}`,
+  `${R} article > .sf-prose :is(ul,ol){padding-left:1.25rem}`,
+  `${R} article > .sf-prose li{padding-left:.25rem}${R} article > .sf-prose li + li{margin-top:.375rem}`,
+  `${R} article > .sf-prose li::marker{color:${N.glow}}`,
+  `${R} article > .sf-prose a{color:${N.frost};text-decoration:underline;text-decoration-color:${N.violet};text-decoration-thickness:2px;text-underline-offset:4px}`,
+  `${R} article > .sf-prose a:hover{color:${N.glow}}`,
+  // Ruta de navegación: separadores tenues; la página actual en blanco frío.
+  `${R} nav[aria-label='Ruta de navegación'] li > span[aria-hidden=true]{color:var(--ad-hair-strong);padding-inline:.125rem}`,
+  `${R} nav[aria-label='Ruta de navegación'] a{color:${N.mist};transition:color var(--ad-dur) var(--ad-ease)}`,
+  `${R} nav[aria-label='Ruta de navegación'] a:hover{color:${N.frost};text-decoration:none}`,
+  `${R} nav[aria-label='Ruta de navegación'] [aria-current=page]{color:${N.silver};font-weight:600}`,
+  // «Saltar al contenido» (teclado): píldora de la marca, no el recuadro del sistema.
+  `${R} a[href='#contenido']:focus{background:${N.action};color:${N.white};border-radius:999px;padding:.625rem 1.125rem;font-weight:700;box-shadow:0 10px 30px -10px rgb(0 0 0/.9)}`,
   // Botón principal: al enfocarlo con teclado, un aro doble que se lee sobre el púrpura.
   `${R} :is(button,a)[class*='bg-[var(--sf-btn-bg)]']:focus-visible{outline:2px solid ${N.glow};outline-offset:3px}`,
 ].join("");

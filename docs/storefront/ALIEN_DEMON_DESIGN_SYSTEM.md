@@ -164,3 +164,11 @@ Directiva del propietario: negro dominante, púrpura como identidad, verde neón
 - **Sin cambios:** catálogo, precios, fotos, textos de la tienda, carrito, checkout, pago y pedidos (solo heredan los colores de los tokens).
 - **Evidencia (local):** recorrido en 360, 375, 390, 430, 768, 1024, 1280, 1440 y 1920 px por inicio, productos, ofertas, ficha, búsqueda vacía, 404, aviso de privacidad y cuenta: sin desplazamiento horizontal; menú del celular cierra con Esc y devuelve el foco; CLS de la portada en 390 px 0.024 → 0.002 (medición local, sin red real).
 - **Nave sobre el título** (`starship.tsx`, petición del propietario): platillo de casco cromado, cúpula de cristal púrpura con piloto (ojos en verde neón), luces de posición y un haz tenue hacia el título. SVG en línea de menos de 3 KB, sin imágenes ni JS ni peticiones extra; solo en la primera portada y solo con el look (las demás tiendas no la reciben). Colores por clase desde la paleta. Movimiento solo con `transform`/`opacity`: llega una vez (1.4 s), flota 5 px, las luces se encienden en secuencia y el haz respira; con «reducir movimiento», quieta. Tamaño fijo desde el HTML (sin CLS). Pruebas: `starship.test.tsx` y E2E en `storefront-look.spec.ts`.
+- **Detalles (v14–v15, 2026-11-25):**
+  - El número de WhatsApp nunca se parte en dos renglones (todas las tiendas).
+  - El buscador termina en «…».
+  - El destello al tocar es púrpura tenue.
+  - Texto suavizado y barras de desplazamiento del tono de la tienda.
+  - Páginas informativas con columna de lectura: filete de la marca bajo el título, subtítulos separados por un filo, viñetas y enlaces en púrpura.
+  - Ruta de navegación con separadores tenues y la página actual en peso 600.
+  - «Saltar al contenido» (teclado) como píldora púrpura.

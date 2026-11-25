@@ -124,6 +124,23 @@ describe("temas de presentación (looks)", () => {
     expect(css).not.toContain("→");
   });
 
+  it("páginas informativas legibles; ruta y «Saltar al contenido» con la marca", () => {
+    const css = lookCss("nocturno");
+    // Subtítulos separados por un filo y viñetas en púrpura luminoso.
+    expect(css).toContain(
+      "article > .sf-prose > :is(h2,h3){margin-top:2.25rem;padding-top:1.5rem;border-top:",
+    );
+    expect(css).toContain(`article > .sf-prose li::marker{color:${NOCTURNO.glow}}`);
+    // La página actual de la ruta se distingue por peso, no solo por color.
+    expect(css).toMatch(
+      /nav\[aria-label='Ruta de navegación'\] \[aria-current=page\]\{[^}]*font-weight:600/,
+    );
+    // El salto al contenido visible al enfocarlo, en el púrpura de acción con texto blanco.
+    expect(css).toContain(
+      `a[href='#contenido']:focus{background:${NOCTURNO.action};color:${NOCTURNO.white}`,
+    );
+  });
+
   it("en el checkout, la forma de pago elegida se enciende (regla :checked propia)", () => {
     const css = lookCss("nocturno");
     expect(css).toContain("[name=shipping_rate_id]):checked){border-color:");
