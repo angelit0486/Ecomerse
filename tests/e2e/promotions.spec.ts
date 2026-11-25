@@ -38,7 +38,9 @@ test.beforeAll(async () => {
   });
 });
 
-test("crear, activar, límite del plan, pausar y editar una promoción", async ({ page }) => {
+test("crear, activar, límite del plan, pausar y editar una promoción; cupón combinable", async ({
+  page,
+}) => {
   await loginNewStaff(page, ownerEmail);
   await page.goto(`/admin/${tenant.handle}`);
   await page.getByRole("link", { name: "Promociones" }).first().click();
@@ -131,10 +133,8 @@ test("crear, activar, límite del plan, pausar y editar una promoción", async (
     { name: "Segunda al 50", status: "paused", targets: 0 },
     { name: "Mayoreo 6", status: "active", targets: 0 },
   ]);
-});
 
-test("un cupón se marca «Se combina con promociones»", async ({ page }) => {
-  await loginNewStaff(page, ownerEmail);
+  // 6. Cupones: la casilla «Se combina con promociones» llega a la base.
   await page.goto(`/admin/${tenant.handle}/descuentos`);
   const code = `JUNTOS${run}`.toUpperCase().slice(0, 20);
   await page.getByLabel("Código").first().fill(code);
