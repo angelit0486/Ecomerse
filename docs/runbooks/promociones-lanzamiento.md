@@ -46,6 +46,7 @@ Las cuatro fases van en el mismo despliegue.
 | 3   | `20261125000300_storefront_promotions.sql` | Lecturas de la tienda; página del pedido y correos con el ahorro. Solo funciones.       | `98abdf159c670fb66d1ea74b6a277b59e77af1422f3c25ff5212a9b4d0cea735` |
 | 4   | `20261125000400_promotions_report.sql`     | `promotions_report` (solo lectura).                                                     | `d61de62acf1d0d22567045a3f628a4e839459e93cc0bc6dc230e826a422307b8` |
 
+- **Staging:** guion por pasos `scripts/ops/promociones/staging-aplicar.sql` (editor SQL; comprobación previa, descarga con `pg_net` desde el commit fijo, sumas, las 4 en una transacción, verificación posterior y planes). Ensayado en local sobre una base en `20261119000100`: esquema final idéntico al de una base desde cero.
 - Cada una en su transacción, con el procedimiento de `docs/runbooks/despliegue-migraciones-2026-11.md` §5 (sumas
   comparadas antes de ejecutar). Versión final: `public.app_schema_version() = '20261125000400'`.
 - El código del PR exige `20261125000400`: con una base anterior el panel avisa «Faltan actualizaciones de la base de datos (migraciones)» y fallan las pantallas de promociones.
