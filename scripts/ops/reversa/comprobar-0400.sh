@@ -29,6 +29,7 @@ OLD_APP=a730989
 # Reversas de las migraciones posteriores a 0400, de la más nueva a la más vieja:
 # «versión de la base antes de correrla | archivo | versión en que la deja».
 NEWER=(
+  "20261125000400|scripts/ops/reversa/20261125000400_promotions_report.reversa.sql|20261125000300"
   "20261125000300|scripts/ops/reversa/20261125000300_storefront_promotions.reversa.sql|20261125000200"
   "20261125000200|scripts/ops/reversa/20261125000200_promotion_engine.reversa.sql|20261125000100"
   "20261125000100|scripts/ops/reversa/20261125000100_promotions.reversa.sql|20261119000100"

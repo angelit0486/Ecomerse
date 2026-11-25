@@ -203,7 +203,7 @@ select is(coalesce(tests.gw(format('select storefront.get_order_for_guest(%L, %L
                           sha256(convert_to('guest-idem-promo-sf-0001', 'UTF8')))), 'null'::jsonb), 'null'::jsonb,
           'desde otra tienda el pedido no existe');
 
-select is(public.app_schema_version(), '20261125000300', 'versión de la base');
+select is(public.app_schema_version(), '20261125000400', 'versión de la base');
 
 select * from finish();
 rollback;
