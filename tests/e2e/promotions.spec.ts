@@ -146,4 +146,23 @@ test("crear, activar, límite del plan, pausar y editar una promoción; cupón c
   const [d] = await admin<{ c: boolean }[]>`
     select combines_with_promotions as c from public.discounts where store_id = ${tenant.storeId} and code = ${code}`;
   expect(d!.c).toBe(true);
+
+  // 7. Reporte (fase 4): sin «Reporte de promociones» en el plan, la invitación;
+  //    con la función, el reporte del periodo (aún sin pedidos pagados).
+  await page.goto(`/admin/${tenant.handle}/promociones`);
+  await page.getByRole("link", { name: "Reporte" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Reporte de promociones" }),
+  ).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("viene con el plan Tienda Plus");
+  await expectNoSeriousA11yViolations(page);
+  await admin`insert into public.organization_entitlement_overrides (organization_id, key, value_bool, reason)
+              values (${tenant.orgId}, 'promotion_reports', true, 'Prueba E2E del reporte de promociones')`;
+  await page.reload();
+  await expect(
+    page.getByText("Ningún pedido pagado de este periodo usó una promoción."),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "90 días" }).click();
+  await expect(page.getByRole("link", { name: "90 días" })).toHaveAttribute("aria-current", "page");
+  await expectNoSeriousA11yViolations(page);
 });
