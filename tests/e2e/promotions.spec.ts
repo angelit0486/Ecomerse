@@ -33,7 +33,6 @@ test.beforeAll(async () => {
     await sql`set local role authenticated`;
     await sql`select public.catalog_upsert_product(${tenant.storeId}, ${sql.json({
       title: "Playera básica",
-      slug: "playera-basica",
       variants: [{ price: 19900, sku: `PLY-${run}`.toUpperCase() }],
     })})`;
   });
