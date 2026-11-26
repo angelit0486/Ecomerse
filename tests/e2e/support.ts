@@ -148,7 +148,10 @@ export async function loginNewStaff(page: Page, email: string): Promise<string> 
   await page.getByRole("button", { name: "Enviarme un código" }).click();
   await enterEmailCode(page, email, sentAt);
   const secret = await enrollTotp(page);
-  await expect(page).toHaveURL(/\/admin$/);
+  // La primera verificación TOTP de la corrida (justo al arrancar la batería)
+  // pasaba de 5 s con el botón en «Verificando…» (sin error): tres falsas alarmas
+  // en noviembre de 2026. Se sigue exigiendo llegar al panel.
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
   return secret;
 }
 
