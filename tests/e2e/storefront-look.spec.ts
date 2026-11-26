@@ -20,6 +20,42 @@ let nocturno: Awaited<ReturnType<typeof createTenant>>;
 
 const url = (t: { handle: string }, path = "/") => `http://${t.handle}.localhost:3000${path}`;
 
+/**
+ * Registra cada salto de diseño con el elemento que se movió (para diagnosticar
+ * en CI: en local no se reproduce). Se instala antes de cargar la página.
+ */
+const recordShifts = () => {
+  const w = window as unknown as { __cls: number; __shifts: string[] };
+  w.__cls = 0;
+  w.__shifts = [];
+  new PerformanceObserver((list) => {
+    for (const e of list.getEntries() as unknown as {
+      value: number;
+      hadRecentInput: boolean;
+      startTime: number;
+      sources?: { node?: Node; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+    }[]) {
+      if (e.hadRecentInput) continue;
+      w.__cls += e.value;
+      for (const src of e.sources ?? []) {
+        const n = src.node as Element | undefined;
+        const name = n?.tagName
+          ? `${n.tagName.toLowerCase()}.${String(n.className ?? "").slice(0, 60)}`
+          : "#text";
+        w.__shifts.push(
+          `${e.value.toFixed(3)} @${Math.round(e.startTime)}ms ${name} «${(n?.textContent ?? "").trim().slice(0, 40)}» ` +
+            `y ${Math.round(src.previousRect.y)}→${Math.round(src.currentRect.y)} ` +
+            `h ${Math.round(src.previousRect.height)}→${Math.round(src.currentRect.height)}`,
+        );
+      }
+    }
+  }).observe({ type: "layout-shift", buffered: true });
+};
+const readShifts = () => {
+  const w = window as unknown as { __cls: number; __shifts: string[] };
+  return { cls: w.__cls, shifts: w.__shifts };
+};
+
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
@@ -182,21 +218,14 @@ test("nocturno: la franja de la hora de corte no mueve la página al cargar (CLS
   // Antes, el servidor dibujaba la regla fija (dos renglones en el celular) y el
   // navegador la cambiaba por la cuenta regresiva (uno): todo subía 16 px.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(() => {
-    const w = window as unknown as { __cls: number };
-    w.__cls = 0;
-    new PerformanceObserver((list) => {
-      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[])
-        if (!e.hadRecentInput) w.__cls += e.value;
-    }).observe({ type: "layout-shift", buffered: true });
-  });
+  await page.addInitScript(recordShifts);
   for (const path of ["/", "/productos"]) {
     await page.goto(url(nocturno, path), { waitUntil: "networkidle" });
     await expect(page.locator(".sf-cutoff time, .sf-cutoff p").first()).toBeVisible();
     // Dos «tics» del reloj: el texto ya era el del servidor y solo cambian los dígitos.
     await page.waitForTimeout(2_200);
-    const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
-    expect(cls, `CLS en ${path}`).toBeLessThan(0.05);
+    const { cls, shifts } = await page.evaluate(readShifts);
+    expect(cls, `CLS en ${path}; saltos:\n${shifts.join("\n")}`).toBeLessThan(0.05);
   }
 });
 
@@ -292,6 +321,7 @@ test("nocturno: la nave sobre el título de la portada es decorativa y no mueve 
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(recordShifts);
   await page.goto(url(nocturno, "/"));
   const ship = page.locator("svg.sf-ship");
   await expect(ship).toHaveCount(1);
@@ -308,21 +338,9 @@ test("nocturno: la nave sobre el título de la portada es decorativa y no mueve 
   });
   expect(order).toEqual({ inHero: true, before: true });
   // Sin saltos de diseño al cargar (la nave tiene su tamaño desde el HTML).
-  const cls = await page.evaluate(
-    () =>
-      new Promise<number>((resolve) => {
-        let total = 0;
-        new PerformanceObserver((list) => {
-          for (const e of list.getEntries() as unknown as {
-            value: number;
-            hadRecentInput: boolean;
-          }[])
-            if (!e.hadRecentInput) total += e.value;
-        }).observe({ type: "layout-shift", buffered: true });
-        setTimeout(() => resolve(total), 1500);
-      }),
-  );
-  expect(cls).toBeLessThan(0.1);
+  await page.waitForTimeout(1_500);
+  const { cls, shifts } = await page.evaluate(readShifts);
+  expect(cls, `saltos:\n${shifts.join("\n")}`).toBeLessThan(0.1);
 
   await page.goto(url(base, "/"));
   await expect(page.locator("svg.sf-ship")).toHaveCount(0);
