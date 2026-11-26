@@ -2175,3 +2175,58 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - Mientras la tienda está en borrador, las demás pantallas muestran «Volver a «Configura tu tienda»».
   - **Sin migración:** la base sigue decidiendo qué bloquea la publicación (`stores_launch_checklist`); la guía solo ordena y explica. Si no se puede leer el estado, el Inicio dice «No pudimos revisar qué le falta» y la guía muestra la página de error con reintento: nunca un avance inventado.
   - **Pruebas:** unitarias `launch-steps.test.ts` (8) y `home-state.test.ts` al día; E2E `launch-guide.spec.ts` (Inicio y guía cuentan lo mismo, siguiente paso marcado, envíos sin zona no sale listo, volver a la guía). `launch.spec.ts` ahora espera «4 de 9» (antes 5: envíos contaba como listo sin zona).
+
+## 47. Comprar el dominio desde el panel (propuesta, 2026-11-26)
+
+### ADR-069 — Compra de dominio desde el panel · **PROPUESTO, pendiente de aprobación del propietario**
+
+**Pedido del propietario:** que cada tienda pueda comprar su dominio desde el panel y quede conectado sin pasos técnicos.
+
+**Lo que ya existe (ADR-037):** conectar un dominio propio con verificación TXT, certificado y redirección al principal. Está construido pero **apagado en staging**: falta `VERCEL_DOMAINS_TOKEN` en Vercel, así que hoy un dominio se queda «en verificación». **Encenderlo es el paso 0 y no requiere esta propuesta.**
+
+**Qué permite Vercel (API de su registrador, revisada el 2026-11-26):**
+
+- Buscar disponibilidad y precio de 1 a 200 nombres exactos (`POST /v1/registrar/domains/search`, precios en **USD**).
+- Comprar (`POST /v1/registrar/domains/{domain}/buy`) con `years`, `autoRenew`, `expectedPrice` (si el precio cambió, falla con `expected_price_mismatch`) y los datos de contacto del titular. Algunas terminaciones piden datos extra (`contact-info/schema`).
+- Renovación automática (`PATCH …/auto-renew`) y transferencia de entrada.
+- Si `.mx` y `.com.mx` se pueden comprar ahí **está por confirmar**: primero se consulta con la búsqueda.
+
+**Propuesta (en dos partes):**
+
+1. **Buscar (sin dinero, sin riesgo):** en Ajustes → Dominio, «Buscar un dominio». El comercio escribe un nombre y ve opciones (.com, .mx, .com.mx, .store…) con disponibilidad y precio por año en pesos (tipo de cambio fijado por la plataforma, mostrado como aproximado). Para comprar hoy: enlace a un registrador y la guía de conexión que ya existe.
+2. **Comprar (con dinero, requiere estas decisiones):**
+   - **Quién paga a Vercel:** la cuenta de Vercel de PRUVA. La compra sale de tu tarjeta, así que el panel **nunca** compra sin cobro confirmado al comercio.
+   - **Cómo se cobra al comercio:** opción A, se suma al cargo de su plan (`plan_payments`) y la compra la confirma la plataforma desde la Consola; opción B, el comercio paga primero con Mercado Pago y la compra se hace al confirmar el pago (webhook). Recomiendo **A** para empezar: no toca el pago de compradores y tú apruebas cada compra.
+   - **Margen y precio:** precio de Vercel + margen fijo (p. ej. +$100 MXN/año) para cubrir tipo de cambio y renovación.
+   - **Titular:** el **comercio** como titular legal (sus datos de contacto). El dominio queda en la cuenta de PRUVA mientras sea cliente; si se va, se le entrega el código de transferencia.
+   - **Renovación:** automática mientras su plan esté al día; 30 días antes se avisa en el Inicio; si el plan está suspendido, no se renueva y se avisa.
+   - **Límites:** 1 dominio comprado por tienda, solo `domains.manage` con verificación en dos pasos, auditoría de cada búsqueda de compra y de cada compra, idempotencia por pedido de dominio.
+   - **Datos:** tabla `domain_orders` (store_id, hostname, precio USD y MXN, estado `quoted → approved → purchased → connected | failed`, order_id del registrador), con RLS forzado, trigger de tienda, FK compuesta y pgTAP entre dos tiendas. Migración nueva, solo con tu autorización.
+   - **Conexión:** al comprarse se usa el flujo de ADR-037 (agregar al proyecto, verificar, certificado, principal).
+
+**Necesito de ti para seguir:**
+
+- Crear el token de Vercel (`VERCEL_DOMAINS_TOKEN`) con acceso al proyecto y al registrador, y guardarlo en las variables de Vercel (yo no manejo secretos).
+- Aprobar la parte 1 (buscar).
+- Elegir A o B, el margen y la política de titular y renovación para la parte 2.
+
+- **D-PANEL-13. Envíos a todo México más fáciles (2026-11-26).**
+  - **Pedido del propietario:** que la tienda pueda vender a nivel nacional sin batallar con la configuración.
+  - **Problema encontrado:** los estados de una zona se escribían a mano y el carrito los compara letra por letra con el estado del comprador (`app.calculate_cart`). «Nuevo Leon» o «Jalsico» dejaban la zona sin aplicar, sin ningún aviso.
+  - **Qué cambió:**
+    - «Envía a todo México en un paso» cuando la tienda no tiene zonas: crea la zona «Todo México» con «Envío estándar» y, si se indica, «Envío gratis» desde un monto. Si un intento anterior dejó la zona sin tarifa, se reutiliza; si ya tiene tarifas, no se duplica.
+    - En una zona solo de México, los estados se eligen de una lista con los mismos nombres que usa el checkout (`MX_STATES`). Ninguno marcado = todo el país.
+    - El servidor también normaliza lo escrito (acentos, mayúsculas, «CDMX», «Edomex», «NL»…) y rechaza lo que no es un estado diciendo cuál (`src/lib/shipping/regions.ts`).
+  - **Sin migración:** usa `shipping_upsert_zone` y `shipping_upsert_rate`.
+  - **Pendiente (ADR-057, aprobado):** guías de paquetería con Skydropx; sigue faltando la cuenta de pruebas.
+  - **Pruebas:** unitarias `regions.test.ts` (5); E2E `shipping-national.spec.ts`.
+
+- **D-PANEL-14. Pasada de calidad visual del panel (2026-11-26).**
+  - **Pedido del propietario:** que el panel se sienta de alta calidad, mejor que el de la competencia.
+  - **Qué cambió (tokens en `src/ui/tokens.css`, contraste probado en `tokens.test.ts`):**
+    - El texto secundario pasa de azul `#446C92` (competía con los enlaces) a gris pizarra `#566272` (6.2:1 sobre blanco).
+    - Bordes decorativos más finos (`#DBE2EA`); los controles conservan un borde ≥ 3:1 (`#7D8DA0`).
+    - Esquinas de 8 px (controles) y 12 px (contenedores).
+    - El azul marino queda para acciones y la sección activa.
+  - **Menú:** íconos propios por sección (`src/ui/nav-icons.tsx`, sin dependencias, decorativos con `aria-hidden`). La sección activa va en azul suave en lugar del bloque negro.
+  - Solo afecta al panel y a la consola: la tienda usa los colores de cada comercio.

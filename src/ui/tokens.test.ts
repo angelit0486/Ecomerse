@@ -33,6 +33,9 @@ const pairs: Array<[string, string, number]> = [
   ["warning", "canvas", 4.5],
   ["danger", "canvas", 4.5],
   ["accent", "canvas", 4.5],
+  // Sección activa del menú: texto azul sobre el fondo azul suave.
+  ["accent", "accent-soft", 4.5],
+  ["fg", "accent-soft", 4.5],
   ["control", "surface", 3],
   ["control", "canvas", 3],
   ["focus", "surface", 3],

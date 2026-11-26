@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { parseMoneyToCents } from "@/lib/money/format";
+import { isMexicoOnly, normalizeMxRegions } from "@/lib/shipping/regions";
 import { callRpc } from "@/server/db/rpc";
 import { invalidateStore } from "@/server/storefront/cache";
 
@@ -32,6 +33,19 @@ export async function saveZone(
   formData: FormData,
 ): Promise<FormState> {
   const values = formValues(formData, ["id", "name", "countries", "regions"]);
+  const countries = list(values.countries ?? "");
+  // Estados elegidos en la lista (zona de México) o regiones escritas (otros países).
+  const picked = formData.getAll("region").map(String);
+  let regions = picked.length > 0 ? picked : list(values.regions ?? "");
+  if (isMexicoOnly(countries) && regions.length > 0) {
+    const { regions: names, unknown } = normalizeMxRegions(regions);
+    if (unknown.length > 0) {
+      const message = `No reconocemos ${unknown.map((u) => `«${u}»`).join(", ")} como estado de México: elígelo de la lista.`;
+      return { error: message, fields: { regions: message }, values };
+    }
+    regions = names;
+  }
+  values.regions = regions.join(", ");
   try {
     const { supabase, storeId } = await storeClient(storeHandle);
     await callRpc(supabase, "shipping_upsert_zone", {
@@ -39,8 +53,8 @@ export async function saveZone(
       p_zone: {
         ...(values.id ? { id: values.id } : {}),
         name: values.name,
-        countries: list(values.countries ?? ""),
-        ...(values.regions ? { regions: list(values.regions) } : {}),
+        countries,
+        ...(regions.length > 0 ? { regions } : {}),
       },
     });
     // La ficha muestra el umbral de envío gratis (F9-T03): se invalida su caché.
@@ -50,6 +64,95 @@ export async function saveZone(
   }
   revalidatePath(base(storeHandle));
   return { ok: true, message: "Zona guardada." };
+}
+
+/**
+ * «Envío a todo México» en un paso (panel, 2026-11-26): la zona «Todo México»
+ * con su tarifa estándar y, si se indica, envío gratis desde un monto. Las
+ * mismas funciones que el formulario detallado (`shipping_upsert_*`).
+ */
+export async function quickNationalShipping(
+  storeHandle: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const values = formValues(formData, [
+    "price",
+    "free_over_subtotal",
+    "est_days_min",
+    "est_days_max",
+  ]);
+  const price = parseMoneyToCents(values.price ?? "");
+  const freeOver = values.free_over_subtotal ? parseMoneyToCents(values.free_over_subtotal) : null;
+  const days = [optInt(values.est_days_min ?? ""), optInt(values.est_days_max ?? "")];
+  const fields: Record<string, string> = {};
+  if (price === null) fields.price = "Escribe el costo del envío (puede ser 0).";
+  if (values.free_over_subtotal && (freeOver === null || freeOver <= 0)) {
+    fields.free_over_subtotal = "Escribe un monto mayor que 0 o déjalo vacío.";
+  }
+  if (
+    days.some((d) => Number.isNaN(d)) ||
+    (days[0] !== null && days[1] !== null && days[0]! > days[1]!)
+  ) {
+    fields.days = "Revisa los días: números enteros y el mínimo no mayor que el máximo.";
+  }
+  if (Object.keys(fields).length > 0) {
+    return { error: Object.values(fields)[0], fields, values };
+  }
+  try {
+    const { supabase, storeId } = await storeClient(storeHandle);
+    // Si un intento anterior dejó la zona sin tarifa, se reutiliza (no se duplica).
+    const { data: existing, error: findError } = await supabase
+      .from("shipping_zones")
+      .select("id, shipping_rates(id)")
+      .eq("store_id", storeId)
+      .eq("name", "Todo México")
+      .limit(1)
+      .maybeSingle();
+    if (findError) throw findError;
+    if (existing && existing.shipping_rates.length > 0) {
+      return { error: "Ya tienes la zona «Todo México»: ajusta sus tarifas abajo." };
+    }
+    const zoneId =
+      existing?.id ??
+      (await callRpc<string>(supabase, "shipping_upsert_zone", {
+        p_store_id: storeId,
+        p_zone: { name: "Todo México", countries: ["MX"] },
+      }));
+    await callRpc(supabase, "shipping_upsert_rate", {
+      p_store_id: storeId,
+      p_rate: {
+        zone_id: zoneId,
+        name: "Envío estándar",
+        type: "flat",
+        price,
+        est_days_min: days[0],
+        est_days_max: days[1],
+        is_active: true,
+      },
+    });
+    if (freeOver !== null) {
+      await callRpc(supabase, "shipping_upsert_rate", {
+        p_store_id: storeId,
+        p_rate: {
+          zone_id: zoneId,
+          name: "Envío gratis",
+          type: "free_over",
+          price: 0,
+          free_over_subtotal: freeOver,
+          est_days_min: days[0],
+          est_days_max: days[1],
+          is_active: true,
+        },
+      });
+    }
+    invalidateStore(storeId);
+  } catch (error) {
+    revalidatePath(base(storeHandle));
+    return failure(error, values);
+  }
+  revalidatePath(base(storeHandle));
+  return { ok: true, message: "Listo: ya envías a todo México." };
 }
 
 export async function deleteZone(

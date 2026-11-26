@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <div className="flex items-center gap-2">
           <Link
             href="/seguridad/contrasena"
-            className="inline-flex min-h-11 items-center px-2 text-sm underline"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm text-fg-muted hover:bg-canvas hover:text-fg"
           >
             Contraseña
           </Link>

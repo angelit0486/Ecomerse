@@ -4,6 +4,8 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { NavIcon } from "@/ui/nav-icons";
+
 export interface AdminNavItem {
   href: string;
   label: string;
@@ -40,6 +42,7 @@ export function AdminNav({
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   const quick = all.filter((i) => primary.includes(i.href));
 
+  const section = (href: string) => (href === base ? "inicio" : href.split("/").pop()!);
   const link = (item: AdminNavItem, pill: boolean) => {
     const active = item.href === current;
     return (
@@ -48,16 +51,23 @@ export function AdminNav({
         aria-current={active ? "page" : undefined}
         // Al elegir una sección el menú del celular se cierra.
         onClick={() => setOpen(false)}
-        className={`flex min-h-11 items-center gap-2 whitespace-nowrap text-sm ${
-          pill ? "rounded-full px-3.5" : "rounded-md px-3 md:min-h-9"
+        className={`flex min-h-11 items-center gap-2.5 whitespace-nowrap text-sm transition-colors ${
+          pill ? "rounded-full px-3.5" : "rounded-[var(--radius-control)] px-3 md:min-h-9"
         } ${
           active
-            ? "bg-fg font-medium text-canvas"
+            ? pill
+              ? "bg-accent font-medium text-accent-fg"
+              : "bg-accent-soft font-medium text-accent"
             : pill
-              ? "border border-border hover:bg-canvas"
-              : "hover:bg-canvas"
+              ? "border border-border bg-surface hover:bg-canvas"
+              : "text-fg hover:bg-surface"
         }`}
       >
+        {pill ? null : (
+          <span className={active ? "text-accent" : "text-fg-muted"}>
+            <NavIcon section={section(item.href)} />
+          </span>
+        )}
         {item.label}
         <PendingMark />
       </Link>
@@ -76,7 +86,7 @@ export function AdminNav({
           aria-expanded={open}
           aria-controls="menu-secciones"
           onClick={() => setOpen((o) => !o)}
-          className="flex min-h-11 items-center rounded-full border border-border px-3.5 text-sm font-medium"
+          className="flex min-h-11 items-center rounded-full border border-border bg-surface px-3.5 text-sm font-medium"
         >
           {open ? "Cerrar menú" : "Menú"}
         </button>
@@ -88,7 +98,9 @@ export function AdminNav({
         {groups.map((group, i) => (
           <div key={group.title ?? i}>
             {group.title ? (
-              <p className="px-3 pb-1 text-[13px] font-semibold text-fg-muted">{group.title}</p>
+              <p className="px-3 pb-1 pt-1 text-[12px] font-semibold text-fg-muted">
+                {group.title}
+              </p>
             ) : null}
             <ul className="space-y-0.5">
               {group.items.map((item) => (
