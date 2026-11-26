@@ -136,7 +136,7 @@ test("inicio: comparativo, antigüedad, carritos, clientes y enlaces filtrados",
     "El más antiguo: hace 2 días",
   );
   await expect(
-    pending.getByRole("listitem").filter({ hasText: "1 pendientes de pago" }),
+    pending.getByRole("listitem").filter({ hasText: "1 pendiente de pago" }),
   ).toContainText("El más antiguo: hace 3 horas");
 
   // Clientes nuevos vs. recurrentes.

@@ -517,7 +517,7 @@ export function ProductEditor({
                         value={draft.price}
                         aria-invalid={priceError ? true : undefined}
                         onChange={(e) => updateVariant(row, { price: e.target.value })}
-                        className="w-28"
+                        className="w-28 min-w-28"
                       />
                       {priceError ? (
                         <span className="block text-[13px] text-danger">{priceError}</span>
@@ -530,7 +530,7 @@ export function ProductEditor({
                         value={draft.compare_at_price}
                         aria-invalid={compareError ? true : undefined}
                         onChange={(e) => updateVariant(row, { compare_at_price: e.target.value })}
-                        className="w-28"
+                        className="w-28 min-w-28"
                       />
                       {compareError ? (
                         <span className="block text-[13px] text-danger">{compareError}</span>
@@ -543,7 +543,7 @@ export function ProductEditor({
                           inputMode="decimal"
                           value={draft.cost}
                           onChange={(e) => updateVariant(row, { cost: e.target.value })}
-                          className="w-28"
+                          className="w-28 min-w-28"
                         />
                       </td>
                     ) : null}
@@ -553,7 +553,7 @@ export function ProductEditor({
                         value={draft.sku}
                         maxLength={64}
                         onChange={(e) => updateVariant(row, { sku: e.target.value })}
-                        className="w-32"
+                        className="w-32 min-w-32"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -563,7 +563,7 @@ export function ProductEditor({
                         value={draft.net_content}
                         maxLength={100}
                         onChange={(e) => updateVariant(row, { net_content: e.target.value })}
-                        className="w-28"
+                        className="w-28 min-w-28"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -572,7 +572,7 @@ export function ProductEditor({
                         inputMode="numeric"
                         value={draft.servings}
                         onChange={(e) => updateVariant(row, { servings: e.target.value })}
-                        className="w-20"
+                        className="w-20 min-w-20"
                       />
                     </td>
                     {stock ? (

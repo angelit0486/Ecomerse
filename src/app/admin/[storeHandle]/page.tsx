@@ -31,7 +31,7 @@ import { panelFlagEnabled } from "./_shared/panel-flags";
 import { launchProgress, launchSteps } from "@/lib/onboarding/launch-steps";
 import { loadLaunchInput } from "@/server/onboarding/launch-guide";
 
-import { launchCopy, QUEUE_OK_TEXT } from "./home-state";
+import { launchCopy, needsAttentionText, pendingPaymentText, QUEUE_OK_TEXT } from "./home-state";
 import { StoreAlertsPanel } from "./store-alerts-panel";
 
 type Props = {
@@ -499,10 +499,10 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
               <li className="rounded-md border border-border px-3 py-2">
                 {canOrders ? (
                   <Link href={ordersHref(base, "pendientes")} className="underline">
-                    {kpis.pending_payment} pendientes de pago
+                    {pendingPaymentText(kpis.pending_payment)}
                   </Link>
                 ) : (
-                  `${kpis.pending_payment} pendientes de pago`
+                  pendingPaymentText(kpis.pending_payment)
                 )}
                 {pendingAge("pending_payment", kpis.pending_payment)}
               </li>
@@ -512,10 +512,10 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                 {kpis.needs_attention > 0 ? "⚠ " : ""}
                 {canOrders && kpis.needs_attention > 0 ? (
                   <Link href={ordersHref(base, "atencion")} className="underline">
-                    {kpis.needs_attention} necesitan atención
+                    {needsAttentionText(kpis.needs_attention)}
                   </Link>
                 ) : (
-                  `${kpis.needs_attention} necesitan atención`
+                  needsAttentionText(kpis.needs_attention)
                 )}
                 {pendingAge("needs_attention", kpis.needs_attention)}
               </li>
@@ -671,6 +671,21 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
                   })}
                 </svg>
               )}
+              {/* Sin ejes la barra no decía qué día ni cuánto (auditoría 2026-11-26). */}
+              {kpis.series.some((s) => s.sales > 0) ? (
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[12px] text-fg-muted">
+                  <span>{dayLabel(kpis.from)}</span>
+                  {(() => {
+                    const best = kpis.series.reduce((a, b) => (b.sales > a.sales ? b : a));
+                    return (
+                      <span className="text-fg">
+                        Día más alto: {dayLabel(best.day)} · {m(best.sales)}
+                      </span>
+                    );
+                  })()}
+                  <span>{dayLabel(kpis.to)}</span>
+                </div>
+              ) : null}
               {kpis.orders > 0 ? (
                 <details className="text-sm">
                   <summary className="cursor-pointer min-h-11 py-3 md:min-h-0 md:py-0 text-[13px] text-fg-muted">

@@ -669,7 +669,10 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               {e.to_value
                 ? `: ${axisValueLabel(e.from_value as string | null)} → ${axisValueLabel(e.to_value as string)}`
                 : ""}
-              {e.message ? ` · ${e.message as string}` : ""}
+              {/* «Pedido recibido · Pedido recibido»: el mensaje no se repite si dice lo mismo. */}
+              {e.message && e.message !== EVENT_LABELS[e.type as string]
+                ? ` · ${e.message as string}`
+                : ""}
             </li>
           ))}
         </ol>

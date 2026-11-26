@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { LaunchProgress } from "@/lib/onboarding/launch-steps";
 
-import { launchCopy, pendingReviewsFrom, queueWaitingFrom } from "./home-state";
+import {
+  launchCopy,
+  needsAttentionText,
+  pendingPaymentText,
+  pendingReviewsFrom,
+  queueWaitingFrom,
+} from "./home-state";
 
 const failure = { code: "57014", message: "canceling statement due to statement timeout" };
 
@@ -70,5 +76,15 @@ describe("opiniones por revisar", () => {
   it("sin error devuelve el conteo", () => {
     expect(pendingReviewsFrom({ count: 3, error: null })).toBe(3);
     expect(pendingReviewsFrom({ count: 0, error: null })).toBe(0);
+  });
+});
+
+describe("contadores de «Por atender»", () => {
+  it("singular con uno, plural con cero o varios", () => {
+    expect(pendingPaymentText(1)).toBe("1 pendiente de pago");
+    expect(pendingPaymentText(0)).toBe("0 pendientes de pago");
+    expect(pendingPaymentText(3)).toBe("3 pendientes de pago");
+    expect(needsAttentionText(1)).toBe("1 necesita atención");
+    expect(needsAttentionText(2)).toBe("2 necesitan atención");
   });
 });

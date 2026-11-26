@@ -58,3 +58,9 @@ export function pendingReviewsFrom(result: Result<unknown>): number | null {
   if (result.error) return null;
   return result.count ?? 0;
 }
+
+/** «1 pendiente de pago», nunca «1 pendientes» (auditoría del panel, 2026-11-26). */
+export const pendingPaymentText = (n: number) =>
+  n === 1 ? "1 pendiente de pago" : `${n} pendientes de pago`;
+export const needsAttentionText = (n: number) =>
+  n === 1 ? "1 necesita atención" : `${n} necesitan atención`;

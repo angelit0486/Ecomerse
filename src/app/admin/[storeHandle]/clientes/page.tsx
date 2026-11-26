@@ -101,7 +101,8 @@ export default async function CustomersPage({ params, searchParams }: Props) {
           <thead className="border-b border-border text-[13px] text-fg-muted">
             <tr>
               <th className="py-2 font-medium">Cliente</th>
-              <th className="py-2 font-medium">Pedidos</th>
+              {/* Se cuentan al pagarse: un pedido pendiente aún no suma. */}
+              <th className="py-2 font-medium">Pedidos pagados</th>
               <th className="py-2 font-medium">Total comprado</th>
               <th className="py-2 font-medium">Cuenta</th>
             </tr>
