@@ -18,6 +18,8 @@ create table if not exists auth.users (
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at         timestamptz not null default now()
 );
+-- Como en Supabase Auth: último inicio de sesión (lo lee la consola, «Mis clientes»).
+alter table auth.users add column if not exists last_sign_in_at timestamptz;
 
 create or replace function auth.jwt() returns jsonb language sql stable as $$
   select coalesce(

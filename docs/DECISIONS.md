@@ -2105,3 +2105,18 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - pgTAP `121_storefront_ui_flags`: nace apagado y encender una tienda no enciende otra;
     - E2E `whatsapp-order-ticket.spec.ts`: compra con envío, la ficha completa y la apertura sola; «Quedarme aquí» y recargar no la repiten; con el interruptor apagado, como antes;
     - `whatsapp-orders.spec.ts`: sin el interruptor no hay marca ni ficha.
+
+## 45. Consola: «Mis clientes» (2026-11-26)
+
+- **D-CON-01. Semáforo por tienda y «quién necesita ayuda hoy».**
+  - **Pedido del propietario:** enfocar el panel en cómo sirve a sus clientes (los comercios) y a él (la plataforma). Eligió empezar por ver el estado de cada cliente.
+  - **Qué:** página `/platform/clientes` (solo dueña y administración, como «Métricas»: trae ventas de todas las tiendas). Resumen por color, lista de las 30 tiendas más urgentes con sus motivos en español y tabla de 100 con ventas en 30 días, última venta, último acceso del equipo y plan.
+  - **Reglas** (`src/lib/platform/client-health.ts`, función pura con pruebas):
+    - **Rojo** (afecta hoy a compradores o a la cuenta): organización suspendida, pago del plan vencido, transferencias sin confirmar desde hace más de 24 h, pedidos pagados sin enviar desde hace más de 3 días, pedidos marcados para revisión, trabajos en segundo plano agotados en 7 días, tienda publicada sin productos.
+    - **Amarillo** (se enfría o viene un cambio): sin ventas en 30 días (salvo recién lanzada), el equipo no entra hace 14 días o nunca, en preparación hace 14 días o más, prueba que termina en 7 días, sin plan.
+    - El semáforo siempre lleva texto y forma, no solo color.
+  - **Datos:** migración `20261126000100` agrega solo la función de lectura `platform_store_overview(p_search, p_limit)`; sin tablas ni columnas. Sin datos personales de compradores: solo conteos y fechas.
+  - **Escala:** PostgREST corta respuestas largas (`db-max-rows`); con 8,177 tiendas de prueba la vista quedaba incompleta sin aviso. Por eso la búsqueda y el límite (300, máx. 500) van en la base, ordenada por urgencia **antes** de cortar, con `total_count`; la página dice «Resumen de las N más urgentes de M». Con 8,177 tiendas la lectura tarda ~1.2 s (local).
+  - **Prueba de Auth local:** el shim `scripts/db/supabase-shim-auth.sql` gana `auth.users.last_sign_in_at`, que ya existe en Supabase Auth.
+  - **Coordinación:** la rama `feat/promociones-mayoreo` trae `20261125000100–0400` y cambia la versión esperada. Esta migración es del 26 a propósito; la comprobación de versión acepta bases más nuevas (`>=`). Quien junte las ramas debe reconciliar `migration-rehearsal.sh`, `comprobar-0400.sh`, `ventana/02-despues.sql` y los pines de versión.
+  - **Pruebas:** pgTAP `156_platform_store_overview` (23: permisos, cada señal en su tienda, búsqueda, comodines, urgencia antes del límite, total, sin datos de compradores); unitarias `client-health.test.ts` (8); E2E `platform-clients.spec.ts` (2: la administración ve el motivo y busca; soporte recibe 404 y no ve el enlace).

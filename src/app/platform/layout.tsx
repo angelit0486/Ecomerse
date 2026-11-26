@@ -52,6 +52,11 @@ export default async function PlatformLayout({ children }: { children: ReactNode
             Salud
           </Link>
           {canManageTenants(role) ? (
+            <Link href="/platform/clientes" className={navLink}>
+              Mis clientes
+            </Link>
+          ) : null}
+          {canManageTenants(role) ? (
             <Link href="/platform/metricas" className={navLink}>
               Métricas
             </Link>
