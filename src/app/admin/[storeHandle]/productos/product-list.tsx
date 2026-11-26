@@ -48,6 +48,7 @@ export function BulkProductsTable({
   canBulkStatus,
   canBulkDelete,
   canBulkEdit,
+  canBulkSoldOut = false,
   brands,
   categories,
 }: {
@@ -59,6 +60,8 @@ export function BulkProductsTable({
   canBulkDelete: boolean;
   /** products.update: marca, categoría y precios en bloque. */
   canBulkEdit: boolean;
+  /** inventory.adjust: «Marcar como agotado» en bloque. */
+  canBulkSoldOut?: boolean;
   brands: Choice[];
   categories: Choice[];
 }) {
@@ -85,7 +88,8 @@ export function BulkProductsTable({
   // Solo cuenta lo que sigue en esta página (tras borrar, paginar o refrescar).
   const selected = new Set(rows.map((r) => r.id).filter((id) => chosen.has(id)));
   const setSelected = setChosen;
-  const bulkEnabled = !deletedView && (canBulkStatus || canBulkDelete || canBulkEdit);
+  const bulkEnabled =
+    !deletedView && (canBulkStatus || canBulkDelete || canBulkEdit || canBulkSoldOut);
   // La vista previa vale solo para lo que muestra: mismo porcentaje, redondeo y
   // selección; si cambia algo, hay que volver a verla antes de aplicar.
   const sameSelection = (ids: string[]) =>
@@ -160,6 +164,7 @@ export function BulkProductsTable({
             {canBulkEdit ? <option value="tags_remove">Quitar etiqueta…</option> : null}
             {canBulkEdit ? <option value="prices">Cambiar precios (%)…</option> : null}
             {canBulkEdit ? <option value="sale">Programar oferta…</option> : null}
+            {canBulkSoldOut ? <option value="soldout">Marcar como agotado</option> : null}
             {canBulkDelete ? <option value="delete">Eliminar</option> : null}
           </select>
           {bulkAction === "brand" ? (
@@ -263,27 +268,42 @@ export function BulkProductsTable({
                 Continuar
               </Link>
             ) : null
-          ) : (bulkAction === "archive" || bulkAction === "delete") && selected.size > 0 ? (
-            // Archivar y eliminar piden confirmación; sin selección se queda el
-            // botón deshabilitado de abajo (y la pregunta se cierra tras aplicar).
+          ) : (bulkAction === "archive" || bulkAction === "delete" || bulkAction === "soldout") &&
+            selected.size > 0 ? (
+            // Archivar, eliminar y agotar piden confirmación; sin selección se queda
+            // el botón deshabilitado de abajo (y la pregunta se cierra tras aplicar).
             <ConfirmButton
               key={bulkAction}
               size="sm"
               loading={pending}
               question={
-                bulkAction === "delete"
-                  ? selected.size === 1
-                    ? "¿Eliminar el producto elegido?"
-                    : `¿Eliminar los ${selected.size} productos elegidos?`
-                  : selected.size === 1
-                    ? "¿Archivar el producto elegido?"
-                    : `¿Archivar los ${selected.size} productos elegidos?`
+                {
+                  delete:
+                    selected.size === 1
+                      ? "¿Eliminar el producto elegido?"
+                      : `¿Eliminar los ${selected.size} productos elegidos?`,
+                  archive:
+                    selected.size === 1
+                      ? "¿Archivar el producto elegido?"
+                      : `¿Archivar los ${selected.size} productos elegidos?`,
+                  soldout:
+                    selected.size === 1
+                      ? "¿Marcar como agotado el producto elegido?"
+                      : `¿Marcar como agotados los ${selected.size} productos elegidos?`,
+                }[bulkAction]
               }
-              confirmLabel={bulkAction === "delete" ? "Sí, eliminar" : "Sí, archivar"}
+              confirmLabel={
+                { delete: "Sí, eliminar", archive: "Sí, archivar", soldout: "Sí, marcar agotado" }[
+                  bulkAction
+                ]
+              }
               detail={
-                bulkAction === "delete"
-                  ? "Se pueden restaurar desde «Ver eliminados»."
-                  : "Dejan de mostrarse en la tienda; puedes volver a publicarlos."
+                {
+                  delete: "Se pueden restaurar desde «Ver eliminados».",
+                  archive: "Dejan de mostrarse en la tienda; puedes volver a publicarlos.",
+                  soldout:
+                    "Todas sus presentaciones quedan sin existencias disponibles. Lo apartado para pedidos ya hechos no se toca. Para volver a venderlos, captura sus existencias en Inventario.",
+                }[bulkAction]
               }
             >
               Aplicar

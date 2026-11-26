@@ -8,7 +8,13 @@ import { callRpc } from "@/server/db/rpc";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { EmptyState } from "@/ui/primitives/empty-state";
 
-import { AdjustForm, ThresholdForm } from "./inventory-forms";
+import {
+  AdjustForm,
+  QUICK_FORM,
+  QuickSaveBar,
+  SoldOutButton,
+  ThresholdForm,
+} from "./inventory-forms";
 import { variantLabel } from "./labels";
 
 export const metadata: Metadata = { title: "Inventario" };
@@ -64,6 +70,9 @@ export default async function InventoryPage({ params, searchParams }: Props) {
       : [];
   const supplierTotals = new Map(supplierRows.map((r) => [r.variant_id, r]));
   const canAdjust = hasPermission(ctx, "inventory.adjust");
+  // Claves de un solo uso por página dibujada (idempotencia de cada envío).
+  const fresh = () => crypto.randomUUID();
+  const quickRows = canAdjust && visible.some((r) => r.track_inventory);
   const base = `/admin/${ctx.store.handle}/inventario`;
   const link = (overrides: Record<string, string | null>) => {
     const params = new URLSearchParams({
@@ -86,6 +95,9 @@ export default async function InventoryPage({ params, searchParams }: Props) {
           <p className="text-sm text-fg-muted">
             Existencias de tu bodega por variante. «Disponible» es lo que se puede vender: en mano
             menos reservado por pedidos. Lo de proveedores se indica aparte.
+            {quickRows
+              ? " Para actualizar, cambia «En mano» en cada fila y pulsa «Guardar cambios»."
+              : ""}
           </p>
         </div>
         <Link
@@ -150,6 +162,8 @@ export default async function InventoryPage({ params, searchParams }: Props) {
               row.track_inventory &&
               row.low_stock_threshold !== null &&
               row.available <= row.low_stock_threshold;
+            const soldOut = row.track_inventory && row.available <= 0;
+            const editable = canAdjust && row.track_inventory;
             return (
               <li key={row.level_id} className="space-y-3 rounded-md border border-border p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -173,7 +187,52 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                   >
                     <div>
                       <dt className="text-fg-muted">En mano</dt>
-                      <dd className="font-medium">{row.on_hand}</dd>
+                      <dd className="font-medium">
+                        {editable ? (
+                          <>
+                            <input
+                              // Nueva clave al guardar: el campo toma la cifra nueva.
+                              key={`${row.variant_id}-${row.on_hand}`}
+                              form={QUICK_FORM}
+                              name={`stock:${row.variant_id}`}
+                              defaultValue={row.on_hand}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              aria-label={`En mano de ${label}`}
+                              aria-describedby={
+                                row.reserved > 0 ? `res-${row.variant_id}` : undefined
+                              }
+                              className="h-11 md:h-9 w-20 rounded-[var(--radius-control)] border border-control bg-surface px-2 text-sm tabular-nums"
+                            />
+                            <input
+                              type="hidden"
+                              form={QUICK_FORM}
+                              name={`orig:${row.variant_id}`}
+                              value={row.on_hand}
+                            />
+                            <input
+                              type="hidden"
+                              form={QUICK_FORM}
+                              name={`res:${row.variant_id}`}
+                              value={row.reserved}
+                            />
+                            <input
+                              type="hidden"
+                              form={QUICK_FORM}
+                              name={`label:${row.variant_id}`}
+                              value={label}
+                            />
+                            <input
+                              type="hidden"
+                              form={QUICK_FORM}
+                              name={`key:${row.variant_id}`}
+                              value={fresh()}
+                            />
+                          </>
+                        ) : (
+                          row.on_hand
+                        )}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-fg-muted">Reservado</dt>
@@ -183,7 +242,11 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                       <dt className="text-fg-muted">Disponible</dt>
                       <dd className="font-medium">
                         {row.available}
-                        {low ? <span className="ml-2 text-danger">Stock bajo</span> : null}
+                        {soldOut ? (
+                          <span className="ml-2 text-danger">Agotado</span>
+                        ) : low ? (
+                          <span className="ml-2 text-danger">Stock bajo</span>
+                        ) : null}
                         {row.inventory_policy === "continue" ? (
                           <span className="ml-2 text-fg-muted">(se vende sin existencias)</span>
                         ) : null}
@@ -205,6 +268,20 @@ export default async function InventoryPage({ params, searchParams }: Props) {
                       : ""}
                     . La tienda los vende cuando se acaban los tuyos.
                   </p>
+                ) : null}
+                {editable && row.reserved > 0 ? (
+                  <p id={`res-${row.variant_id}`} className="text-[13px] text-fg-muted">
+                    En mano no puede ser menor que {row.reserved}: están apartadas para pedidos.
+                  </p>
+                ) : null}
+                {editable ? (
+                  <SoldOutButton
+                    storeHandle={ctx.store.handle}
+                    variantId={row.variant_id}
+                    label={label}
+                    nonce={fresh()}
+                    soldOut={soldOut}
+                  />
                 ) : null}
                 {canAdjust && row.track_inventory ? (
                   <details>
@@ -231,6 +308,8 @@ export default async function InventoryPage({ params, searchParams }: Props) {
           })}
         </ul>
       )}
+
+      {quickRows ? <QuickSaveBar storeHandle={ctx.store.handle} /> : null}
 
       <nav aria-label="Paginación" className="flex gap-3 text-sm">
         {page > 0 ? (

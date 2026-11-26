@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 
 import { Button } from "@/ui/primitives/button";
 import { Field } from "@/ui/primitives/field";
 import { Input } from "@/ui/primitives/input";
 
-import { adjustInventory, setLowStockThreshold, type InventoryActionState } from "./actions";
+import {
+  adjustInventory,
+  markVariantSoldOut,
+  saveQuickInventory,
+  setLowStockThreshold,
+  type InventoryActionState,
+} from "./actions";
 import { useSafeActionState } from "@/ui/use-safe-action-state";
 
 const control =
@@ -165,6 +171,88 @@ export function ThresholdForm({
       </Button>
       <div aria-live="polite">
         <Feedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+/** Formulario de «Guardar cambios»: los campos de cada fila se asocian con `form`. */
+export const QUICK_FORM = "inventario-rapido";
+
+/**
+ * Barra de «Guardar cambios» de la página (siempre a la vista en el celular).
+ * onSubmit y no `action`: React reiniciaría todos los campos asociados y se
+ * perdería lo escrito en una fila que no se pudo guardar.
+ */
+export function QuickSaveBar({ storeHandle }: { storeHandle: string }) {
+  const [state, action, pending] = useSafeActionState<InventoryActionState, FormData>(
+    saveQuickInventory.bind(null, storeHandle),
+    {},
+  );
+  return (
+    <form
+      id={QUICK_FORM}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      noValidate
+      className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-surface px-4 py-3 sm:mx-0 sm:rounded-md sm:border"
+      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+    >
+      <Button type="submit" loading={pending}>
+        Guardar cambios
+      </Button>
+      <p className="text-[13px] text-fg-muted">
+        Cambia «En mano» en las filas que quieras y guarda una sola vez.
+      </p>
+      <div className="w-full" aria-live="polite">
+        <Feedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+/**
+ * «Marcar agotado»: deja el disponible en 0 sin tocar lo apartado para pedidos.
+ * Ya agotada, el botón se va pero el componente se queda: así la confirmación
+ * no desaparece con él.
+ */
+export function SoldOutButton({
+  storeHandle,
+  variantId,
+  label,
+  nonce,
+  soldOut,
+}: {
+  storeHandle: string;
+  variantId: string;
+  label: string;
+  nonce: string;
+  soldOut: boolean;
+}) {
+  const [state, action, pending] = useSafeActionState<InventoryActionState, FormData>(
+    markVariantSoldOut.bind(null, storeHandle, variantId),
+    {},
+  );
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="nonce" value={nonce} />
+      {soldOut ? null : (
+        <Button
+          type="submit"
+          variant="secondary"
+          size="sm"
+          loading={pending}
+          aria-label={`Marcar agotado: ${label}`}
+        >
+          Marcar agotado
+        </Button>
+      )}
+      <div aria-live="polite">
+        {/* Si se repuso después, el «marcada como agotada» ya no aplica. */}
+        {state.ok && !soldOut ? null : <Feedback state={state} />}
       </div>
     </form>
   );

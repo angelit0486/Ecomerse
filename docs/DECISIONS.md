@@ -2148,3 +2148,17 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - pgTAP `157_store_visits` (14) y `156` al día;
     - unitarias `visit-filter` (3) y `visit-beacon` (2);
     - E2E `store-visits.spec.ts` (2): cuenta una vez al día, un navegador automatizado no cuenta, Inicio con la nota.
+
+## 46. Panel: «Marcar agotado» e inventario más fácil (2026-11-26)
+
+- **D-PANEL-11. Marcar agotado y actualizar existencias en una sola página.**
+  - **Pedido del propietario:** poder marcar productos como agotados y que actualizar el inventario sea más fácil.
+  - **Qué hay:**
+    - Inventario: «En mano» editable en cada fila y un solo «Guardar cambios» (barra fija abajo en el celular) que fija solo las filas que cambiaron. Una fila que falla no detiene a las demás y se dice cuál.
+    - Inventario: botón «Marcar agotado» en cada variante con seguimiento; la fila muestra «Agotado» cuando el disponible es 0.
+    - Productos: acción en bloque «Marcar como agotado» (pide confirmación), con `inventory.adjust`.
+    - El ajuste detallado (daño, pérdida, sumar o restar, aviso de stock bajo) sigue igual en «Ajustar existencias o aviso».
+  - **Agotado = disponible en 0, no «en mano» en 0.** Si hay piezas apartadas para pedidos ya hechos, en mano queda igual a lo apartado: bajar más dejaría esos pedidos sin mercancía. Por eso la actualización rápida tampoco acepta una cifra menor que lo apartado. Una variante con «se vende sin existencias» queda en 0 disponible pero se avisa que la tienda la sigue vendiendo.
+  - **Sin migración ni contratos nuevos.** Todo pasa por `inventory_adjust` en modo «fijar» (movimiento con motivo, auditoría, permiso `inventory.adjust` validado por la base; GATE0 §44.10). Motivos fijos: «Marcado como agotado desde el panel» y «Actualización rápida de inventario desde el panel».
+  - **Idempotencia:** las claves de `inventory_adjust` son permanentes, así que no se arman con las existencias (agotar, reponer y volver a agotar repetiría la clave y la segunda vez no haría nada). Cada página dibujada trae claves de un solo uso por fila; la acción en bloque usa una por envío.
+  - **Pruebas:** unitarias `sold-out.test.ts` (filas que cambiaron, cifras no válidas o menores que lo apartado, plan por variante, clave por envío, mensajes); E2E `inventory-quick.spec.ts` (3: guardar varias filas a la vez y rechazo por lo apartado; marcar agotado conserva lo apartado y se puede volver a agotar tras reponer, libro de inventario cuadrado; en bloque desde Productos y la tienda muestra «Agotado»). `inventory.spec.ts` sigue pasando.

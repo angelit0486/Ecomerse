@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 
 import { reportActionError } from "@/server/actions/report";
 import { getStoreContext } from "@/server/auth/store-context";
@@ -13,6 +14,7 @@ import { AppError } from "@/server/errors";
 import { finalizePanelUpload } from "@/server/media/finalize";
 import { createMediaUpload } from "@/server/media/upload";
 import { parseMoneyToCents } from "@/lib/money/format";
+import { loadStockRows, markSoldOut, soldOutMessage } from "@/server/inventory/stock-actions";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import {
@@ -516,7 +518,7 @@ export async function bulkProductsAction(
   const action = String(formData.get("action") ?? "");
   const ids = formData.getAll("ids").map(String);
   const isEdit = (BULK_EDITS as readonly string[]).includes(action);
-  if (!isEdit && !(BULK_ACTIONS as readonly string[]).includes(action)) {
+  if (!isEdit && action !== "soldout" && !(BULK_ACTIONS as readonly string[]).includes(action)) {
     return { error: "Elige una acción." };
   }
   if (ids.length === 0) return { error: "Selecciona al menos un producto." };
@@ -524,6 +526,7 @@ export async function bulkProductsAction(
     return { error: "Selección no válida." };
   }
   if (isEdit) return bulkEdit(storeHandle, action as BulkEdit, ids, formData);
+  if (action === "soldout") return bulkSoldOut(storeHandle, ids);
   let done = 0;
   // Publicar valida cada producto (precio, fotos, ficha sanitaria): los que no
   // pasan no detienen a los demás; se informa cuántos y por qué.
@@ -569,6 +572,26 @@ export async function bulkProductsAction(
     delete: one ? "producto eliminado" : "productos eliminados",
   }[action as (typeof BULK_ACTIONS)[number]];
   return { ok: true, message: `${done} ${verb}.` };
+}
+
+/**
+ * «Marcar como agotado» en bloque: cada presentación de los productos elegidos
+ * queda con el disponible en 0 (lo apartado para pedidos no se toca). Por
+ * inventory_adjust (exige `inventory.adjust`; la base lo vuelve a validar).
+ */
+async function bulkSoldOut(storeHandle: string, ids: string[]): Promise<CatalogActionState> {
+  try {
+    const result = await withStore(storeHandle, async ({ supabase, storeId }) => {
+      const rows = await loadStockRows(supabase, storeId, { productIds: ids });
+      return markSoldOut(supabase, storeId, rows, randomUUID());
+    });
+    revalidatePath(productsPath(storeHandle));
+    revalidatePath(`/admin/${storeHandle}/inventario`, "layout");
+    const { ok, message } = soldOutMessage(result);
+    return ok ? { ok: true, message } : { error: message };
+  } catch (error) {
+    return failure("catalog.bulk_sold_out", error);
+  }
 }
 
 /**

@@ -381,6 +381,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
           canBulkStatus={bulk.status}
           canBulkDelete={bulk.delete}
           canBulkEdit={canEditPrices}
+          canBulkSoldOut={hasPermission(ctx, "inventory.adjust") && !deleted}
           currency={ctx.store.currency}
           brands={brands.map((b) => ({ id: b.id, label: b.name }))}
           categories={categories.map((c) => ({

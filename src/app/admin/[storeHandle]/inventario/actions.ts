@@ -8,6 +8,8 @@ import { getStoreContext } from "@/server/auth/store-context";
 import { callRpc } from "@/server/db/rpc";
 import { invalidateStore } from "@/server/storefront/cache";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { quickChanges } from "@/lib/inventory/sold-out";
+import { loadStockRows, markSoldOut, soldOutMessage } from "@/server/inventory/stock-actions";
 
 /**
  * Acciones de inventario (F4-T03). La tienda sale de la URL; la base valida
@@ -135,4 +137,102 @@ export async function setLowStockThreshold(
         ? "Aviso de stock bajo desactivado."
         : `Aviso de stock bajo en ${threshold}.`,
   };
+}
+
+const QUICK_REASON = "Actualización rápida de inventario desde el panel";
+
+/**
+ * «Marcar agotado» de una variante: el disponible queda en 0 (en mano = lo
+ * apartado para pedidos ya hechos). Por inventory_adjust, con motivo y clave.
+ */
+export async function markVariantSoldOut(
+  storeHandle: string,
+  variantId: string,
+  _: InventoryActionState,
+  formData: FormData,
+): Promise<InventoryActionState> {
+  if (!z.uuid().safeParse(variantId).success) return { error: "Variante no válida." };
+  // Uno por página dibujada: repetir el mismo clic no mueve dos veces.
+  const nonce = String(formData.get("nonce") ?? "");
+  if (!z.uuid().safeParse(nonce).success)
+    return { error: "Recarga la página e inténtalo de nuevo." };
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    const supabase = await createSupabaseServerClient();
+    const rows = await loadStockRows(supabase, ctx.store.id, { variantIds: [variantId] });
+    if (rows.length === 0) return { error: "No encontramos esta variante." };
+    const result = await markSoldOut(supabase, ctx.store.id, rows, nonce);
+    if (result.marked > 0) invalidateStore(ctx.store.id);
+    revalidatePath(`/admin/${storeHandle}/inventario`, "layout");
+    const { ok, message } = soldOutMessage(result);
+    return ok ? { ok: true, message } : { error: message };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/**
+ * «Guardar cambios» de la página de inventario: fija las existencias de cada
+ * variante que cambió (modo «fijar», motivo fijo y la clave de cada fila). Una
+ * fila que falla no detiene a las demás; se dice cuáles.
+ */
+export async function saveQuickInventory(
+  storeHandle: string,
+  _: InventoryActionState,
+  formData: FormData,
+): Promise<InventoryActionState> {
+  const { changes, invalid } = quickChanges(formData.entries());
+  const labels = new Map<string, string>();
+  for (const [k, v] of formData.entries()) {
+    if (k.startsWith("label:") && typeof v === "string") labels.set(k.slice(6), v);
+  }
+  const name = (id: string) => labels.get(id) ?? "una variante";
+  if (invalid.length > 0) {
+    return {
+      error: `Revisa ${invalid.length === 1 ? "la cantidad" : "las cantidades"} de ${invalid
+        .slice(0, 5)
+        .map(name)
+        .join(", ")}: escribe un número entero de 0 en adelante y no menor que lo apartado.`,
+    };
+  }
+  if (changes.length === 0) return { ok: true, message: "No cambiaste ninguna cantidad." };
+  let saved = 0;
+  const failed: string[] = [];
+  let storeId = "";
+  try {
+    const ctx = await getStoreContext(storeHandle);
+    storeId = ctx.store.id;
+    const supabase = await createSupabaseServerClient();
+    for (const c of changes) {
+      const key = String(formData.get(`key:${c.variantId}`) ?? "");
+      try {
+        await callRpc(supabase, "inventory_adjust", {
+          p_store_id: storeId,
+          p_variant_id: c.variantId,
+          p_type: "adjustment",
+          p_quantity: c.to,
+          p_reason: QUICK_REASON,
+          p_mode: "set",
+          p_idempotency_key: /^[0-9a-f-]{36}$/.test(key) ? `${key}-${c.to}` : null,
+        });
+        saved += 1;
+      } catch (error) {
+        reportActionError("inventory.quick_save", error);
+        failed.push(name(c.variantId));
+      }
+    }
+  } catch (error) {
+    return failure(error);
+  }
+  if (saved > 0) invalidateStore(storeId);
+  revalidatePath(`/admin/${storeHandle}/inventario`, "layout");
+  const savedText =
+    saved === 1 ? "1 existencia actualizada." : `${saved} existencias actualizadas.`;
+  if (failed.length > 0) {
+    return {
+      ...(saved > 0 ? { ok: true } : {}),
+      error: `${saved > 0 ? `${savedText} ` : ""}No se pudo guardar: ${failed.slice(0, 5).join(", ")}. Inténtalo de nuevo.`,
+    };
+  }
+  return { ok: true, message: savedText };
 }
