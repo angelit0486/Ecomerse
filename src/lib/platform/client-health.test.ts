@@ -37,6 +37,7 @@ function healthy(over: Partial<StoreOverviewRow> = {}): StoreOverviewRow {
     orders_need_attention: 0,
     dead_jobs_7d: 0,
     last_staff_sign_in_at: daysAgo(2),
+    visitors_7d: 240,
     total_count: 1,
     ...over,
   };

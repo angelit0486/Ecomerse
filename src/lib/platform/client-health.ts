@@ -35,6 +35,8 @@ export const storeOverviewRow = z.object({
   orders_need_attention: z.number(),
   dead_jobs_7d: z.number(),
   last_staff_sign_in_at: ts,
+  // Visitantes de 7 días (null = la tienda aún no tiene conteo de visitas).
+  visitors_7d: z.number().nullable(),
   // Cuántas tiendas coinciden en total (la base devuelve las más urgentes primero).
   total_count: z.number(),
 });

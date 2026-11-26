@@ -2120,3 +2120,31 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   - **Prueba de Auth local:** el shim `scripts/db/supabase-shim-auth.sql` gana `auth.users.last_sign_in_at`, que ya existe en Supabase Auth.
   - **Coordinación:** la rama `feat/promociones-mayoreo` trae `20261125000100–0400` y cambia la versión esperada. Esta migración es del 26 a propósito; la comprobación de versión acepta bases más nuevas (`>=`). Quien junte las ramas debe reconciliar `migration-rehearsal.sh`, `comprobar-0400.sh`, `ventana/02-despues.sql` y los pines de versión.
   - **Pruebas:** pgTAP `156_platform_store_overview` (23: permisos, cada señal en su tienda, búsqueda, comodines, urgencia antes del límite, total, sin datos de compradores); unitarias `client-health.test.ts` (8); E2E `platform-clients.spec.ts` (2: la administración ve el motivo y busca; soporte recibe 404 y no ve el enlace).
+
+- **D-CON-02. Visitantes de la tienda, en el panel (2026-11-26).**
+  - **Pedido del propietario:** ver cuántas personas entran a la tienda. Eligió el conteo propio en el panel (no Vercel Analytics, que solo vería él).
+  - **Cómo se cuenta:**
+    - Sin cookies ni identificadores. El navegador avisa a `/visita` una vez al día por tienda; el último día va en su `localStorage`.
+    - El servidor solo suma `store_visits_daily(store_id, day) += 1`, en la zona horaria de la tienda: una escritura por visitante al día, no por página vista.
+  - **Qué no cuenta:**
+    - Navegadores automatizados (`navigator.webdriver`, comprobado: el navegador de pruebas usa un user-agent normal de Chrome).
+    - User-agents de robots y vistas previas de enlaces (`shouldCountVisit`).
+    - Avisos de otro sitio (`sec-fetch-site`).
+    - La vista previa del panel.
+    - Tiendas sin publicar.
+    - Modo privado sin almacenamiento: mejor no contar que contar de más.
+  - **Freno:** 5 avisos por IP por minuto y 1 a la vez por instancia (como las sugerencias), para no ocupar el pool de la tienda; siempre responde 204.
+  - **Dónde se ve:**
+    - Inicio → «Visitantes del periodo»: visitantes y conversión, exige `analytics.read`.
+    - «Mis clientes»: visitantes de 7 días.
+    - Mientras no haya un periodo completo de conteo, la conversión no se calcula («Contando desde el…»); sin visitas aún, se dice en lugar de un 0.
+  - **Datos:** migración `20261126000200`:
+    - tabla con RLS forzado, trigger de tienda y lectura por `analytics.read`;
+    - `storefront.record_visit` solo para el gateway;
+    - `dashboard_visits`;
+    - `platform_store_overview` vuelve a crearse con `visitors_7d`.
+  - **Reversa:** pierde solo este conteo. Probado: el esquema queda idéntico al de 0100.
+  - **Pruebas:**
+    - pgTAP `157_store_visits` (14) y `156` al día;
+    - unitarias `visit-filter` (3) y `visit-beacon` (2);
+    - E2E `store-visits.spec.ts` (2): cuenta una vez al día, un navegador automatizado no cuenta, Inicio con la nota.

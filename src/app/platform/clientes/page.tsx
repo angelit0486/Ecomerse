@@ -161,6 +161,7 @@ export default async function ClientsPage({
               <TR>
                 <TH>Tienda</TH>
                 <TH>Estado</TH>
+                <TH>Visitantes en 7 días</TH>
                 <TH>Ventas en 30 días</TH>
                 <TH>Última venta</TH>
                 <TH>Último acceso del equipo</TH>
@@ -184,6 +185,9 @@ export default async function ClientsPage({
                   </TD>
                   <TD>
                     <LightBadge light={light} />
+                  </TD>
+                  <TD className="tabular-nums">
+                    {row.visitors_7d === null ? "—" : num(row.visitors_7d)}
                   </TD>
                   <TD className="tabular-nums">{row.paid_orders_30d}</TD>
                   <TD>{ago(row.last_paid_at, now)}</TD>

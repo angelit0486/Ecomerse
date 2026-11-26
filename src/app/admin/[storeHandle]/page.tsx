@@ -63,6 +63,14 @@ const RANGES: Record<string, { days: number; label: string }> = {
   "90": { days: 90, label: "90 días" },
 };
 
+interface Visits {
+  from: string;
+  to: string;
+  visitors: number;
+  /** Primer día con conteo; null si aún no hay visitas registradas. */
+  counting_since: string | null;
+}
+
 interface Kpis {
   from: string;
   to: string;
@@ -179,7 +187,7 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
   const kpis = kpisState.status === "ok" ? kpisState.data : null;
   const period = kpis ? { from: kpis.from, to: kpis.to } : null;
 
-  const [previousState, customerMixState, cartsState, oldestState, reviewsState] =
+  const [previousState, customerMixState, cartsState, oldestState, reviewsState, visitsState] =
     await Promise.all([
       // Punto 1: el mismo RPC con los N días inmediatamente anteriores.
       period
@@ -226,6 +234,16 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
             return count ?? 0;
           })
         : Promise.resolve(CARD_OFF),
+      // Visitantes del periodo (un aviso por persona al día, sin cookies).
+      canAnalytics && period
+        ? loadCard("visits", storeId, () =>
+            callRpc<Visits>(db, "dashboard_visits", {
+              p_store_id: storeId,
+              p_from: period.from,
+              p_to: period.to,
+            }),
+          )
+        : Promise.resolve(canAnalytics ? CARD_ERROR : CARD_FORBIDDEN),
     ]);
   const previous = previousState.status === "ok" ? previousState.data : null;
   const pendingReviews = reviewsState.status === "ok" ? reviewsState.data : null;
@@ -744,6 +762,18 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
 
       {canAnalytics ? (
         <div className="grid gap-6 md:grid-cols-2">
+          {visitsState.status !== "forbidden" ? (
+            <section aria-labelledby="visitantes" className="space-y-2">
+              <h2 id="visitantes" className="font-semibold">
+                Visitantes del periodo
+              </h2>
+              {visitsState.status === "ok" ? (
+                <VisitsCard visits={visitsState.data} paidOrders={kpis?.orders ?? null} />
+              ) : (
+                <CardError what="tus visitantes del periodo" retryHref={retryHref} />
+              )}
+            </section>
+          ) : null}
           {customerMixState.status !== "forbidden" ? (
             <section aria-labelledby="clientes" className="space-y-2">
               <h2 id="clientes" className="font-semibold">
@@ -828,5 +858,65 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
       ) : null}
       {systemState && healthy ? systemState : null}
     </section>
+  );
+}
+
+const shortDay = (iso: string) =>
+  new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Date(`${iso}T00:00:00Z`),
+  );
+
+/**
+ * Visitantes del periodo (una persona cuenta una vez al día, sin cookies) y qué
+ * parte compró. Antes de que existiera el conteo no hay datos: se dice desde
+ * cuándo se cuenta en lugar de mostrar un cero engañoso.
+ */
+function VisitsCard({ visits, paidOrders }: { visits: Visits; paidOrders: number | null }) {
+  if (visits.counting_since === null) {
+    return (
+      <p className="text-sm text-fg-muted">
+        Aún no hay visitas registradas. Se cuentan desde que se activó esta función: aquí verás
+        cuántas personas entran a tu tienda cada día.
+      </p>
+    );
+  }
+  const partial = visits.counting_since > visits.from;
+  // Si el conteo empezó a mitad del periodo, los pedidos de los días sin conteo
+  // inflarían la proporción: no se calcula hasta tener el periodo completo.
+  const rate =
+    !partial && paidOrders !== null && visits.visitors > 0
+      ? (paidOrders / visits.visitors) * 100
+      : null;
+  return (
+    <>
+      <dl className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-md border border-border p-3">
+          <dt className="text-[13px] text-fg-muted">Visitantes</dt>
+          <dd className="text-lg font-semibold tabular-nums">
+            {visits.visitors.toLocaleString("es-MX")}
+          </dd>
+          <dd className="text-[13px] text-fg-muted">Personas distintas por día</dd>
+        </div>
+        <div className="rounded-md border border-border p-3">
+          <dt className="text-[13px] text-fg-muted">Compraron</dt>
+          <dd className="text-lg font-semibold tabular-nums">
+            {rate === null
+              ? "—"
+              : `${rate.toLocaleString("es-MX", { maximumFractionDigits: 1 })} %`}
+          </dd>
+          <dd className="text-[13px] text-fg-muted">
+            {partial
+              ? "Se calcula con un periodo completo de conteo"
+              : paidOrders === null
+                ? "Sin datos de pedidos del periodo"
+                : `${paidOrders.toLocaleString("es-MX")} ${paidOrders === 1 ? "pedido pagado" : "pedidos pagados"}`}
+          </dd>
+        </div>
+      </dl>
+      <p className="text-[13px] text-fg-muted">
+        {partial ? `Contando desde el ${shortDay(visits.counting_since)}. ` : ""}
+        Cada persona cuenta una vez al día; sin cookies ni datos personales.
+      </p>
+    </>
   );
 }

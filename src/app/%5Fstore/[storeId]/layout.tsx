@@ -37,6 +37,7 @@ import {
 import { NavBar } from "./_components/nav-bar";
 import { CartToast } from "./_components/quick-add";
 import { CartSheet } from "./_components/cart-sheet";
+import { VisitBeacon } from "./_components/visit-beacon";
 
 /**
  * Marco del storefront (F5-T03): tema de la tienda como variables CSS (lista
@@ -321,6 +322,8 @@ export default async function StoreLayout({ children, params }: Props) {
       ) : (
         <CartToast />
       )}
+      {/* Visitantes de la tienda (panel → Inicio): un aviso al día, sin cookies. */}
+      {preview ? null : <VisitBeacon storeId={store.id} />}
     </div>
   );
 }
