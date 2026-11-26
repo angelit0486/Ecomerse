@@ -2230,3 +2230,18 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
     - El azul marino queda para acciones y la sección activa.
   - **Menú:** íconos propios por sección (`src/ui/nav-icons.tsx`, sin dependencias, decorativos con `aria-hidden`). La sección activa va en azul suave en lugar del bloque negro.
   - Solo afecta al panel y a la consola: la tienda usa los colores de cada comercio.
+
+- **D-TIENDA-CLS-01. Fuentes de la tienda con `font-display: optional` (2026-11-26).**
+  - **Síntoma:** el CI de producción estaba rojo desde el 26 nov (runs #463, #466, #469, #472). La portada Nocturno saltaba al cargar con CLS 0.285–0.287; los límites son 0.05 y 0.1.
+  - **Diagnóstico:** las pruebas de CLS de `storefront-look.spec.ts` ahora listan cada salto (elemento, posición y alto). El CI mostró que todo subía y el pie entraba desde abajo a los 141 ms: el texto se reacomodaba al llegar la fuente.
+  - **Causa:**
+    - `next/font` ajusta la fuente de respaldo con `src: local(Arial)`. En máquinas sin Arial (el runner del CI, Android) ese ajuste no aplica y el respaldo es más ancho.
+    - Con `display: swap`, al llegar la fuente real los títulos y avisos cambiaban de renglones.
+    - En local no se veía porque Liberation Sans sustituye a Arial. Simulándolo (CSS con `local(DejaVu Sans)` y fuentes con 600 ms de retraso) se reprodujo: CLS 0.031, con el mismo patrón que el CI.
+  - **Cambio:** las 10 fuentes de la tienda (`_components/fonts.ts`) pasan a `display: "optional"`. Si la fuente no está lista en ~100 ms, esa página se queda con el respaldo y la siguiente usa la de la caché. No hay saltos.
+  - **Costo aceptado:** en una primera visita con red lenta puede verse la fuente del sistema en lugar de la de la marca en esa primera página.
+  - **Alternativa descartada:** precargar solo las dos fuentes de cada tienda. Los archivos llevan un hash del build y no se pueden conocer de forma fiable al momento de la petición en Vercel.
+  - **Pruebas:**
+    - Con la simulación: CLS 0.0016.
+    - `storefront-look.spec.ts`: 17 de 17 normal y 17 de 17 con la simulación (incluye desbordes en todos los anchos).
+    - Suite E2E completa antes de publicar.
