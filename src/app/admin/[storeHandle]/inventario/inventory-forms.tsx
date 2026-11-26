@@ -198,8 +198,8 @@ export function QuickSaveBar({ storeHandle }: { storeHandle: string }) {
         startTransition(() => action(data));
       }}
       noValidate
-      className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-surface px-4 py-3 sm:mx-0 sm:rounded-md sm:border"
-      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+      // Sin `style`: la CSP del panel bloquea estilos en línea.
+      className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:mx-0 sm:rounded-md sm:border"
     >
       <Button type="submit" loading={pending}>
         Guardar cambios
