@@ -13,6 +13,8 @@ import { canonicalUrl } from "@/server/storefront/seo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { publicMediaUrl } from "@/server/catalog/queries";
+import { launchProgress, launchSteps, type LaunchIssue } from "@/lib/onboarding/launch-steps";
+import { loadLaunchInput } from "@/server/onboarding/launch-guide";
 
 import { ShareTools } from "../_shared/share-tools";
 import { loadSiblingStores } from "../_shared/sibling-stores";
@@ -31,11 +33,6 @@ export const maxDuration = 60;
 export const metadata: Metadata = { title: "Configura tu tienda" };
 
 type Props = { params: Promise<{ storeHandle: string }> };
-
-interface LaunchIssue {
-  code: string;
-  message: string;
-}
 
 /** Dónde se resuelve cada pendiente del checklist (§14.3). */
 function issueHref(base: string, code: string): string {
@@ -94,32 +91,25 @@ export default async function OnboardingPage({ params }: Props) {
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
-  const [{ data: checklist, error: checklistError }, { data: manual }, { count: sampleCount }] =
-    await Promise.all([
-      supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
-      hasPermission(ctx, "payments.read")
-        ? supabase
-            .from("payment_accounts")
-            .select("display_name, status, public_config")
-            .eq("store_id", ctx.store.id)
-            .eq("provider", "manual")
-            .order("created_at")
-            .limit(1)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      // Productos de ejemplo de la plantilla (ADR-034 §5): bloquean el lanzamiento.
-      supabase
-        .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", ctx.store.id)
-        .contains("tags", ["ejemplo"])
-        .is("deleted_at", null),
-    ]);
-  if (checklistError) throw checklistError;
-  const launch = checklist as { status: string; issues: LaunchIssue[] };
-  const issues = launch.issues;
+  const [launchInput, { data: manual }] = await Promise.all([
+    loadLaunchInput(supabase, ctx.store),
+    hasPermission(ctx, "payments.read")
+      ? supabase
+          .from("payment_accounts")
+          .select("display_name, status, public_config")
+          .eq("store_id", ctx.store.id)
+          .eq("provider", "manual")
+          .order("created_at")
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  // Sin el estado real no se dibuja un avance inventado: la página de error ofrece reintentar.
+  if (!launchInput) throw new Error("No se pudo revisar el estado de la tienda.");
+  const issues: readonly LaunchIssue[] = launchInput.issues;
+  const sampleCount = launchInput.sampleCount;
   const paymentsDone = !issues.some((i) => i.code === "payment_method");
-  const launched = launch.status === "active";
+  const launched = launchInput.launched;
   const logos: Array<LogoCandidate & { path: string }> = (
     (logoMedia ?? []) as { id: string; status: LogoCandidate["status"]; storage_path: string }[]
   ).map((m) => ({
@@ -153,127 +143,114 @@ export default async function OnboardingPage({ params }: Props) {
   // Mismo análisis que Apariencia: el formulario de marca es el mismo.
   const parsedSettings = ThemeSettingsV2.safeParse(theme?.draft_settings ?? theme?.settings ?? {});
   const settings: ThemeSettings = parsedSettings.success ? parsedSettings.data : {};
-  const brandingSaved = Boolean(
-    theme?.draft_settings || (theme?.settings as ThemeSettings)?.colors,
-  );
-  const profileDone = Boolean(store?.contact_email);
-
-  const base = `/admin/${ctx.store.handle}`;
-  const has = (code: string) => issues.some((i) => i.code === code);
-  const taxRate = (store?.tax_rate_bps as number | undefined) ?? 0;
-  // Recorrido completo de una tienda nueva (Paso 3 del estudio): cada paso lleva
-  // a su pantalla. Los pendientes de publicar los decide la base (§14.3).
-  const steps: {
-    title: string;
-    detail: string;
-    href: string;
-    done: boolean;
-    optional?: boolean;
-  }[] = [
-    {
-      title: "Plantilla y estilo",
-      detail: "Giro, colores y portada",
-      href: "#paso-plantilla",
-      done: brandingSaved,
-    },
-    {
-      title: "Datos de la tienda",
-      detail: `Nombre, contacto, zona horaria · ${store?.currency ?? "MXN"}`,
-      href: "#paso-datos",
-      done: profileDone,
-    },
-    { title: "Logo", detail: "Imagen de tu marca", href: "#paso-logo", done: Boolean(currentLogo) },
-    {
-      title: "Productos",
-      detail: "Agrega o importa tu catálogo",
-      href: `${base}/productos`,
-      done: !has("active_product") && (sampleCount ?? 0) === 0,
-    },
-    {
-      title: "Envíos",
-      detail: "Zonas y tarifas",
-      href: `${base}/envios`,
-      done: !has("shipping_zone"),
-    },
-    {
-      title: "Impuestos",
-      detail:
-        taxRate > 0
-          ? `IVA ${taxRate / 100} % ${store?.prices_include_tax ? "incluido en los precios" : "se suma al precio"}`
-          : "Revisa la tasa con tu contador",
-      href: `${base}/impuestos`,
-      done: taxRate > 0,
-    },
-    {
-      title: "Pagos",
-      detail: "Transferencia y Mercado Pago",
-      href: "#paso-pagos",
-      done: paymentsDone,
-    },
-    {
-      title: "Políticas",
-      detail: "Privacidad, términos, devoluciones y envíos",
-      href: `${base}/contenido`,
-      done: !issues.some((i) => i.code.startsWith("policy_")),
-    },
-    {
-      title: "Dominio propio",
-      detail: "Opcional",
-      href: `${base}/ajustes/dominio`,
-      done: domain?.type === "custom",
-      optional: true,
-    },
-    { title: "Publicar", detail: "Abre tu tienda", href: "#paso-publicar", done: launched },
-  ];
-  const required = steps.filter((s) => !s.optional);
+  const steps = launchSteps(launchInput);
+  const progress = launchProgress(steps);
+  const next = progress.next;
 
   return (
     <section className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-xl font-semibold">Configura tu tienda</h1>
+      <header className="space-y-4">
         <div className="space-y-1">
-          <p className="text-sm font-medium" id="avance-configuracion">
-            {required.filter((s) => s.done).length} de {required.length} pasos listos
+          <h1 className="text-xl font-semibold">Configura tu tienda</h1>
+          <p className="text-sm text-fg-muted">
+            Sigue los pasos en orden. Los marcados «Necesario» hacen falta para publicar; los demás
+            hacen que tu tienda se vea y cobre mejor.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <p className="flex items-baseline justify-between gap-3 text-sm font-medium">
+            <span id="avance-configuracion">
+              {progress.done} de {progress.total} pasos listos
+            </span>
+            <span className="tabular-nums text-fg-muted">{progress.percent} %</span>
           </p>
           <progress
             aria-labelledby="avance-configuracion"
-            max={required.length}
-            value={required.filter((s) => s.done).length}
+            max={progress.total}
+            value={progress.done}
             className="h-2 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-success [&::-webkit-progress-bar]:bg-border [&::-webkit-progress-value]:bg-success"
           />
         </div>
-        <ol
-          className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
-          aria-label="Pasos de configuración"
-        >
-          {steps.map((step) => (
-            <li key={step.title}>
-              <a
-                href={step.href}
-                className="flex min-h-11 flex-col rounded-md border border-border p-3 text-sm hover:bg-canvas"
-              >
-                <span className="font-medium">{step.title}</span>
-                <span className="text-[13px] text-fg-muted">{step.detail}</span>
-                <span className={`text-[13px] ${step.done ? "text-success" : "text-fg-muted"}`}>
-                  {step.done ? "✓ Listo" : step.optional ? "Opcional" : "Pendiente"}
-                </span>
-              </a>
-            </li>
-          ))}
+        {next ? (
+          <section
+            aria-labelledby="siguiente-paso"
+            className="flex flex-col gap-3 rounded-md border border-accent bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="space-y-1">
+              <p className="text-[13px] font-medium text-fg-muted">
+                {launched ? "Sugerencia" : "Siguiente paso"}
+              </p>
+              <h2 id="siguiente-paso" className="text-base font-semibold">
+                {next.title}
+              </h2>
+              <p className="max-w-prose text-sm text-fg-muted">{next.why}</p>
+            </div>
+            <a
+              href={next.href}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"
+            >
+              {next.key === "publish" ? "Ir a publicar" : `Ir a ${next.title.toLowerCase()}`}
+            </a>
+          </section>
+        ) : null}
+        <ol className="grid gap-2 sm:grid-cols-2" aria-label="Pasos de configuración">
+          {steps.map((step, i) => {
+            const isNext = next?.key === step.key;
+            const tag = step.done
+              ? "✓ Listo"
+              : step.optional
+                ? "Opcional"
+                : step.required
+                  ? "Necesario"
+                  : "Recomendado";
+            return (
+              <li key={step.key}>
+                <a
+                  href={step.href}
+                  aria-current={isNext ? "step" : undefined}
+                  className="flex min-h-11 items-start gap-3 rounded-md border border-border p-3 text-sm hover:bg-canvas aria-[current=step]:border-accent"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border text-[12px] font-semibold tabular-nums ${
+                      step.done ? "border-success text-success" : "border-border text-fg-muted"
+                    }`}
+                  >
+                    {step.done ? "✓" : i + 1}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-medium">{step.title}</span>
+                    <span className="text-[13px] text-fg-muted">{step.detail}</span>
+                  </span>
+                  <span
+                    className={`shrink-0 text-[12px] font-medium ${
+                      step.done
+                        ? "text-success"
+                        : step.required && !step.optional
+                          ? "text-fg"
+                          : "text-fg-muted"
+                    }`}
+                  >
+                    {tag}
+                  </span>
+                </a>
+              </li>
+            );
+          })}
         </ol>
       </header>
 
-      {(canApplyTemplate && launch.status === "draft") || (sampleCount ?? 0) > 0 ? (
+      {(canApplyTemplate && ctx.store.status === "draft") || sampleCount > 0 ? (
         <section aria-labelledby="paso-plantilla" className="space-y-3">
           <h2 id="paso-plantilla" className="text-base font-semibold">
             Plantilla por giro
           </h2>
           <SamplesNotice
             storeHandle={ctx.store.handle}
-            count={sampleCount ?? 0}
+            count={sampleCount}
             canDelete={hasPermission(ctx, "products.delete")}
           />
-          {canApplyTemplate && launch.status === "draft" ? (
+          {canApplyTemplate && ctx.store.status === "draft" ? (
             <TemplateForm
               storeHandle={ctx.store.handle}
               revision={theme?.draft_revision ?? 0}

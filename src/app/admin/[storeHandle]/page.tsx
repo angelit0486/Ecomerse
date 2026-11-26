@@ -28,7 +28,10 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { CardError, ComparisonLine } from "./_shared/home-cards";
 import { panelFlagEnabled } from "./_shared/panel-flags";
-import { launchCopy, launchPendingFrom, QUEUE_OK_TEXT } from "./home-state";
+import { launchProgress, launchSteps } from "@/lib/onboarding/launch-steps";
+import { loadLaunchInput } from "@/server/onboarding/launch-guide";
+
+import { launchCopy, QUEUE_OK_TEXT } from "./home-state";
 import { StoreAlertsPanel } from "./store-alerts-panel";
 
 type Props = {
@@ -324,16 +327,13 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
     }
   }
 
-  // Tienda sin publicar: cuántos pendientes le faltan (misión panel, F3).
+  // Tienda sin publicar: la misma cuenta que «Configura tu tienda» (launch-steps).
   // "error": no se pudo revisar (nunca «Ya tiene todo lo necesario» por un fallo).
-  let launchPending: number | "error" | null = null;
+  let launch: ReturnType<typeof launchCopy> | null = null;
   if (ctx.store.status === "draft" && canManage) {
-    const supabase = await createSupabaseServerClient();
-    launchPending = launchPendingFrom(
-      await supabase.rpc("stores_launch_checklist", { p_store_id: ctx.store.id }),
-    );
+    const input = await loadLaunchInput(await createSupabaseServerClient(), ctx.store);
+    launch = launchCopy(input ? launchProgress(launchSteps(input)) : "error");
   }
-  const launch = launchPending === null ? null : launchCopy(launchPending);
   const quickActions = [
     {
       href: `${base}/productos/nuevo`,
@@ -435,9 +435,12 @@ export default async function StoreHomePage({ params, searchParams }: Props) {
         </p>
         {launch ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent p-4">
-            <p className="text-sm">
-              <strong>Tu tienda aún no está publicada.</strong> {launch.message}
-            </p>
+            <div className="space-y-0.5 text-sm">
+              <p>
+                <strong>Tu tienda aún no está publicada.</strong> {launch.message}
+              </p>
+              {launch.next ? <p className="text-fg-muted">Siguiente: {launch.next}.</p> : null}
+            </div>
             <Link
               href={`${base}/configuracion`}
               className="inline-flex h-11 items-center rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"

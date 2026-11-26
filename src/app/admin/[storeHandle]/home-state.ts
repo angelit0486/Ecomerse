@@ -1,3 +1,5 @@
+import { launchSummary, type LaunchProgress } from "@/lib/onboarding/launch-steps";
+
 /**
  * Inicio: distinguir «la consulta falló» de «el resultado es cero». supabase-js
  * no lanza: devuelve `{ data: null, error }` o `{ count: null, error }`, y un
@@ -6,22 +8,34 @@
 
 type Result<T> = { data?: T | null; count?: number | null; error: unknown };
 
-/** Pasos que le faltan a la tienda para publicarse; "error" si no se pudo revisar. */
-export function launchPendingFrom(result: Result<unknown>): number | "error" {
-  if (result.error) return "error";
-  const issues = (result.data as { issues?: unknown[] } | null | undefined)?.issues;
-  return (issues ?? []).length;
-}
-
-/** Texto y acción de la tarjeta «Tu tienda aún no está publicada». */
-export function launchCopy(pending: number | "error"): { message: string; cta: string } {
-  if (pending === "error") {
-    return { message: "No pudimos revisar qué le falta.", cta: "Revisar configuración" };
+/**
+ * Texto y acción de la tarjeta «Tu tienda aún no está publicada», con la misma
+ * cuenta que «Configura tu tienda» (launch-steps). "error": no se pudo revisar.
+ */
+export function launchCopy(progress: LaunchProgress | "error"): {
+  message: string;
+  cta: string;
+  next: string | null;
+} {
+  if (progress === "error") {
+    return {
+      message: "No pudimos revisar qué le falta.",
+      cta: "Revisar configuración",
+      next: null,
+    };
   }
-  if (pending === 0) return { message: "Ya tiene todo lo necesario.", cta: "Publicar mi tienda" };
+  const steps = `Llevas ${progress.done} de ${progress.total} pasos.`;
+  if (progress.blocking === 0) {
+    return {
+      message: `${launchSummary(progress)} ${steps}`,
+      cta: "Publicar mi tienda",
+      next: null,
+    };
+  }
   return {
-    message: pending === 1 ? "Le falta 1 paso." : `Le faltan ${pending} pasos.`,
+    message: `${launchSummary(progress)} ${steps}`,
     cta: "Terminar de configurar",
+    next: progress.next?.title ?? null,
   };
 }
 

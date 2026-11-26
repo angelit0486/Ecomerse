@@ -12,6 +12,7 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { STORE_STATUS_SHORT } from "../_shared/store-status";
 import { AdminNav } from "./_shared/admin-nav";
 import { GlobalSearch } from "./_shared/global-search";
+import { LaunchGuideReturn } from "./_shared/launch-guide-return";
 import { NoticesButton } from "./_shared/notices-button";
 import { StoreTimeZoneProvider } from "./_shared/store-time-zone";
 
@@ -239,6 +240,10 @@ export default async function StoreLayout({ children, params }: Props) {
               </Link>
             ) : null}
           </div>
+          {ctx.store.status === "draft" &&
+          (hasPermission(ctx, "store.update") || hasPermission(ctx, "appearance.manage")) ? (
+            <LaunchGuideReturn base={base} />
+          ) : null}
           {schema.ok ? null : (
             <p role="alert" className="rounded-md border border-danger px-3 py-2 text-sm">
               Faltan actualizaciones de la base de datos (migraciones). Algunas pantallas pueden

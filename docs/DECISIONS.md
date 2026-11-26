@@ -2163,3 +2163,15 @@ Documento completo: [`docs/plan/ADR-066-venta-de-mostrador.md`](plan/ADR-066-ven
   - **Sin migración ni contratos nuevos.** Todo pasa por `inventory_adjust` en modo «fijar» (movimiento con motivo, auditoría, permiso `inventory.adjust` validado por la base; GATE0 §44.10). Motivos fijos: «Marcado como agotado desde el panel» y «Actualización rápida de inventario desde el panel».
   - **Idempotencia:** las claves de `inventory_adjust` son permanentes, así que no se arman con las existencias (agotar, reponer y volver a agotar repetiría la clave y la segunda vez no haría nada). Cada página dibujada trae claves de un solo uso por fila; la acción en bloque usa una por envío.
   - **Pruebas:** unitarias `sold-out.test.ts` (filas que cambiaron, cifras no válidas o menores que lo apartado, plan por variante, clave por envío, mensajes); E2E `inventory-quick.spec.ts` (3: guardar varias filas a la vez y rechazo por lo apartado; marcar agotado conserva lo apartado y se puede volver a agotar tras reponer, libro de inventario cuadrado; en bloque desde Productos y la tienda muestra «Agotado»). `inventory.spec.ts` sigue pasando.
+
+- **D-PANEL-12. «Configura tu tienda» como guía de lanzamiento (2026-11-26).**
+  - **Pedido del propietario:** que instalar una tienda sea fácil y quede completa para vender.
+  - **Problema encontrado:** el Inicio decía «Le faltan 6 pasos» (pendientes de la base) y la guía decía «1 de 9 pasos listos» (pasos de la pantalla): contaban cosas distintas. Además, «Envíos ✓ Listo» salía sin ninguna zona de envío, porque la base solo exige envíos cuando hay productos físicos.
+  - **Qué cambió:**
+    - Una sola lista de pasos (`src/lib/onboarding/launch-steps.ts`) para el Inicio y la guía. Cada paso dice si es «Necesario» (lo exige la base para publicar), «Recomendado» u «Opcional».
+    - Arriba de la guía, «Siguiente paso» con el porqué y un botón; la lista marca ese paso. Avance en número y porcentaje (nunca 100 % con algo pendiente).
+    - Inicio: «Le faltan N pasos necesarios para publicar. Llevas X de Y pasos. Siguiente: …».
+    - Envíos solo cuenta como listo con una tarifa activa; es «Necesario» solo cuando la base lo exige.
+    - Mientras la tienda está en borrador, las demás pantallas muestran «Volver a «Configura tu tienda»».
+  - **Sin migración:** la base sigue decidiendo qué bloquea la publicación (`stores_launch_checklist`); la guía solo ordena y explica. Si no se puede leer el estado, el Inicio dice «No pudimos revisar qué le falta» y la guía muestra la página de error con reintento: nunca un avance inventado.
+  - **Pruebas:** unitarias `launch-steps.test.ts` (8) y `home-state.test.ts` al día; E2E `launch-guide.spec.ts` (Inicio y guía cuentan lo mismo, siguiente paso marcado, envíos sin zona no sale listo, volver a la guía). `launch.spec.ts` ahora espera «4 de 9» (antes 5: envíos contaba como listo sin zona).
