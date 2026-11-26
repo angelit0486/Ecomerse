@@ -161,7 +161,13 @@ test("la Playera de 6 variantes: crear → imagen → publicar → archivar → 
   await page.getByLabel("Valores de la opción 3").fill("Algodón");
   await expect(page.getByLabel("SKU de Negro / M / Algodón")).toHaveValue("PLY-N-M");
   await page.getByRole("button", { name: "Guardar cambios" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Cambios guardados." })).toBeVisible();
+  // Agregar una opción rehace todas las variantes: con la batería completa en
+  // paralelo el guardado pasaba de 5 s (dos falsas alarmas el 2026-11-25; la
+  // captura del fallo ya mostraba «Cambios guardados.»). El resultado se sigue
+  // comprobando abajo en la base (mismo id y SKU).
+  await expect(page.getByRole("status").filter({ hasText: "Cambios guardados." })).toBeVisible({
+    timeout: 15_000,
+  });
   const [after] = await admin<{ id: string; option_signature: string }[]>`
     select id, option_signature from public.product_variants where sku = 'PLY-N-M' and deleted_at is null
        and store_id = ${tenant.storeId}`;

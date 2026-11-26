@@ -21,12 +21,16 @@ import { serverEnv } from "@/server/env";
 let worker: Sql | undefined;
 let gateway: Sql | undefined;
 
-export function createRoleClient(url: string, applicationName: string): Sql {
+export function createRoleClient(
+  url: string,
+  applicationName: string,
+  { connectTimeout = 10 }: { connectTimeout?: number } = {},
+): Sql {
   return postgres(url, {
     prepare: false,
     max: 3,
     idle_timeout: 20,
-    connect_timeout: 10,
+    connect_timeout: connectTimeout,
     connection: { application_name: applicationName },
     onnotice: () => {},
   });
@@ -38,7 +42,12 @@ export function workerDb(): Sql {
 }
 
 export function gatewayDb(): Sql {
-  gateway ??= createRoleClient(serverEnv().GATEWAY_DATABASE_URL, "pruva-storefront-gateway");
+  // Tienda pública: 5 s para conectar (el pooler está en la misma región y suele
+  // conectar en milisegundos). Si no entra, `cachedRead` reintenta una vez con
+  // otra conexión: el peor caso sigue siendo ~10 s, pero con una segunda oportunidad.
+  gateway ??= createRoleClient(serverEnv().GATEWAY_DATABASE_URL, "pruva-storefront-gateway", {
+    connectTimeout: 5,
+  });
   return gateway;
 }
 export type { Sql, TransactionSql } from "postgres";

@@ -17,14 +17,52 @@ export function storeTag(storeId: string): string {
   return `store:${storeId}`;
 }
 
+/**
+ * Errores de *conexión* (no de la consulta): la lectura nunca llegó a correr.
+ * En producción, a ratos una conexión nueva al pooler (Supavisor) no responde a
+ * tiempo aunque la base esté sana (registros de Vercel, 2026-11-22 a 26); una
+ * segunda conexión casi siempre entra. Un error de la consulta (p. ej.
+ * `statement timeout`, 57014) no se repite: duplicaría la carga.
+ */
+const CONNECTION_ERRORS = new Set([
+  "CONNECT_TIMEOUT",
+  "CONNECTION_CLOSED",
+  "CONNECTION_ENDED",
+  "CONNECTION_DESTROYED",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+]);
+
+function isConnectionError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" && CONNECTION_ERRORS.has(code);
+}
+
+/**
+ * Una lectura pública (solo lee: repetirla es seguro) con un reintento si falló
+ * la conexión. Sin esto, un tropiezo dejaba la copia vieja en caché (el precio
+ * «tardaba» en cambiar) o mostraba la página de error.
+ */
+export async function withConnectionRetry<R>(name: string, read: () => Promise<R>): Promise<R> {
+  try {
+    return await read();
+  } catch (error) {
+    if (!isConnectionError(error)) throw error;
+    log.warn("storefront.read_retry", { read: name, code: (error as { code: string }).code });
+    return read();
+  }
+}
+
 /** Envuelve una lectura pública cuyo primer argumento es el storeId. */
 export function cachedRead<A extends [string, ...unknown[]], R>(
   name: string,
   read: (...args: A) => Promise<R>,
   extraTags: readonly string[] = [],
 ): (...args: A) => Promise<R> {
+  const resilient = (...args: A) => withConnectionRetry(name, () => read(...args));
   return (...args: A) =>
-    unstable_cache(read, ["storefront", name, args[0]], {
+    unstable_cache(resilient, ["storefront", name, args[0]], {
       tags: [storeTag(args[0]), ...extraTags],
       revalidate: STOREFRONT_TTL_SECONDS,
     })(...args);
