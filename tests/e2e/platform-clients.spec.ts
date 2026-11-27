@@ -47,11 +47,7 @@ test("la administración ve quién necesita ayuda hoy y por qué", async ({ page
     .getByRole("navigation", { name: "Consola de plataforma" })
     .getByRole("link", { name: "Mis clientes" })
     .click();
-  // La base local de pruebas acumula miles de tiendas (8,597 al 2026-11-26) y
-  // la consulta de todas tarda ~3.6 s ahí; staging tiene pocas. Pendiente: D-CON-01.
-  await expect(page.getByRole("heading", { name: "Mis clientes", level: 1 })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.getByRole("heading", { name: "Mis clientes", level: 1 })).toBeVisible();
   // Con muchas tiendas se busca por nombre.
   const search = page.getByLabel("Buscar tienda u organización");
   await search.fill(withProblem.name);

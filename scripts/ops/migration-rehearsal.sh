@@ -62,6 +62,8 @@ MANIFEST=(
   "20261126000100_platform_store_overview.sql 1a6a1624cea9cff498ffdc7392272c56481dd000bcc35c73da861b4a1b538981"
   # Visitantes de la tienda: conteo diario sin cookies (tabla nueva con RLS forzado).
   "20261126000200_store_visits.sql 2977e3d73204595e84d9026f901e53f0115e56de7a3674555fc0effa75b458a1"
+  # «Mis clientes» más rápido: la misma función, agregada por tabla (sin tablas nuevas).
+  "20261127000100_platform_overview_set_based.sql c518e220726a6901e8e2b8b690d60b140475441deb0eefcc31b6035be352a99b"
 )
 UP=pruva_cap_upgrade
 FRESH=pruva_cap_fresh
@@ -130,7 +132,7 @@ done
 
 echo "▸ 4. Verificación posterior (las mismas consultas del runbook, §5)"
 check() { [ "$(q -c "$2")" = "$3" ] && ok "$1" || fail "$1 (esperado $3, obtenido $(q -c "$2"))"; }
-check "versión final" "select public.app_schema_version()" "20261126000200"
+check "versión final" "select public.app_schema_version()" "20261127000100"
 check "1117-0600 (transferencia): place_order aparta 24 horas con pago manual" "select prosrc ~ 'when v_provider = ''manual'' then 24 \* 60' from pg_proc where oid = 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)'::regprocedure" "t"
 check "1117-0600 (transferencia): place_order sigue solo para storefront_gateway" "select has_function_privilege('storefront_gateway', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('anon', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute') and not has_function_privilege('authenticated', 'storefront.place_order(uuid, text, jsonb, bigint, text, bytea)', 'execute')" "t"
 check "0300: order_item_costs con RLS forzado" "select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.order_item_costs'::regclass" "t"

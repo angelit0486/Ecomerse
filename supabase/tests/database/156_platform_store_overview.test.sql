@@ -132,7 +132,7 @@ select tests.logout();
 select ok(pg_get_function_result('public.platform_store_overview(text,integer)'::regprocedure)
             !~* '(customer|phone|address|buyer)',
           'el resultado no expone datos de compradores');
-select is(public.app_schema_version(), '20261126000200', 'versión de la base');
+select is(public.app_schema_version(), '20261127000100', 'versión de la base');
 
 select * from finish();
 rollback;

@@ -84,7 +84,7 @@ select is((select visitors_7d from public.platform_store_overview(null, 300)
             where store_id = tests.fx('store_a')), 2, 'la plataforma ve los visitantes de 7 días de A');
 select tests.logout();
 
-select is(public.app_schema_version(), '20261126000200', 'versión de la base');
+select is(public.app_schema_version(), '20261127000100', 'versión de la base');
 
 select * from finish();
 rollback;
