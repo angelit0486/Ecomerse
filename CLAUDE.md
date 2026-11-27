@@ -75,4 +75,6 @@ Estas reglas complementan a las anteriores; ante conflicto gana la más restrict
 
 **Definición de terminado para cada función:** propósito, estados (carga, vacío, error, sin permiso), validaciones, manejo de errores explícito (sin ceros engañosos ni tarjetas que desaparecen), permisos respetados, persistencia real y pruebas (unit; pgTAP si hay SQL; E2E si es factible). UI y textos en español.
 
+**Informe por tarea (obligatorio):** cada prompt ejecutado termina con un informe técnico consecutivo en `docs/reports/` (`PRUVA_INFORME_<NNN>_<DESCRIPCION>.md`, más `.docx` si se puede), escrito antes de declarar la tarea terminada, incluso si quedó bloqueada. El protocolo completo y el índice están en `docs/reports/README.md`.
+
 **Evidencia:** no declarar nada terminado sin evidencia. Al terminar, reportar archivos cambiados, comandos ejecutados y sus resultados reales (número de pruebas que pasan/fallan), y lo que no se pudo verificar y por qué.
